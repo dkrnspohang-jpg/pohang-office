@@ -7334,7 +7334,14 @@ async function fbReloadStore(store){
   else if(store==='eaf'){eafData=await txAll('eaf');}
   else if(store==='inv'){invData=await txAll('inv');}
   else if(store==='invin'){invInData=await txAll('invin');}
-  else if(store==='emp'){empData=await txAll('emp');}
+  else if(store==='emp'){empData=await txAll('emp');
+    /* 2026-09-21: Firebase/가져오기로 직원 명부가 (재)적재된 직후에도 서명 일괄반영을 다시 시도.
+       최초 접속처럼 로컬이 비어있던 상태에서 로그인 시점의 loadAttend()가 빈 명단에 대해 먼저
+       실행되어 서명을 채울 대상이 없었던 경우를 보완한다. !e.sign 조건이라 이미 채워진 서명은
+       건드리지 않는다. fbApplyStore가 아직 fbApplying=true인 상태로 이 함수를 호출하므로,
+       그 상태에서 바로 putRec하면 fbOnWrite가 무시되어 팀 저장소에 업로드가 안 된다 — 짧게
+       지연시켜 fbApplying이 false로 돌아온 뒤 실행되게 한다(정상적으로 팀에도 업로드됨). */
+    setTimeout(()=>{try{if(typeof seedEmpSignaturesFromSheet==='function')seedEmpSignaturesFromSheet();}catch(e){}},50);}
   else if(store==='leave'){leaveData=await txAll('leave');}
   else if(store==='ot'){otData=await txAll('ot');}
   else if(store==='handover'){hoData=await txAll('handover');}
