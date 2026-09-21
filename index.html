@@ -9692,7 +9692,8 @@ function mvHome(){
   const mm=todayStr().slice(5,7);
   const otM=otStat(me.id,y,mm),otY=otStat(me.id,y),wait=[...leaveData,...otData].filter(d=>canApprove(d)).length;
   mvHead(me.name+' 님',ROLE_LABEL[role]+(me.rank?' · '+me.rank:'')+(me.team?' · '+me.team:''));
-  const canHo=['sn','foreman','office','admin'].includes(role);
+  /* 2026-09-21: '교대 인수인계' 버튼을 모바일 간편 홈 화면에서 제거(사용자 요청).
+     PC 화면 사이드바 및 모바일의 [PC 화면] 전체 메뉴 전환에서는 기존처럼 그대로 접근 가능. */
   document.getElementById('mvBody').innerHTML=
     `<div class="mv-stat">
       <div class="s rem"><span>연차 잔여</span><b>${+(g-st.used-st.pend).toFixed(1)}</b><small>부여 ${g}일</small></div>
@@ -9705,7 +9706,6 @@ function mvHome(){
     <div class="mv-menu">
       ${mvB('mv-m1','🏖️ 휴가원 신청','연차 · 반차 · 연중휴가',"mvOpen('leave')")}
       ${mvB('mv-m2','🌙 잔업 신청','휴게 자동공제',"mvOpen('ot')")}
-      ${canHo?mvB('mv-m3','🔁 교대 인수인계','반별 인계사항',"mvOpen('ho')"):''}
       ${mvB('mv-m4','📋 내 신청 현황','결재 진행 확인',"mvOpen('my')")}
       ${wait||['foreman','office','admin'].includes(role)?mvB('mv-m5','✍️ 결재함'+(wait?' ('+wait+')':''),'승인 · 반려',"mvOpen('appr')"):''}
     </div>
