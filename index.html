@@ -673,6 +673,20 @@
     if(window.matchMedia&&window.matchMedia('(max-width:820px)').matches)document.body.classList.add('mv');
   }
 })();
+/* 2026-09-21: 파트 미선택 상태(포항사업소 첫 화면)에서 전체 사이드바 메뉴가 잠깐 보였다가
+   파트 선택 화면으로 바뀌는 깜빡임(FOUC) 방지 — appRole()과 동일한 판정을 스크립트 로딩 전에
+   미리 적용해 body에 start 클래스를 먼저 붙인다. renderModePanel()이 나중에 다시 정확히 계산해
+   같은 결과로 재확정하므로 동작 로직 자체는 바뀌지 않는다. */
+(function(){
+  try{
+    var r=localStorage.getItem('dgrns_role');
+    if(r==='input'||r==='dgrns')r='office';
+    if(r==='view'||r==='field')r='foreman';
+    var VALID=['pohang','admin','office','foreman','sn','furnace','safety'];
+    if(VALID.indexOf(r)<0)r='pohang';
+    if(r==='pohang')document.body.classList.add('start');
+  }catch(e){document.body.classList.add('start');}
+})();
 </script>
 <!-- ===== 사이드바 ===== -->
 <nav class="sidebar">
