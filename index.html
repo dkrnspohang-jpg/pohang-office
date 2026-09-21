@@ -8622,6 +8622,9 @@ function fillSel(id,arr,cur,allLabel){
   if(cur!=null)el.value=cur;
 }
 function empOptions(){return empData.filter(e=>e.active!==0&&(canSeeEmp(e)||e.id===myEmpId())).sort((a,b)=>a.name.localeCompare(b.name)).map(e=>({v:e.id,l:e.name+(e.dept?' ('+e.dept+')':'')}));}
+/* 2026-09-21: 교대 대근자는 직급·소속 상관없이 누가 대신 근무할지 미리 알 수 없으므로
+   canSeeEmp() 상하관계 필터를 적용하지 않고 재직중인 전 직원을 보여준다(본인 제외). */
+function subOptions(){return empData.filter(e=>e.active!==0&&e.id!==myEmpId()).sort((a,b)=>a.name.localeCompare(b.name)).map(e=>({v:e.id,l:e.name+(e.dept?' ('+e.dept+')':'')}));}
 function attendYears(){
   const ys=new Set([todayStr().slice(0,4)]);
   leaveData.forEach(l=>ys.add(String(l.start||'').slice(0,4)));
@@ -8653,7 +8656,7 @@ function initAttend(){
   fillSel('at_dept',DEPTS,document.getElementById('at_dept').value||'','전체 소속');
   fillSel('vc_year',ys,document.getElementById('vc_year').value||cy);
   fillSel('vc_dept',DEPTS,document.getElementById('vc_dept').value||'','전체 소속');
-  fillSel('lv_sub',empOptions(),(document.getElementById('lv_sub')||{}).value||'','대근자 없음');
+  fillSel('lv_sub',subOptions(),(document.getElementById('lv_sub')||{}).value||'','대근자 없음');
   const stOpts=[...STEP_ORDER,'done','rej'].map(k=>({v:k,l:ST_LABEL[k]}));
   fillSel('lv_fStatus',stOpts,document.getElementById('lv_fStatus').value||'','전체 상태');
   fillSel('ot_fStatus',stOpts,document.getElementById('ot_fStatus').value||'','전체 상태');
@@ -9723,7 +9726,7 @@ function mvOpen(v){
 function mvLeave(){
   const me=meEmp(),y=todayStr().slice(0,4),g=annualGrant(me,y),st=leaveStat(me.id,y);
   mvHead('휴가원 신청','연차 잔여 '+(+(g-st.used-st.pend).toFixed(1))+'일',true);
-  const subs=empData.filter(e=>e.active!==0&&e.id!==me.id&&(e.dept||'')===(me.dept||''));
+  const subs=empData.filter(e=>e.active!==0&&e.id!==me.id);   // 2026-09-21: 대근자는 소속 무관 전 직원
   document.getElementById('mvBody').innerHTML=`<div class="mv-card">
     <div class="mv-f"><label>휴가 종류</label><select id="mv_type" onchange="mvDays()">${LEAVE_TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
     <div class="mv-2">
@@ -9920,10 +9923,12 @@ const ROLE_VIEWS={
   pohang:['board'],                                             // 첫 화면 : 작업현황판만 (여기서 파트 선택)
   admin:null,                                                   // 사업소장 : 모든 권한
   office:null,                                                  // 관리직 : 전체 · 삭제만 제한
-  foreman:['board','attend','approve','handover','mperf','ladle','tundish','eaf'],
-  sn:['board','attend','handover','ladle'],                     // SN반 : 래들 수명 + 인수인계 + 휴가원
-  furnace:['board','attend','ladle','tundish'],                 // 축로반 : 래들·턴디쉬 + 휴가원
-  safety:['board','attend']                                     // 안전관리담당자 : 작업현황판 + 본인 근태
+  // 2026-09-21: 현장직원(현장기성·SN반·축로반·안전관리담당자)은 근태관리(휴가·잔업 신청)만 접근,
+  // 그 외 화면은 전부 숨김 처리 — 사업소장·관리직만 기존처럼 전체 권한 유지
+  foreman:['attend'],
+  sn:['attend'],
+  furnace:['attend'],
+  safety:['attend']
 };
 const FIELD_ROLES=['foreman','sn','furnace','pohang'];
 const FIELD_VIEWS=['board','attend','ladle','tundish','eaf','handover'];
@@ -10020,7 +10025,14 @@ function updateRoleChip(){const c=document.getElementById('roleChip');if(!c)retu
 function setRole(r){try{localStorage.setItem('dgrns_role',r);}catch(e){}updateRoleChip();applyRoleLock();applyRoleNav();
   if(!viewAllowed(curView))nav(defaultView());}
 function viewAllowed(v){const a=ROLE_VIEWS[appRole()];return !a||a.indexOf(v)>=0;}
-function defaultView(){return viewAllowed('home')?'home':'board';}
+function defaultView(){
+  if(viewAllowed('home'))return 'home';
+  if(viewAllowed('board'))return 'board';
+  // 2026-09-21: home·board 둘 다 허용 안 된 역할(예: 근태관리만 남은 현장직원)을 위한 안전장치 —
+  // 그 역할에 실제로 허용된 첫 화면으로 보낸다(없으면 기존처럼 board, nav()가 그대로 막아줌)
+  const a=ROLE_VIEWS[appRole()];
+  return (a&&a.length)?a[0]:'board';
+}
 function openRoleDlg(){
   const cur=appRole();
   const items=[{v:'pohang',no:'🏭',label:'포항사업소',sub:'작업현황판 · 파트 선택 화면'}]
