@@ -1352,6 +1352,7 @@
         <button class="btn" onclick="syncPullAll()" title="팀 저장소 내용을 이 PC로 통째로 받습니다(이 PC 내용은 사라집니다)">⬇️ 팀 전체 받기</button>
         <button class="btn primary" onclick="syncDiag()" title="이 PC와 팀 저장소의 자료 건수를 비교합니다">🩺 동기화 진단</button>
         <button class="btn boss-only" onclick="importLegacyEmployees()" title="과장님 기존 Firebase에서 직원관리 자료만 읽어 새 시험 서버로 복사합니다">👥 기존 서버 직원자료 가져오기</button>
+        <button class="btn danger boss-only" onclick="importLegacyAllData()" title="과장님 기존 Firebase의 일정·휴가·잔업 등 전체 자료를 읽어 새 시험 서버로 복사합니다">📦 기존 서버 전체자료 가져오기</button>
         <span class="spacer"></span>
         <button class="btn" onclick="setAdminPin()" title="관리자 PIN 설정(팀원 권한 제어)">🔑 관리자 PIN 설정</button>
         <button class="btn" onclick="mvSet('mobile')" title="이 PC에서 모바일 화면을 미리 봅니다">📲 모바일 화면 미리보기</button>
@@ -7552,6 +7553,55 @@ async function importLegacyEmployees(){
   }catch(err){
     console.error(err);
     alert('기존 서버 자료 가져오기 실패\n\n'+err.message+'\n\n기존 Firebase의 Firestore 규칙이 읽기를 허용하는지 확인해 주세요.');
+  }
+}
+
+/* 기존 서버의 업무자료 전체를 읽어서 새 시험 서버로 1회 복사한다. */
+async function importLegacyAllData(){
+  if(!requireAdmin())return;
+  if(!fbOn){alert('먼저 새 시험 서버 자동연결을 확인해 주세요.');return;}
+  if(!confirm('과장님 기존 서버의 전체 자료를 읽어\n현재 시험 서버로 복사할까요?\n\n대상: 직원·일정·휴가·잔업·래들·턴디쉬·재고·견적·전기로·인수인계\n\n기존 서버는 읽기만 하며 수정하거나 삭제하지 않습니다.'))return;
+  try{
+    await fbEnsureSdk();
+    let oldApp;
+    try{oldApp=firebase.app('legacy-employee-import');}
+    catch(e){oldApp=firebase.initializeApp(LEGACY_FIREBASE_CONFIG,'legacy-employee-import');}
+    const oldDb=oldApp.firestore();
+    const oldBase=oldDb.collection('dgrns_rooms').doc(LEGACY_FB_ROOM).collection('data');
+    const incoming={},counts=[];
+    const labels={ladle:'래들',tundish:'턴디쉬',quotes:'견적서',schedule:'일정',bomstd:'축조물량표',eaf:'전기로',inv:'재고',invin:'입고',emp:'직원',leave:'휴가원',ot:'잔업',handover:'인수인계'};
+    for(const st of FB_STORES){
+      const snap=await oldBase.doc(st).get();
+      if(!snap.exists)continue;
+      incoming[st]=((snap.data()||{}).items||[]);
+      counts.push(`${labels[st]||st} ${incoming[st].length}건`);
+    }
+    if(!Object.keys(incoming).length){alert('기존 서버에서 가져올 자료를 찾지 못했습니다.');return;}
+    let oldKv={};
+    try{const kvSnap=await oldBase.doc('__kv').get();if(kvSnap.exists)oldKv=(kvSnap.data()||{}).kv||{};}catch(e){}
+    const protectedKeys=['dgrns_adminpin','dgrns_partpin','dgrns_me','dgrns_role','dgrns_sess','dgrns_appr_notified'];
+    const safeKv={};Object.keys(oldKv).forEach(k=>{if(!protectedKeys.includes(k))safeKv[k]=oldKv[k];});
+    if(!confirm('기존 서버에서 다음 자료를 찾았습니다.\n\n'+counts.join('\n')+'\n\n현재 시험 서버의 해당 자료를 기존 서버 자료로 교체할까요?'))return;
+    await exportJSON('before-legacy-full-import');
+    fbApplying=true;
+    try{
+      for(const st of FB_STORES)if(Array.isArray(incoming[st]))await fbApplyStore(st,incoming[st]);
+      if(Object.keys(safeKv).length)fbApplyKv(safeKv);
+    }finally{fbApplying=false;}
+    const now=Date.now();
+    for(const st of FB_STORES){
+      if(!Array.isArray(incoming[st]))continue;
+      await fbDoc(st).set({items:incoming[st],by:fbClientId,at:now,importedFrom:'dkrnspohang-23523/dkrnspohang'});
+    }
+    const targetKv=Object.assign({},fbCollectKv(),safeKv);
+    await fbDoc('__kv').set({kv:targetKv,by:fbClientId,at:now,importedFrom:'dkrnspohang-23523/dkrnspohang'});
+    for(const st of FB_STORES)if(Array.isArray(incoming[st]))await fbReloadStore(st);
+    fbRerender();
+    toast('기존 서버 전체자료를 시험 서버로 가져왔습니다');
+    alert('전체자료 복사가 완료되었습니다.\n\n'+counts.join('\n')+'\n\n기존 서버 원본은 변경하지 않았습니다.');
+  }catch(err){
+    console.error(err);
+    alert('기존 서버 전체자료 가져오기 실패\n\n'+err.message+'\n\n기존 Firebase의 Firestore 읽기 규칙을 확인해 주세요.');
   }
 }
 
