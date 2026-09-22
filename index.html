@@ -5142,7 +5142,7 @@ function boardLadle(){
     const todaySL=list.find(r=>r.date===asOf&&r.type==='SL보수');
     const dno=esc(String(no));
     return `<tr><td class="bno">${esc(noLabel(no))}</td>
-      <td class="n"><input type="number" class="binp bl-in" data-no="${dno}" data-f="cur" value="${todayUse?todayUse.daily:''}" placeholder="누적 ${cur||0}" style="width:100%;text-align:right;color:#dc2626;font-weight:700;border:1px solid var(--line)" title="오늘(작업일자) 사용 CH를 입력하면 '사용' 기록으로 저장됩니다"></td>
+      <td class="n"><input type="number" class="binp bl-in" data-no="${dno}" data-f="cur" value="${todayUse?todayUse.daily:''}" placeholder="${cur||0}" style="width:100%;text-align:right;color:#dc2626;font-weight:700;border:1px solid var(--line)" title="오늘(작업일자) 사용 CH를 입력하면 '사용' 기록으로 저장됩니다"></td>
       <td class="n"><input type="number" class="binp bl-in" data-no="${dno}" data-f="cone" value="${todayCone?todayCone.daily:''}" placeholder="${coneVal==null?'-':coneVal}" style="width:100%;text-align:right;color:#7c3aed;font-weight:700;border:1px solid var(--line)" title="콘보수 시점 수명을 입력하면 '콘보수' 기록으로 저장됩니다"></td>
       <td class="n"><input type="number" class="binp bl-in" data-no="${dno}" data-f="sl" value="${todaySL?todaySL.daily:''}" placeholder="${slVal==null?'-':slVal}" style="width:100%;text-align:right;color:#c81e1e;font-weight:700;border:1px solid var(--line)" title="S/L보수 시점 수명을 입력하면 'SL보수' 기록으로 저장됩니다"></td>
       <td class="n" style="color:#1d4ed8"><b>${shell||0}</b></td>
