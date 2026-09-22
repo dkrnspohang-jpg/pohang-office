@@ -3093,8 +3093,8 @@ function rowProd(r){return r.pcode?prodById(r.pcode):null;}
 function rowNm(r){const p=rowProd(r);return p?p.name:(r.nm||'');}
 function rowMix(r){const p=rowProd(r);return p?(p.mix||''):(r.mix||'');}
 function rowSpec(r){const p=rowProd(r);return p?p.spec:(r.spec||'');}
-// 단중: 물량표 행값(물리값) 우선, 없으면 마스터 단중
-function rowUw(r){if(r.uw!=null&&r.uw!==''&&(+r.uw||0)>0)return +r.uw||0;const p=rowProd(r);return p?(+p.uw||0):(+r.uw||0);}
+// 단중: 제품 마스터 연동(pcode) 행은 마스터 단중이 항상 우선(단가와 동일 규칙) · 미연동(직접입력) 행만 자체값 사용
+function rowUw(r){const p=rowProd(r);return p?(+p.uw||0):(+r.uw||0);}
 function rowPrice(r){return r.pcode?activePrice(r.pcode):(+r.price||0);}
 function rowPriceAt(r,period){return r.pcode?priceAt(r.pcode,period):(+r.price||0);}
 // 단가유형: 'ea'(수량단가=금액은 수량×단가) / 'kg'(중량단가=단중×수량×단가). 마스터 제품의 unit, 없으면 행 unit, 기본 kg
