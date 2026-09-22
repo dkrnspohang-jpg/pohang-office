@@ -1335,18 +1335,14 @@
 
   <!-- ===== 보고서 자동생성 (PPT) ===== -->
   <section id="v-report" class="hidden">
-    <div class="subtabs" id="reportTypeTabs">
-      <button class="subtab active" data-t="daily" onclick="reportSetType('daily')">🗓️ 일일 보고</button>
-      <button class="subtab" data-t="monthly" onclick="reportSetType('monthly')">📅 월간 보고</button>
-    </div>
+    <div class="subhead" style="margin-top:0">📅 월간 보고서 자동생성 <span class="hint">내화물 실적자료 양식</span></div>
     <div class="toolrow">
-      <input type="date" id="rpt_date" onchange="renderReportPreview()">
-      <select class="selbox hidden" id="rpt_year" onchange="renderReportPreview()"></select>
-      <select class="selbox hidden" id="rpt_month" onchange="renderReportPreview()"></select>
+      <select class="selbox" id="rpt_year" onchange="renderReportPreview()"></select>
+      <select class="selbox" id="rpt_month" onchange="renderReportPreview()"></select>
       <span class="spacer"></span>
       <button class="btn primary" onclick="generateReportPpt()">📊 PPT 생성</button>
     </div>
-    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 12px">선택한 기간의 작업현황판·전기로 조업·수명/원가관리·외근업무 이슈를 자동으로 모아 PPT 슬라이드로 만듭니다. 생성된 파일은 파워포인트(.pptx)로 다운로드되며, 편집·발표 자료로 바로 사용할 수 있습니다. (이 화면·기능은 시험 도입 단계이며 계속 보완해 나갈 예정입니다)</div>
+    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 12px">선택한 월의 원단위·생산량·래들·턴디쉬·전기로 실적을 자동으로 모아 [내화물 실적자료] PPT 양식 그대로 슬라이드를 만듭니다. 생성된 파일은 파워포인트(.pptx)로 다운로드되며, 편집·발표 자료로 바로 사용할 수 있습니다. (이 화면·기능은 계속 보완해 나갈 예정입니다)</div>
     <div class="cards" id="reportCards"></div>
     <div class="subhead">생성될 슬라이드 미리보기 <span class="hint">PPT 생성 버튼을 누르면 아래 구성대로 슬라이드가 만들어집니다</span></div>
     <div id="reportSlidePreview"></div>
@@ -1799,7 +1795,7 @@ service cloud.firestore {
       <div class="costgrid" id="inflowCards"></div>
       <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 10px">※ 매일 입고분을 품목별로 입력하세요. 그 달 1~말일 입고가 합산되어 [월별 원단위]의 입고량으로 자동 반영됩니다. 오른쪽 '월 누적'은 해당 월 총 입고입니다.</div>
       <div class="tablewrap"><table class="bomtbl" id="inflowTbl" style="min-width:820px">
-        <thead><tr><th>설비</th><th>품명</th><th>단위</th><th class="n">단가</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n">월 누적입고</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
+        <thead><tr><th>설비</th><th>고객사 품명</th><th>단위</th><th class="n">단가</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n">월 누적입고</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
         <tbody id="inflowBody"></tbody>
       </table></div>
     </div>
@@ -3092,7 +3088,8 @@ function delSnap(){if(!canDelete()){alert('삭제는 관리자만 가능합니�
 function rowProd(r){return r.pcode?prodById(r.pcode):null;}
 function rowNm(r){const p=rowProd(r);return p?p.name:(r.nm||'');}
 function rowMix(r){const p=rowProd(r);return p?(p.mix||''):(r.mix||'');}
-function rowSpec(r){const p=rowProd(r);return p?p.spec:(r.spec||'');}
+// 2026-09-22: 규격은 제품 선택 시 마스터 값을 자동으로 채워주되, 행별로 직접 수정(덮어쓰기) 가능(요청 반영)
+function rowSpec(r){if(r.spec!=null&&r.spec!=='')return r.spec;const p=rowProd(r);return p?p.spec:'';}
 // 단중: 제품 마스터 연동(pcode) 행은 마스터 단중이 항상 우선(단가와 동일 규칙) · 미연동(직접입력) 행만 자체값 사용
 function rowUw(r){const p=rowProd(r);return p?(+p.uw||0):(+r.uw||0);}
 function rowPrice(r){return r.pcode?activePrice(r.pcode):(+r.price||0);}
@@ -3505,18 +3502,17 @@ function refreshBomIfOpen(){if(bomIsActive())renderLadleBom();}
 function prodUse(p){return p.use==null?1:p.use;}
 function prodGubun(p){return p.gubun||'제품';}
 const PROD_GUBUN=['제품','상품'];
-// 2026-09-22: 고객사 제품명을 매번 새로 타이핑하지 않고 기존에 등록된 값 중에서 "선택"할 수 있게
-// 하기 위한 datalist. 별도 마스터 데이터 없이 현재 prodData에 이미 입력된 고객사 제품명들을 모아
-// 자동완성 목록으로 제공(신규 값 직접 입력도 그대로 가능 — 기존 자유입력 방식은 유지).
-function ensureCustNameDatalist(){
-  let dl=document.getElementById('dl_custname');
-  if(!dl){dl=document.createElement('datalist');dl.id='dl_custname';document.body.appendChild(dl);}
-  const names=[...new Set(prodData.map(p=>(p.custName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-  dl.innerHTML=names.map(n=>`<option value="${esc(n)}">`).join('');
+// 2026-09-22: 고객사 제품명 = 내화물 원단위 > 내화물 입고량 화면의 품명(INV_MASTER.n) 목록에서
+// "구분(설비)"처럼 선택. 그 화면에서 품명을 고치면 여기 목록도 자동으로 갱신됨(단방향: 목록→선택값).
+function custNameOptions(sel){
+  const names=[...new Set(INV_MASTER.map(m=>(m.n||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  let h='<option value="">고객사 품명 선택…</option>';
+  if(sel&&!names.includes(sel))h+=`<option value="${esc(sel)}" selected>${esc(sel)} (목록에 없음)</option>`;
+  h+=names.map(n=>`<option value="${esc(n)}"${n===sel?' selected':''}>${esc(n)}</option>`).join('');
+  return h;
 }
 function renderProdMaster(){
   syncPeriodSelectors();
-  ensureCustNameDatalist();
   const q=(document.getElementById('pm_search').value||'').toLowerCase();
   const cf=(document.getElementById('pm_cat')||{}).value||'';
   const gf=(document.getElementById('pm_gubun')||{}).value||'';
@@ -3550,7 +3546,7 @@ function renderProdMaster(){
      <td>${catSel(i,p.cat)}</td>
      <td>${gubunSel(i,prodGubun(p))}</td>
      <td><input value="${esc(p.name||'')}" style="width:100%;min-width:150px" oninput="editProd(${i},'name',this.value)"></td>
-     <td><input list="dl_custname" value="${esc(p.custName||'')}" style="width:100%;min-width:130px" placeholder="고객사 품명 (선택 또는 입력)" oninput="editProd(${i},'custName',this.value)"></td>
+     <td><select onchange="editProd(${i},'custName',this.value)" style="width:100%;min-width:130px;font-size:11px">${custNameOptions(p.custName||'')}</select></td>
      <td><input value="${esc(p.mix||'')}" style="width:100%;min-width:140px" placeholder="배합·재질" oninput="editProd(${i},'mix',this.value)"></td>
      <td><input value="${esc(p.spec||'')}" style="width:100%;min-width:160px" oninput="editProd(${i},'spec',this.value)"></td>
      <td class="n"><input type="number" value="${p.uw||''}" style="width:64px;text-align:right" oninput="editProd(${i},'uw',this.value)"></td>
@@ -3750,7 +3746,8 @@ function prodOptions(sel){
   const pool=prodData.filter(p=>(p.use==null?1:p.use)!==0||p.id===sel);
   const inscope=pool.filter(p=>(p.cat||'공통')===lab||(p.cat||'공통')==='공통');
   const others=pool.filter(p=>!((p.cat||'공통')===lab||(p.cat||'공통')==='공통'));
-  const opt=p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(prodLabel(p))}</option>`;
+  // 2026-09-22: 옆 칸에 규격이 별도로 표시되므로 여기 드롭다운은 제품명만 표시(요청 반영)
+  const opt=p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.name)}</option>`;
   const sort=a=>a.slice().sort((x,y)=>x.name.localeCompare(y.name)||x.spec.localeCompare(y.spec));
   let h=sort(inscope).map(opt).join('');
   if(others.length)h+=`<optgroup label="기타 설비">`+sort(others).map(opt).join('')+`</optgroup>`;
@@ -3764,7 +3761,7 @@ function drawBomRows(){
      <td><select style="width:100%;min-width:130px;font-size:11.5px${(!linked&&r.nm)?';color:#c81e1e':''}" onchange="editBom(${i},'pcode',this.value)">
         <option value=""${linked?'':' selected'}>${linked?'— 직접입력 —':(r.nm?'⚠ '+esc(r.nm)+' (미등록)':'제품 선택…')}</option>${prodOptions(r.pcode)}</select></td>
      <td style="font-size:11px;color:var(--muted)" id="bomMix${i}">${esc(rowMix(r)||'-')}</td>
-     <td style="font-size:11.5px" id="bomSpec${i}">${linked?esc(rowSpec(r)):`<input value="${esc(r.spec||'')}" style="width:78px" oninput="editBom(${i},'spec',this.value)">`}</td>
+     <td style="font-size:11.5px" id="bomSpec${i}"><input value="${esc(rowSpec(r))}" style="width:78px" oninput="editBom(${i},'spec',this.value)" title="제품 선택 시 마스터 규격이 자동으로 채워지며, 필요하면 직접 수정할 수 있습니다"></td>
      <td class="n" id="bomUw${i}">${linked?uw:`<input type="number" value="${r.uw??''}" style="width:64px;text-align:right" oninput="editBom(${i},'uw',this.value)">`}</td>
      <td class="n"><input type="number" value="${r.qty??''}" style="width:58px;text-align:right" oninput="editBom(${i},'qty',this.value)"></td>
      <td class="n" id="bomW${i}">${wKG(w)}${ea?'<br><span style="font-size:9px;color:#c81e1e">수량단가</span>':''}</td>
@@ -3802,7 +3799,10 @@ function bomRowCells(i){const r=bomDraft[i];const w=rowUw(r)*(+r.qty||0);const c
 // 입력 중 전체 재렌더 금지(커서 유지) → 모델만 갱신 + 파생셀만 부분 갱신. 제품 선택 시에만 행 재구성
 function editBom(i,k,v){
   bomDirty=true;const s=document.getElementById('l_bomSave');if(s)s.textContent='💾 저장*';
-  if(k==='pcode'){bomDraft[i].pcode=v||null;drawBomRows();return;}
+  if(k==='pcode'){bomDraft[i].pcode=v||null;
+    // 2026-09-22: 제품(마스터)을 새로 선택하면 규격을 그 제품의 마스터 규격으로 자동 채움(이후 직접 수정 가능)
+    if(v){const p=prodById(v);if(p)bomDraft[i].spec=p.spec||'';}
+    drawBomRows();return;}
   bomDraft[i][k]=(k==='uw'||k==='qty'||k==='price')?(+v||0):v;
   if(k==='uw'||k==='qty'||k==='price')bomRowCells(i);
 }
@@ -5541,23 +5541,14 @@ function downloadEafRepairExcel(){
 }
 
 /* ============ 보고서 자동생성 (PPT) ============
-   래들·턴디쉬·전기로 수명/원가관리, 작업현황판, 외근업무 이슈 등 이미 프로그램에
-   집계된 데이터를 모아 파워포인트(.pptx) 파일로 자동 생성한다. 완전히 오프라인으로
-   동작하도록 PptxGenJS·JSZip 라이브러리를 파일 자체에 내장했다(본 화면 상단 <script>).
-   1차 구현 범위(시험 도입): 일일 보고 = 전기로 조업현황 + 작업현황판 요약 + 외근업무
-   진행 이슈 / 월간 보고 = 월간 실적 요약 + 래들·턴디쉬·전기로 원가 요약.
-   원단위관리·포스코입찰 등 다른 화면과의 연동은 사용 형태를 보고 다음 단계에서 확장. */
-let reportType='daily';
-function reportSetType(t){
-  reportType=t;
-  document.querySelectorAll('#reportTypeTabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
-  document.getElementById('rpt_date').classList.toggle('hidden',t!=='daily');
-  document.getElementById('rpt_year').classList.toggle('hidden',t!=='monthly');
-  document.getElementById('rpt_month').classList.toggle('hidden',t!=='monthly');
-  renderReportPreview();
-}
+   내화물 실적자료(원단위·EAF 발코니/로저전극 교체현황·래들/턴디쉬 수명현황·원가요약) PPT를
+   프로그램에 이미 입력된 데이터로 자동 생성한다. 완전히 오프라인으로 동작하도록
+   PptxGenJS·JSZip 라이브러리를 파일 자체에 내장했다(본 화면 상단 <script>).
+   2026-09-22: 일일 보고는 제외하고 월간 보고만 제공 · [내화물 실적자료] PPT 양식(폼)의 슬라이드
+   구성·제목을 그대로 따름. 단, 연도별 원단위 벤치마크(19~25년)·앙카허스 13개월 사용량·원가
+   세부현황(설비별 4분할 패널)은 그 원본 수치가 프로그램에 없어 아직 포함하지 않음 — 데이터가
+   쌓이거나 별도로 입력받으면 다음 단계에서 추가 예정. */
 function initReport(){
-  const d=document.getElementById('rpt_date');if(d&&!d.value)d.value=todayStr();
   const ySel=document.getElementById('rpt_year');
   if(ySel&&!ySel.options.length){
     const ys=new Set([todayStr().slice(0,4)]);
@@ -5568,43 +5559,21 @@ function initReport(){
   }
   const mSel=document.getElementById('rpt_month');
   if(mSel&&!mSel.options.length)mSel.innerHTML=MP_MON.map(m=>`<option value="${m}"${m===(new Date().getMonth()+1)?' selected':''}>${m}월</option>`).join('');
-  reportSetType(reportType);
-}
-function reportBoardCounts(asOf){
-  const lg={};ladleData.forEach(r=>{if(r.date<=asOf)(lg[r.no]=lg[r.no]||[]).push(r);});
-  const lStat={};Object.keys(lg).forEach(no=>{
-    const list=withCum(lg[no].slice());const last=list[list.length-1];
-    const st=bStat['L:'+no]||ladleAutoStat(last);lStat[st]=(lStat[st]||0)+1;});
-  const tg={};tundishData.forEach(r=>{if(r.date<=asOf)(tg[r.no]=tg[r.no]||[]).push(r);});
-  const tStat={};Object.keys(tg).forEach(no=>{
-    const st=bStat['T:'+no]||tundishAutoStat();tStat[st]=(tStat[st]||0)+1;});
-  return {ladle:{total:Object.keys(lg).length,byStat:lStat},tundish:{total:Object.keys(tg).length,byStat:tStat}};
+  renderReportPreview();
 }
 function renderReportPreview(){
   const cardsEl=document.getElementById('reportCards'),prevEl=document.getElementById('reportSlidePreview');
   if(!cardsEl||!prevEl)return;
-  let slideList=[];
-  if(reportType==='daily'){
-    const date=document.getElementById('rpt_date').value||todayStr();
-    const st=eafStatus(date),bc=reportBoardCounts(date);
-    const openIssues=fieldAllIssues().filter(i=>fieldIssueStatus(i)!=='done');
-    cardsEl.innerHTML=card('보고 기준일',fmtYMD(date),'')
-      +card('전기로 조업 누계(A+B)',(st.A.totCH+st.B.totCH).toLocaleString(),'CH')
-      +card('작업현황판 관리대수',(bc.ladle.total+bc.tundish.total).toLocaleString(),'대')
-      +card('외근업무 진행 이슈',openIssues.length,'건');
-    slideList=['① 표지','② 전기로 조업현황 ('+fmtYMD(date)+' 기준)','③ 전기로 부위별 누적수명','④ 작업현황판 요약(현황별 대수)','⑤ 외근업무 · 진행중 이슈('+openIssues.length+'건)'];
-  }else{
-    const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
-    const m=+((document.getElementById('rpt_month')||{}).value||(new Date().getMonth()+1));
-    const ym=y+'-'+String(m).padStart(2,'0');
-    const eafM=eafData.filter(r=>String(r.date||'').slice(0,7)===ym);
-    const ltM=ladleData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
-    const tdM=tundishData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
-    cardsEl.innerHTML=card('보고 대상월',y+'년 '+m+'월','')
-      +card('전기로 조업 CH',eafM.reduce((s,r)=>s+(+r.ch||0),0).toLocaleString(),'CH')
-      +card('래들 해체',ltM.length,'대')+card('턴디쉬 사용',tdM.length,'대');
-    slideList=['① 표지','② '+y+'년 '+m+'월 실적 요약','③ 래들·턴디쉬 월간 실적 상세','④ 래들·턴디쉬·전기로 원가 요약'];
-  }
+  const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
+  const m=+((document.getElementById('rpt_month')||{}).value||(new Date().getMonth()+1));
+  const ym=y+'-'+String(m).padStart(2,'0');
+  const eafM=eafData.filter(r=>String(r.date||'').slice(0,7)===ym);
+  const ltM=ladleData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
+  const tdM=tundishData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
+  cardsEl.innerHTML=card('보고 대상월',y+'년 '+m+'월','')
+    +card('전기로 조업 CH',eafM.reduce((s,r)=>s+(+r.ch||0),0).toLocaleString(),'CH')
+    +card('래들 해체',ltM.length,'대')+card('턴디쉬 사용',tdM.length,'대');
+  const slideList=['① 표지','② 설비별 원단가 현황(월별 원단위 트렌드)','③ EAF 발코니·로저전극 교체 현황','④ 래들(LD) 수명현황','⑤ 턴디쉬(TD) 수명현황','⑥ 내화물 원가 요약'];
   prevEl.innerHTML='<div class="tablewrap"><table class="mini"><tbody>'
     +slideList.map(s=>`<tr><td style="padding:8px 12px">${esc(s)}</td></tr>`).join('')+'</tbody></table></div>';
 }
@@ -5655,44 +5624,102 @@ function rptCardsSlide(pptx,title,cards){
   });
   return s;
 }
-async function buildDailyReportSlides(pptx){
-  const date=document.getElementById('rpt_date').value||todayStr();
-  rptTitleSlide(pptx,'포항사업소 일일 업무보고',fmtYMD(date)+' 기준','동국알앤에스 포항사업소');
-  const st=eafStatus(date);
-  rptCardsSlide(pptx,'🔥 전기로 조업현황 ('+fmtYMD(date)+' 기준)',[
-    {label:'A로 조업 누계',value:st.A.totCH.toLocaleString(),unit:'CH'},
-    {label:'B로 조업 누계',value:st.B.totCH.toLocaleString(),unit:'CH'},
-    {label:'통합 생산량',value:(st.A.ton+st.B.ton).toLocaleString(),unit:'TON'}]);
-  rptTableSlide(pptx,'🔥 전기로 부위별 누적수명 ('+fmtYMD(date)+' 기준)',
-    ['구분','A로(CH)','B로(CH)'],
-    EAF_PARTS.map(p=>[EAF_PART_LABEL[p],st.A[p]||0,st.B[p]||0]));
-  const bc=reportBoardCounts(date);
-  const statuses=[...new Set([...Object.keys(bc.ladle.byStat),...Object.keys(bc.tundish.byStat)])];
-  rptTableSlide(pptx,'📋 작업현황판 요약 ('+fmtYMD(date)+' 기준)',
-    ['현황','래들(대)','턴디쉬(대)'],
-    statuses.map(s=>[s,bc.ladle.byStat[s]||0,bc.tundish.byStat[s]||0]).concat([['합계',bc.ladle.total,bc.tundish.total]]));
-  const openIssues=fieldAllIssues().filter(i=>fieldIssueStatus(i)!=='done');
-  rptBulletSlide(pptx,'🚗 외근업무 · 진행중 이슈 ('+openIssues.length+'건)',
-    openIssues.slice(0,12).map(i=>'['+i.date+' · '+i.target+'] '+i.text));
+// 2026-09-22: [내화물 실적자료] PPT의 라인차트 슬라이드(설비별 원단가·EAF 교체현황)를 재현하기 위한 헬퍼
+function rptLineChartSlide(pptx,title,categories,series,opts){
+  opts=opts||{};
+  const s=pptx.addSlide();s.background={color:'FFFFFF'};
+  rptSectionHeader(s,title);
+  const colors=['1D4ED8','DC2626','059669','D97706','7C3AED'];
+  const chartData=series.map((sr,i)=>({name:sr.name,labels:categories,values:sr.values}));
+  s.addChart(pptx.ChartType.line,chartData,{
+    x:0.5,y:1.15,w:12.33,h:5.55,
+    chartColors:series.map((_,i)=>colors[i%colors.length]),
+    showLegend:series.length>1,legendPos:'b',legendFontSize:11,
+    lineSize:2.25,lineDataSymbol:'circle',lineDataSymbolSize:6,
+    catAxisLabelFontSize:10,valAxisLabelFontSize:10,
+    valAxisTitle:opts.unit||'',showValAxisTitle:!!opts.unit,valAxisTitleFontSize:10
+  });
+  if(opts.note)s.addText(opts.note,{x:0.5,y:6.85,w:12,h:0.4,fontSize:9,color:RPT_GRAY});
+  return s;
+}
+// 설비별(EAF·래들·턴디쉬) 월별 금액원단위(원/톤) 트렌드 — 내화물 원단위 화면 데이터 기준
+function reportUnitCostSeries(){
+  const months=invMonths();
+  const groups=[{g:'EAF',name:'전기로'},{g:'LF',name:'래들'},{g:'CC',name:'턴디쉬'}];
+  const series=groups.map(gr=>({name:gr.name,values:months.map(ym=>{const prod=getProd(ym);return prod?Math.round(invGrpAmt(ym,gr.g)/prod):0;})}));
+  return {categories:months.map(ym=>ym.slice(2).replace('-','.')+'월'),series};
+}
+// EAF 발코니·로저전극 교체 시점 수명(CH) 추이 — 전기로 해체 점검 보고서(eafTdData) 기준
+function reportEafTdSeries(){
+  const targets=[{t:'발코니',name:'발코니'},{t:'로저전극',name:'로저전극'}];
+  const dates=[...new Set(eafTdData.map(r=>r.date))].filter(Boolean).sort();
+  const series=targets.map(tg=>{
+    const byDate={};eafTdData.filter(r=>r.target===tg.t).forEach(r=>{byDate[r.date]=r.lifeCh||0;});
+    return {name:tg.name,values:dates.map(d=>byDate[d]!=null?byDate[d]:0)};
+  });
+  return {categories:dates.map(d=>fmtYMD(d)),series};
+}
+// 래들(LD) 수명현황 — 업체별 해체·SL보수 실적(전체기간 누적, 래들 수명관리 화면과 동일 계산)
+function reportLadleVendorRows(){
+  const teardowns=ladleData.filter(r=>END_EVT.includes(r.type)&&r.daily&&!isExcl(r));
+  const sls=ladleData.filter(r=>r.type==='SL보수'&&r.daily);
+  const g={},gs={};
+  teardowns.forEach(r=>{const v=r.vendor||'(미지정)';(g[v]=g[v]||[]).push(r.daily);});
+  sls.forEach(r=>{const v=r.vendor||'(미지정)';(gs[v]=gs[v]||[]).push(r.daily);});
+  const vs=[...new Set([...Object.keys(g),...Object.keys(gs)])].sort();
+  const totCnt=teardowns.length;
+  const avgArr=a=>a&&a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):'-';
+  const rows=vs.map(v=>{const a=g[v]||[],s=gs[v]||[];const sum=a.reduce((x,y)=>x+y,0);
+    return [v,a.length,totCnt?(a.length/totCnt*100).toFixed(1)+'%':'-',a.length?Math.round(sum/a.length):'-',
+      a.length?Math.max(...a):'-',a.length?Math.min(...a):'-',sum||0,s.length,avgArr(s)];});
+  const totSum=teardowns.reduce((x,r)=>x+r.daily,0);
+  rows.push(['합계',totCnt,'100%',totCnt?Math.round(totSum/totCnt):'-','-','-',totSum,sls.length,avgArr(sls.map(r=>r.daily))]);
+  return rows;
+}
+// 턴디쉬(TD) 수명현황 — 호수별 현재 상태(턴디쉬 수명관리 화면과 동일 계산)
+function reportTundishRows(){
+  const g={};tundishData.forEach(r=>{(g[r.no]=g[r.no]||[]).push(r);});
+  const nos=Object.keys(g).sort(cmpNo);
+  if(!nos.length)return[];
+  return nos.map(no=>{
+    const list=withCum(g[no]);const last=list[list.length-1];
+    const camps=list.filter(r=>END_EVT.includes(r.type)).length+(END_EVT.includes(last.type)?0:1);
+    const maxCH=Math.max(...list.map(r=>r._camp||0));
+    const done=last.type==='해체';
+    return [no,last.kind||'-',done?'해체':'사용중',camps,maxCH,last._shell||0];
+  });
 }
 async function buildMonthlyReportSlides(pptx){
   const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
   const m=+((document.getElementById('rpt_month')||{}).value||(new Date().getMonth()+1));
   const ym=y+'-'+String(m).padStart(2,'0');
-  rptTitleSlide(pptx,'포항사업소 월간 업무보고',y+'년 '+m+'월','동국알앤에스 포항사업소');
+  // ① 표지 — [내화물 실적자료] 원본 PPT의 표지 문구 형식을 그대로 따름
+  rptTitleSlide(pptx,y.slice(2)+'년 '+m+'월 내화물 실적 자료','(동국제강 포항공장)','㈜ 동국알앤에스');
+  // ② 설비별 원단가 현황
+  const uc=reportUnitCostSeries();
+  rptLineChartSlide(pptx,'설비별 원단가 현황(월별 금액원단위)',uc.categories,uc.series,
+    {unit:'원/톤',note:'※ 내화물 원단위 화면의 재고·입고·사용 데이터를 기준으로 자동 계산됩니다(자사 품목 기준).'});
+  // ③ EAF 발코니·로저전극 교체 현황
+  const et=reportEafTdSeries();
+  if(et.categories.length){
+    rptLineChartSlide(pptx,'EAF 발코니·로저전극 교체 현황(교체 시점 수명)',et.categories,et.series,
+      {unit:'CH',note:'※ 전기로 수명관리 > 해체 점검 보고서에 등록된 교체 기록 기준입니다.'});
+  }else{
+    rptBulletSlide(pptx,'EAF 발코니·로저전극 교체 현황',
+      ['등록된 전기로 해체 점검 보고서가 없습니다','[전기로 수명관리 > 해체 점검 보고서]에서 등록하면 다음 생성부터 자동 반영됩니다']);
+  }
+  // ④ 래들(LD) 수명현황
+  rptTableSlide(pptx,'래들(LD) 수명현황 · 업체별 해체 실적(누적)',
+    ['업체','해체건수','비율','평균해체수명','최고','최저','누적CH','SL건수','평균SL보수'],
+    reportLadleVendorRows(),{note:'※ 래들 수명관리 화면의 업체별 현황과 동일한 기준(전체기간 누적)입니다.'});
+  // ⑤ 턴디쉬(TD) 수명현황
+  rptTableSlide(pptx,'턴디쉬(TD) 수명현황 · 호수별 현황',
+    ['호수','종류','상태','차수','최고CH','영구장누적'],
+    reportTundishRows(),{note:'※ 턴디쉬 수명관리 화면의 호수별 현황과 동일한 기준(전체기간 누적)입니다.'});
+  // ⑥ 내화물 원가 요약(당월)
   const eafM=eafData.filter(r=>String(r.date||'').slice(0,7)===ym);
-  const ch=eafM.reduce((s,r)=>s+(+r.ch||0),0), ton=eafM.reduce((s,r)=>s+(+r.ton||0),0);
   const ltM=ladleData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
   const tdM=tundishData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
-  rptCardsSlide(pptx,'📅 '+y+'년 '+m+'월 실적 요약',[
-    {label:'전기로 조업 CH',value:ch.toLocaleString(),unit:'CH'},
-    {label:'생산량',value:ton.toLocaleString(),unit:'TON'},
-    {label:'래들 해체',value:ltM.length,unit:'대'},
-    {label:'턴디쉬 사용',value:tdM.length,unit:'대'}]);
-  rptTableSlide(pptx,'📅 래들·턴디쉬 월간 실적 상세',
-    ['구분','건수','평균수명(CH)'],
-    [['래들 해체',ltM.length,ltM.length?Math.round(ltM.reduce((s,r)=>s+(+r.daily||0),0)/ltM.length):0],
-     ['턴디쉬 사용',tdM.length,tdM.length?Math.round(tdM.reduce((s,r)=>s+(+r.daily||0),0)/tdM.length):0]]);
   let ladleCostRows=[],tdCostRows=[];
   try{ladleCostRows=teardownCostRows().filter(r=>String(r.date||'').slice(0,7)===ym);}catch(e){}
   try{tdCostRows=tundishTeardownCostRows().filter(r=>String(r.date||'').slice(0,7)===ym);}catch(e){}
@@ -5700,7 +5727,12 @@ async function buildMonthlyReportSlides(pptx){
   const ladleSum=ladleCostRows.reduce((s,r)=>s+(+r.total||0),0);
   const tdSum=tdCostRows.reduce((s,r)=>s+(+r.total||0),0);
   const eafSum=eafRepM.reduce((s,r)=>s+(+r.amount||0),0);
-  rptTableSlide(pptx,'💰 '+y+'년 '+m+'월 내화물 원가 요약',
+  rptCardsSlide(pptx,y+'년 '+m+'월 실적 요약',[
+    {label:'전기로 조업 CH',value:eafM.reduce((s,r)=>s+(+r.ch||0),0).toLocaleString(),unit:'CH'},
+    {label:'생산량',value:eafM.reduce((s,r)=>s+(+r.ton||0),0).toLocaleString(),unit:'TON'},
+    {label:'래들 해체',value:ltM.length,unit:'대'},
+    {label:'턴디쉬 사용',value:tdM.length,unit:'대'}]);
+  rptTableSlide(pptx,y+'년 '+m+'월 내화물 원가 요약',
     ['설비','건수','원가 합계(백만원)'],
     [['래들',ladleCostRows.length,(ladleSum/1e6).toFixed(1)],
      ['턴디쉬',tdCostRows.length,(tdSum/1e6).toFixed(1)],
@@ -5715,16 +5747,10 @@ async function generateReportPpt(){
     pptx.layout='LAYOUT_WIDE';
     pptx.author='동국알앤에스 포항사업소';
     pptx.company='동국알앤에스';
-    let fname;
-    if(reportType==='daily'){
-      await buildDailyReportSlides(pptx);
-      fname=`포항사업소_일일보고_${document.getElementById('rpt_date').value||todayStr()}.pptx`;
-    }else{
-      const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
-      const m=(document.getElementById('rpt_month')||{}).value||(new Date().getMonth()+1);
-      await buildMonthlyReportSlides(pptx);
-      fname=`포항사업소_월간보고_${y}년${String(m).padStart(2,'0')}월.pptx`;
-    }
+    const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
+    const m=(document.getElementById('rpt_month')||{}).value||(new Date().getMonth()+1);
+    await buildMonthlyReportSlides(pptx);
+    const fname=`포항사업소_월간보고_${y}년${String(m).padStart(2,'0')}월.pptx`;
     await pptx.writeFile({fileName:fname});
     toast('PPT 파일이 생성되었습니다');
   }catch(e){console.error(e);alert('PPT 생성 중 오류가 발생했습니다: '+e.message);}
@@ -6071,7 +6097,7 @@ function downloadEaf(){
   t+=`</table>`;downloadXls('전기로_AB_수명일지',t);
 }
 
-const INV_MASTER=[{"g":"CC","c":"U12100002","n":"C52용내화물,cap BLOCK-C52","u":"EA","p":47174.0,"cl":"신품"},{"g":"CC","c":"U12100003","n":"C52용내화물,GASKET-C52","u":"EA","p":17437.0,"cl":"신품"},{"g":"CC","c":"U12100004","n":"C52용내화물,IMPACT PAD","u":"EA","p":305903.0,"cl":"신품"},{"g":"CC","c":"U12100006","n":"C52용내화물,MIDDLE PLATE-C52","u":"EA","p":105637.0,"cl":"신품"},{"g":"CC","c":"U12100008","n":"C52용내화물,MPNT-C52","u":"EA","p":264027.0,"cl":"신품"},{"g":"CC","c":"U12100012","n":"CNC용내화물,RAMMING MATERIAL-CNC","u":"KG","p":1589.0,"cl":"신품"},{"g":"CC","c":"U12100014","n":"캐스터블,CA-150S","u":"KG","p":1144.0,"cl":"신품"},{"g":"CC","c":"U12100016","n":"캐스터블,CA-165SYD","u":"KG","p":1174.0,"cl":"신품"},{"g":"CC","c":"U12110021","n":"TD댐브릭,T/D DAM BRICK","u":"KG","p":1858.0,"cl":"신품"},{"g":"CC","c":"U12110036","n":"점토질브릭,STD","u":"KG","p":375.0,"cl":"신품"},{"g":"CC","c":"U12120008","n":"C52용내화물,SES BL용,VESUVIS,무예열,DCM-B02-081","u":"EA","p":213640.0,"cl":"신품"},{"g":"CC","c":"U12120009","n":"C52용내화물,SES BL용,VESUVIUS,장연주용","u":"EA","p":254176.0,"cl":"신품"},{"g":"CC","c":"U12120018","n":"MUD재,B25","u":"KG","p":2148.0,"cl":"신품"},{"g":"CC","c":"U12120019","n":"ONQC블랭크노즐,BN-LN-60","u":"EA","p":25088.0,"cl":"신품"},{"g":"CC","c":"U12120021","n":"ONQC상부노즐,23.0/ONQC-UN-60","u":"EA","p":37228.0,"cl":"신품"},{"g":"CC","c":"U12120022","n":"ONQC웰블록,28/WB-ONQC-LN-60","u":"EA","p":38892.0,"cl":"신품"},{"g":"","c":"","n":"ONQC하부노즐,18.0/LN-60","u":"EA","p":36985.0,"cl":"?"},{"g":"CC","c":"U12120030","n":"ONQC하부노즐,19.0/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120031","n":"ONQC하부노즐,19.5/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120032","n":"ONQC하부노즐,20.0/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120033","n":"ONQC하부노즐,20.5LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120034","n":"ONQC하부노즐,21.0/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120071","n":"TD건닝재,TUNGUN-2(5)","u":"KG","p":1092.0,"cl":"신품"},{"g":"CC","c":"U12120075","n":"TD플레이트,MGO-C","u":"EA","p":28094.0,"cl":"신품"},{"g":"CC","c":"U12120076","n":"C-52 BEAM BLANK(Z) SES 내화물","u":"EA","p":307733.0,"cl":"신품"},{"g":"CC","c":"U12120077","n":"C-52 MIDDLE PALTE(Z)","u":"EA","p":158783.0,"cl":"신품"},{"g":"CC","c":"U12120078","n":"C52 MTNP(Z)","u":"EA","p":324114.0,"cl":"신품"},{"g":"CC","c":"U12120081","n":"램밍재,RM37S","u":"KG","p":1391.0,"cl":"신품"},{"g":"CC","c":"U12120091","n":"몰탈,MAL","u":"KG","p":1110.0,"cl":"신품"},{"g":"CC","c":"U12120105","n":"스타팅튜브캡,Starting Tube Cover,동국알앤에스,연주Star","u":"EA","p":44793.0,"cl":"신품"},{"g":"CC","c":"U12120123","n":"유입재캐스터블,TC-2","u":"KG","p":1109.0,"cl":"신품"},{"g":"CC","c":"U12120138","n":"탕수연와 A,T3 500","u":"KG","p":1957.0,"cl":"신품"},{"g":"CC","c":"U12120139","n":"탕수연와 B, T3 90T(대)","u":"KG","p":2330.0,"cl":"신품"},{"g":"CC","c":"U12120168","n":"롱노즐,DCM-B02-078,00,VESVIUS,삽입부 형상변경 개선품","u":"EA","p":260062.0,"cl":"신품"},{"g":"CC","c":"U12120201","n":"TD 건닝재(원진)","u":"KG","p":1092.0,"cl":"신품"},{"g":"CC","c":"U12120206","n":"롱노즐;SHROUND NOZZLE;오성스틸;140Ton(철근재용)","u":"EA","p":184570.0,"cl":"신품"},{"g":"CC","c":"U12120216","n":"턴디쉬 댐블럭, DCM-CO1-342(SIZE 축소품)","u":"EA","p":293997.0,"cl":"신품"},{"g":"EAF","c":"U12110007","n":"EBT튜브브릭,ETB-180","u":"EA","p":365007.0,"cl":"신품"},{"g":"EAF","c":"U12110020","n":"MGO브릭,SMC-95","u":"KG","p":1597.0,"cl":"신품"},{"g":"EAF","c":"U12110028","n":"로저전극납배출브릭,DC-17","u":"EA","p":101653.0,"cl":"신품"},{"g":"EAF","c":"U12110029","n":"로저전극납배출브릭,DC-18","u":"EA","p":110790.0,"cl":"신품"},{"g":"EAF","c":"U12110030","n":"로저전극납배출브릭,DC-19","u":"EA","p":125639.0,"cl":"신품"},{"g":"EAF","c":"U12110031","n":"로저전극납배출브릭,DC-20","u":"EA","p":125639.0,"cl":"신품"},{"g":"EAF","c":"U12110032","n":"로저전극슬리브브릭,DC-15","u":"EA","p":3289613.0,"cl":"신품"},{"g":"EAF","c":"U12110033","n":"로저전극슬리브브릭,DC-16","u":"EA","p":1992565.0,"cl":"신품"},{"g":"EAF","c":"U12110045","n":"MGO-C브릭,PGT-FMH1","u":"KG","p":2289.0,"cl":"신품"},{"g":"EAF","c":"U12120014","n":"EBT터미널블록,ETM-180","u":"EA","p":642753.0,"cl":"신품"},{"g":"EAF","c":"U12120089","n":"루프슬리브,EAF용 ROOF SLEEVE","u":"KG","p":3409.0,"cl":"신품"},{"g":"EAF","c":"U12120107","n":"스프레이재,SPRAY재","u":"KG","p":635.0,"cl":"신품"},{"g":"EAF","c":"U12120112","n":"앙카허스,DC25","u":"KG","p":1275.0,"cl":"신품"},{"g":"EAF","c":"U12120173","n":"스탐프재;MC-STAMP재","u":"KG","p":832.0,"cl":"신품"},{"g":"EAF","c":"U12120188","n":"스프레이재, 원진","u":"KG","p":635.0,"cl":"신품"},{"g":"EAF","c":"U12120190","n":"스프레이재, KR","u":"KG","p":635.0,"cl":"신품"},{"g":"EAF","c":"U12120217","n":"마그네시아 로상재(MAGRAM-98)","u":"KG","p":2776.0,"cl":"신품"},{"g":"EAF","c":"U12120219","n":"올리빈샌드(EBT충진재)","u":"KG","p":95.0,"cl":"신품"},{"g":"EAF","c":"U12120235","n":"마그-크롬 스탐프재-MAGRAM-CR;B25","u":"KG","p":1855.0,"cl":"신품"},{"g":"EAF","c":"U12120256","n":"스프레이재;조선내화;전기로 스프레이재;","u":"KG","p":635.0,"cl":"신품"},{"g":"LD","c":"U12100015","n":"캐스터블,CA-160","u":"KG","p":687.0,"cl":"신품"},{"g":"LD","c":"U12100030","n":"캐스타블;KR;CT-180","u":"KG","p":1435.0,"cl":"신품"},{"g":"LD","c":"U12100031","n":"캐스타블;원진;RM-180","u":"KG","p":1528.0,"cl":"신품"},{"g":"LD","c":"U12100033","n":"캐스터블,CA-180MH","u":"KG","p":1528.0,"cl":"신품"},{"g":"LD","c":"U12110001","n":"AMC브릭,AMC BRICK","u":"KG","p":1931.0,"cl":"신품"},{"g":"LD","c":"U12110002","n":"AMC브릭,AMC-BS","u":"KG","p":1584.0,"cl":"신품"},{"g":"LD","c":"U12110003","n":"AMC브릭,AMC-FB","u":"KG","p":1247.0,"cl":"신품"},{"g":"LD","c":"U12110010","n":"LD MGO-C브릭,PGT-BT","u":"KG","p":2033.0,"cl":"신품"},{"g":"LD","c":"U12110023","n":"고알루미나브릭,HA-85","u":"KG","p":1601.0,"cl":"신품"},{"g":"LD","c":"U12110034","n":"알루미나브릭,H-3(1/2STD)","u":"KG","p":700.0,"cl":"신품"},{"g":"LD","c":"U12110043","n":"MAC브릭;MAC-W","u":"KG","p":2033.0,"cl":"신품"},{"g":"LD","c":"U12110049","n":"KR 바닥","u":"KG","p":1814.0,"cl":"신품"},{"g":"LD","c":"U12110050","n":"KR SL","u":"KG","p":1910.0,"cl":"신품"},{"g":"LD","c":"U12110054","n":"원진;SL","u":"KG","p":2033.0,"cl":"신품"},{"g":"LD","c":"U12110055","n":"원진;ML","u":"KG","p":2033.0,"cl":"신품"},{"g":"LD","c":"U12110056","n":"원진;바닥","u":"KG","p":1931.0,"cl":"신품"},{"g":"LD","c":"U12110068","n":"KR ML","u":"KG","p":1910.0,"cl":"신품"},{"g":"LD","c":"U12110105","n":"원진래들 후렌지","u":"KG","p":1247.0,"cl":"신품"},{"g":"LD","c":"U12110106","n":"인디케이트연와","u":"KG","p":3352.0,"cl":"신품"},{"g":"LD","c":"U12120011","n":"EASY-200,JOINT SHEET, 조선내화","u":"EA","p":4962.0,"cl":"신품"},{"g":"LD","c":"U12120017","n":"LF루프슬리브,PCB-SV140","u":"KG","p":3423.0,"cl":"신품"},{"g":"LD","c":"U12120036","n":"S/N상부노즐,EASY200-UPPER NOZZLE,조선내화","u":"EA","p":62110.0,"cl":"신품"},{"g":"LD","c":"U12120038","n":"S/N상부플레이트,EASY200-UPPER PLATE,조선내화","u":"EA","p":115682.0,"cl":"신품"},{"g":"LD","c":"U12120043","n":"S/N하부노즐,EASY200-LOWER NOZZLE,조선내화","u":"EA","p":63027.0,"cl":"신품"},{"g":"LD","c":"U12120046","n":"S/N하부플레이트,EASY200-LOWER PLATE,조선내화","u":"EA","p":115682.0,"cl":"신품"},{"g":"LD","c":"U12120053","n":"SLOT플러그,D370H","u":"EA","p":627075.0,"cl":"신품"},{"g":"LD","c":"U12120068","n":"T/D댐블럭,WB-140","u":"ST","p":613973.0,"cl":"신품"},{"g":"LD","c":"U12120096","n":"몰탈,SK-38","u":"KG","p":2732.0,"cl":"신품"},{"g":"LD","c":"U12120143","n":"포러스플러그,DK520-3S","u":"EA","p":997650.0,"cl":"신품"},{"g":"LD","c":"U12120234","n":"단열보드","u":"EA","p":4730.0,"cl":"신품"},{"g":"CC","c":"U12120099","n":"C-52 LOWER PLATE(GASKET 일체형)","u":"EA","p":155217.0,"cl":"재고품"},{"g":"CC","c":"U12100027","n":"C52 스타팅 튜브 350MM X 40T;S-Tube 350","u":"EA","p":103321.0,"cl":"재고품"},{"g":"CC","c":"U12100028","n":"C52 스타팅 튜브 400MM X 40T;S-Tube 400","u":"EA","p":105982.0,"cl":"재고품"},{"g":"CC","c":"U12100036","n":"C52 스타팅 튜브 420MM X 40T;S-TUBE 420","u":"EA","p":107209.0,"cl":"재고품"},{"g":"CC","c":"U12120257","n":"턴디쉬 임팩트 패드;IMPACT PAD;동국알앤에스;TD-IP-1","u":"EA","p":586320.0,"cl":"재고품"},{"g":"CC","c":"U12120255","n":"ONQC하부노즐,18.0/LN-60","u":"EA","p":2776.0,"cl":"?"},{"g":"CC","c":"U12120248","n":"스타팅튜브;동국알앤에스;S-TUBE;626","u":"","p":0,"cl":""},{"g":"CC","c":"N12130066","n":"TD커버홀블록,NA,동국알앤에스,OD430xID230xH150mm","u":"EA","p":1650.0,"cl":""}];
+const INV_MASTER=[{"g":"CC","c":"U12100002","n":"C52용내화물,cap BLOCK-C52","u":"EA","p":47174.0,"cl":"신품"},{"g":"CC","c":"U12100003","n":"C52용내화물,GASKET-C52","u":"EA","p":17437.0,"cl":"신품"},{"g":"CC","c":"U12100004","n":"C52용내화물,IMPACT PAD","u":"EA","p":305903.0,"cl":"신품"},{"g":"CC","c":"U12100006","n":"C52용내화물,MIDDLE PLATE-C52","u":"EA","p":105637.0,"cl":"신품"},{"g":"CC","c":"U12100008","n":"C52용내화물,MPNT-C52","u":"EA","p":264027.0,"cl":"신품"},{"g":"CC","c":"U12100012","n":"CNC용내화물,RAMMING MATERIAL-CNC","u":"KG","p":1589.0,"cl":"신품"},{"g":"CC","c":"U12100014","n":"캐스터블,CA-150S","u":"KG","p":1144.0,"cl":"신품"},{"g":"CC","c":"U12100016","n":"캐스터블,CA-165SYD","u":"KG","p":1174.0,"cl":"신품"},{"g":"CC","c":"U12110021","n":"TD댐브릭,T/D DAM BRICK","u":"KG","p":1858.0,"cl":"신품"},{"g":"CC","c":"U12110036","n":"점토질브릭,STD","u":"KG","p":375.0,"cl":"신품"},{"g":"CC","c":"U12120008","n":"C52용내화물,SES BL용,VESUVIS,무예열,DCM-B02-081","u":"EA","p":213640.0,"cl":"신품"},{"g":"CC","c":"U12120009","n":"C52용내화물,SES BL용,VESUVIUS,장연주용","u":"EA","p":254176.0,"cl":"신품"},{"g":"CC","c":"U12120018","n":"MUD재,B25","u":"KG","p":2148.0,"cl":"신품"},{"g":"CC","c":"U12120019","n":"ONQC블랭크노즐,BN-LN-60","u":"EA","p":25088.0,"cl":"신품"},{"g":"CC","c":"U12120021","n":"ONQC상부노즐,23.0/ONQC-UN-60","u":"EA","p":37228.0,"cl":"신품"},{"g":"CC","c":"U12120022","n":"ONQC웰블록,28/WB-ONQC-LN-60","u":"EA","p":38892.0,"cl":"신품"},{"g":"","c":"","n":"ONQC하부노즐,18.0/LN-60","u":"EA","p":36985.0,"cl":"?"},{"g":"CC","c":"U12120030","n":"ONQC하부노즐,19.0/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120031","n":"ONQC하부노즐,19.5/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120032","n":"ONQC하부노즐,20.0/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120033","n":"ONQC하부노즐,20.5LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120034","n":"ONQC하부노즐,21.0/LN-60","u":"EA","p":36985.0,"cl":"신품"},{"g":"CC","c":"U12120071","n":"TD건닝재,TUNGUN-2(5)","u":"KG","p":1092.0,"cl":"신품"},{"g":"CC","c":"U12120075","n":"TD플레이트,MGO-C","u":"EA","p":28094.0,"cl":"신품"},{"g":"CC","c":"U12120076","n":"C-52 BEAM BLANK(Z) SES 내화물","u":"EA","p":307733.0,"cl":"신품"},{"g":"CC","c":"U12120077","n":"C-52 MIDDLE PALTE(Z)","u":"EA","p":158783.0,"cl":"신품"},{"g":"CC","c":"U12120078","n":"C52 MTNP(Z)","u":"EA","p":324114.0,"cl":"신품"},{"g":"CC","c":"U12120081","n":"램밍재,RM37S","u":"KG","p":1391.0,"cl":"신품"},{"g":"CC","c":"U12120091","n":"몰탈,MAL","u":"KG","p":1110.0,"cl":"신품"},{"g":"CC","c":"U12120105","n":"스타팅튜브캡,Starting Tube Cover,동국알앤에스,연주Star","u":"EA","p":44793.0,"cl":"신품"},{"g":"CC","c":"U12120123","n":"유입재캐스터블,TC-2","u":"KG","p":1109.0,"cl":"신품"},{"g":"CC","c":"U12120138","n":"탕수연와 A,T3 500","u":"KG","p":1957.0,"cl":"신품"},{"g":"CC","c":"U12120139","n":"탕수연와 B, T3 90T(대)","u":"KG","p":2330.0,"cl":"신품"},{"g":"CC","c":"U12120168","n":"롱노즐,DCM-B02-078,00,VESVIUS,삽입부 형상변경 개선품","u":"EA","p":260062.0,"cl":"신품"},{"g":"CC","c":"U12120201","n":"TD 건닝재(원진)","u":"KG","p":1092.0,"cl":"신품"},{"g":"CC","c":"U12120206","n":"롱노즐;SHROUND NOZZLE;오성스틸;140Ton(철근재용)","u":"EA","p":184570.0,"cl":"신품"},{"g":"CC","c":"U12120216","n":"턴디쉬 댐블럭, DCM-CO1-342(SIZE 축소품)","u":"EA","p":293997.0,"cl":"신품"},{"g":"EAF","c":"U12110007","n":"EBT튜브브릭,ETB-180","u":"EA","p":365007.0,"cl":"신품"},{"g":"EAF","c":"U12110020","n":"MGO브릭,SMC-95","u":"KG","p":1597.0,"cl":"신품"},{"g":"EAF","c":"U12110028","n":"로저전극납배출브릭,DC-17","u":"EA","p":101653.0,"cl":"신품"},{"g":"EAF","c":"U12110029","n":"로저전극납배출브릭,DC-18","u":"EA","p":110790.0,"cl":"신품"},{"g":"EAF","c":"U12110030","n":"로저전극납배출브릭,DC-19","u":"EA","p":125639.0,"cl":"신품"},{"g":"EAF","c":"U12110031","n":"로저전극납배출브릭,DC-20","u":"EA","p":125639.0,"cl":"신품"},{"g":"EAF","c":"U12110032","n":"로저전극슬리브브릭,DC-15","u":"EA","p":3289613.0,"cl":"신품"},{"g":"EAF","c":"U12110033","n":"로저전극슬리브브릭,DC-16","u":"EA","p":1992565.0,"cl":"신품"},{"g":"EAF","c":"U12110045","n":"MGO-C브릭,PGT-FMH1","u":"KG","p":2289.0,"cl":"신품"},{"g":"EAF","c":"U12120014","n":"EBT터미널블록,ETM-180","u":"EA","p":642753.0,"cl":"신품"},{"g":"EAF","c":"U12120089","n":"루프슬리브,EAF용 ROOF SLEEVE","u":"KG","p":3409.0,"cl":"신품"},{"g":"EAF","c":"U12120107","n":"스프레이재,SPRAY재","u":"KG","p":635.0,"cl":"신품"},{"g":"EAF","c":"U12120112","n":"앙카허스,DC25","u":"KG","p":1275.0,"cl":"신품"},{"g":"EAF","c":"U12120173","n":"스탐프재;MC-STAMP재","u":"KG","p":832.0,"cl":"신품"},{"g":"EAF","c":"U12120188","n":"스프레이재, 원진","u":"KG","p":635.0,"cl":"신품"},{"g":"EAF","c":"U12120190","n":"스프레이재, KR","u":"KG","p":635.0,"cl":"신품"},{"g":"EAF","c":"U12120217","n":"마그네시아 로상재(MAGRAM-98)","u":"KG","p":2776.0,"cl":"신품"},{"g":"EAF","c":"U12120219","n":"올리빈샌드(EBT충진재)","u":"KG","p":95.0,"cl":"신품"},{"g":"EAF","c":"U12120235","n":"마그-크롬 스탐프재-MAGRAM-CR;B25","u":"KG","p":1855.0,"cl":"신품"},{"g":"EAF","c":"U12120256","n":"스프레이재;조선내화;전기로 스프레이재;","u":"KG","p":635.0,"cl":"신품"},{"g":"LF","c":"U12100015","n":"캐스터블,CA-160","u":"KG","p":687.0,"cl":"신품"},{"g":"LF","c":"U12100030","n":"캐스타블;KR;CT-180","u":"KG","p":1435.0,"cl":"신품"},{"g":"LF","c":"U12100031","n":"캐스타블;원진;RM-180","u":"KG","p":1528.0,"cl":"신품"},{"g":"LF","c":"U12100033","n":"캐스터블,CA-180MH","u":"KG","p":1528.0,"cl":"신품"},{"g":"LF","c":"U12110001","n":"AMC브릭,AMC BRICK","u":"KG","p":1931.0,"cl":"신품"},{"g":"LF","c":"U12110002","n":"AMC브릭,AMC-BS","u":"KG","p":1584.0,"cl":"신품"},{"g":"LF","c":"U12110003","n":"AMC브릭,AMC-FB","u":"KG","p":1247.0,"cl":"신품"},{"g":"LF","c":"U12110010","n":"LD MGO-C브릭,PGT-BT","u":"KG","p":2033.0,"cl":"신품"},{"g":"LF","c":"U12110023","n":"고알루미나브릭,HA-85","u":"KG","p":1601.0,"cl":"신품"},{"g":"LF","c":"U12110034","n":"알루미나브릭,H-3(1/2STD)","u":"KG","p":700.0,"cl":"신품"},{"g":"LF","c":"U12110043","n":"MAC브릭;MAC-W","u":"KG","p":2033.0,"cl":"신품"},{"g":"LF","c":"U12110049","n":"KR 바닥","u":"KG","p":1814.0,"cl":"신품"},{"g":"LF","c":"U12110050","n":"KR SL","u":"KG","p":1910.0,"cl":"신품"},{"g":"LF","c":"U12110054","n":"원진;SL","u":"KG","p":2033.0,"cl":"신품"},{"g":"LF","c":"U12110055","n":"원진;ML","u":"KG","p":2033.0,"cl":"신품"},{"g":"LF","c":"U12110056","n":"원진;바닥","u":"KG","p":1931.0,"cl":"신품"},{"g":"LF","c":"U12110068","n":"KR ML","u":"KG","p":1910.0,"cl":"신품"},{"g":"LF","c":"U12110105","n":"원진래들 후렌지","u":"KG","p":1247.0,"cl":"신품"},{"g":"LF","c":"U12110106","n":"인디케이트연와","u":"KG","p":3352.0,"cl":"신품"},{"g":"LF","c":"U12120011","n":"EASY-200,JOINT SHEET, 조선내화","u":"EA","p":4962.0,"cl":"신품"},{"g":"LF","c":"U12120017","n":"LF루프슬리브,PCB-SV140","u":"KG","p":3423.0,"cl":"신품"},{"g":"LF","c":"U12120036","n":"S/N상부노즐,EASY200-UPPER NOZZLE,조선내화","u":"EA","p":62110.0,"cl":"신품"},{"g":"LF","c":"U12120038","n":"S/N상부플레이트,EASY200-UPPER PLATE,조선내화","u":"EA","p":115682.0,"cl":"신품"},{"g":"LF","c":"U12120043","n":"S/N하부노즐,EASY200-LOWER NOZZLE,조선내화","u":"EA","p":63027.0,"cl":"신품"},{"g":"LF","c":"U12120046","n":"S/N하부플레이트,EASY200-LOWER PLATE,조선내화","u":"EA","p":115682.0,"cl":"신품"},{"g":"LF","c":"U12120053","n":"SLOT플러그,D370H","u":"EA","p":627075.0,"cl":"신품"},{"g":"LF","c":"U12120068","n":"T/D댐블럭,WB-140","u":"ST","p":613973.0,"cl":"신품"},{"g":"LF","c":"U12120096","n":"몰탈,SK-38","u":"KG","p":2732.0,"cl":"신품"},{"g":"LF","c":"U12120143","n":"포러스플러그,DK520-3S","u":"EA","p":997650.0,"cl":"신품"},{"g":"LF","c":"U12120234","n":"단열보드","u":"EA","p":4730.0,"cl":"신품"},{"g":"CC","c":"U12120099","n":"C-52 LOWER PLATE(GASKET 일체형)","u":"EA","p":155217.0,"cl":"재고품"},{"g":"CC","c":"U12100027","n":"C52 스타팅 튜브 350MM X 40T;S-Tube 350","u":"EA","p":103321.0,"cl":"재고품"},{"g":"CC","c":"U12100028","n":"C52 스타팅 튜브 400MM X 40T;S-Tube 400","u":"EA","p":105982.0,"cl":"재고품"},{"g":"CC","c":"U12100036","n":"C52 스타팅 튜브 420MM X 40T;S-TUBE 420","u":"EA","p":107209.0,"cl":"재고품"},{"g":"CC","c":"U12120257","n":"턴디쉬 임팩트 패드;IMPACT PAD;동국알앤에스;TD-IP-1","u":"EA","p":586320.0,"cl":"재고품"},{"g":"CC","c":"U12120255","n":"ONQC하부노즐,18.0/LN-60","u":"EA","p":2776.0,"cl":"?"},{"g":"CC","c":"U12120248","n":"스타팅튜브;동국알앤에스;S-TUBE;626","u":"","p":0,"cl":""},{"g":"CC","c":"N12130066","n":"TD커버홀블록,NA,동국알앤에스,OD430xID230xH150mm","u":"EA","p":1650.0,"cl":""}];
 const INV_M09={"U12100002":[105.0,0.0,105.0],"U12100003":[107.0,0.0,107.0],"U12100004":[10.0,0.0,10.0],"U12100006":[35.0,40.0,35.0],"U12100008":[40.0,40.0,40.0],"U12100012":[2100.0,10065.0,2100.0],"U12100014":[5000.0,0.0,5000.0],"U12100016":[500.0,0.0,500.0],"U12110021":[836.16,0.0,836.16],"U12110036":[584.3,0.0,584.3],"U12120008":[13.0,0.0,13.0],"U12120009":[69.0,0.0,69.0],"U12120018":[1504.0,0.0,1504.0],"U12120019":[126.0,0.0,126.0],"U12120021":[231.0,0.0,231.0],"U12120022":[182.0,0.0,182.0],"":[0.0,0.0,0.0],"U12120030":[277.0,0.0,277.0],"U12120031":[152.0,0.0,152.0],"U12120032":[188.0,0.0,188.0],"U12120033":[128.0,0.0,128.0],"U12120034":[152.0,0.0,152.0],"U12120071":[9000.0,18150.0,9000.0],"U12120075":[422.0,0.0,422.0],"U12120076":[45.0,42.0,45.0],"U12120077":[70.0,0.0,70.0],"U12120078":[53.0,0.0,53.0],"U12120081":[500.0,2030.0,500.0],"U12120091":[625.0,0.0,625.0],"U12120105":[11.0,0.0,11.0],"U12120123":[11000.0,0.0,11000.0],"U12120138":[168.0,0.0,168.0],"U12120139":[528.4,0.0,528.4],"U12120168":[42.0,40.0,42.0],"U12120201":[0.0,0.0,0.0],"U12120206":[26.0,0.0,26.0],"U12120216":[6.0,12.0,6.0],"U12110007":[24.0,12.0,24.0],"U12110020":[16610.8,0.0,16610.8],"U12110028":[0.0,0,0.0],"U12110029":[0.0,0,0.0],"U12110030":[0.0,0,0.0],"U12110031":[0.0,0,0.0],"U12110032":[0.0,0,0.0],"U12110033":[0.0,0,0.0],"U12110045":[10342.86,0.0,10342.86],"U12120014":[4.0,2.0,4.0],"U12120089":[865.0,0.0,865.0],"U12120107":[32000.0,155308.0,32000.0],"U12120112":[3700.0,37790.0,3700.0],"U12120173":[0,0.0,0],"U12120188":[10000.0,0.0,10000.0],"U12120190":[0.0,0.0,0.0],"U12120217":[1000.0,4020.0,1000.0],"U12120219":[24000.0,27219.0,24000.0],"U12120235":[900.0,0.0,900.0],"U12120256":[0.0,0.0,0.0],"U12100015":[10625.0,3575.0,10625.0],"U12100030":[0.0,0.0,0.0],"U12100031":[1000.0,0.0,1000.0],"U12100033":[14000.0,7020.0,14000.0],"U12110001":[15459.76,15060.0,15459.76],"U12110002":[6558.72,0.0,6558.72],"U12110003":[6986.69,6360.0,6986.69],"U12110010":[20861.26,31745.0,20861.26],"U12110023":[11818.17,0.0,11818.17],"U12110034":[4689.0,0.0,4689.0],"U12110043":[8961.18,35090.0,8961.18],"U12110049":[0.0,0.0,0.0],"U12110050":[0.0,0.0,0.0],"U12110054":[0.0,0.0,0.0],"U12110055":[0.0,0.0,0.0],"U12110056":[0.0,0.0,0.0],"U12110068":[0.0,0.0,0.0],"U12110105":[0.0,0.0,0.0],"U12110106":[893.1,0.0,893.1],"U12120011":[535.0,0.0,535.0],"U12120017":[825.0,0.0,825.0],"U12120036":[65.0,0.0,65.0],"U12120038":[384.0,0.0,384.0],"U12120043":[348.0,0.0,348.0],"U12120046":[252.0,0.0,252.0],"U12120053":[0.0,0.0,0.0],"U12120068":[14.0,0.0,14.0],"U12120096":[350.0,1025.0,350.0],"U12120143":[8.0,8.0,8.0],"U12120234":[1500.0,0.0,1500.0],"U12120099":[53.0,40.0,53.0],"U12100027":[28.0,0.0,28.0],"U12100028":[28.0,0.0,28.0],"U12100036":[14.0,0.0,14.0],"U12120257":[1.0,0.0,1.0],"U12120255":[0.0,0.0,0.0],"U12120248":[0,0,0],"N12130066":[0.0,0.0,0.0]};
 const INV_PROD09=116900;
 // ---- 원단위 품목마스터: 사용자 추가·복사 품목 + 설비/품명 수정사항 복원(새로고침 시에도 유지) ----
@@ -6119,7 +6145,7 @@ function delInvUserItem(code){
   delete invMOv[code];saveInvMOv();
   renderInvMaster();
 }
-const INV_GRP_ORDER=['EAF','LD','CC'];
+const INV_GRP_ORDER=['EAF','LF','CC','공통'];
 function invMasterOv(){try{return JSON.parse(localStorage.getItem('dgrns_invmaster')||'{}');}catch(e){return{};}}
 let invMOv=invMasterOv();
 function saveInvMOv(){try{localStorage.setItem('dgrns_invmaster',JSON.stringify(invMOv));}catch(e){}}
@@ -6177,8 +6203,7 @@ function invTab(sp){invSub=sp;
 function initInv(){
   const yi=document.getElementById('inv_ym');if(!yi.value)yi.value='2026-09';
   const di=document.getElementById('ii_date');if(!di.value)di.value=todayStr();
-  const gs=[...new Set(INV_MASTER.map(m=>m.g).filter(Boolean))];
-  ['inv_grp','ii_grp'].forEach(id=>{const gsel=document.getElementById(id);if(gsel.options.length<=1)gsel.innerHTML='<option value="">전체 설비</option>'+gs.map(g=>`<option>${esc(g)}</option>`).join('');});
+  ['inv_grp','ii_grp'].forEach(id=>{const gsel=document.getElementById(id);if(gsel.options.length<=1)gsel.innerHTML='<option value="">전체 설비</option>'+INV_GRP_ORDER.map(g=>`<option>${esc(g)}</option>`).join('');});
   renderInflow();
 }
 /* ---- 일별 입고량 ---- */
@@ -6201,13 +6226,10 @@ function renderInflow(){
   let dayAmt=0,monAmt=0;
   const body=items.map(m=>{const it=invItem(m.c);const dq=invInDay(m.c,d);const mq=invInDaily(m.c,ym)||0;const days=invInDays(m.c,ym);
     dayAmt+=dq*it.p;monAmt+=mq*it.p;
-    // 2026-09-22: 내화물 기본정보(품목마스터)에 연동된 품목은 고객사 품명을 우선 표시(요청 반영).
-    // 연동 안 된 품목은 기존처럼 내부 품명만 표시 — invItem()의 linkedProd(prodById)에서 가져옴.
-    const custN=it.linkedProd&&it.linkedProd.custName;
-    const nameCell=custN?`<b>${esc(custN)}</b><div style="font-size:9.5px;color:var(--muted)">${esc(it.n)}</div>`:`<b>${esc(it.n)}</b>`;
+    // 2026-09-22: 품명(=고객사 품명) 직접 수정 가능 · 내화물 기본정보의 고객사 제품명이 이 목록에서 선택됨(요청 반영)
     return `<tr>
       <td style="font-size:10.5px;color:var(--muted)">${esc(m.g)}</td>
-      <td>${nameCell}</td><td>${esc(it.u)}</td><td class="n">${iN(it.p)}</td>
+      <td><input class="iinp" style="min-width:150px;font-weight:600" value="${esc(it.n)}" onchange="setInvMasterField('${m.c}','n',this.value);renderInflow()"></td><td>${esc(it.u)}</td><td class="n">${iN(it.p)}</td>
       <td class="n"><input type="number" class="iinp" value="${dq||''}" placeholder="0" onchange="setInflow('${m.c}','${d}',this.value)"></td>
       <td class="n">${dq?iN(dq*it.p):'-'}</td>
       <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq):'-'}</td>
@@ -6743,9 +6765,8 @@ function renderFieldIssue(){
 }
 
 /* ============ 내화물 실적현황 (설비별 자동계산) ============ */
-/* 2026-09-20: 설비코드 LF→LD 통일에 따라 PERF_MAP/PERF_ORDER의 'LF' 항목(래들(정련))은
-   더 이상 쓰이지 않아 제거 — 모든 래들 데이터는 'LD' 하나로 표기됨 */
-const PERF_MAP={'EAF':'전기로','LD':'래들','CC':'연주(턴디쉬)','':'기타'};
+/* 2026-09-22: 설비코드 LD→LF로 재변경(래들퍼니스 표기 통일) */
+const PERF_MAP={'EAF':'전기로','LF':'래들','CC':'연주(턴디쉬)','':'기타'};
 const PERF_ORDER=['전기로','래들','연주(턴디쉬)','기타'];
 function perfEquip(g){return PERF_MAP[g]||'기타';}
 function initPerf(){
