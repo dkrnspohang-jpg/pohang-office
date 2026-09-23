@@ -326,7 +326,10 @@
   @media print{.sidebar,.topbar,.formbar,.toolrow,.acts,.btn{display:none!important}
     .content{padding:0}.tablewrap{overflow:visible;border:none}thead th{position:static}body{font-size:11px}
     body.qprint .sidebar,body.qprint .main{display:none!important}
-    body.qprint .qdoc-overlay{position:static;background:none;padding:0;display:block!important}
+    /* 2026-09-23: 열려있지 않은 다른 오버레이(직원 일괄등록·휴가 기록 일괄등록·사용자 선택 등)까지
+       인쇄 대상에 같이 끌려나와 PDF 페이지가 깨지던 문제 수정 — 현재 열려있는(.show) 오버레이만 인쇄 */
+    body.qprint .qdoc-overlay:not(.show){display:none!important}
+    body.qprint .qdoc-overlay.show{position:static;background:none;padding:0;display:block!important}
     body.qprint .qdoc{box-shadow:none;margin:0;max-width:100%}
     body.qprint .qdoc-toolbar{display:none!important}}
   /* 업무 파트(모드) 선택 */
@@ -717,7 +720,8 @@
   </div>
   <div class="side-group">
     <div class="gh">구매 · 재고관리</div>
-    <div class="side-item" data-view="stock" onclick="nav('stock')"><span class="ic">🏭</span>재고관리(신동·베수비우스)</div>
+    <div class="side-item" data-view="stocksd" onclick="nav('stocksd')"><span class="ic">🧱</span>재고관리(신동내화)</div>
+    <div class="side-item" data-view="stockvs" onclick="nav('stockvs')"><span class="ic">🔧</span>재고관리(베수비우스)</div>
   </div>
   <div class="side-group">
     <div class="gh">영업 관리</div>
@@ -1053,41 +1057,70 @@
   </section>
 
   <!-- ===== 재고관리(신동내화 · 베수비우스) ===== -->
-  <section id="v-stock" class="hidden">
-    <div class="subtabs" id="stockSubtabs">
-      <button class="subtab active" data-sup="신동내화" onclick="stockTab('신동내화')">🧱 신동내화</button>
-      <button class="subtab" data-sup="베수비우스" onclick="stockTab('베수비우스')">🔧 베수비우스</button>
-    </div>
-    <div class="cards" id="stockCards"></div>
+  <section id="v-stocksd" class="hidden">
+    <div class="cards" id="stockCards_sd"></div>
     <div class="toolrow">
-      <input class="search" id="stk_search" placeholder="품명·규격·CODE 검색" oninput="renderStock()">
-      <select class="selbox" id="stk_filter" onchange="renderStock()">
+      <input class="search" id="stk_search_sd" placeholder="품명·규격·CODE 검색" oninput="renderStock('신동내화')">
+      <select class="selbox" id="stk_filter_sd" onchange="renderStock('신동내화')">
         <option value="">전체</option>
-        <option value="need">발주 필요(제안&gt;0)</option>
+        <option value="need">재고 부족 임박(가용 15일 이하)</option>
         <option value="unlinked">기본정보 미연동</option>
       </select>
       <span class="spacer"></span>
-      <button class="btn primary" onclick="addStockRow()">＋ 품목 추가</button>
+      <button class="btn primary" onclick="addStockRow('신동내화')">＋ 품목 추가</button>
       <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
       <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
-      <button class="btn" onclick="downloadStockCSV()">📤 CSV 내보내기</button>
+      <button class="btn" onclick="downloadStockCSV('신동내화')">📤 CSV 내보내기</button>
     </div>
-    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint"></div>
-    <div class="tablewrap"><table class="bomtbl" id="stockTbl">
+    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint_sd"></div>
+    <div class="tablewrap"><table class="bomtbl" id="stockTbl_sd">
       <thead><tr>
-        <th style="width:150px">품명</th><th style="width:120px">규격/CODE</th><th style="width:50px">단위</th>
+        <th style="width:150px">품명</th><th style="width:120px">규격/CODE</th><th style="width:90px">배합</th><th style="width:50px">단위</th>
         <th class="n" style="width:80px">적정재고</th><th class="n" style="width:80px">현재고</th>
         <th class="n" style="width:80px">기발주</th><th class="n" style="width:90px">예상사용량</th>
-        <th class="n" style="width:80px" title="적정재고+예상사용량-현재고-기발주 (참고용, 자동계산)">제안발주량</th>
+        <th class="n" style="width:80px" title="(현재고+기발주)÷예상사용량×30 (참고용, 자동계산)">가용가능일</th>
         <th class="n" style="width:90px">발주량(확정)</th>
         <th style="width:120px">비고</th><th style="width:84px">갱신일</th><th style="width:34px"></th>
       </tr></thead>
-      <tbody id="stockBody"></tbody>
-      <tfoot id="stockFoot"></tfoot>
+      <tbody id="stockBody_sd"></tbody>
+      <tfoot id="stockFoot_sd"></tfoot>
     </table></div>
     <div style="font-size:11.5px;color:var(--muted);margin-top:8px">
-      ※ <b>적정재고</b>·<b>발주량(확정)</b>은 직접 입력·검토해서 정합니다. <b>제안발주량</b>은 (적정재고+예상사용량-현재고-기발주)로 자동 계산되는 참고값일 뿐 발주량에 자동 반영되지 않습니다 — 셀 옆 <b>↦적용</b>을 눌러야 발주량에 채워집니다.<br>
-      ※ 신동내화는 <b>내화물 기본정보</b>에 등록된(우리 사업소가 쓰는) 품목만 관리합니다. 다른 영업소 전용 품목은 대상에서 제외됩니다. 초기 현재고·기발주·예상사용량은 2026년 9월 신동 정기 발주 검토 엑셀을, 베수비우스는 09/08 기준 재고관리 자료를 참고해 반영했습니다.
+      ※ <b>적정재고</b>·<b>발주량(확정)</b>은 직접 입력·검토해서 정합니다. <b>가용가능일</b>은 (현재고+기발주)÷예상사용량×30으로 자동 계산되는 참고값입니다(예상사용량이 없으면 '-').<br>
+      ※ 신동내화는 <b>내화물 기본정보</b>에 등록된(우리 사업소가 쓰는) 품목만 관리합니다. 다른 영업소 전용 품목은 대상에서 제외됩니다. 초기 현재고·기발주·예상사용량은 2026년 9월 신동 정기 발주 검토 엑셀을 참고해 반영했습니다.
+    </div>
+  </section>
+
+
+  <section id="v-stockvs" class="hidden">
+    <div class="cards" id="stockCards_vs"></div>
+    <div class="toolrow">
+      <input class="search" id="stk_search_vs" placeholder="품명·규격·CODE 검색" oninput="renderStock('베수비우스')">
+      <select class="selbox" id="stk_filter_vs" onchange="renderStock('베수비우스')">
+        <option value="">전체</option>
+        <option value="need">재고 부족 임박(가용 15일 이하)</option>
+        <option value="unlinked">기본정보 미연동</option>
+      </select>
+      <span class="spacer"></span>
+      <button class="btn primary" onclick="addStockRow('베수비우스')">＋ 품목 추가</button>
+      <button class="btn" onclick="downloadStockCSV('베수비우스')">📤 CSV 내보내기</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint_vs"></div>
+    <div class="tablewrap"><table class="bomtbl" id="stockTbl_vs">
+      <thead><tr>
+        <th style="width:150px">품명</th><th style="width:120px">규격/CODE</th><th style="width:90px">배합</th><th style="width:50px">단위</th>
+        <th class="n" style="width:80px">적정재고</th><th class="n" style="width:80px">현재고</th>
+        <th class="n" style="width:80px">기발주</th><th class="n" style="width:90px">예상사용량</th>
+        <th class="n" style="width:80px" title="(현재고+기발주)÷예상사용량×30 (참고용, 자동계산)">가용가능일</th>
+        <th class="n" style="width:90px">발주량(확정)</th>
+        <th style="width:120px">비고</th><th style="width:84px">갱신일</th><th style="width:34px"></th>
+      </tr></thead>
+      <tbody id="stockBody_vs"></tbody>
+      <tfoot id="stockFoot_vs"></tfoot>
+    </table></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:8px">
+      ※ <b>적정재고</b>·<b>발주량(확정)</b>은 직접 입력·검토해서 정합니다. <b>가용가능일</b>은 (현재고+기발주)÷예상사용량×30으로 자동 계산되는 참고값입니다(예상사용량이 없으면 '-').<br>
+      ※ 베수비우스(Slide Gate) 품목입니다. 09/08 기준 재고관리 자료를 참고해 초기값을 반영했고, 내화물 기본정보와 연동되어 있습니다.
     </div>
   </section>
 
@@ -3029,6 +3062,14 @@ const PROD_SEED=[
  {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'C-52 S-Tube420L*40t',uw:3,price:107209,gubun:'상품'},
  {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'C-52 SES bloom(장)',uw:13.16,price:254176,gubun:'상품'},
  {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'SES BEAM 100(장)',uw:12.02,price:307733,gubun:'상품'},
+ // 2026-09-23: 재고관리(베수비우스) 목록에만 있고 기본정보에는 없던 7개 품목 추가(기본정보 연동용) — 단중/단가는 확인 전 임시 0, 추후 실제값으로 수정 필요
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'GASKET',uw:0,price:0,gubun:'상품'},
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'Lower+GASKET(신규)',uw:0,price:0,gubun:'상품'},
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'롱노즐',uw:0,price:0,gubun:'상품'},
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'롱노즐(Butt)',uw:0,price:0,gubun:'상품'},
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'SES Bloom(무예열)',uw:0,price:0,gubun:'상품'},
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'Middle Plate(재질개선)',uw:0,price:0,gubun:'상품'},
+ {cat:'턴디쉬',name:'TD Slide gate',kind:'내화물',mix:'불소성',spec:'Ar-MTMP(재질개선)',uw:0,price:0,gubun:'상품'},
  {cat:'턴디쉬',name:'TUNGUN-5',kind:'내화물',mix:'BU-11-60-09',spec:'B1000',uw:1000,price:1092,gubun:'제품'},
  {cat:'래들',name:'단열보드',kind:'내화물',mix:'(대한동방)',spec:'LB 312*100*12.7',uw:0.3,price:4730,gubun:'상품'},
  {cat:'전기로',name:'앙카허스 DC-25',kind:'내화물',mix:'부정형',spec:'B1250',uw:1250,price:1275,gubun:'상품'},
@@ -5078,9 +5119,10 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   mperf:['월별 실적관리','전기로·래들·턴디쉬 월별 사용실적 (2026년 내화물 사용현황 양식 기준 자동 집계)'],
   handover:['교대반 인수인계','SN반 교대 근무 인수인계사항 · 조업 특이사항 · 턴디쉬 사용현황'],
   report:['보고서 자동생성','일일·월간 현황을 종합해 PPT 보고자료를 자동으로 만듭니다 (관리직 이상)'],
-  stock:['재고관리','신동내화 · 베수비우스 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 발주량)']};
+  stocksd:['재고관리(신동내화)','신동내화 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)'],
+  stockvs:['재고관리(베수비우스)','베수비우스(Slide Gate) 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)']};
 let quoteInit=false, curView='home';
-const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','handover','report','stock'];
+const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','handover','report','stocksd','stockvs'];
 function togglePcMenu(){document.body.classList.toggle('pc-menu-open');}
 function closePcMenu(){document.body.classList.remove('pc-menu-open');}
 function nav(v){
@@ -5111,7 +5153,8 @@ function nav(v){
   if(v==='mperf')initMperf();
   if(v==='handover')initHandover();
   if(v==='report')initReport();
-  if(v==='stock')initStock();
+  if(v==='stocksd')initStock('신동내화');
+  if(v==='stockvs')initStock('베수비우스');
   updateRoleChip();applyRoleLock();
 }
 
@@ -7418,7 +7461,6 @@ const STOCK_SEED=[
  {supplier:"베수비우스",prodId:null,code:"KR08507",name:"Ar-MTMP(재질개선)",spec:"",unit:"EA",target:0,cur:191,onOrder:0,expUse:0,orderQty:40,note:"",upd:"2026-09-08"},
 ];
 const STOCK_SEED_VERSION='2026-09-23-init';
-let curStockSup='신동내화';
 async function ensureStockSeed(){
   if(stockData.length)return;   // 이미 데이터가 있으면(직접 추가분 포함) 절대 건드리지 않음
   if(getMeta('stockSeedVersion')===STOCK_SEED_VERSION)return;
@@ -7427,11 +7469,47 @@ async function ensureStockSeed(){
   stockData=await txAll('stock');
   setMeta('stockSeedVersion',STOCK_SEED_VERSION);
 }
+// 2026-09-23: 베수비우스 품목 중 기본정보(prodData)에 없던 7개를 PROD_SEED에 새로 추가했고,
+// 그 항목들은 런타임에 id가 새로 부여되므로(고정 불가) CODE→규격 매핑으로 1회성 연동한다.
+const VESUVIUS_LINK_MAP={
+  'XP06054':'GASKET',
+  'KK34805':'Lower+GASKET(신규)',
+  'BD57521':'롱노즐',
+  'BC51542':'롱노즐(Butt)',
+  'BK53128':'SES Bloom(무예열)',
+  'KA82061040':'Middle Plate(재질개선)',
+  'KR08507':'Ar-MTMP(재질개선)'
+};
+const STOCK_LINK_VERSION='2026-09-23-vslink1';
+async function ensureVesuviusLinks(){
+  if(getMeta('stockLinkVersion')===STOCK_LINK_VERSION)return;
+  let changed=false;
+  for(const r of stockData){
+    if(r.supplier==='베수비우스'&&!r.prodId&&r.code&&VESUVIUS_LINK_MAP[r.code]){
+      const spec=VESUVIUS_LINK_MAP[r.code];
+      const p=prodData.find(x=>x.name==='TD Slide gate'&&x.spec===spec);
+      if(p){r.prodId=p.id;r.upd=todayStr();await putRec('stock',r);changed=true;}
+    }
+  }
+  if(changed)stockData=await txAll('stock');
+  setMeta('stockLinkVersion',STOCK_LINK_VERSION);
+}
 function stockProd(r){return r.prodId?prodById(r.prodId):null;}
 function stockName(r){const p=stockProd(r);return p?p.name:(r.name||'');}
 function stockSpec(r){const p=stockProd(r);return p?(p.spec||''):(r.spec||'');}
+function stockMix(r){const p=stockProd(r);return p?(p.mix||''):(r.mix||'');}
 function stockUnit(r){const p=stockProd(r);return r.unit||(p&&p.unit)||'EA';}
-function stockSuggest(r){return Math.max(0,(+r.target||0)+(+r.expUse||0)-(+r.cur||0)-(+r.onOrder||0));}
+// 가용가능일 = (현재고+기발주) / 예상사용량 * 30 (일) — 현재고+기발주가 0 이하면 0,
+// 예상사용량이 없으면(0 이하) 소진 속도를 알 수 없으므로 '-' 로 표시(null)
+function stockDaysNum(r){
+  const avail=(+r.cur||0)+(+r.onOrder||0);
+  const use=+r.expUse||0;
+  if(avail<=0)return 0;
+  if(use<=0)return null;
+  return avail/use*30;
+}
+function stockDaysLabel(r){const d=stockDaysNum(r);return d===null?'-':iN(Math.round(d))+'일';}
+function stockDaysColor(r){const d=stockDaysNum(r);if(d===null)return 'var(--muted)';if(d<=15)return '#dc2626';if(d<=30)return '#d97706';return 'inherit';}
 function stockCandidates(sup,curId){
   const used=new Set(stockData.filter(r=>r.supplier===sup&&r.id!==curId&&r.prodId).map(r=>r.prodId));
   if(sup==='신동내화')return prodData.filter(p=>SHINDONG_KEYS.has((p.name||'')+'|'+(p.spec||''))&&!used.has(p.id));
@@ -7444,59 +7522,83 @@ function stockProdOptions(sup,r){
   h+=cands.map(p=>`<option value="${p.id}"${p.id===r.prodId?' selected':''}>${esc(p.name)} · ${esc(p.spec||'')}</option>`).join('');
   return h;
 }
-function stockTab(sup){curStockSup=sup;
-  document.querySelectorAll('#stockSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sup===sup));
-  renderStock();}
-function initStock(){renderStock();}
+function stockSfx(sup){return sup==='신동내화'?'sd':'vs';}
+function initStock(sup){renderStock(sup);}
+// 2026-09-23: 입력 중 전체 재렌더 금지(커서 유지) → 모델만 갱신 + 파생셀(가용가능일)만 부분 갱신 + 카드 요약만 갱신.
+// 품목 연결(prodId) 변경 시에만 행 구조가 바뀌므로 그때만 전체 재구성.
 async function editStock(id,k,v){
   const r=stockData.find(x=>x.id===id);if(!r)return;
   if(k==='prodId'){
-    if(v){const p=prodById(v);if(p){r.prodId=v;r.name=p.name;r.spec=p.spec||'';}}
+    if(v){const p=prodById(v);if(p){r.prodId=v;r.name=p.name;r.spec=p.spec||'';r.mix=p.mix||'';}}
     else{r.prodId=null;}
-  }else if(k==='target'||k==='cur'||k==='onOrder'||k==='expUse'||k==='orderQty'){
+    r.upd=todayStr();
+    await putRec('stock',r);flashSave();renderStock(r.supplier);
+    return;
+  }
+  if(k==='target'||k==='cur'||k==='onOrder'||k==='expUse'||k==='orderQty'){
     r[k]=+v||0;
   }else{r[k]=v;}
   r.upd=todayStr();
-  await putRec('stock',r);flashSave();renderStock();
+  await putRec('stock',r);flashSave();
+  stockPatchRow(r);
 }
-function applyStockSuggest(id){const r=stockData.find(x=>x.id===id);if(!r)return;editStock(id,'orderQty',stockSuggest(r));}
-async function addStockRow(){
-  const r={id:uid(),supplier:curStockSup,prodId:null,name:'',spec:'',code:'',unit:'EA',
+function stockPatchRow(r){
+  const sfx=stockSfx(r.supplier);
+  const daysEl=document.getElementById('stkDays_'+sfx+'_'+r.id);
+  if(daysEl){daysEl.textContent=stockDaysLabel(r);daysEl.style.color=stockDaysColor(r);}
+  const updEl=document.getElementById('stkUpd_'+sfx+'_'+r.id);
+  if(updEl)updEl.textContent=r.upd||'';
+  const footEl=document.getElementById('stockFoot_'+sfx);
+  if(footEl){
+    const rows=stockData.filter(x=>x.supplier===r.supplier);
+    const sumOrder=rows.reduce((s,x)=>s+(+x.orderQty||0),0);
+    const cell=footEl.querySelector('.n');if(cell)cell.textContent=iN(sumOrder);
+  }
+  stockRefreshCards(r.supplier);
+}
+function stockRefreshCards(sup){
+  const sfx=stockSfx(sup);
+  const all=stockData.filter(r=>r.supplier===sup);
+  const needCnt=all.filter(r=>{const d=stockDaysNum(r);return d!==null&&d<=15;}).length;
+  const unlinkedCnt=all.filter(r=>!r.prodId).length;
+  const cardsEl=document.getElementById('stockCards_'+sfx);
+  if(cardsEl)cardsEl.innerHTML=card('추적 품목',all.length,'개')
+    +card('재고 부족 임박',`<span style="color:${needCnt?'#dc2626':'inherit'}">${needCnt}</span>`,'개(가용가능일 15일 이하)')
+    +card('기본정보 미연동',unlinkedCnt,'개');
+}
+async function addStockRow(sup){
+  const r={id:uid(),supplier:sup,prodId:null,name:'',spec:'',mix:'',code:'',unit:'EA',
     target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:'',upd:todayStr(),seq:Date.now()};
-  stockData.unshift(r);await putRec('stock',r);flashSave();renderStock();
-  const tb=document.getElementById('stockBody');const f=tb&&tb.querySelector('select,input');if(f)f.focus();
+  stockData.unshift(r);await putRec('stock',r);flashSave();renderStock(sup);
+  const tb=document.getElementById('stockBody_'+stockSfx(sup));const f=tb&&tb.querySelector('select,input');if(f)f.focus();
 }
 async function delStockRow(id){
+  const r=stockData.find(x=>x.id===id);
   if(!canDelete()){alert('삭제는 관리자만 할 수 있습니다.\n(발주 이력이 아니라 추적 대상 품목 자체가 목록에서 사라집니다)');return;}
   if(!confirm('이 품목을 재고관리 목록에서 삭제할까요?'))return;
-  stockData=stockData.filter(x=>x.id!==id);await delRec('stock',id);flashSave();renderStock();
+  stockData=stockData.filter(x=>x.id!==id);await delRec('stock',id);flashSave();if(r)renderStock(r.supplier);
 }
-function renderStock(){
-  const q=(document.getElementById('stk_search')||{}).value||'';
-  const filt=(document.getElementById('stk_filter')||{}).value||'';
-  const all=stockData.filter(r=>r.supplier===curStockSup);
+function renderStock(sup){
+  const sfx=stockSfx(sup);
+  const q=(document.getElementById('stk_search_'+sfx)||{}).value||'';
+  const filt=(document.getElementById('stk_filter_'+sfx)||{}).value||'';
+  const all=stockData.filter(r=>r.supplier===sup);
   let rows=all;
   if(q.trim()){const qq=q.trim().toLowerCase();
     rows=rows.filter(r=>(stockName(r)+' '+stockSpec(r)+' '+(r.code||'')).toLowerCase().includes(qq));}
-  if(filt==='need')rows=rows.filter(r=>stockSuggest(r)>0);
+  if(filt==='need')rows=rows.filter(r=>{const d=stockDaysNum(r);return d!==null&&d<=15;});
   else if(filt==='unlinked')rows=rows.filter(r=>!r.prodId);
   rows=rows.slice().sort((a,b)=>stockName(a).localeCompare(stockName(b),'ko')||stockSpec(a).localeCompare(stockSpec(b),'ko'));
 
-  const needCnt=all.filter(r=>stockSuggest(r)>0).length;
-  const unlinkedCnt=all.filter(r=>!r.prodId).length;
-  const cardsEl=document.getElementById('stockCards');
-  if(cardsEl)cardsEl.innerHTML=card('추적 품목',all.length,'개')
-    +card('발주 필요',`<span style="color:${needCnt?'#dc2626':'inherit'}">${needCnt}</span>`,'개(제안발주량&gt;0)')
-    +card('기본정보 미연동',unlinkedCnt,'개');
+  stockRefreshCards(sup);
 
-  const hint=document.getElementById('stockHint');
-  if(hint)hint.textContent=curStockSup==='신동내화'
+  const hint=document.getElementById('stockHint_'+sfx);
+  if(hint)hint.textContent=sup==='신동내화'
     ?'내화물 기본정보에 등록된 품목 중 신동내화가 취급하는 품목만 대상입니다. [📥 신동 엑셀 반영]으로 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 이 목록에 있는 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다(다른 영업소 품목은 건드리지 않음).'
-    :'베수비우스(Slide Gate) 품목입니다. 09/08 기준 재고관리 자료를 참고해 초기값을 반영했습니다.';
+    :'베수비우스(Slide Gate) 품목입니다. 09/08 기준 재고관리 자료를 참고해 초기값을 반영했고, 내화물 기본정보와 모두 연동되어 있습니다.';
 
-  const tb=document.getElementById('stockBody');if(!tb)return;
+  const tb=document.getElementById('stockBody_'+sfx);if(!tb)return;
   tb.innerHTML=rows.map(r=>{
-    const sug=stockSuggest(r);
     const nameCell=r.prodId
       ?`<div style="font-weight:600">${esc(stockName(r))}</div><div style="font-size:10.5px;color:var(--muted)">🔗 기본정보 연동 · <span style="cursor:pointer;color:#2563eb" onclick="editStock('${r.id}','prodId','')">연결해제</span></div>`
       :`<select style="width:100%;font-size:11px" onchange="editStock('${r.id}','prodId',this.value)">${stockProdOptions(r.supplier,r)}</select>
@@ -7505,31 +7607,35 @@ function renderStock(){
       ?`<div>${esc(stockSpec(r))}</div>${r.code?`<div style="font-size:10.5px;color:var(--muted)">${esc(r.code)}</div>`:''}`
       :`<input style="width:100%;font-size:11px" placeholder="규격" value="${esc(r.spec||'')}" oninput="editStock('${r.id}','spec',this.value)">
         <input style="width:100%;margin-top:3px;font-size:11px" placeholder="CODE" value="${esc(r.code||'')}" oninput="editStock('${r.id}','code',this.value)">`;
+    const mixCell=r.prodId
+      ?`<div style="font-size:11px">${esc(stockMix(r))||'<span style="color:var(--muted)">-</span>'}</div>`
+      :`<input style="width:100%;font-size:11px" placeholder="배합" value="${esc(r.mix||'')}" oninput="editStock('${r.id}','mix',this.value)">`;
     return `<tr>
       <td>${nameCell}</td>
       <td>${specCell}</td>
+      <td>${mixCell}</td>
       <td>${esc(stockUnit(r))}</td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.target||0}" oninput="editStock('${r.id}','target',this.value)"></td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.cur||0}" oninput="editStock('${r.id}','cur',this.value)"></td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.onOrder||0}" oninput="editStock('${r.id}','onOrder',this.value)"></td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.expUse||0}" oninput="editStock('${r.id}','expUse',this.value)"></td>
-      <td class="n" style="color:${sug>0?'#dc2626':'var(--muted)'};font-weight:${sug>0?700:400}">${iN(sug)}<div style="font-size:9.5px;font-weight:400"><span style="cursor:pointer;color:#2563eb" onclick="applyStockSuggest('${r.id}')">↦적용</span></div></td>
+      <td class="n" id="stkDays_${sfx}_${r.id}" style="color:${stockDaysColor(r)};font-weight:600">${stockDaysLabel(r)}</td>
       <td class="n"><input type="number" style="width:100%;text-align:right;font-weight:700" value="${r.orderQty||0}" oninput="editStock('${r.id}','orderQty',this.value)"></td>
       <td><input style="width:100%;font-size:11px" value="${esc(r.note||'')}" oninput="editStock('${r.id}','note',this.value)"></td>
-      <td style="font-size:10.5px;color:var(--muted)">${esc(r.upd||'')}</td>
+      <td id="stkUpd_${sfx}_${r.id}" style="font-size:10.5px;color:var(--muted)">${esc(r.upd||'')}</td>
       <td><button class="btn danger del-rec sm" onclick="delStockRow('${r.id}')" style="padding:2px 6px">✕</button></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">품목이 없습니다 · [＋ 품목 추가]로 등록하세요</td></tr>`;
+  }).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">품목이 없습니다 · [＋ 품목 추가]로 등록하세요</td></tr>`;
 
-  const foot=document.getElementById('stockFoot');
+  const foot=document.getElementById('stockFoot_'+sfx);
   if(foot){const sumOrder=rows.reduce((s,r)=>s+(+r.orderQty||0),0);
-    foot.innerHTML=`<tr style="font-weight:700;background:#f8fafc"><td colspan="7" style="text-align:right">표시된 ${rows.length}개 합계(발주량)</td><td class="n">${iN(sumOrder)}</td><td colspan="3"></td></tr>`;}
+    foot.innerHTML=`<tr style="font-weight:700;background:#f8fafc"><td colspan="8" style="text-align:right">표시된 ${rows.length}개 합계(발주량)</td><td class="n">${iN(sumOrder)}</td><td colspan="3"></td></tr>`;}
 }
-function downloadStockCSV(){
-  const rows=[['공급사','품명','규격','CODE','단위','적정재고','현재고','기발주','예상사용량','제안발주량','발주량(확정)','비고','갱신일']];
-  stockData.filter(r=>r.supplier===curStockSup).forEach(r=>rows.push([r.supplier,stockName(r),stockSpec(r),r.code||'',stockUnit(r),r.target||0,r.cur||0,r.onOrder||0,r.expUse||0,stockSuggest(r),r.orderQty||0,r.note||'',r.upd||'']));
+function downloadStockCSV(sup){
+  const rows=[['공급사','품명','규격','배합','CODE','단위','적정재고','현재고','기발주','예상사용량','가용가능일','발주량(확정)','비고','갱신일']];
+  stockData.filter(r=>r.supplier===sup).forEach(r=>rows.push([r.supplier,stockName(r),stockSpec(r),stockMix(r),r.code||'',stockUnit(r),r.target||0,r.cur||0,r.onOrder||0,r.expUse||0,stockDaysLabel(r),r.orderQty||0,r.note||'',r.upd||'']));
   const csv='\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
-  downloadText(curStockSup+'_재고관리_'+todayStr()+'.csv',csv);
+  downloadText(sup+'_재고관리_'+todayStr()+'.csv',csv);
   toast('CSV로 내보냈습니다');
 }
 /* ---- 신동내화 정기 발주 검토 엑셀(.xlsx) 반영 : 우리 품목(신동내화 탭에 이미 등록된 품목)만 매칭해 갱신 ---- */
@@ -7622,7 +7728,7 @@ async function importStockXlsx(input){
       r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;r.upd=todayStr();
       await putRec('stock',r);
     }
-    flashSave();renderStock();
+    flashSave();renderStock('신동내화');
     toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(missList.length?` · ${missList.length}건 자료 없음`:''));
     if(missList.length)alert('이번 엑셀에서 찾지 못해 값이 유지된 품목(일부):\n'+missList.slice(0,15).join('\n')+(missList.length>15?`\n… 외 ${missList.length-15}건`:''));
   }catch(err){alert('엑셀을 읽는 중 오류가 발생했습니다: '+err.message);}
@@ -9551,7 +9657,8 @@ function renderApprove(){
 /* ---- 결재 문서(양식) ---- */
 function signCell(step){
   if(!step)return '<td></td>';
-  return `<td>${step.sign?`<img src="${step.sign}" alt="sign">`:`<b style="font-size:13px">${esc(step.by||'')}</b>`}<span class="who">${esc(step.by||'')}<br>${esc((step.at||'').slice(0,10))}</span></td>`;
+  // 2026-09-23: 사인(도장) 아래에 이름을 다시 적어주던 부분 삭제(요청 반영) — 결재일자만 표시
+  return `<td>${step.sign?`<img src="${step.sign}" alt="sign">`:`<b style="font-size:13px">${esc(step.by||'')}</b>`}<span class="who">${esc((step.at||'').slice(0,10))}</span></td>`;
 }
 function openAttDoc(kind,id){
   const d=(kind==='leave'?leaveData:otData).find(x=>x.id===id);if(!d)return;
@@ -10555,7 +10662,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
     else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
     await migrateVendor();await loadSchedule();await loadBom();await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
-    try{stockData=await txAll('stock');await ensureStockSeed();}catch(e){stockData=[];}
+    try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();}catch(e){stockData=[];}
     await loadAttend();await loadHo();
   }catch(err){document.getElementById('saveTxt').textContent='저장소 사용불가(미리보기)';document.getElementById('saveDot').style.background='#c2410c';}
   refreshLadle();refreshTundish();
