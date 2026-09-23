@@ -716,6 +716,10 @@
     <div class="side-item" data-view="bom" onclick="nav('bom')"><span class="ic">🧱</span>내화물 축조물량표</div>
   </div>
   <div class="side-group">
+    <div class="gh">구매 · 재고관리</div>
+    <div class="side-item" data-view="stock" onclick="nav('stock')"><span class="ic">🏭</span>재고관리(신동·베수비우스)</div>
+  </div>
+  <div class="side-group">
     <div class="gh">영업 관리</div>
     <div class="side-item" data-view="quote" onclick="nav('quote')"><span class="ic">📄</span>견적서</div>
     <div class="side-item" data-view="posco" onclick="nav('posco')"><span class="ic">🏭</span>포스코 입찰</div>
@@ -1046,6 +1050,45 @@
       <tbody id="bomBuBody"></tbody>
     </table></div>
     <div style="font-size:11.5px;color:var(--muted);margin-top:8px" id="bomEquipNote"></div>
+  </section>
+
+  <!-- ===== 재고관리(신동내화 · 베수비우스) ===== -->
+  <section id="v-stock" class="hidden">
+    <div class="subtabs" id="stockSubtabs">
+      <button class="subtab active" data-sup="신동내화" onclick="stockTab('신동내화')">🧱 신동내화</button>
+      <button class="subtab" data-sup="베수비우스" onclick="stockTab('베수비우스')">🔧 베수비우스</button>
+    </div>
+    <div class="cards" id="stockCards"></div>
+    <div class="toolrow">
+      <input class="search" id="stk_search" placeholder="품명·규격·CODE 검색" oninput="renderStock()">
+      <select class="selbox" id="stk_filter" onchange="renderStock()">
+        <option value="">전체</option>
+        <option value="need">발주 필요(제안&gt;0)</option>
+        <option value="unlinked">기본정보 미연동</option>
+      </select>
+      <span class="spacer"></span>
+      <button class="btn primary" onclick="addStockRow()">＋ 품목 추가</button>
+      <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
+      <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
+      <button class="btn" onclick="downloadStockCSV()">📤 CSV 내보내기</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint"></div>
+    <div class="tablewrap"><table class="bomtbl" id="stockTbl">
+      <thead><tr>
+        <th style="width:150px">품명</th><th style="width:120px">규격/CODE</th><th style="width:50px">단위</th>
+        <th class="n" style="width:80px">적정재고</th><th class="n" style="width:80px">현재고</th>
+        <th class="n" style="width:80px">기발주</th><th class="n" style="width:90px">예상사용량</th>
+        <th class="n" style="width:80px" title="적정재고+예상사용량-현재고-기발주 (참고용, 자동계산)">제안발주량</th>
+        <th class="n" style="width:90px">발주량(확정)</th>
+        <th style="width:120px">비고</th><th style="width:84px">갱신일</th><th style="width:34px"></th>
+      </tr></thead>
+      <tbody id="stockBody"></tbody>
+      <tfoot id="stockFoot"></tfoot>
+    </table></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:8px">
+      ※ <b>적정재고</b>·<b>발주량(확정)</b>은 직접 입력·검토해서 정합니다. <b>제안발주량</b>은 (적정재고+예상사용량-현재고-기발주)로 자동 계산되는 참고값일 뿐 발주량에 자동 반영되지 않습니다 — 셀 옆 <b>↦적용</b>을 눌러야 발주량에 채워집니다.<br>
+      ※ 신동내화는 <b>내화물 기본정보</b>에 등록된(우리 사업소가 쓰는) 품목만 관리합니다. 다른 영업소 전용 품목은 대상에서 제외됩니다. 초기 현재고·기발주·예상사용량은 2026년 9월 신동 정기 발주 검토 엑셀을, 베수비우스는 09/08 기준 재고관리 자료를 참고해 반영했습니다.
+    </div>
   </section>
 
 
@@ -2244,8 +2287,8 @@ var PptxGenJS=function(){"use strict";function T(e){return e&&"object"==typeof e
 // PWA 기능 비활성화 (모바일 캐시 문제 해결)
 // function setupPWA(){...} 제거됨 - 항상 최신 파일 사용
 /* ============ 저장소 (IndexedDB) ============ */
-const DB_NAME='dgrns_life_mgmt', DB_VER=10;
-let db=null, ladleData=[], tundishData=[], scheduleData=[], bomData=[], eafData=[], invData=[], invInData=[];
+const DB_NAME='dgrns_life_mgmt', DB_VER=11;
+let db=null, ladleData=[], tundishData=[], scheduleData=[], bomData=[], eafData=[], invData=[], invInData=[], stockData=[];
 let editId={ladle:null,tundish:null};
 const RESET_CAMP=['신축','대수리(영구장)','철피신규'];
 const END_EVT=['해체','폐기'];
@@ -2261,6 +2304,7 @@ function openDB(){return new Promise((res,rej)=>{const rq=indexedDB.open(DB_NAME
     if(!d.objectStoreNames.contains('eaf'))d.createObjectStore('eaf',{keyPath:'id'});
     if(!d.objectStoreNames.contains('inv'))d.createObjectStore('inv',{keyPath:'id'});
     if(!d.objectStoreNames.contains('invin'))d.createObjectStore('invin',{keyPath:'id'});
+    if(!d.objectStoreNames.contains('stock'))d.createObjectStore('stock',{keyPath:'id'});
     if(!d.objectStoreNames.contains('emp'))d.createObjectStore('emp',{keyPath:'id'});
     if(!d.objectStoreNames.contains('leave'))d.createObjectStore('leave',{keyPath:'id'});
     if(!d.objectStoreNames.contains('ot'))d.createObjectStore('ot',{keyPath:'id'});
@@ -5033,9 +5077,10 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   emp:['직원 관리','현장·관리직 직원 등록 · 근무형태(상주/교대 4조3교대) · 개인 사인 등록'],
   mperf:['월별 실적관리','전기로·래들·턴디쉬 월별 사용실적 (2026년 내화물 사용현황 양식 기준 자동 집계)'],
   handover:['교대반 인수인계','SN반 교대 근무 인수인계사항 · 조업 특이사항 · 턴디쉬 사용현황'],
-  report:['보고서 자동생성','일일·월간 현황을 종합해 PPT 보고자료를 자동으로 만듭니다 (관리직 이상)']};
+  report:['보고서 자동생성','일일·월간 현황을 종합해 PPT 보고자료를 자동으로 만듭니다 (관리직 이상)'],
+  stock:['재고관리','신동내화 · 베수비우스 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 발주량)']};
 let quoteInit=false, curView='home';
-const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','handover','report'];
+const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','handover','report','stock'];
 function togglePcMenu(){document.body.classList.toggle('pc-menu-open');}
 function closePcMenu(){document.body.classList.remove('pc-menu-open');}
 function nav(v){
@@ -5066,6 +5111,7 @@ function nav(v){
   if(v==='mperf')initMperf();
   if(v==='handover')initHandover();
   if(v==='report')initReport();
+  if(v==='stock')initStock();
   updateRoleChip();applyRoleLock();
 }
 
@@ -7244,6 +7290,345 @@ const SEED_VERSION="2026-09-09-cone";  // 엑셀 반영 시 매주 자동 갱신
 const POSCO_SEED=[{"year":"25","item":"A-19","baseVendor":"","basePrice":1342,"ourBid":null,"winPrice":1350,"change":0.006,"qty":1363598,"amount":1840857300,"alloc":"80:20","dkRank":"2순위","dkWin":368171460,"vmap":{"동국":"2순위","포스코퓨처엠":"O","KR":"O","조선":"O","원진":"1순위"}},{"year":"25","item":"J-16","baseVendor":"","basePrice":589,"ourBid":null,"winPrice":610,"change":0.036,"qty":1162697,"amount":709245170,"alloc":"80:20","dkRank":"1순위","dkWin":567396136,"vmap":{"동국":"1순위","포스코퓨처엠":"O","조선":"O","원진":"2순위"}},{"year":"25","item":"SGN-2","baseVendor":"","basePrice":510,"ourBid":null,"winPrice":514,"change":0.008,"qty":939000,"amount":482646000,"alloc":"80:20","dkRank":"1순위","dkWin":386116800,"vmap":{"동국":"1순위","포스코퓨처엠":"O","조선":"O","포항세라믹":"2순위","원진":"O"}},{"year":"25","item":"SMC-85C-R","baseVendor":"","basePrice":567,"ourBid":null,"winPrice":607,"change":0.071,"qty":3485500,"amount":2115698500,"alloc":"2","dkRank":"1순위","dkWin":1057849250,"vmap":{"동국":"1순위","포스코퓨처엠":"2순위","민텍":"3순위"}},{"year":"25","item":"CA-18","baseVendor":"","basePrice":2377,"ourBid":null,"winPrice":2370,"change":-0.003,"qty":243746,"amount":577678020,"alloc":"80:20","dkRank":"2순위","dkWin":115535604,"vmap":{"동국":"2순위","조선":"1순위"}},{"year":"25","item":"CA-CPR","baseVendor":"","basePrice":992,"ourBid":null,"winPrice":1141,"change":0.15,"qty":639500,"amount":729669500,"alloc":"80:20","dkRank":"2순위","dkWin":145933900,"vmap":{"동국":"2순위","포스코퓨처엠":"1순위"}},{"year":"25","item":"CFC-TDL","baseVendor":"","basePrice":947,"ourBid":null,"winPrice":950,"change":0.003,"qty":807580,"amount":767201000,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"1순위","조선":"O","포항세라믹":"2순위","원진":"O"}},{"year":"25","item":"HNG","baseVendor":"","basePrice":1632,"ourBid":null,"winPrice":1626,"change":-0.0004,"qty":84080,"amount":136714080,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"1순위","조선":"O","포항세라믹":"2순위","원진":"O"}},{"year":"25","item":"CTC-SCM","baseVendor":"","basePrice":958,"ourBid":null,"winPrice":968,"change":0.01,"qty":1191500,"amount":1153372000,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포스코퓨처엠":"O","포항세라믹":"1순위","원진":"2순위"}},{"year":"25","item":"TD-160","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1298,"change":null,"qty":31220,"amount":40523560,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","조선":"1순위","포항세라믹":"O","원진":"2순위"}},{"year":"25","item":"TD-160R","baseVendor":"","basePrice":1249,"ourBid":null,"winPrice":1278,"change":0.023,"qty":2953880,"amount":3775058640,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","조선":"1순위","포항세라믹":"O","원진":"2순위"}},{"year":"25","item":"TD-165R","baseVendor":"","basePrice":1389,"ourBid":null,"winPrice":1395,"change":0.004,"qty":1700715,"amount":2372497425,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포스코퓨처엠":"O","조선":"1순위","포항세라믹":"O","원진":"2순위"}},{"year":"25","item":"TD-165","baseVendor":"","basePrice":1387,"ourBid":null,"winPrice":1399,"change":0.009,"qty":260928,"amount":365038272,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포스코퓨처엠":"O","조선":"1순위","포항세라믹":"O","원진":"2순위"}},{"year":"25","item":"STMC-1","baseVendor":"","basePrice":1913,"ourBid":null,"winPrice":1894,"change":-0.01,"qty":144760,"amount":274175440,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포스코퓨처엠":"1순위","원진":"O"}},{"year":"25","item":"SC-AM-10C","baseVendor":"","basePrice":1758,"ourBid":null,"winPrice":1838,"change":0.046,"qty":856500,"amount":1574247000,"alloc":"80:20","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","조선":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"CTC-16TD-R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1120,"change":null,"qty":4459000,"amount":4994080000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","조선":"2순위","포항세라믹":"1순위","원진":"O"}},{"year":"25","item":"CTC-SCM-S","baseVendor":"","basePrice":1123,"ourBid":null,"winPrice":1174,"change":0.045,"qty":2772500,"amount":3254915000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"2순위","원진":"1순위"}},{"year":"25","item":"AM-85RH(A)-R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1488,"change":null,"qty":403600,"amount":600556800,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"조선":"1순위","원진":"2순위"}},{"year":"25","item":"MDS-3","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":552,"change":null,"qty":38000,"amount":20976000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","KR":"O","조선":"O","원진":"1순위"}},{"year":"25","item":"J-18","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":578,"change":null,"qty":3120176,"amount":1803461728,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","KR":"O","조선":"1순위","원진":"2순위"}},{"year":"25","item":"LD-1700","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1277,"change":null,"qty":120000,"amount":153240000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","원진":"O"}},{"year":"25","item":"LD-1700R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1252,"change":null,"qty":183000,"amount":229116000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","원진":"O"}},{"year":"25","item":"MC-3","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1190,"change":null,"qty":712728,"amount":848146320,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","KR":"1순위","조선":"O","원진":"2순위"}},{"year":"25","item":"MC-6","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1280,"change":null,"qty":702169,"amount":898776320,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","KR":"1순위","조선":"O","원진":"2순위"}},{"year":"25","item":"MC-3-R40","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1190,"change":null,"qty":13,"amount":15470,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위"}},{"year":"25","item":"MC-6-R40","baseVendor":"","basePrice":1199,"ourBid":null,"winPrice":1280,"change":0.068,"qty":272352,"amount":348610560,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위"}},{"year":"25","item":"H-80D-EC","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1835,"change":null,"qty":166182,"amount":304943970,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","조선":"1순위","포항세라믹":"O"}},{"year":"25","item":"LAS-50","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1078,"change":null,"qty":12520,"amount":13496560,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"조선":"1순위","포항세라믹":"O"}},{"year":"25","item":"MDS-S1W","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1063,"change":null,"qty":140000,"amount":148820000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"1순위"}},{"year":"25","item":"MDS-S1","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1022,"change":null,"qty":215000,"amount":219730000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"MY-M-11","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":945,"change":null,"qty":209000,"amount":197505000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","조선":"O","포항세라믹":"O"}},{"year":"25","item":"PI-S-R","baseVendor":"","basePrice":1788,"ourBid":null,"winPrice":1815,"change":0.015,"qty":1464770,"amount":2658557550,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"조선":"1순위"}},{"year":"25","item":"TD-HRP-R","baseVendor":"","basePrice":889,"ourBid":null,"winPrice":900,"change":0.012,"qty":831500,"amount":748350000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"1순위"}},{"year":"25","item":"TD-RM","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":636,"change":null,"qty":8500,"amount":5406000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위"}},{"year":"25","item":"TD-RM-10R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":630,"change":null,"qty":72500,"amount":45675000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위"}},{"year":"25","item":"TD-RP","baseVendor":"","basePrice":530,"ourBid":null,"winPrice":590,"change":0.113,"qty":183250,"amount":108117500,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"TD-RPR","baseVendor":"","basePrice":527,"ourBid":null,"winPrice":560,"change":0.063,"qty":95500,"amount":53480000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"CJ-11A-R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":634,"change":null,"qty":167500,"amount":106195000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"CJ-12-R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":567,"change":null,"qty":851500,"amount":482800500,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"CJ-13-R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":551,"change":null,"qty":20000,"amount":11020000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"FG-MA","baseVendor":"","basePrice":1688,"ourBid":null,"winPrice":1770,"change":0.049,"qty":506400,"amount":896328000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"MS-M-12","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1119,"change":null,"qty":219300,"amount":245396700,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SGN-1-LR","baseVendor":"","basePrice":657,"ourBid":null,"winPrice":647,"change":-0.0015,"qty":2006000,"amount":1297882000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SGN-1-LR5","baseVendor":"","basePrice":640,"ourBid":null,"winPrice":642,"change":0.003,"qty":712000,"amount":457104000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SGN-1-LR7","baseVendor":"","basePrice":639,"ourBid":null,"winPrice":642,"change":0.005,"qty":3867000,"amount":2482614000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SGN-1-R","baseVendor":"","basePrice":539,"ourBid":null,"winPrice":647,"change":0.2,"qty":5097000,"amount":3297759000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SGN-1-R2","baseVendor":"","basePrice":539,"ourBid":null,"winPrice":646,"change":0.199,"qty":4162000,"amount":2688652000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SGN-S2-R","baseVendor":"","basePrice":865,"ourBid":null,"winPrice":871,"change":0.007,"qty":1806000,"amount":1573026000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SMG-70-R","baseVendor":"","basePrice":674,"ourBid":null,"winPrice":607,"change":-0.099,"qty":960000,"amount":582720000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SMG-70R5","baseVendor":"","basePrice":670,"ourBid":null,"winPrice":606,"change":-0.096,"qty":138500,"amount":83931000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SMG-70-RC","baseVendor":"","basePrice":666,"ourBid":null,"winPrice":605,"change":-0.092,"qty":38000,"amount":22990000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"SMG-75W-R","baseVendor":"","basePrice":690,"ourBid":null,"winPrice":690,"change":null,"qty":1500000,"amount":1035000000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","포항세라믹":"2순위"}},{"year":"25","item":"MS-M-14-R","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":614,"change":null,"qty":340000,"amount":208760000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"TD-MT5","baseVendor":"","basePrice":690,"ourBid":null,"winPrice":690,"change":null,"qty":608000,"amount":419520000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O","포항세라믹":"1순위"}},{"year":"25","item":"CA-CR","baseVendor":"","basePrice":null,"ourBid":null,"winPrice":1955,"change":null,"qty":512200,"amount":1001351000,"alloc":"80:20","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","조선":"2순위","포항세라믹":"O"}},{"year":"25","item":"M-27E","baseVendor":"","basePrice":3085,"ourBid":null,"winPrice":3221,"change":0.044,"qty":90705,"amount":292160805,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"1순위","KR":"O"}},{"year":"25","item":"CTRE-3","baseVendor":"","basePrice":597,"ourBid":null,"winPrice":607,"change":0.017,"qty":200000,"amount":121400000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"1순위"}},{"year":"26","item":"MC-S1","baseVendor":"퓨처엠","basePrice":1628,"ourBid":1514,"winPrice":1224,"change":-0.24815724815724816,"qty":761813,"amount":1240231564,"alloc":"60:40","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","포스코퓨처엠":"O"}},{"year":"26","item":"SE-MC","baseVendor":"퓨처엠","basePrice":1963,"ourBid":1710,"winPrice":1710,"change":-0.12888436067244013,"qty":62000,"amount":121706000,"alloc":"100","dkRank":"낙찰","dkWin":121706000,"vmap":{"동국":"O","KR":"O","원진":"O","포스코퓨처엠":"O"}},{"year":"26","item":"A-2","baseVendor":"조선/퓨처엠","basePrice":920,"ourBid":994,"winPrice":782,"change":-0.15,"qty":1059676,"amount":974901920,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"A-10","baseVendor":"조선","basePrice":808,"ourBid":998,"winPrice":860,"change":0.06435643564356436,"qty":624258,"amount":504400464,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"A-17","baseVendor":"조선","basePrice":1976,"ourBid":2580,"winPrice":null,"change":null,"qty":46581,"amount":92044056,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"AC-65B","baseVendor":"조선","basePrice":1424,"ourBid":1910,"winPrice":1282,"change":-0.0997191011235955,"qty":285869,"amount":407077456,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"ACPR-M","baseVendor":"조선","basePrice":1546,"ourBid":1690,"winPrice":1388,"change":-0.10219922380336352,"qty":234843,"amount":363067278,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"ALMC-B3","baseVendor":"조선","basePrice":1558,"ourBid":1618,"winPrice":1370,"change":-0.12066752246469833,"qty":79374,"amount":123664692,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포항세라믹":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"HFC-60","baseVendor":"조선","basePrice":1339,"ourBid":1205,"winPrice":1149,"change":-0.14189693801344286,"qty":87980,"amount":117805220,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"INCT-160","baseVendor":"조선","basePrice":1681,"ourBid":1735,"winPrice":1400,"change":-0.16716240333135038,"qty":47500,"amount":79847500,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","원진":"O","조선":"O"}},{"year":"26","item":"RHCT-AM","baseVendor":"조선","basePrice":1752,"ourBid":1455,"winPrice":1455,"change":-0.1695205479452055,"qty":734500,"amount":1286844000,"alloc":"100","dkRank":"낙찰","dkWin":1286844000,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"SC-60S","baseVendor":"조선","basePrice":973,"ourBid":993,"winPrice":876,"change":-0.09969167523124357,"qty":477500,"amount":464607500,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"SPRAY-1600","baseVendor":"조선","basePrice":689,"ourBid":702,"winPrice":647,"change":-0.06095791001451379,"qty":1172000,"amount":807508000,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"UCS-8KP","baseVendor":"조선","basePrice":1279,"ourBid":1610,"winPrice":null,"change":null,"qty":75945,"amount":97133655,"alloc":"100","dkRank":"참여","dkWin":0,"vmap":{"동국":"O","KR":"O","포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"FM-1","baseVendor":"조선","basePrice":1547,"ourBid":null,"winPrice":1311,"change":-0.15255332902391727,"qty":257360,"amount":398135920,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"KR":"O","포항세라믹":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"MC-S2","baseVendor":"퓨처엠","basePrice":1665,"ourBid":null,"winPrice":1450,"change":-0.12912912912912913,"qty":1235086,"amount":2056418190,"alloc":"60:40","dkRank":"미참여","dkWin":0,"vmap":{"KR":"O","포항세라믹":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"MC-S2R","baseVendor":"퓨처엠","basePrice":1658,"ourBid":null,"winPrice":1450,"change":-0.12545235223160434,"qty":1148222,"amount":1903752076,"alloc":"60:40","dkRank":"미참여","dkWin":0,"vmap":{"KR":"O","포항세라믹":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"M-12S","baseVendor":"조선/퓨처엠","basePrice":975,"ourBid":null,"winPrice":null,"change":null,"qty":517337,"amount":504403575,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"KR":"O","포항세라믹":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"TD-50","baseVendor":"조선","basePrice":1937,"ourBid":null,"winPrice":null,"change":null,"qty":31074,"amount":60190338,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"KR":"O","원진":"O","조선":"O"}},{"year":"26","item":"THS-63A","baseVendor":"퓨처엠","basePrice":1023,"ourBid":null,"winPrice":921,"change":-0.09970674486803519,"qty":1220000,"amount":1248060000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"O","원진":"O","포스코퓨처엠":"O"}},{"year":"26","item":"KRLC-W","baseVendor":"조선","basePrice":1580,"ourBid":null,"winPrice":1350,"change":-0.14556962025316456,"qty":1471200,"amount":2324496000,"alloc":"60:40","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"O","원진":"O","조선":"O"}},{"year":"26","item":"MC-11RH","baseVendor":"조선/퓨처엠","basePrice":2374,"ourBid":null,"winPrice":null,"change":null,"qty":464287,"amount":1102217338,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포항세라믹":"O","원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"ASCM-T1","baseVendor":"조선","basePrice":1883,"ourBid":null,"winPrice":null,"change":null,"qty":181500,"amount":341764500,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","조선":"O"}},{"year":"26","item":"CA-CP","baseVendor":"퓨처엠","basePrice":1163,"ourBid":null,"winPrice":1047,"change":-0.0997420464316423,"qty":8200,"amount":9536600,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","포스코퓨처엠":"O"}},{"year":"26","item":"CAS-R2","baseVendor":"조선","basePrice":1900,"ourBid":null,"winPrice":1649,"change":-0.13210526315789473,"qty":901020,"amount":1711938000,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","조선":"O"}},{"year":"26","item":"CM-1","baseVendor":"퓨처엠","basePrice":1388,"ourBid":null,"winPrice":1248,"change":-0.10086455331412104,"qty":266789,"amount":370303132,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","포스코퓨처엠":"O"}},{"year":"26","item":"HSC-16HW","baseVendor":"조선","basePrice":2445,"ourBid":null,"winPrice":2150,"change":-0.12065439672801637,"qty":54768,"amount":133907760,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","조선":"O","포스코퓨처엠":"O"}},{"year":"26","item":"MC-10R","baseVendor":"퓨처엠","basePrice":1830,"ourBid":null,"winPrice":1700,"change":-0.07103825136612021,"qty":991109,"amount":1813729470,"alloc":"60:40","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","포스코퓨처엠":"O"}},{"year":"26","item":"VCP-A75","baseVendor":"조선","basePrice":2350,"ourBid":null,"winPrice":null,"change":null,"qty":28812,"amount":67708200,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"원진":"O","조선":"O"}},{"year":"26","item":"MC-11S","baseVendor":"퓨처엠","basePrice":2876,"ourBid":null,"winPrice":2031,"change":-0.2938108484005563,"qty":921169,"amount":2649282044,"alloc":"100","dkRank":"미참여","dkWin":0,"vmap":{"포스코퓨처엠":"O"}}];
 function getMeta(k){try{return localStorage.getItem(DB_NAME+':'+k);}catch(e){return null;}}
 function setMeta(k,v){try{localStorage.setItem(DB_NAME+':'+k,v);}catch(e){}}
+
+/* ============ 재고관리(신동내화 · 베수비우스 발주/재고) ============ */
+// 2026-09-23: 신동내화 50개 품목은 26년 9월 정기 발주 검토 엑셀(영업소 확인요청)에서
+// 내화물 기본정보(prodData)와 품명+규격이 일치하는 품목만 추려 초기값을 반영.
+// 베수비우스 14개 품목은 09/08 기준 재고관리 자료를 반영(일부만 기본정보와 연동).
+// 적정재고는 사업소에서 직접 정하는 값이라 0으로 비워둠 — 최초 1회만 자동 반영되고,
+// 이후에는 데이터가 있으면(1건이라도) 절대 덮어쓰지 않음(ensureStockSeed 참고).
+const SHINDONG_KEYS=new Set([
+ "ACT-20|TMB-200",
+ "AMC-B|LW250",
+ "AMC-B|LW280",
+ "AMC-B|LW300",
+ "AMC-B|LW300-1/2",
+ "AMC-BS|LW9",
+ "AMC-BS|LW9-5",
+ "AMC-BS|LW90",
+ "AMC-BS|LW95",
+ "AMC-FB|LW25-5FS",
+ "AMC-FB|LW251FBP",
+ "AMC-FB|LW25FS",
+ "AMC-T3|T3 90T(450*450)",
+ "AMC-TD|LW150",
+ "AMC-TD|LW152",
+ "HAU-BS|LW90",
+ "HAU-BS|LW95",
+ "MAC-W|LW21",
+ "MAC-W|LW21-5",
+ "MAC-W|LW210",
+ "MAC-W|LW211",
+ "MAC-W|LW21K",
+ "PGT-BT|LW15",
+ "PGT-BT|LW15-5",
+ "PGT-BT|LW150",
+ "PGT-BT|LW151",
+ "PGT-BT|LW18",
+ "PGT-BT|LW18-5",
+ "PGT-BT|LW180",
+ "PGT-BT|LW181",
+ "PGT-BT|LW200",
+ "PGT-BT|LW21",
+ "PGT-BT|LW21-5",
+ "PGT-BT|LW21-5(160H)",
+ "PGT-BT|LW21(160H)",
+ "PGT-BT|LW210",
+ "PGT-BT|LW210(160H)",
+ "PGT-BT|LW211",
+ "PGT-BT|LW211(160H)",
+ "PGT-BT|LW21K",
+ "PGT-IND SET|LW211-IND50-90/100",
+ "SMC-95|1.5J",
+ "SMC-95|281",
+ "SMC-95|282",
+ "SMC-95|EBS-317",
+ "SMC-95|EBT-S2",
+ "SMC-95|K4",
+ "SMC-95|K5",
+ "SMC-95|K6",
+ "SMC-95|STD"
+]);
+const STOCK_SEED=[
+ // 신동내화 50개 품목 — 26년 9월 정기 발주 검토 엑셀(영업소 확인요청) 반영, 우리 내화물 기준정보(prodData)와 매칭되는 품목만 · 수량(EA) 기준
+ {supplier:"신동내화",prodId:"p1",name:"ACT-20",spec:"TMB-200",unit:"EA",target:0,cur:0,onOrder:4,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p2",name:"AMC-B",spec:"LW250",unit:"EA",target:0,cur:4416,onOrder:2592,expUse:2844,orderQty:3072,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p3",name:"AMC-B",spec:"LW280",unit:"EA",target:0,cur:3776,onOrder:2592,expUse:1600,orderQty:1116,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p4",name:"AMC-B",spec:"LW300",unit:"EA",target:0,cur:2016,onOrder:2160,expUse:1008,orderQty:864,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p5",name:"AMC-B",spec:"LW300-1/2",unit:"EA",target:0,cur:384,onOrder:768,expUse:384,orderQty:768,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p6",name:"AMC-BS",spec:"LW9",unit:"EA",target:0,cur:450,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p7",name:"AMC-BS",spec:"LW9-5",unit:"EA",target:0,cur:0,onOrder:800,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p8",name:"AMC-BS",spec:"LW90",unit:"EA",target:0,cur:1680,onOrder:0,expUse:336,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p9",name:"AMC-BS",spec:"LW95",unit:"EA",target:0,cur:5040,onOrder:0,expUse:2688,orderQty:4368,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p10",name:"AMC-FB",spec:"LW25-5FS",unit:"EA",target:0,cur:50,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p11",name:"AMC-FB",spec:"LW251FBP",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p12",name:"AMC-FB",spec:"LW25FS",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p13",name:"AMC-T3",spec:"T3 90T(450*450)",unit:"EA",target:0,cur:80,onOrder:40,expUse:7,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p14",name:"AMC-TD",spec:"LW150",unit:"EA",target:0,cur:4416,onOrder:1920,expUse:1800,orderQty:1920,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p15",name:"AMC-TD",spec:"LW152",unit:"EA",target:0,cur:1536,onOrder:768,expUse:600,orderQty:768,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p42",name:"HAU-BS",spec:"LW90",unit:"EA",target:0,cur:672,onOrder:1008,expUse:336,orderQty:672,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p43",name:"HAU-BS",spec:"LW95",unit:"EA",target:0,cur:2352,onOrder:0,expUse:1334,orderQty:1344,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p45",name:"MAC-W",spec:"LW21",unit:"EA",target:0,cur:448,onOrder:100,expUse:124,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p46",name:"MAC-W",spec:"LW21-5",unit:"EA",target:0,cur:248,onOrder:200,expUse:100,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p47",name:"MAC-W",spec:"LW210",unit:"EA",target:0,cur:1014,onOrder:864,expUse:288,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p48",name:"MAC-W",spec:"LW211",unit:"EA",target:0,cur:11808,onOrder:13824,expUse:5088,orderQty:7200,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p49",name:"MAC-W",spec:"LW21K",unit:"EA",target:0,cur:148,onOrder:100,expUse:100,orderQty:200,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p61",name:"PGT-BT",spec:"LW15",unit:"EA",target:0,cur:0,onOrder:100,expUse:60,orderQty:200,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p62",name:"PGT-BT",spec:"LW15-5",unit:"EA",target:0,cur:0,onOrder:200,expUse:60,orderQty:100,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p63",name:"PGT-BT",spec:"LW150",unit:"EA",target:0,cur:3166,onOrder:768,expUse:768,orderQty:768,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p64",name:"PGT-BT",spec:"LW151",unit:"EA",target:0,cur:7536,onOrder:1920,expUse:2496,orderQty:1920,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p65",name:"PGT-BT",spec:"LW18",unit:"EA",target:0,cur:160,onOrder:0,expUse:32,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p66",name:"PGT-BT",spec:"LW18-5",unit:"EA",target:0,cur:0,onOrder:200,expUse:60,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p67",name:"PGT-BT",spec:"LW180",unit:"EA",target:0,cur:1344,onOrder:1464,expUse:600,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p68",name:"PGT-BT",spec:"LW181",unit:"EA",target:0,cur:8784,onOrder:9504,expUse:4362,orderQty:4032,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p69",name:"PGT-BT",spec:"LW200",unit:"EA",target:0,cur:2764,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p70",name:"PGT-BT",spec:"LW21",unit:"EA",target:0,cur:460,onOrder:200,expUse:140,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p71",name:"PGT-BT",spec:"LW21-5",unit:"EA",target:0,cur:360,onOrder:200,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p72",name:"PGT-BT",spec:"LW21-5(160H)",unit:"EA",target:0,cur:150,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p73",name:"PGT-BT",spec:"LW21(160H)",unit:"EA",target:0,cur:100,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p74",name:"PGT-BT",spec:"LW210",unit:"EA",target:0,cur:1104,onOrder:432,expUse:160,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p75",name:"PGT-BT",spec:"LW210(160H)",unit:"EA",target:0,cur:432,onOrder:144,expUse:32,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p76",name:"PGT-BT",spec:"LW211",unit:"EA",target:0,cur:12763,onOrder:13797,expUse:7004,orderQty:10530,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p77",name:"PGT-BT",spec:"LW211(160H)",unit:"EA",target:0,cur:1176,onOrder:2352,expUse:848,orderQty:1344,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p78",name:"PGT-BT",spec:"LW21K",unit:"EA",target:0,cur:260,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p80",name:"PGT-IND SET",spec:"LW211-IND50-90/100",unit:"EA",target:0,cur:200,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p85",name:"SMC-95",spec:"1.5J",unit:"EA",target:0,cur:823,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p86",name:"SMC-95",spec:"281",unit:"EA",target:0,cur:2721,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p87",name:"SMC-95",spec:"282",unit:"EA",target:0,cur:1462,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p88",name:"SMC-95",spec:"EBS-317",unit:"EA",target:0,cur:130,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p89",name:"SMC-95",spec:"EBT-S2",unit:"EA",target:0,cur:277,onOrder:0,expUse:108,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p90",name:"SMC-95",spec:"K4",unit:"EA",target:0,cur:1358,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p91",name:"SMC-95",spec:"K5",unit:"EA",target:0,cur:772,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p92",name:"SMC-95",spec:"K6",unit:"EA",target:0,cur:404,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p93",name:"SMC-95",spec:"STD",unit:"EA",target:0,cur:3147,onOrder:4032,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ // 베수비우스(Slide Gate) 14개 품목 — 베수비우스 재고관리 자료(09/08 기준) 반영 · CODE는 베수비우스 품목코드
+ {supplier:"베수비우스",prodId:"p98",code:"KA67203",name:"Middle Plate",spec:"",unit:"EA",target:0,cur:95,onOrder:120,expUse:60,orderQty:120,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:"p95",code:"KR03235",name:"Ar-MTMP",spec:"",unit:"EA",target:0,cur:90,onOrder:40,expUse:60,orderQty:160,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"XP06054",name:"GASKET",spec:"",unit:"EA",target:0,cur:180,onOrder:180,expUse:0,orderQty:0,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:"p96",code:"KK32684",name:"Lower+GASKET일체형",spec:"",unit:"EA",target:0,cur:154,onOrder:160,expUse:90,orderQty:120,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"KK34805",name:"Lower+GASKET(신규)",spec:"",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"BD57521",name:"롱노즐",spec:"",unit:"EA",target:0,cur:33,onOrder:220,expUse:90,orderQty:160,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"BC51542",name:"롱노즐(Butt)",spec:"",unit:"EA",target:0,cur:60,onOrder:80,expUse:0,orderQty:0,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:"p103",code:"BK54373",name:"SES BLOOM(장연주)",spec:"",unit:"EA",target:0,cur:153,onOrder:42,expUse:30,orderQty:42,note:"KA73771040(Zr)함께 사용",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:"p104",code:"BK63531",name:"SES BEAM",spec:"",unit:"EA",target:0,cur:151,onOrder:84,expUse:60,orderQty:84,note:"KA67203(AL)함께 사용",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"BK53128",name:"SES Bloom(무예열)",spec:"",unit:"EA",target:0,cur:10,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:"p97",code:"KA73771040",name:"Middle Plate(Z)",spec:"",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:"p99",code:"KR07236",name:"Ar-MTMP(Z)",spec:"",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"KA82061040",name:"Middle Plate(재질개선)",spec:"",unit:"EA",target:0,cur:208,onOrder:0,expUse:0,orderQty:40,note:"",upd:"2026-09-08"},
+ {supplier:"베수비우스",prodId:null,code:"KR08507",name:"Ar-MTMP(재질개선)",spec:"",unit:"EA",target:0,cur:191,onOrder:0,expUse:0,orderQty:40,note:"",upd:"2026-09-08"},
+];
+const STOCK_SEED_VERSION='2026-09-23-init';
+let curStockSup='신동내화';
+async function ensureStockSeed(){
+  if(stockData.length)return;   // 이미 데이터가 있으면(직접 추가분 포함) 절대 건드리지 않음
+  if(getMeta('stockSeedVersion')===STOCK_SEED_VERSION)return;
+  let seq=Date.now();
+  for(const r of STOCK_SEED){await putRec('stock',{...r,id:uid(),seq:seq++});}
+  stockData=await txAll('stock');
+  setMeta('stockSeedVersion',STOCK_SEED_VERSION);
+}
+function stockProd(r){return r.prodId?prodById(r.prodId):null;}
+function stockName(r){const p=stockProd(r);return p?p.name:(r.name||'');}
+function stockSpec(r){const p=stockProd(r);return p?(p.spec||''):(r.spec||'');}
+function stockUnit(r){const p=stockProd(r);return r.unit||(p&&p.unit)||'EA';}
+function stockSuggest(r){return Math.max(0,(+r.target||0)+(+r.expUse||0)-(+r.cur||0)-(+r.onOrder||0));}
+function stockCandidates(sup,curId){
+  const used=new Set(stockData.filter(r=>r.supplier===sup&&r.id!==curId&&r.prodId).map(r=>r.prodId));
+  if(sup==='신동내화')return prodData.filter(p=>SHINDONG_KEYS.has((p.name||'')+'|'+(p.spec||''))&&!used.has(p.id));
+  return prodData.filter(p=>p.name==='TD Slide gate'&&!used.has(p.id));
+}
+function stockProdOptions(sup,r){
+  const cands=stockCandidates(sup,r.id).slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')||(a.spec||'').localeCompare(b.spec||'','ko'));
+  let h='<option value="">— 직접입력(목록에 없는 품목) —</option>';
+  if(r.prodId&&!cands.some(p=>p.id===r.prodId)){const p=prodById(r.prodId);if(p)h+=`<option value="${p.id}" selected>${esc(p.name)} · ${esc(p.spec||'')}</option>`;}
+  h+=cands.map(p=>`<option value="${p.id}"${p.id===r.prodId?' selected':''}>${esc(p.name)} · ${esc(p.spec||'')}</option>`).join('');
+  return h;
+}
+function stockTab(sup){curStockSup=sup;
+  document.querySelectorAll('#stockSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sup===sup));
+  renderStock();}
+function initStock(){renderStock();}
+async function editStock(id,k,v){
+  const r=stockData.find(x=>x.id===id);if(!r)return;
+  if(k==='prodId'){
+    if(v){const p=prodById(v);if(p){r.prodId=v;r.name=p.name;r.spec=p.spec||'';}}
+    else{r.prodId=null;}
+  }else if(k==='target'||k==='cur'||k==='onOrder'||k==='expUse'||k==='orderQty'){
+    r[k]=+v||0;
+  }else{r[k]=v;}
+  r.upd=todayStr();
+  await putRec('stock',r);flashSave();renderStock();
+}
+function applyStockSuggest(id){const r=stockData.find(x=>x.id===id);if(!r)return;editStock(id,'orderQty',stockSuggest(r));}
+async function addStockRow(){
+  const r={id:uid(),supplier:curStockSup,prodId:null,name:'',spec:'',code:'',unit:'EA',
+    target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:'',upd:todayStr(),seq:Date.now()};
+  stockData.unshift(r);await putRec('stock',r);flashSave();renderStock();
+  const tb=document.getElementById('stockBody');const f=tb&&tb.querySelector('select,input');if(f)f.focus();
+}
+async function delStockRow(id){
+  if(!canDelete()){alert('삭제는 관리자만 할 수 있습니다.\n(발주 이력이 아니라 추적 대상 품목 자체가 목록에서 사라집니다)');return;}
+  if(!confirm('이 품목을 재고관리 목록에서 삭제할까요?'))return;
+  stockData=stockData.filter(x=>x.id!==id);await delRec('stock',id);flashSave();renderStock();
+}
+function renderStock(){
+  const q=(document.getElementById('stk_search')||{}).value||'';
+  const filt=(document.getElementById('stk_filter')||{}).value||'';
+  const all=stockData.filter(r=>r.supplier===curStockSup);
+  let rows=all;
+  if(q.trim()){const qq=q.trim().toLowerCase();
+    rows=rows.filter(r=>(stockName(r)+' '+stockSpec(r)+' '+(r.code||'')).toLowerCase().includes(qq));}
+  if(filt==='need')rows=rows.filter(r=>stockSuggest(r)>0);
+  else if(filt==='unlinked')rows=rows.filter(r=>!r.prodId);
+  rows=rows.slice().sort((a,b)=>stockName(a).localeCompare(stockName(b),'ko')||stockSpec(a).localeCompare(stockSpec(b),'ko'));
+
+  const needCnt=all.filter(r=>stockSuggest(r)>0).length;
+  const unlinkedCnt=all.filter(r=>!r.prodId).length;
+  const cardsEl=document.getElementById('stockCards');
+  if(cardsEl)cardsEl.innerHTML=card('추적 품목',all.length,'개')
+    +card('발주 필요',`<span style="color:${needCnt?'#dc2626':'inherit'}">${needCnt}</span>`,'개(제안발주량&gt;0)')
+    +card('기본정보 미연동',unlinkedCnt,'개');
+
+  const hint=document.getElementById('stockHint');
+  if(hint)hint.textContent=curStockSup==='신동내화'
+    ?'내화물 기본정보에 등록된 품목 중 신동내화가 취급하는 품목만 대상입니다. [📥 신동 엑셀 반영]으로 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 이 목록에 있는 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다(다른 영업소 품목은 건드리지 않음).'
+    :'베수비우스(Slide Gate) 품목입니다. 09/08 기준 재고관리 자료를 참고해 초기값을 반영했습니다.';
+
+  const tb=document.getElementById('stockBody');if(!tb)return;
+  tb.innerHTML=rows.map(r=>{
+    const sug=stockSuggest(r);
+    const nameCell=r.prodId
+      ?`<div style="font-weight:600">${esc(stockName(r))}</div><div style="font-size:10.5px;color:var(--muted)">🔗 기본정보 연동 · <span style="cursor:pointer;color:#2563eb" onclick="editStock('${r.id}','prodId','')">연결해제</span></div>`
+      :`<select style="width:100%;font-size:11px" onchange="editStock('${r.id}','prodId',this.value)">${stockProdOptions(r.supplier,r)}</select>
+        <input style="width:100%;margin-top:3px;font-size:11px" placeholder="품명 직접입력" value="${esc(r.name||'')}" oninput="editStock('${r.id}','name',this.value)">`;
+    const specCell=r.prodId
+      ?`<div>${esc(stockSpec(r))}</div>${r.code?`<div style="font-size:10.5px;color:var(--muted)">${esc(r.code)}</div>`:''}`
+      :`<input style="width:100%;font-size:11px" placeholder="규격" value="${esc(r.spec||'')}" oninput="editStock('${r.id}','spec',this.value)">
+        <input style="width:100%;margin-top:3px;font-size:11px" placeholder="CODE" value="${esc(r.code||'')}" oninput="editStock('${r.id}','code',this.value)">`;
+    return `<tr>
+      <td>${nameCell}</td>
+      <td>${specCell}</td>
+      <td>${esc(stockUnit(r))}</td>
+      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.target||0}" oninput="editStock('${r.id}','target',this.value)"></td>
+      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.cur||0}" oninput="editStock('${r.id}','cur',this.value)"></td>
+      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.onOrder||0}" oninput="editStock('${r.id}','onOrder',this.value)"></td>
+      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.expUse||0}" oninput="editStock('${r.id}','expUse',this.value)"></td>
+      <td class="n" style="color:${sug>0?'#dc2626':'var(--muted)'};font-weight:${sug>0?700:400}">${iN(sug)}<div style="font-size:9.5px;font-weight:400"><span style="cursor:pointer;color:#2563eb" onclick="applyStockSuggest('${r.id}')">↦적용</span></div></td>
+      <td class="n"><input type="number" style="width:100%;text-align:right;font-weight:700" value="${r.orderQty||0}" oninput="editStock('${r.id}','orderQty',this.value)"></td>
+      <td><input style="width:100%;font-size:11px" value="${esc(r.note||'')}" oninput="editStock('${r.id}','note',this.value)"></td>
+      <td style="font-size:10.5px;color:var(--muted)">${esc(r.upd||'')}</td>
+      <td><button class="btn danger del-rec sm" onclick="delStockRow('${r.id}')" style="padding:2px 6px">✕</button></td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">품목이 없습니다 · [＋ 품목 추가]로 등록하세요</td></tr>`;
+
+  const foot=document.getElementById('stockFoot');
+  if(foot){const sumOrder=rows.reduce((s,r)=>s+(+r.orderQty||0),0);
+    foot.innerHTML=`<tr style="font-weight:700;background:#f8fafc"><td colspan="7" style="text-align:right">표시된 ${rows.length}개 합계(발주량)</td><td class="n">${iN(sumOrder)}</td><td colspan="3"></td></tr>`;}
+}
+function downloadStockCSV(){
+  const rows=[['공급사','품명','규격','CODE','단위','적정재고','현재고','기발주','예상사용량','제안발주량','발주량(확정)','비고','갱신일']];
+  stockData.filter(r=>r.supplier===curStockSup).forEach(r=>rows.push([r.supplier,stockName(r),stockSpec(r),r.code||'',stockUnit(r),r.target||0,r.cur||0,r.onOrder||0,r.expUse||0,stockSuggest(r),r.orderQty||0,r.note||'',r.upd||'']));
+  const csv='\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  downloadText(curStockSup+'_재고관리_'+todayStr()+'.csv',csv);
+  toast('CSV로 내보냈습니다');
+}
+/* ---- 신동내화 정기 발주 검토 엑셀(.xlsx) 반영 : 우리 품목(신동내화 탭에 이미 등록된 품목)만 매칭해 갱신 ---- */
+function xlsxColIdx(ref){const m=/^([A-Z]+)/.exec(ref);if(!m)return 0;let n=0;for(const ch of m[1])n=n*26+(ch.charCodeAt(0)-64);return n;}
+async function xlsxParseFirstSheet(file){
+  const zip=await JSZip.loadAsync(await file.arrayBuffer());
+  const parser=new DOMParser();
+  let sharedStrings=[];
+  const ssFile=zip.file('xl/sharedStrings.xml');
+  if(ssFile){
+    const ssDoc=parser.parseFromString(await ssFile.async('text'),'application/xml');
+    sharedStrings=[...ssDoc.getElementsByTagName('si')].map(si=>{
+      const ts=[...si.getElementsByTagName('t')];
+      return ts.map(t=>t.textContent).join('');
+    });
+  }
+  // 워크북 관계에서 첫 시트 실제 경로를 찾음(파일마다 sheet1.xml이 아닐 수 있음)
+  let sheetPath='xl/worksheets/sheet1.xml';
+  try{
+    const wbDoc=parser.parseFromString(await zip.file('xl/workbook.xml').async('text'),'application/xml');
+    const firstSheet=wbDoc.getElementsByTagName('sheet')[0];
+    const rid=firstSheet&&(firstSheet.getAttribute('r:id')||firstSheet.getAttribute('rid'));
+    if(rid){
+      const relsDoc=parser.parseFromString(await zip.file('xl/_rels/workbook.xml.rels').async('text'),'application/xml');
+      const rel=[...relsDoc.getElementsByTagName('Relationship')].find(r=>r.getAttribute('Id')===rid);
+      if(rel)sheetPath='xl/'+rel.getAttribute('Target').replace(/^\/?xl\//,'').replace(/^\.?\//,'');
+    }
+  }catch(e){}
+  const sheetDoc=parser.parseFromString(await zip.file(sheetPath).async('text'),'application/xml');
+  const grid={};
+  [...sheetDoc.getElementsByTagName('row')].forEach(rowEl=>{
+    const rNo=+rowEl.getAttribute('r');const rowObj={};
+    [...rowEl.getElementsByTagName('c')].forEach(c=>{
+      const ref=c.getAttribute('r')||'';const col=xlsxColIdx(ref);if(!col)return;
+      const t=c.getAttribute('t');
+      let val;
+      if(t==='inlineStr'){const isEl=c.getElementsByTagName('is')[0];val=isEl?[...isEl.getElementsByTagName('t')].map(x=>x.textContent).join(''):'';}
+      else{const vEl=c.getElementsByTagName('v')[0];const raw=vEl?vEl.textContent:'';
+        if(t==='s')val=sharedStrings[+raw]||'';
+        else if(t==='str')val=raw;
+        else val=raw===''?'':(+raw);
+      }
+      rowObj[col]=val;
+    });
+    grid[rNo]=rowObj;
+  });
+  return grid;
+}
+function xlsxFindCol(rowObj,label){
+  for(const c in rowObj){if(String(rowObj[c]||'').trim()===label)return +c;}
+  return -1;
+}
+async function importStockXlsx(input){
+  const f=input.files&&input.files[0];if(!f){return;}
+  try{
+    const grid=await xlsxParseFirstSheet(f);
+    const row1=grid[1]||{},row2=grid[2]||{};
+    const nameCol=xlsxFindCol(row1,'품명'),specCol=xlsxFindCol(row1,'규격');
+    const expUseCol=xlsxFindCol(row1,'예상사용'),curColX=xlsxFindCol(row1,'상품재고'),onOrderCol=xlsxFindCol(row1,'기발주');
+    if(nameCol<0||specCol<0||expUseCol<0||curColX<0||onOrderCol<0){
+      alert('엑셀 머리글을 인식하지 못했습니다.\n신동내화 정기 발주 검토 엑셀(품명·규격·예상사용·상품재고·기발주 항목이 있는 형식)이 맞는지 확인해 주세요.');
+      input.value='';return;
+    }
+    const rowNos=Object.keys(grid).map(Number).sort((a,b)=>a-b);
+    const sums={};
+    for(const rNo of rowNos){
+      if(rNo<3)continue;
+      const r=grid[rNo];const nm=r[nameCol];if(nm==null||String(nm).trim()==='')continue;
+      const sp=r[specCol];const key=String(nm).trim()+'|'+(sp==null?'':String(sp).trim());
+      const s=sums[key]||(sums[key]={expUse:0,cur:0,onOrder:0});
+      s.expUse+=(+r[expUseCol]||0);s.cur+=(+r[curColX]||0);s.onOrder+=(+r[onOrderCol]||0);
+    }
+    const mine=stockData.filter(r=>r.supplier==='신동내화');
+    let upd=0,same=0;const missList=[];
+    for(const r of mine){
+      const key=stockName(r)+'|'+stockSpec(r);
+      const s=sums[key];
+      if(!s){missList.push(stockName(r)+(stockSpec(r)?' · '+stockSpec(r):''));continue;}
+      if(r.cur===s.cur&&r.onOrder===s.onOrder&&r.expUse===s.expUse){same++;continue;}
+      upd++;
+    }
+    const msg=`엑셀에서 ${Object.keys(sums).length}개 품목(전체 영업소)을 읽었습니다.\n\n`
+      +`· 우리 품목 중 갱신될 항목 : ${upd}건\n`
+      +`· 값 변동 없음 : ${same}건\n`
+      +(missList.length?`· 이번 엑셀에 없는 항목(값 유지) : ${missList.length}건\n`:'')
+      +`\n다른 영업소 품목은 건드리지 않습니다. 현재고·기발주·예상사용량을 갱신할까요?\n(발주량·적정재고는 그대로 유지됩니다)`;
+    if(!confirm(msg)){input.value='';return;}
+    for(const r of mine){
+      const key=stockName(r)+'|'+stockSpec(r);const s=sums[key];if(!s)continue;
+      r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;r.upd=todayStr();
+      await putRec('stock',r);
+    }
+    flashSave();renderStock();
+    toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(missList.length?` · ${missList.length}건 자료 없음`:''));
+    if(missList.length)alert('이번 엑셀에서 찾지 못해 값이 유지된 품목(일부):\n'+missList.slice(0,15).join('\n')+(missList.length>15?`\n… 외 ${missList.length-15}건`:''));
+  }catch(err){alert('엑셀을 읽는 중 오류가 발생했습니다: '+err.message);}
+  input.value='';
+}
+
 async function loadSeedInto(){
   let seq=Date.now();
   for(const r of SEED.ladle){await putRec('ladle',{...r,id:uid(),seq:seq++,src:'seed'});}
@@ -7276,7 +7661,7 @@ async function migrateVendor(){
 }
 
 /* ============ 팀 공유(Firebase 실시간 동기화) ============ */
-const FB_STORES=['ladle','tundish','quotes','schedule','bomstd','eaf','inv','invin','emp','leave','ot','handover'];
+const FB_STORES=['ladle','tundish','quotes','schedule','bomstd','eaf','inv','invin','stock','emp','leave','ot','handover'];
 /* 전 직원 공통 Firebase 자동 연결: 휴대폰별 JSON/팀코드 입력 불필요 */
 const FIREBASE_AUTO_CONFIG={
   apiKey:'AIzaSyDlGT0-edy1sqAFxSojyVsKKTcLLnQm-y0',
@@ -7405,6 +7790,7 @@ async function fbReloadStore(store){
   else if(store==='eaf'){eafData=await txAll('eaf');}
   else if(store==='inv'){invData=await txAll('inv');}
   else if(store==='invin'){invInData=await txAll('invin');}
+  else if(store==='stock'){stockData=await txAll('stock');}
   else if(store==='emp'){empData=await txAll('emp');
     /* 2026-09-21: Firebase/가져오기로 직원 명부가 (재)적재된 직후에도 서명 일괄반영을 다시 시도.
        최초 접속처럼 로컬이 비어있던 상태에서 로그인 시점의 loadAttend()가 빈 명단에 대해 먼저
@@ -7553,7 +7939,7 @@ async function syncPushAll(){
   if(!fbOn){alert('먼저 연결하세요');return;}
   // 평소 작업은 자동 동기화됨 — 이 기능은 최초 1회 또는 복구용
   const LAB={ladle:'래들',tundish:'턴디쉬',quotes:'견적서',schedule:'일정',bomstd:'축조물량표',eaf:'전기로',
-             inv:'재고',invin:'입고',emp:'직원',leave:'휴가원',ot:'잔업신청',handover:'인수인계'};
+             inv:'재고',invin:'입고',stock:'재고관리',emp:'직원',leave:'휴가원',ot:'잔업신청',handover:'인수인계'};
   let risk=[];
   for(const st of FB_STORES){
     let mine=[];try{mine=await txAll(st);}catch(e){}
@@ -7603,7 +7989,7 @@ async function syncPasteCfg(){
 async function syncDiag(){
   if(!fbOn){alert('먼저 [연결]을 눌러 팀 공유에 연결하세요.\n\n· 팀원 PC에서는 관리자와 똑같은 { } 설정과 똑같은 팀 코드를 넣어야 합니다.');return;}
   const LAB={ladle:'래들',tundish:'턴디쉬',quotes:'견적서',schedule:'일정',bomstd:'축조물량표',eaf:'전기로',
-             inv:'재고',invin:'입고',emp:'직원',leave:'휴가원',ot:'잔업신청',handover:'인수인계'};
+             inv:'재고',invin:'입고',stock:'재고관리',emp:'직원',leave:'휴가원',ot:'잔업신청',handover:'인수인계'};
   let rows='',diff=0;
   for(const st of FB_STORES){
     let mine=[];try{mine=await txAll(st);}catch(e){}
@@ -7695,7 +8081,7 @@ async function importLegacyAllData(){
     const oldDb=oldApp.firestore();
     const oldBase=oldDb.collection('dgrns_rooms').doc(LEGACY_FB_ROOM).collection('data');
     const incoming={},counts=[];
-    const labels={ladle:'래들',tundish:'턴디쉬',quotes:'견적서',schedule:'일정',bomstd:'축조물량표',eaf:'전기로',inv:'재고',invin:'입고',emp:'직원',leave:'휴가원',ot:'잔업',handover:'인수인계'};
+    const labels={ladle:'래들',tundish:'턴디쉬',quotes:'견적서',schedule:'일정',bomstd:'축조물량표',eaf:'전기로',inv:'재고',invin:'입고',stock:'재고관리',emp:'직원',leave:'휴가원',ot:'잔업',handover:'인수인계'};
     for(const st of FB_STORES){
       const snap=await oldBase.doc(st).get();
       if(!snap.exists)continue;
@@ -10169,6 +10555,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
     else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
     await migrateVendor();await loadSchedule();await loadBom();await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
+    try{stockData=await txAll('stock');await ensureStockSeed();}catch(e){stockData=[];}
     await loadAttend();await loadHo();
   }catch(err){document.getElementById('saveTxt').textContent='저장소 사용불가(미리보기)';document.getElementById('saveDot').style.background='#c2410c';}
   refreshLadle();refreshTundish();
