@@ -164,16 +164,18 @@
   .boardwrap3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start}
   @media(max-width:900px){.boardwrap3{grid-template-columns:1fr}}
   .bcol{min-width:0}
-  .boardwrap3>.bcol{min-width:0;overflow:hidden}
-  /* 작업현황판 턴디쉬 셀 크기 확대(2차) — 툴/구조는 동일, 가독성만 개선 */
-  /* 2026-09-20: "사용완료(수명)" 라벨이 잘리던 문제 → 해당 칸 폭 확대(64px→104px), 헤더는 줄바꿈 허용 */
-  .btd-row{display:grid;grid-template-columns:36px 138px 116px 76px 104px minmax(0,1fr);gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid #eef1f4;font-size:15.5px}
+  /* 2026-09-26: 카드 폭이 좁은 화면(3분할)에서 6개 칸이 다 안 들어가 "사용완료(수명)" 헤더가
+     중간에 잘리는 문제 → overflow:hidden(하드 클리핑) 대신 overflow-x:auto로 바꿔 필요할 때만
+     카드 안에서 가로 스크롤되게 하고, 각 칸 폭 자체도 더 촘촘히 줄여 왠만한 화면에선 스크롤 없이
+     한번에 다 보이도록 함(달력 입력칸만 날짜 표시에 필요한 최소폭 유지). */
+  .boardwrap3>.bcol{min-width:0;overflow-x:auto;overflow-y:hidden}
+  .btd-row{display:grid;grid-template-columns:20px 86px 118px 52px 64px minmax(56px,1fr);gap:6px;align-items:center;padding:10px 10px;border-bottom:1px solid #eef1f4;font-size:14px;min-width:430px}
   .btd-row>*{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  .btd-head{background:#f4f6f8;font-weight:700;color:#516170;font-size:12.5px;padding:10px 14px}
-  .btd-head>*{white-space:normal;line-height:1.2;overflow:visible;text-overflow:clip}
-  .btd-row .bno{font-size:17px;font-weight:800}
-  .btd-row .bsel{font-size:14.5px;padding:6px 8px}
-  .btd-row .binp{font-size:15px;padding:6px 8px}
+  .btd-head{background:#f4f6f8;font-weight:700;color:#516170;font-size:11.5px;padding:8px 10px}
+  .btd-head>*{white-space:normal;line-height:1.15;overflow:visible;text-overflow:clip}
+  .btd-row .bno{font-size:15px;font-weight:800}
+  .btd-row .bsel{font-size:12.5px;padding:5px 2px}
+  .btd-row .binp{font-size:13px;padding:5px 4px}
   .prodstrip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
   @media(max-width:800px){.prodstrip{grid-template-columns:1fr}}
   .prodbox{border:1px solid var(--line);border-radius:12px;padding:14px 18px;background:linear-gradient(135deg,#1e3a5f,#2b5580);color:#fff}
@@ -719,7 +721,7 @@
     <div class="side-item" data-view="bom" onclick="nav('bom')"><span class="ic">🧱</span>내화물 축조물량표</div>
   </div>
   <div class="side-group">
-    <div class="gh">구매 · 재고관리</div>
+    <div class="gh">상품 재고관리</div>
     <div class="side-item" data-view="stocksd" onclick="nav('stocksd')"><span class="ic">🧱</span>재고관리(신동내화)</div>
     <div class="side-item" data-view="stockvs" onclick="nav('stockvs')"><span class="ic">🔧</span>재고관리(베수비우스)</div>
   </div>
@@ -1070,6 +1072,7 @@
       <button class="btn primary" onclick="addStockRow('신동내화')">＋ 품목 추가</button>
       <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
       <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
+      <button class="btn" onclick="autoSetStockTarget('신동내화')" title="예상사용량(월) × 3개월 기준으로 적정재고를 다시 계산합니다">📐 적정재고 자동설정(3개월)</button>
       <button class="btn" onclick="downloadStockCSV('신동내화')">📤 CSV 내보내기</button>
     </div>
     <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint_sd"></div>
@@ -1103,6 +1106,7 @@
       </select>
       <span class="spacer"></span>
       <button class="btn primary" onclick="addStockRow('베수비우스')">＋ 품목 추가</button>
+      <button class="btn" onclick="autoSetStockTarget('베수비우스')" title="예상사용량(월) × 4개월 기준으로 적정재고를 다시 계산합니다">📐 적정재고 자동설정(4개월)</button>
       <button class="btn" onclick="downloadStockCSV('베수비우스')">📤 CSV 내보내기</button>
     </div>
     <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint_vs"></div>
@@ -5297,7 +5301,7 @@ function boardTundishCol(colName,hcolor){
       <span><input class="binp" type="text" inputmode="numeric" value="${esc(lifeDone)}" placeholder="숫자 입력" title="사용완료 시 사용수명(CH) 직접입력" onchange="setBoardLifeDone('${key}',this.value)"></span>
       <span><input class="binp" value="${esc(memo)}" placeholder="특이사항" onchange="setBoardMemo('${key}',this.value)"></span></div>`;}).join('');
   return `<div class="bcol"><div class="bcol-h" style="background:${hcolor}">${colName} T/D</div>
-    <div class="btd-row btd-head"><span>No</span><span>현황</span><span>신축</span><span>영구장</span><span>사용완료(수명)</span><span>특이사항</span></div>
+    <div class="btd-row btd-head"><span>No</span><span>현황</span><span>신축</span><span>영구장</span><span>사용완료<br>(수명)</span><span>특이사항</span></div>
     ${rows||'<div style="color:#98a2ad;padding:12px;font-size:12px">-</div>'}</div>`;
 }
 /* 2026-09-20: 작업현황판 턴디쉬 "신축"·"사용완료(수명)" 입력 → 턴디쉬 수명관리 자동 반영.
@@ -7575,6 +7579,329 @@ async function ensureVesuviusLinks(){
   if(changed)stockData=await txAll('stock');
   setMeta('stockLinkVersion',STOCK_LINK_VERSION);
 }
+
+/* 2026-09-26: 동국포항래들사용일지.xlsx(2026년래들현황 시트) 자동가져오기.
+   래들사용일지는 매일 누적CH가 기록되는 일지이지만, 실제 파싱 검증 결과 일자별 숫자는
+   래들 재배치·기재 방식 등으로 그대로 신뢰하기 어려운 사례가 확인되어(사용자 확인 완료),
+   일자 단위 재구성 대신 매월 요약행(1~3차콘수명/해체수명/SL보수)의 확정 수치만 가져온다.
+   - type:'해체'/'폐기' → 해당 캠페인의 최종 누적CH(해체수명 요약행 기준, END_EVT)
+   - type:'SL보수'/'1~3차콘교체' → 비누적 체크포인트(NON_ACCUM), 표시·이력 참고용
+   - 정확한 시공/해체 일자가 일지에서 특정되지 않는 항목은 해당 월 마지막 해체일(또는 월말)로 근사 표기하고
+     note에 그 사실을 명시함(안전판단용 원본 대조는 항상 note로 가능).
+   기존 수기입력 기록(src:'manual')은 전혀 건드리지 않으며, 버전 플래그로 1회만 실행됨(재실행 안전). */
+const LADLE2026_IMPORT_VERSION='2026-09-26-ladle2026v1';
+const LADLE2026_SEED=[
+{no:"10",date:"2026-01-29",type:"SL보수",vendor:"",daily:65,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"10",date:"2026-01-29",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-01-29",type:"2차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-01-29",type:"해체",vendor:"",daily:127,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:32/32"},
+{no:"10",date:"2026-01-29",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"10",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"10",date:"2026-03-29",type:"SL보수",vendor:"",daily:72,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"10",date:"2026-03-29",type:"1차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-03-29",type:"2차콘교체",vendor:"",daily:73,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-03-29",type:"해체",vendor:"",daily:145,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:62/62"},
+{no:"10",date:"2026-03-29",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"10",date:"2026-04-30",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"10",date:"2026-04-30",type:"2차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"10",date:"2026-05-18",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-05-18",type:"2차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-05-18",type:"해체",vendor:"",daily:126,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:76/76"},
+{no:"10",date:"2026-05-18",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"10",date:"2026-05-25",type:"SL보수",vendor:"",daily:62,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"10",date:"2026-06-27",type:"SL보수",vendor:"",daily:76,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"10",date:"2026-06-27",type:"1차콘교체",vendor:"",daily:76,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-06-27",type:"2차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"10",date:"2026-06-27",type:"해체",vendor:"",daily:136,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:준영구장해체"},
+{no:"10",date:"2026-06-27",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"11",date:"2026-02-05",type:"SL보수",vendor:"",daily:61,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"11",date:"2026-02-05",type:"1차콘교체",vendor:"",daily:61,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-02-05",type:"2차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-02-05",type:"폐기",vendor:"",daily:119,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:래들폐기"},
+{no:"11",date:"2026-04-13",type:"SL보수",vendor:"",daily:71,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"11",date:"2026-04-13",type:"1차콘교체",vendor:"",daily:71,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-04-13",type:"2차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-04-13",type:"해체",vendor:"",daily:138,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"11",date:"2026-04-13",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"11",date:"2026-05-08",type:"SL보수",vendor:"",daily:73,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"11",date:"2026-05-31",type:"1차콘교체",vendor:"",daily:73,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"11",date:"2026-06-20",type:"1차콘교체",vendor:"",daily:73,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-06-20",type:"2차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-06-20",type:"해체",vendor:"",daily:141,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:66/66"},
+{no:"11",date:"2026-06-20",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"11",date:"2026-06-24",type:"SL보수",vendor:"",daily:73,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"11",date:"2026-07-16",type:"SL보수",vendor:"",daily:66,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"11",date:"2026-07-16",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-07-16",type:"2차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-07-16",type:"해체",vendor:"",daily:130,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"11",date:"2026-07-16",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"11",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"11",date:"2026-09-07",type:"SL보수",vendor:"",daily:96,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"11",date:"2026-09-07",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-09-07",type:"2차콘교체",vendor:"",daily:29,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-09-07",type:"3차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-09-07",type:"해체",vendor:"",daily:162,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"11",date:"2026-09-07",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"12",date:"2026-01-31",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"12",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-02-28",type:"2차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-02-28",type:"해체",vendor:"",daily:129,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"12",date:"2026-02-28",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"12",date:"2026-04-16",type:"SL보수",vendor:"",daily:65,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"12",date:"2026-04-16",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-04-16",type:"2차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-04-16",type:"해체",vendor:"",daily:137,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"12",date:"2026-04-16",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"12",date:"2026-06-28",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-06-28",type:"2차콘교체",vendor:"",daily:46,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-06-28",type:"해체",vendor:"",daily:112,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:38/38"},
+{no:"12",date:"2026-06-28",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"12",date:"2026-07-10",type:"SL보수",vendor:"",daily:74,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"12",date:"2026-07-31",type:"1차콘교체",vendor:"",daily:74,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"12",date:"2026-08-31",type:"SL보수",vendor:"",daily:74,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"12",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:74,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-08-31",type:"2차콘교체",vendor:"",daily:48,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"12",date:"2026-08-31",type:"해체",vendor:"",daily:122,note:"엑셀 월간요약(해체수명) 자동반영 · 정확한 해체일 불명(월말로 표기)"},
+{no:"12",date:"2026-08-31",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"13",date:"2026-01-31",type:"1차콘교체",vendor:"",daily:73,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"13",date:"2026-02-05",type:"SL보수",vendor:"",daily:73,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"13",date:"2026-02-05",type:"1차콘교체",vendor:"",daily:73,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-02-05",type:"2차콘교체",vendor:"",daily:59,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-02-05",type:"해체",vendor:"",daily:132,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"13",date:"2026-02-05",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"13",date:"2026-04-29",type:"SL보수",vendor:"",daily:97,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"13",date:"2026-04-29",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-04-29",type:"2차콘교체",vendor:"",daily:32,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-04-29",type:"3차콘교체",vendor:"",daily:59,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-04-29",type:"해체",vendor:"",daily:156,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:59/59"},
+{no:"13",date:"2026-04-29",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"13",date:"2026-05-06",type:"SL보수",vendor:"",daily:59,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"13",date:"2026-05-20",type:"1차콘교체",vendor:"",daily:59,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-05-20",type:"2차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-05-20",type:"해체",vendor:"",daily:127,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"13",date:"2026-05-20",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"13",date:"2026-07-25",type:"1차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-07-25",type:"2차콘교체",vendor:"",daily:34,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-07-25",type:"해체",vendor:"",daily:106,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:63/63"},
+{no:"13",date:"2026-07-25",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"13",date:"2026-08-05",type:"SL보수",vendor:"",daily:63,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"13",date:"2026-08-25",type:"1차콘교체",vendor:"",daily:63,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-08-25",type:"2차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"13",date:"2026-08-25",type:"해체",vendor:"",daily:129,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"13",date:"2026-08-25",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"15",date:"2026-01-02",type:"SL보수",vendor:"",daily:90,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"15",date:"2026-01-13",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-01-13",type:"2차콘교체",vendor:"",daily:56,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-01-13",type:"해체",vendor:"",daily:116,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"15",date:"2026-01-13",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"15",date:"2026-03-30",type:"SL보수",vendor:"",daily:68,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"15",date:"2026-03-30",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-03-30",type:"2차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-03-30",type:"해체",vendor:"",daily:136,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:56/56"},
+{no:"15",date:"2026-03-30",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"15",date:"2026-04-04",type:"SL보수",vendor:"",daily:56,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"15",date:"2026-04-22",type:"1차콘교체",vendor:"",daily:56,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-04-22",type:"2차콘교체",vendor:"",daily:73,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-04-22",type:"해체",vendor:"",daily:129,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"15",date:"2026-04-22",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"15",date:"2026-06-30",type:"SL보수",vendor:"",daily:62,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"15",date:"2026-06-30",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-06-30",type:"2차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-06-30",type:"해체",vendor:"",daily:128,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:35/34"},
+{no:"15",date:"2026-06-30",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"15",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"15",date:"2026-09-30",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"2",date:"2026-01-23",type:"SL보수",vendor:"",daily:71,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"2",date:"2026-01-23",type:"1차콘교체",vendor:"",daily:71,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-01-23",type:"2차콘교체",vendor:"",daily:44,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-01-23",type:"3차콘교체",vendor:"",daily:31,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-01-23",type:"해체",vendor:"",daily:146,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"2",date:"2026-01-23",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"2",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"2",date:"2026-03-15",type:"1차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-03-15",type:"2차콘교체",vendor:"",daily:10,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-03-15",type:"해체",vendor:"",daily:82,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"2",date:"2026-03-15",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"2",date:"2026-04-28",type:"SL보수",vendor:"",daily:96,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"2",date:"2026-04-30",type:"1차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"2",date:"2026-05-30",type:"SL보수",vendor:"",daily:96,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"2",date:"2026-05-30",type:"1차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-05-30",type:"2차콘교체",vendor:"",daily:59,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-05-30",type:"해체",vendor:"",daily:129,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:65/65"},
+{no:"2",date:"2026-05-30",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"2",date:"2026-06-05",type:"SL보수",vendor:"",daily:65,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"2",date:"2026-06-24",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-06-24",type:"2차콘교체",vendor:"",daily:56,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-06-24",type:"해체",vendor:"",daily:121,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"2",date:"2026-06-24",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"2",date:"2026-08-30",type:"SL보수",vendor:"",daily:66,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"2",date:"2026-08-30",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-08-30",type:"2차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"2",date:"2026-08-30",type:"해체",vendor:"",daily:128,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:57/57"},
+{no:"2",date:"2026-08-30",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"2",date:"2026-09-30",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"3",date:"2026-01-30",type:"SL보수",vendor:"",daily:68,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"3",date:"2026-01-30",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-01-30",type:"2차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-01-30",type:"해체",vendor:"",daily:134,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:61/61"},
+{no:"3",date:"2026-01-30",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"3",date:"2026-02-02",type:"SL보수",vendor:"",daily:61,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"3",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:61,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"3",date:"2026-03-23",type:"SL보수",vendor:"",daily:61,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"3",date:"2026-03-23",type:"1차콘교체",vendor:"",daily:61,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-03-23",type:"2차콘교체",vendor:"",daily:76,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-03-23",type:"해체",vendor:"",daily:137,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:65/65"},
+{no:"3",date:"2026-03-23",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"3",date:"2026-04-11",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-04-11",type:"2차콘교체",vendor:"",daily:44,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-04-11",type:"해체",vendor:"",daily:109,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"3",date:"2026-04-11",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"3",date:"2026-06-10",type:"SL보수",vendor:"",daily:111,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"3",date:"2026-06-30",type:"1차콘교체",vendor:"",daily:75,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"3",date:"2026-06-30",type:"2차콘교체",vendor:"",daily:36,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"3",date:"2026-06-30",type:"3차콘교체",vendor:"",daily:51,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"3",date:"2026-07-20",type:"1차콘교체",vendor:"",daily:75,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-07-20",type:"2차콘교체",vendor:"",daily:36,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-07-20",type:"3차콘교체",vendor:"",daily:51,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-07-20",type:"해체",vendor:"",daily:162,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:70/70"},
+{no:"3",date:"2026-07-20",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"3",date:"2026-07-24",type:"SL보수",vendor:"",daily:111,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"3",date:"2026-08-21",type:"SL보수",vendor:"",daily:70,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"3",date:"2026-08-21",type:"1차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-08-21",type:"2차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"3",date:"2026-08-21",type:"해체",vendor:"",daily:130,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"3",date:"2026-08-21",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"3",date:"2026-09-30",type:"1차콘교체",vendor:"",daily:63,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"5",date:"2026-01-31",type:"1차콘교체",vendor:"",daily:76,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"5",date:"2026-02-27",type:"1차콘교체",vendor:"",daily:76,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-02-27",type:"2차콘교체",vendor:"",daily:39,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-02-27",type:"해체",vendor:"",daily:115,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:58/58"},
+{no:"5",date:"2026-02-27",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"5",date:"2026-03-04",type:"SL보수",vendor:"",daily:58,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"5",date:"2026-03-28",type:"1차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-03-28",type:"2차콘교체",vendor:"",daily:69,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-03-28",type:"해체",vendor:"",daily:127,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"5",date:"2026-03-28",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"5",date:"2026-05-27",type:"SL보수",vendor:"",daily:60,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"5",date:"2026-05-27",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-05-27",type:"2차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-05-27",type:"해체",vendor:"",daily:130,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"5",date:"2026-05-27",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"5",date:"2026-07-31",type:"1차콘교체",vendor:"",daily:54,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"5",date:"2026-07-31",type:"2차콘교체",vendor:"",daily:37,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"5",date:"2026-08-28",type:"SL보수",vendor:"",daily:91,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"5",date:"2026-08-28",type:"1차콘교체",vendor:"",daily:54,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-08-28",type:"2차콘교체",vendor:"",daily:37,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-08-28",type:"3차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"5",date:"2026-08-28",type:"해체",vendor:"",daily:159,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:57/57"},
+{no:"5",date:"2026-08-28",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"5",date:"2026-09-30",type:"1차콘교체",vendor:"",daily:57,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"6",date:"2026-06-30",type:"SL보수",vendor:"",daily:60,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"6",date:"2026-06-30",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"6",date:"2026-07-13",type:"SL보수",vendor:"",daily:60,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"6",date:"2026-07-13",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-07-13",type:"2차콘교체",vendor:"",daily:52,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-07-13",type:"3차콘교체",vendor:"",daily:29,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-07-13",type:"해체",vendor:"",daily:141,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"6",date:"2026-07-13",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"6",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"6",date:"2026-09-01",type:"1차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-09-01",type:"2차콘교체",vendor:"",daily:52,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-09-01",type:"해체",vendor:"",daily:110,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"6",date:"2026-09-01",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"7",date:"2026-01-05",type:"SL보수",vendor:"",daily:68,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"7",date:"2026-01-29",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-01-29",type:"2차콘교체",vendor:"",daily:61,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-01-29",type:"해체",vendor:"",daily:129,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"7",date:"2026-01-29",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"7",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"7",date:"2026-03-31",type:"1차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"7",date:"2026-04-22",type:"1차콘교체",vendor:"",daily:70,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-04-22",type:"2차콘교체",vendor:"",daily:39,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-04-22",type:"3차콘교체",vendor:"",daily:38,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-04-22",type:"해체",vendor:"",daily:147,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:69/69"},
+{no:"7",date:"2026-04-22",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"7",date:"2026-04-28",type:"SL보수",vendor:"",daily:109,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"7",date:"2026-05-31",type:"SL보수",vendor:"",daily:69,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"7",date:"2026-05-31",type:"1차콘교체",vendor:"",daily:69,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"7",date:"2026-05-31",type:"2차콘교체",vendor:"",daily:18,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"7",date:"2026-06-25",type:"1차콘교체",vendor:"",daily:69,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-06-25",type:"2차콘교체",vendor:"",daily:18,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-06-25",type:"3차콘교체",vendor:"",daily:54,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-06-25",type:"해체",vendor:"",daily:141,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:61/61"},
+{no:"7",date:"2026-06-25",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"7",date:"2026-06-30",type:"SL보수",vendor:"",daily:69,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"7",date:"2026-07-25",type:"SL보수",vendor:"",daily:61,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"7",date:"2026-07-25",type:"1차콘교체",vendor:"",daily:61,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-07-25",type:"2차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-07-25",type:"해체",vendor:"",daily:133,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"7",date:"2026-07-25",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"8",date:"2026-01-24",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-01-24",type:"2차콘교체",vendor:"",daily:43,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-01-24",type:"해체",vendor:"",daily:109,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:56/56"},
+{no:"8",date:"2026-01-24",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"8",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"8",date:"2026-03-26",type:"SL보수",vendor:"",daily:60,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"8",date:"2026-03-26",type:"1차콘교체",vendor:"",daily:60,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-03-26",type:"2차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-03-26",type:"해체",vendor:"",daily:127,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"8",date:"2026-03-26",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"8",date:"2026-05-29",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-05-29",type:"2차콘교체",vendor:"",daily:36,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-05-29",type:"해체",vendor:"",daily:101,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:64/64"},
+{no:"8",date:"2026-05-29",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"8",date:"2026-06-30",type:"1차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"8",date:"2026-07-26",type:"SL보수",vendor:"",daily:97,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"8",date:"2026-07-26",type:"1차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-07-26",type:"2차콘교체",vendor:"",daily:33,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-07-26",type:"3차콘교체",vendor:"",daily:46,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-07-26",type:"해체",vendor:"",daily:143,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:67/67"},
+{no:"8",date:"2026-07-26",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"8",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"8",date:"2026-08-31",type:"2차콘교체",vendor:"",daily:69,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"8",date:"2026-09-02",type:"SL보수",vendor:"",daily:67,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"8",date:"2026-09-02",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-09-02",type:"2차콘교체",vendor:"",daily:69,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-09-02",type:"3차콘교체",vendor:"",daily:17,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"8",date:"2026-09-02",type:"해체",vendor:"",daily:153,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"8",date:"2026-09-02",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"9",date:"2026-01-31",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"9",date:"2026-02-03",type:"SL보수",vendor:"",daily:103,note:"엑셀 월간요약(SL보수) 자동반영"},
+{no:"9",date:"2026-02-20",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-02-20",type:"2차콘교체",vendor:"",daily:36,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-02-20",type:"3차콘교체",vendor:"",daily:55,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-02-20",type:"해체",vendor:"",daily:158,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"9",date:"2026-02-20",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"9",date:"2026-03-31",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"9",date:"2026-03-31",type:"2차콘교체",vendor:"",daily:24,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"9",date:"2026-04-27",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-04-27",type:"2차콘교체",vendor:"",daily:24,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-04-27",type:"해체",vendor:"",daily:90,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:68/68"},
+{no:"9",date:"2026-04-27",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"9",date:"2026-05-25",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-05-25",type:"2차콘교체",vendor:"",daily:21,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-05-25",type:"해체",vendor:"",daily:89,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"9",date:"2026-05-25",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"9",date:"2026-07-31",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"9",date:"2026-07-31",type:"2차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"9",date:"2026-08-14",type:"SL보수",vendor:"",daily:95,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"9",date:"2026-08-14",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-08-14",type:"2차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-08-14",type:"3차콘교체",vendor:"",daily:19,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"9",date:"2026-08-14",type:"해체",vendor:"",daily:149,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"9",date:"2026-08-14",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"}
+];
+async function ensureLadle2026Import(){
+  if(getMeta('ladle2026ImportVersion')===LADLE2026_IMPORT_VERSION)return;
+  for(const s of LADLE2026_SEED){
+    const rec={id:uid(),date:s.date,no:s.no,vendor:s.vendor||'',type:s.type,slPat:'',
+      daily:s.daily,note:s.note,seq:Date.now()+Math.random(),src:'excel2026m'};
+    await putRec('ladle',rec);
+    ladleData.push(rec);
+  }
+  setMeta('ladle2026ImportVersion',LADLE2026_IMPORT_VERSION);
+}
+
 function stockProd(r){return r.prodId?prodById(r.prodId):null;}
 function stockName(r){const p=stockProd(r);return p?p.name:(r.name||'');}
 function stockSpec(r){const p=stockProd(r);return p?(p.spec||''):(r.spec||'');}
@@ -7652,6 +7979,21 @@ async function addStockRow(sup){
     target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:'',upd:todayStr(),seq:Date.now()};
   stockData.unshift(r);await putRec('stock',r);flashSave();renderStock(sup);
   const tb=document.getElementById('stockBody_'+stockSfx(sup));const f=tb&&tb.querySelector('select,input');if(f)f.focus();
+}
+/* 2026-09-26: 적정재고를 "예상사용량(월) × N개월" 기준으로 한번에 재계산하는 버튼.
+   기존 적정재고 값을 손으로 조정해둔 경우가 있을 수 있어 자동으로 덮어쓰지 않고,
+   버튼을 눌렀을 때만 · 예상사용량이 입력된 품목만 대상으로 확인 후 반영한다. */
+const STOCK_TARGET_MONTHS={'신동내화':3,'베수비우스':4};
+async function autoSetStockTarget(sup){
+  const months=STOCK_TARGET_MONTHS[sup]||3;
+  const rows=stockData.filter(r=>r.supplier===sup);
+  if(!rows.length){toast('품목이 없습니다');return;}
+  const targets=rows.filter(r=>(+r.expUse||0)>0);
+  if(!targets.length){alert('예상사용량이 입력된 품목이 없어 계산할 수 없습니다.\n먼저 예상사용량을 입력해 주세요.');return;}
+  if(!confirm(`${sup} 적정재고를 예상사용량(월) × ${months}개월 기준으로 다시 계산할까요?\n\n대상 ${targets.length}/${rows.length}건 (예상사용량이 없는 품목은 제외)\n기존 적정재고 값은 새 값으로 덮어써집니다.`))return;
+  for(const r of targets){r.target=Math.round((+r.expUse||0)*months);r.upd=todayStr();await putRec('stock',r);}
+  flashSave();renderStock(sup);
+  toast(`${sup} 적정재고를 ${months}개월 기준으로 재계산했습니다 (${targets.length}건)`);
 }
 async function delStockRow(id){
   const r=stockData.find(x=>x.id===id);
@@ -10755,6 +11097,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
   try{db=await openDB();await initPhotoCache();ladleData=await txAll('ladle');tundishData=await txAll('tundish');
     if(ladleData.length===0&&tundishData.length===0){await loadSeedInto();setMeta('seedVersion',SEED_VERSION);}
     else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
+    try{await ensureLadle2026Import();}catch(e){}
     await migrateVendor();await loadSchedule();await loadBom();await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
     try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();}catch(e){stockData=[];}
