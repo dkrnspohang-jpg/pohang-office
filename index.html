@@ -702,23 +702,26 @@
   <div class="side-group">
     <div class="gh">포항사업소</div>
     <div class="side-item active" data-view="home" onclick="nav('home')"><span class="ic">🗓️</span>일정 · 스케줄</div>
-    <div class="side-item" data-view="board" onclick="nav('board')"><span class="ic">📋</span>작업현황판</div>
   </div>
   <div class="side-group">
-    <div class="gh">동국R&S(동국포항)</div>
+    <div class="gh">작업현황판</div>
+    <div class="side-item" data-view="board" onclick="nav('board')"><span class="ic">📋</span>작업현황판</div>
     <div class="side-item" data-view="ladle" onclick="nav('ladle')"><span class="ic">🪣</span>래들</div>
     <div class="side-item" data-view="tundish" onclick="nav('tundish')"><span class="ic">🛢️</span>턴디쉬</div>
     <div class="side-item" data-view="eaf" onclick="nav('eaf')"><span class="ic">🔥</span>전기로</div>
+    <div class="side-item" data-view="handover" onclick="nav('handover')"><span class="ic">🔁</span>교대반 인수인계</div>
+  </div>
+  <div class="side-group">
+    <div class="gh">제강 원가 관리</div>
     <div class="side-item" data-view="inv" onclick="nav('inv')"><span class="ic">📦</span>내화물 원단위</div>
     <div class="side-item" data-view="perf" onclick="nav('perf')"><span class="ic">📊</span>내화물 실적현황</div>
     <div class="side-item" data-view="mperf" onclick="nav('mperf')"><span class="ic">🗓️</span>월별 실적관리</div>
-    <div class="side-item" data-view="handover" onclick="nav('handover')"><span class="ic">🔁</span>교대반 인수인계</div>
     <div class="side-item" data-view="report" onclick="nav('report')"><span class="ic">📑</span>보고서 자동생성</div>
   </div>
   <div class="side-group">
-    <div class="gh">기준정보</div>
-    <div class="side-item" data-view="prodm" onclick="nav('prodm')"><span class="ic">📦</span>내화물 기본정보</div>
-    <div class="side-item" data-view="bom" onclick="nav('bom')"><span class="ic">🧱</span>내화물 축조물량표</div>
+    <div class="gh">내화물 기준 정보</div>
+    <div class="side-item" data-view="prodm" onclick="nav('prodm')"><span class="ic">📦</span>내화물 품목마스터</div>
+    <div class="side-item" data-view="bom" onclick="nav('bom')"><span class="ic">🧱</span>설비별 내화물 축조물량표</div>
   </div>
   <div class="side-group">
     <div class="gh">상품 재고관리</div>
@@ -726,11 +729,13 @@
     <div class="side-item" data-view="stockvs" onclick="nav('stockvs')"><span class="ic">🔧</span>재고관리(베수비우스)</div>
   </div>
   <div class="side-group">
+    <div class="gh">포스코</div>
+    <div class="side-item" data-view="posco" onclick="nav('posco')"><span class="ic">🏭</span>포스코 입찰</div>
+  </div>
+  <div class="side-group">
     <div class="gh">영업 관리</div>
     <div class="side-item" data-view="quote" onclick="nav('quote')"><span class="ic">📄</span>견적서</div>
-    <div class="side-item" data-view="posco" onclick="nav('posco')"><span class="ic">🏭</span>포스코 입찰</div>
     <div class="side-item" data-view="fieldwork" onclick="nav('fieldwork')"><span class="ic">🚗</span>외근업무</div>
-    <div class="side-item" data-view="news" onclick="nav('news')"><span class="ic">📰</span>업계 뉴스</div>
   </div>
   <div class="side-group">
     <div class="gh">근태 관리</div>
@@ -2050,7 +2055,7 @@ service cloud.firestore {
       <div class="subhead">포스코 품목마스터 <span class="hint">품목코드(예: A-19)마다 규격·Q코드를 등록합니다 — 규격이 여러 개면 [＋]로 행을 추가하세요. 입력 즉시 자동저장됩니다. "범용B 입찰현황" 탭에서 품목코드를 클릭하면 여기서 해당 품목만 볼 수 있습니다.</span></div>
       <div id="poscoMasterFocusBar" style="margin-bottom:8px;font-size:12px;color:var(--muted)"></div>
       <div class="tablewrap"><table class="bomtbl" style="min-width:640px">
-        <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:112px">제철소</th><th style="min-width:180px">규격</th><th style="min-width:140px">Q코드</th><th style="min-width:70px"></th></tr></thead>
+        <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:140px">Q코드</th><th style="min-width:180px">규격</th><th style="min-width:112px">제철소</th><th style="min-width:70px"></th></tr></thead>
         <tbody id="poscoMasterBody"></tbody>
       </table></div>
     </div>
@@ -7825,10 +7830,11 @@ function poscoMasterItemHtml(r){
     if(idx===0){
       return `<tr>
         <td rowspan="${n}" style="white-space:nowrap;vertical-align:top;cursor:pointer" onclick="poscoGotoMaster('${esc(r.item)}')" title="클릭하면 이 품목만 보기"><b>${esc(r.item)}</b></td>
+        <td>${qCell}</td><td>${specCell}</td>
         <td rowspan="${n}" style="vertical-align:top">${poscoSiteSel(r.item)}</td>
-        <td>${specCell}</td><td>${qCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+        <td style="white-space:nowrap">${actions}</td></tr>`;
     }
-    return `<tr><td>${specCell}</td><td>${qCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+    return `<tr><td>${qCell}</td><td>${specCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
   }).join('');
 }
 function renderPoscoMaster(){
@@ -7841,9 +7847,9 @@ function renderPoscoMaster(){
 }
 function downloadPoscoMaster(){
   const rows=poscoMasterFocus?POSCO_SEED.filter(r=>r.item===poscoMasterFocus):poscoRows();
-  let t=`<table><tr><th>품목코드</th><th>제철소</th><th>규격</th><th>Q코드</th></tr>`;
+  let t=`<table><tr><th>품목코드</th><th>Q코드</th><th>규격</th><th>제철소</th></tr>`;
   rows.forEach(r=>{poscoMasterRows(r.item).forEach(row=>{
-    t+=`<tr><td>${esc(r.item)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(row.spec)}</td><td>${esc(row.qcode)}</td></tr>`;
+    t+=`<tr><td>${esc(r.item)}</td><td>${esc(row.qcode)}</td><td>${esc(row.spec)}</td><td>${esc(poscoSite(r.item))}</td></tr>`;
   });});
   t+=`</table>`;downloadXls('포스코_품목마스터',t);
 }
