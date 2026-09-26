@@ -1968,6 +1968,7 @@ service cloud.firestore {
       <button class="subtab active" data-sp="result" onclick="poscoTab('result')">📋 범용B 입찰현황</button>
       <button class="subtab" data-sp="matrix" onclick="poscoTab('matrix')">🏷️ 업체별 입찰가능 품목</button>
       <button class="subtab" data-sp="rank" onclick="poscoTab('rank')">🏆 입찰순위 · 경쟁현황</button>
+      <button class="subtab" data-sp="schedule" onclick="poscoTab('schedule')">🗓️ 입찰일정</button>
     </div>
     <div class="cards" id="poscoCards"></div>
     <div class="toolrow">
@@ -1994,7 +1995,7 @@ service cloud.firestore {
         <thead><tr><th style="min-width:170px;white-space:nowrap">품명</th><th style="min-width:112px">제철소</th><th style="min-width:140px">입찰가능업체</th><th style="min-width:120px">입찰 순위업체</th><th style="min-width:120px;white-space:nowrap">기존업체</th><th class="n">기존단가</th><th class="n">낙찰가</th><th class="n">물량(kg)</th><th class="n">금액(원)</th><th>배분율</th><th>동국 순위</th><th class="n" style="min-width:130px;white-space:nowrap">동국 낙찰금액</th><th style="min-width:110px">계약업체·계약기간</th></tr></thead>
         <tbody id="poscoBody"></tbody>
       </table></div>
-      <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ 25·26년 범용B 입찰을 통합(중복 품목은 최신 회차 기준). 27년 통합 입찰 준비용 마스터 품목 리스트입니다. '계약업체·계약기간' 칸을 클릭하면 현재 계약업체와 계약기간(예: 27.03월)을 입력할 수 있고, 이전 값이 있으면 자동으로 이력에 남아 나중에 업체가 바뀐 시점을 비교할 수 있습니다.</div>
+      <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ 25·26년 범용B 입찰을 통합(중복 품목은 최신 회차 기준). 27년 통합 입찰 준비용 마스터 품목 리스트입니다. '계약업체·계약기간' 칸을 클릭하면 현재 계약업체와 계약기간(예: 27.03월)을 입력할 수 있고, 이전 값이 있으면 자동으로 이력에 남아 나중에 업체가 바뀐 시점을 비교할 수 있습니다.<br>※ 기준단가·낙찰가·물량·배분율은 칸을 눌러 직접 수정할 수 있습니다(주황색 배경 = 원본에서 수정됨). 칸을 비우면 원본값으로 되돌아갑니다. 금액(원)은 원본표의 확정 금액을 그대로 표시하며 수정값으로 자동 재계산되지 않습니다. 모든 수정 이력은 '🗓️ 입찰일정' 탭에서 확인할 수 있습니다.</div>
     </div>
     <div class="subpanel" id="psp-matrix">
       <div class="subhead">업체별 입찰가능 품목 매트릭스 <span class="hint">O = 입찰대상 · 숫자 = 낙찰순위</span></div>
@@ -2010,6 +2011,18 @@ service cloud.firestore {
       <div class="tablewrap"><table class="bomtbl" style="min-width:auto">
         <thead><tr><th>업체</th><th class="n">입찰 참여 품목수</th><th class="n">동국과 경합</th><th class="n">1순위(낙찰) 품목수</th></tr></thead>
         <tbody id="poscoRivalBody"></tbody>
+      </table></div>
+    </div>
+    <div class="subpanel" id="psp-schedule">
+      <div class="subhead">계약기간 · 다음 입찰(계약) 일정 <span class="hint">품목을 클릭하면 계약정보를 수정할 수 있습니다 · 다음 예정이 등록된 품목이 위로 정렬됩니다</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:900px">
+        <thead><tr><th>품명</th><th>제철소</th><th>현재 계약업체</th><th>현재 계약기간</th><th style="color:#b45309">다음 예정업체</th><th style="color:#b45309">다음 예정기간</th></tr></thead>
+        <tbody id="poscoScheduleBody"></tbody>
+      </table></div>
+      <div class="subhead" style="margin-top:14px">최근 변경 이력 <span class="hint">기준단가·낙찰가·물량·배분율을 수정할 때마다 자동으로 기록됩니다 (최신순 최대 40건)</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:auto">
+        <thead><tr><th>일시</th><th>품명</th><th>항목</th><th>변경전</th><th>변경후</th></tr></thead>
+        <tbody id="poscoLogBody"></tbody>
       </table></div>
     </div>
   </section>
@@ -4312,7 +4325,9 @@ function renderLadleDia(){
       <tr><th>입회자</th><td><input class="dtxt" placeholder="제강팀 ○○○" value="${esc(diaCur.insWith||'')}" onchange="diaCur.insWith=this.value"></td></tr>
       <tr><th>업체</th><td><input class="dtxt" placeholder="공급업체" value="${esc(diaCur.vendor||'')}" onchange="diaCur.vendor=this.value"></td></tr>
       <tr><th>Remark</th><td><input class="dtxt" placeholder="S/L 잔존부족으로 해체" value="${esc(diaCur.remark||'')}" onchange="diaCur.remark=this.value"></td></tr>
-    </tbody></table>`;
+    </tbody></table>
+    <div class="dia-h" style="margin-top:10px">⑤ 래들 사진</div>
+    <div style="display:flex;gap:10px">${diaPhotoSlotHtml(0)}${diaPhotoSlotHtml(1)}</div>`;
 
   /* 단수별 잔존 (표시 순서: 가운데 배치) */
   let col3=`<div class="dia-h">③ 단수별 잔존 <span class="dsub">용손율 = (규격−잔존)÷${ch}CH</span></div>
@@ -4341,13 +4356,10 @@ function renderLadleDia(){
       <div class="dt-r">${esc(diaCur.no||'')} · ${esc(diaCur.ev)} · 총사용수명 <b>${ch}</b> CH · ${dateLab} ${esc(fmtYMD(diaCur.date||''))}</div>
     </div>`;
   const warnBar=warn.length?`<div class="dia-warn">⚠ 기준잔존 미달 : ${esc(warn.join(', '))}</div>`:'';
-  const photoBlock=`<div class="dia-h" style="margin-top:8px">⑤ 래들 사진</div>
-    <div style="display:flex;gap:10px">${diaPhotoSlotHtml(0)}${diaPhotoSlotHtml(1)}</div>`;
 
   document.getElementById('ladleDia').innerHTML=
     `<div id="diaPrintArea" class="dia-sheet">${head}
        <div class="dia-grid"><div>${col2}</div><div>${col3}</div><div>${col1}</div></div>
-       ${photoBlock}
        ${warnBar}
        <div class="dia-foot">점검자 ${esc(diaCur.insBy||'')} &nbsp;/&nbsp; 입회 ${esc(diaCur.insWith||'')} &nbsp;/&nbsp; 점검일 ${esc(fmtYMD(diaCur.insDate||diaCur.date||''))}</div>
      </div>`;
@@ -7130,6 +7142,45 @@ function poscoSiteSel(item){const cur=poscoSite(item);
   const bg=cur==='포항제철소'?'#dbeafe':cur==='광양제철소'?'#ffedd5':'#eef2f6';
   return `<select class="bsel" style="color:${col};background:${bg};font-size:11px" onchange="setPoscoSite('${esc(item)}',this.value)">`
     +POSCO_SITE_OPTS.map(o=>`<option${o===cur?' selected':''}>${o}</option>`).join('')+`</select>`;}
+/* 배분율·물량·기준단가·낙찰가 직접 수정 — POSCO_SEED(원본)는 그대로 두고 품목별 override로 저장.
+   빈 값으로 지우면 원본값으로 자동 복귀한다. 수정할 때마다 변경이력(poscoFieldLog)에 기록되어
+   '입찰일정' 탭에서 언제 무엇이 바뀌었는지 확인할 수 있다. */
+function loadPoscoFieldOv(){try{return JSON.parse(localStorage.getItem('dgrns_posco_field')||'{}');}catch(e){return{};}}
+function savePoscoFieldOv(){try{localStorage.setItem('dgrns_posco_field',JSON.stringify(poscoFieldOv));}catch(e){}}
+let poscoFieldOv=loadPoscoFieldOv();
+const POSCO_FIELD_LABEL={basePrice:'기준단가',winPrice:'낙찰가',qty:'물량',alloc:'배분율'};
+function loadPoscoFieldLog(){try{const s=JSON.parse(localStorage.getItem('dgrns_posco_field_log'));return Array.isArray(s)?s:[];}catch(e){return[];}}
+function savePoscoFieldLog(){try{localStorage.setItem('dgrns_posco_field_log',JSON.stringify(poscoFieldLog.slice(-200)));}catch(e){}}
+let poscoFieldLog=loadPoscoFieldLog();
+function poscoOrig(item,key){const r=POSCO_SEED.find(x=>x.item===item);return r?r[key]:undefined;}
+function poscoField(r,key){const ov=poscoFieldOv[r.item];const v=ov&&ov[key];return (v!=null&&v!=='')?v:r[key];}
+function poscoFieldChanged(r,key){const ov=poscoFieldOv[r.item];return !!(ov&&ov[key]!=null&&ov[key]!=='');}
+function setPoscoField(item,key,val){
+  const ov=poscoFieldOv[item]||{};
+  const before=poscoField({item,[key]:poscoOrig(item,key)},key);
+  let after;
+  if(key==='alloc'){
+    const s=(val||'').trim();
+    if(!s||s===(poscoOrig(item,key)||''))delete ov[key];else ov[key]=s;
+    after=ov[key]!=null?ov[key]:poscoOrig(item,key);
+  }else{
+    const s=(val==null?'':val).toString().replace(/,/g,'').trim();
+    if(s===''){delete ov[key];}
+    else{
+      const n=+s;
+      if(isNaN(n)){toast('숫자를 입력하세요');renderPosco();return;}
+      if(n===poscoOrig(item,key))delete ov[key];else ov[key]=n;
+    }
+    after=ov[key]!=null?ov[key]:poscoOrig(item,key);
+  }
+  if(Object.keys(ov).length)poscoFieldOv[item]=ov;else delete poscoFieldOv[item];
+  savePoscoFieldOv();
+  if(before!==after){
+    poscoFieldLog.push({item,key,from:before,to:after,at:new Date().toISOString()});
+    savePoscoFieldLog();
+  }
+  renderPosco();
+}
 function poscoTab(sp){poscoSub=sp;
   document.querySelectorAll('#poscoSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sp===sp));
   document.querySelectorAll('#v-posco .subpanel').forEach(p=>p.classList.remove('active'));
@@ -7207,11 +7258,15 @@ function renderPosco(){
   // 결과표: 동국R&S 입찰가능 품목을 상단 그룹으로, 나머지는 하단 그룹으로 표시
   const {canBid,cannotBid}=poscoSplit(rows);
   const COLN=13;
+  const editCell=(r,key,w)=>{const v=poscoField(r,key);const ch=poscoFieldChanged(r,key);
+    return `<input type="text" class="dnum" style="width:${w||70}px;text-align:right${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${v==null?'':Math.round(v).toLocaleString()}" title="${ch?'원본 '+pN(r[key])+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','${key}',this.value)">`;};
+  const allocCell=r=>{const v=poscoField(r,'alloc')||'';const ch=poscoFieldChanged(r,'alloc');
+    return `<input type="text" class="dtxt" style="width:60px;text-align:center${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="80:20" title="${ch?'원본 '+esc(r.alloc||'-')+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','alloc',this.value)">`;};
   const rowHtml=r=>`<tr${r.dkWin>0?' style="background:#f0fdf4"':''}>
       <td style="white-space:nowrap"><b>${esc(r.item)}</b></td><td>${poscoSiteSel(r.item)}</td><td>${vendorPlainTags(r)}</td><td>${vendorRankTags(r)}</td><td style="font-size:12px;white-space:nowrap">${esc(r.baseVendor||'-')}</td>
-      <td class="n">${pN(r.basePrice)}</td><td class="n">${pN(r.winPrice)}</td>
-      <td class="n">${pN(r.qty)}</td><td class="n">${pN(r.amount)}</td>
-      <td>${r.alloc?`<span class="tag t-vendor" style="font-size:10.5px">${esc(r.alloc)}</span>`:'-'}</td>
+      <td class="n">${editCell(r,'basePrice')}</td><td class="n">${editCell(r,'winPrice')}</td>
+      <td class="n">${editCell(r,'qty')}</td><td class="n">${pN(r.amount)}</td>
+      <td>${allocCell(r)}</td>
       <td>${dkBadge(r)}</td><td class="n" style="white-space:nowrap">${r.dkWin>0?'<b>'+pN(r.dkWin)+'</b>':'-'}</td>
       <td style="cursor:pointer" onclick="editPoscoContract('${esc(r.item)}')" title="클릭해서 현재 계약업체·계약기간 입력/수정">${poscoContractCell(r.item)} <span style="font-size:10px;color:var(--accent)">✎</span>
         ${((poscoContractStore[r.item]||{}).history||[]).length?`<br><button class="btn sm" style="font-size:10px;padding:1px 6px;margin-top:3px" onclick="event.stopPropagation();showPoscoHistory('${esc(r.item)}')">이력보기</button>`:''}</td></tr>`;
@@ -7225,14 +7280,40 @@ function renderPosco(){
   if(poscoSub==='matrix')renderPoscoMatrix(rows);
   // 순위 분포 + 경쟁사
   if(poscoSub==='rank')renderPoscoRank(all);
+  // 입찰일정 · 변경이력
+  if(poscoSub==='schedule')renderPoscoSchedule(all);
 }
 function renderPoscoMatrix(rows0){
   const {all:rows}=poscoSplit(rows0);
   const head=`<thead><tr><th>품명</th><th class="n">물량(kg)</th><th>배분율</th>`+PVEND.map(v=>`<th style="text-align:center;color:${PVEND_COLOR[v]}">${v}</th>`).join('')+`</tr></thead>`;
-  const b=rows.map(r=>{const vm=r.vmap||{};
-    return `<tr${vm['동국']?' style="background:#eef6ff"':''}><td><b>${esc(r.item)}</b></td><td class="n">${pN(r.qty)}</td><td>${r.alloc?`<span class="tag t-vendor" style="font-size:10px">${esc(r.alloc)}</span>`:'-'}</td>`
+  const b=rows.map(r=>{const vm=r.vmap||{};const qv=poscoField(r,'qty'),av=poscoField(r,'alloc');
+    return `<tr${vm['동국']?' style="background:#eef6ff"':''}><td><b>${esc(r.item)}</b></td><td class="n">${pN(qv)}</td><td>${av?`<span class="tag t-vendor" style="font-size:10px">${esc(av)}</span>`:'-'}</td>`
       +PVEND.map(v=>`<td style="text-align:center">${vcell(vm[v])}</td>`).join('')+`</tr>`;}).join('');
   document.getElementById('poscoMatrix').innerHTML=head+`<tbody>${b||`<tr><td colspan="${PVEND.length+3}"><div class="empty">품목이 없습니다.</div></td></tr>`}</tbody>`;
+}
+/* 입찰일정 탭: ①계약기간·다음 예정 일정을 한 화면에 모아보기 ②기준단가·낙찰가·물량·배분율 변경이력 */
+function renderPoscoSchedule(all){
+  const items=all.slice().sort((a,b)=>{
+    const ca=poscoContractStore[a.item]||{}, cb=poscoContractStore[b.item]||{};
+    const na=(ca.next&&ca.next.period)?0:1, nb=(cb.next&&cb.next.period)?0:1;
+    if(na!==nb)return na-nb;
+    return (ca.next&&ca.next.period||'').localeCompare(cb.next&&cb.next.period||'')||a.item.localeCompare(b.item);
+  });
+  document.getElementById('poscoScheduleBody').innerHTML=items.map(r=>{
+    const c=poscoContractStore[r.item]||{};
+    const hasNext=c.next&&(c.next.vendor||c.next.period);
+    return `<tr${hasNext?' style="background:#fffbeb"':''} style="cursor:pointer" onclick="editPoscoContract('${esc(r.item)}')">
+      <td style="white-space:nowrap"><b>${esc(r.item)}</b></td><td>${esc(poscoSite(r.item))}</td>
+      <td>${esc(c.vendor||'-')}</td><td style="font-size:12px;color:var(--muted)">${esc(c.period||'-')}</td>
+      <td style="color:#b45309">${esc((c.next&&c.next.vendor)||'-')}</td><td style="font-size:12px;color:#b45309">${esc((c.next&&c.next.period)||'-')}</td></tr>`;
+  }).join('')||`<tr><td colspan="6"><div class="empty">품목이 없습니다.</div></td></tr>`;
+  const log=poscoFieldLog.slice().reverse().slice(0,40);
+  const fmtV=(k,v)=>k==='alloc'?esc(v||'-'):pN(v);
+  document.getElementById('poscoLogBody').innerHTML=log.map(l=>
+    `<tr><td style="font-size:11.5px;color:var(--muted);white-space:nowrap">${esc((l.at||'').replace('T',' ').slice(0,16))}</td>
+     <td><b>${esc(l.item)}</b></td><td>${esc(POSCO_FIELD_LABEL[l.key]||l.key)}</td>
+     <td class="n">${fmtV(l.key,l.from)}</td><td class="n"><b>${fmtV(l.key,l.to)}</b></td></tr>`
+  ).join('')||`<tr><td colspan="5"><div class="empty">아직 변경 이력이 없습니다. 기준단가·낙찰가·물량·배분율을 수정하면 여기에 기록됩니다.</div></td></tr>`;
 }
 function renderPoscoRank(all){
   const cats=[['낙찰','#15803d'],['1순위','#1d4ed8'],['2순위','#b45309'],['참여','#64748b'],['미참여','#94a3b8']];
@@ -7252,9 +7333,9 @@ function renderPoscoRank(all){
 }
 function downloadPosco(){
   const rows=poscoRows();
-  let t=`<table><tr><th>품명</th><th>제철소</th><th>기존업체</th><th>기존단가</th><th>낙찰가</th><th>물량</th><th>금액</th><th>배분율</th><th>동국순위</th><th>동국낙찰금액</th><th>계약업체</th><th>계약기간</th>`+PVEND.map(v=>`<th>${v}</th>`).join('')+`</tr>`;
+  let t=`<table><tr><th>품명</th><th>제철소</th><th>기존업체</th><th>기준단가</th><th>낙찰가</th><th>물량</th><th>금액</th><th>배분율</th><th>동국순위</th><th>동국낙찰금액</th><th>계약업체</th><th>계약기간</th>`+PVEND.map(v=>`<th>${v}</th>`).join('')+`</tr>`;
   rows.forEach(r=>{const vm=r.vmap||{};const ct=poscoContractStore[r.item]||{};
-    t+=`<tr><td>${esc(r.item)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(r.baseVendor||'')}</td><td>${r.basePrice??''}</td><td>${r.winPrice??''}</td><td>${r.qty??''}</td><td>${r.amount??''}</td><td>${esc(r.alloc||'')}</td><td>${r.dkWin>0?'낙찰':esc(r.dkRank)}</td><td>${r.dkWin||''}</td><td>${esc(ct.vendor||'')}</td><td>${esc(ct.period||'')}</td>`+PVEND.map(v=>`<td>${esc(vm[v]||'')}</td>`).join('')+`</tr>`;});
+    t+=`<tr><td>${esc(r.item)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(r.baseVendor||'')}</td><td>${poscoField(r,'basePrice')??''}</td><td>${poscoField(r,'winPrice')??''}</td><td>${poscoField(r,'qty')??''}</td><td>${r.amount??''}</td><td>${esc(poscoField(r,'alloc')||'')}</td><td>${r.dkWin>0?'낙찰':esc(r.dkRank)}</td><td>${r.dkWin||''}</td><td>${esc(ct.vendor||'')}</td><td>${esc(ct.period||'')}</td>`+PVEND.map(v=>`<td>${esc(vm[v]||'')}</td>`).join('')+`</tr>`;});
   t+=`</table>`;downloadXls('포스코_범용B_입찰통합',t);
 }
 
@@ -9188,6 +9269,20 @@ function empOptions(){return empData.filter(e=>e.active!==0&&(canSeeEmp(e)||e.id
 /* 2026-09-21: 교대 대근자는 직급·소속 상관없이 누가 대신 근무할지 미리 알 수 없으므로
    canSeeEmp() 상하관계 필터를 적용하지 않고 재직중인 전 직원을 보여준다(본인 제외). */
 function subOptions(){return empData.filter(e=>e.active!==0&&e.id!==myEmpId()).sort((a,b)=>a.name.localeCompare(b.name)).map(e=>({v:e.id,l:e.name+(e.dept?' ('+e.dept+')':'')}));}
+/* 2026-09-26: 잔업신청은 주임 이상 현장직원이 여러 명을 대표로 한번에 상신하는 경우가 많아
+   같은 반으로 제한하면 안 된다는 요청 → 잔업신청서의 '신청자' 선택만 파트(반) 구분 없이
+   현장직원(축로반·SN반·기성) 전원을 보여준다(단, 본인보다 상위 직급자는 기존과 동일하게 제외).
+   휴가원·문서 목록 필터·인수인계 등 다른 화면의 canSeeEmp() 열람범위는 그대로 유지된다. */
+function otEmpOptions(){
+  if(seeAllAttend())return empOptions();
+  const me=meEmp();
+  if(me&&FIELD_DEPTS.includes(normDept(me.dept))&&rankLv(me)>=2){
+    return empData.filter(e=>e.active!==0&&FIELD_DEPTS.includes(normDept(e.dept))&&rankLv(e)<=rankLv(me))
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .map(e=>({v:e.id,l:e.name+(e.dept?' ('+e.dept+(e.team?' '+e.team:'')+')':'')}));
+  }
+  return empOptions();
+}
 function attendYears(){
   const ys=new Set([todayStr().slice(0,4)]);
   leaveData.forEach(l=>ys.add(String(l.start||'').slice(0,4)));
@@ -9207,7 +9302,7 @@ function initAttend(){
   updateMeChip();
   const me=myEmpId();
   fillSel('lv_emp',empOptions(),me||'');
-  fillSel('ot_emp',empOptions(),me||'');
+  fillSel('ot_emp',otEmpOptions(),me||'');
   fillSel('lv_type',LEAVE_TYPES,document.getElementById('lv_type').value||'연차');
   const ys=attendYears(),cy=todayStr().slice(0,4);
   fillSel('lv_fYear',ys,document.getElementById('lv_fYear').value||cy);
