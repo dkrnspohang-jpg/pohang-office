@@ -1004,9 +1004,11 @@
       <span class="spacer"></span>
       <span style="font-size:12px;color:var(--muted)">분기 확정 →</span>
       <select class="selbox" id="pm_qtr" style="width:110px"></select>
-      <button class="btn primary" onclick="confirmQuarterBtn()" title="현재 단가를 선택 분기의 확정단가로 저장">📌 이 분기로 확정</button>
+      <button class="btn primary" onclick="newPricePoint()" title="선택한 분기를 새 단가 시점으로 만들고, 그 시점의 단가를 바로 수정할 수 있게 전환합니다(현재 라이브 단가는 그대로 유지)">🆕 신규 시점</button>
+      <button class="btn" onclick="confirmQuarterBtn()" title="현재(라이브) 단가를 선택 분기에 그대로 덮어써 저장">📌 현재값으로 확정</button>
       <button class="btn danger del-rec" onclick="delSnap()" title="현재 조회중인 확정분기 삭제">확정 삭제</button>
     </div>
+    <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="pm_periodHint"></div>
     <div class="tablewrap"><table class="bomtbl">
       <thead><tr><th style="width:30px" title="표시된 전체 선택"><input type="checkbox" id="pm_all" onchange="toggleAllShown(this.checked)"></th><th style="width:60px">설비</th><th style="width:66px">구분</th><th style="width:160px">당사 제품명</th><th style="width:140px">고객사 제품명</th><th style="width:150px">배합</th><th style="width:170px">규격</th><th class="n" style="width:64px">단중</th><th style="width:78px">단가유형</th><th class="n" style="width:84px">단가(원)</th><th class="n" style="width:92px">변동</th><th style="width:60px">등록</th><th style="width:44px">사용</th><th class="n" style="width:44px">물량</th><th style="width:34px"></th></tr></thead>
       <tbody id="prodBody"></tbody>
@@ -1919,10 +1921,22 @@ service cloud.firestore {
         <button class="btn" onclick="downloadInvMaster()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:11.5px;color:var(--muted)">설비·품명·단가·단위는 입력 즉시 자동 저장됩니다 · 내화물 기본정보와 연동시 단가 자동 동기화</span>
       </div>
+      <div class="toolrow" style="margin-top:6px;background:#f1f5f9;border-radius:8px;padding:7px 10px">
+        <span style="font-size:12px;font-weight:700;color:#334155">단가 시점</span>
+        <select class="selbox" id="invm_period" onchange="setInvPricePeriod(this.value)"></select>
+        <span class="spacer"></span>
+        <span style="font-size:12px;color:var(--muted)">신규 시점 →</span>
+        <select class="selbox" id="invm_newtype" style="width:76px" onchange="syncInvNewYmOptions()"><option value="month">월별</option><option value="quarter">분기별</option></select>
+        <select class="selbox" id="invm_newym" style="width:130px"></select>
+        <button class="btn primary" onclick="addInvPricePoint()" title="선택한 월/분기부터 적용되는 단가 이력을 만들고 바로 편집할 수 있게 전환합니다">🆕 신규 시점</button>
+        <button class="btn danger del-rec" onclick="delInvPricePoint()" title="현재 조회중인 시점의 단가 이력 전체 삭제">시점 삭제</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="invm_periodHint"></div>
       <div class="tablewrap"><table class="bomtbl" style="min-width:960px">
         <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:180px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:170px">내화물 기본정보 연동</th><th style="min-width:100px">관리</th></tr></thead>
         <tbody id="invMasterBody"></tbody>
       </table></div>
+      <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ "현재(직접수정)"에서 단가를 고치면 즉시 라이브 단가로 적용되어 월별 원단위·입고금액 등 모든 계산에 오늘부터 반영됩니다. 특정 월(또는 분기)부터 적용될 단가를 미리 준비하려면 🆕 신규 시점을 눌러 그 시점만 따로 편집하세요 — 과거 달의 원단위·비교 화면은 그 달 시점에 유효했던 단가로 자동 계산됩니다.</div>
     </div>
   </section>
 
@@ -3181,6 +3195,26 @@ function confirmQuarterBtn(){
   if(!confirm(`현재 제품 단가를 [${label}] 확정단가로 저장할까요?`+(exists?`\n(이미 저장된 분기 — 덮어씁니다)`:'')))return;
   confirmQuarter(key,label);toast(label+' 단가 확정 저장 · 원가 조회에 반영됩니다');syncPeriodSelectors();renderProdMaster();
 }
+// 2026-09-26: "신규 시점" — 선택한 분기를 새 단가 시점으로 만들고(없으면 직전 유효가로 시딩),
+// 그 시점으로 조회를 전환해 바로 단가를 수정할 수 있게 함(라이브 단가는 그대로 유지).
+// 이미 있는 시점을 선택해도 마찬가지로 편집모드로 전환 — 과거/미래 시점 단가를 나중에 고치기 쉽게 하기 위함.
+function newPricePoint(){
+  const key=(document.getElementById('pm_qtr')||{}).value||currentQuarterKey();const label=quarterLabel(key);
+  const exists=!!priceSnaps[key];
+  if(!exists){
+    const prices={};prodData.forEach(p=>{prices[p.id]=priceAt(p.id,pricePeriod);}); // 조회중인 시점(보통 직전 유효가)으로 시딩
+    priceSnaps[key]={date:todayStr(),label,prices};saveSnaps();
+  }
+  setPricePeriod(key);
+  toast(exists?`[${label}] 시점 편집모드로 전환했습니다`:`[${label}] 시점이 생성되었습니다 · 바뀐 제품만 단가를 수정하세요`);
+}
+// 시점(스냅샷) 단가 직접 수정 — 라이브(prodData) 값은 건드리지 않고 해당 시점에만 반영
+let _snapAutoSaveT=null;
+function editSnapPrice(period,id,v){
+  const s=priceSnaps[period]=priceSnaps[period]||{date:todayStr(),label:quarterLabel(period),prices:{}};
+  s.prices[id]=+v||0;
+  clearTimeout(_snapAutoSaveT);_snapAutoSaveT=setTimeout(saveSnaps,500);
+}
 function delSnap(){if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}
   const pk=pricePeriod;if(!pk){toast('삭제할 확정분기를 먼저 선택하세요');return;}
   if(!confirm(`[${periodLabel(pk)}] 확정단가를 삭제할까요?`))return;
@@ -3640,15 +3674,21 @@ function renderProdMaster(){
   const viewLive=(pricePeriod==='');
   window.__pmShownIds=rows.map(({p})=>p.id);
   document.getElementById('pm_hint').textContent=`표시 ${rows.length} / 총 ${prodData.length}개 · 상품 ${nGoods}·제품 ${prodData.length-nGoods} · 선택 ${prodSel.size} · 단가시점 [${periodLabel(pricePeriod)}]${cmpPeriod?' vs '+periodLabel(cmpPeriod):''}`;
+  const phEl=document.getElementById('pm_periodHint');
+  if(phEl)phEl.textContent=viewLive
+    ?'※ "현재(편집중)"에서 단가를 고치면 라이브 단가가 즉시 바뀝니다. 특정 시점부터 적용될 단가를 미리 준비하려면 분기를 고르고 🆕 신규 시점을 눌러 그 시점만 편집하세요.'
+    :`※ 지금은 [${periodLabel(pricePeriod)}] 시점 단가를 편집 중입니다(노란 칸) — 이 시점에만 저장되고 라이브 단가·다른 시점은 바뀌지 않습니다.`;
   const catSel=(i,v)=>`<select onchange="editProd(${i},'cat',this.value);renderProdMaster()" style="font-size:11px">${PROD_CATS.map(c=>`<option value="${c}"${c===(v||'공통')?' selected':''}>${catLabel(c)}</option>`).join('')}</select>`;
   const gubunSel=(i,v)=>`<select onchange="editProd(${i},'gubun',this.value);renderProdMaster()" style="font-size:11px">${PROD_GUBUN.map(g=>`<option${g===(v||'제품')?' selected':''}>${g}</option>`).join('')}</select>`;
   document.getElementById('prodBody').innerHTML=rows.map(({p,i})=>{const off=prodUse(p)===0;const sel=prodSel.has(p.id);
     const shown=priceAt(p.id,pricePeriod);
+    // 2026-09-26: "신규 시점" 편집을 지원하기 위해 시점 조회중에도 단가를 직접 수정할 수 있게 함
+    // (라이브가 아닌 시점 수정은 그 시점의 확정단가에만 반영되고 현재 라이브 단가는 바뀌지 않음).
     const priceCell=viewLive
       // 2026-09-22: 단가 입력칸에 천단위 콤마 표시 — type=number는 콤마 표시가 불가능해 text로 변경.
       // 입력 중에는 숫자만 뽑아 그대로 저장(editProd)하고, 포커스를 벗어날 때만 콤마를 다시 붙여 보여준다.
       ? `<input type="text" inputmode="numeric" value="${p.price?Number(p.price).toLocaleString():''}" style="width:92px;text-align:right" oninput="editProd(${i},'price',this.value.replace(/[^0-9]/g,''))" onblur="this.value=prodData[${i}]&&prodData[${i}].price?Number(prodData[${i}].price).toLocaleString():''">`
-      : `<span title="${esc(periodLabel(pricePeriod))} 확정단가">${shown?wON(shown):'-'}</span>`;
+      : `<input type="text" inputmode="numeric" value="${shown?Number(shown).toLocaleString():''}" style="width:92px;text-align:right;border-color:#f59e0b;background:#fffbeb" title="[${esc(periodLabel(pricePeriod))}] 시점 단가 — 이 시점에만 반영되며 현재 라이브 단가는 바뀌지 않습니다" oninput="editSnapPrice('${pricePeriod}','${p.id}',this.value.replace(/[^0-9]/g,''))" onblur="this.value=Number(priceAt('${p.id}','${pricePeriod}')||0).toLocaleString()">`;
     let cmpCell='<span style="color:#c5ccd3">-</span>';
     if(cmpPeriod){const base=priceAt(p.id,cmpPeriod);const d=shown-base;
       const pct=base?(d/base*100):null;const col=d>0?'#c81e1e':d<0?'#1d4ed8':'#94a3b8';const ar=d>0?'▲':d<0?'▼':'–';
@@ -5155,7 +5195,9 @@ function nav(v){
   closePcMenu();
   if(!viewAllowed(v)){toast('이 화면에 접근할 권한이 없습니다');v=defaultView();}
   curView=v;
-  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','handover','vac'].includes(v));
+  // 2026-09-26: 표 너비가 기본 컨텐츠 폭(1180px)보다 넓어 열이 가로 스크롤 없이는 잘려 보이는 화면들
+  // (품목마스터의 등록/사용/물량 등)을 wide 컨텐츠(1560px)로 전환해 한 화면에 다 보이게 함.
+  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','handover','vac','prodm','attend','emp','posco','stocksd','stockvs'].includes(v));
   ALL_VIEWS.forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
   document.querySelectorAll('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
   document.getElementById('viewTitle').textContent=VIEWS[v][0];
@@ -6268,6 +6310,76 @@ function invItem(code){const m=invM.get(code)||{c:code,n:code,u:'',p:0,g:'',cl:'
   const lp=o.linkedProdId?prodById(o.linkedProdId):null;
   const p=lp?(+lp.price||0):(o.p!=null?o.p:m.p);
   return {c:code,n:m.n,g:m.g,cl:m.cl,u:o.u!=null?o.u:m.u,p,linkedProdId:o.linkedProdId||'',linkedProd:lp};}
+/* ===== 2026-09-26: 원단위 품목 단가 시점(월별/분기별) 이력 =====
+   기존엔 모든 월별 원단위·입고금액·설비별 비교가 항상 "오늘의 라이브 단가(it.p)"로 계산되어,
+   과거 달을 조회해도 최근 단가변동이 그대로 소급 반영되는 문제가 있었음.
+   invPriceHist={code:[{ym:'YYYY-MM',p:단가}, ...]}(월 오름차순) 를 두고,
+   invPriceAt(code,ym)으로 "그 달 시점에 유효했던 단가"를 구해 월별 계산에 쓰도록 함(기본데이터 자동 반영).
+   이력이 없는 품목은 기존과 동일하게 항상 invItem(code).p(라이브/연동가)를 씀 — 하위호환. */
+function loadInvPriceHist(){try{const s=JSON.parse(localStorage.getItem('dgrns_invpricehist'));if(s&&typeof s==='object')return s;}catch(e){}return {};}
+let invPriceHist=loadInvPriceHist();
+function saveInvPriceHist(){try{localStorage.setItem('dgrns_invpricehist',JSON.stringify(invPriceHist));}catch(e){}}
+function invPriceAt(code,ym){
+  const it=invItem(code);
+  if(it.linkedProdId)return it.p; // 내화물 기본정보 연동 품목은 항상 그쪽의 라이브 단가를 따름(이력 대상 아님)
+  const hist=invPriceHist[code];if(!hist||!hist.length)return it.p;
+  let found=null;for(const h of hist){if(h.ym<=ym)found=h;else break;} // hist는 ym 오름차순 정렬 유지
+  return found?(+found.p||0):it.p;
+}
+let invmPricePeriod=''; // ''=현재(직접수정), 그 외='YYYY-MM'(그 시점 단가를 편집)
+function invHistPeriods(){const set=new Set();Object.values(invPriceHist).forEach(arr=>(arr||[]).forEach(h=>set.add(h.ym)));return [...set].sort();}
+function invPeriodLabel(ym){if(!ym)return '현재(직접수정)';const a=ym.split('-');return `${a[0]}년 ${+a[1]}월~ 적용`;}
+function quarterToYm(qkey){const m=/^(\d{4})Q([1-4])$/.exec(qkey);if(!m)return qkey;return m[1]+'-'+String((+m[2]-1)*3+1).padStart(2,'0');}
+function syncInvPeriodSelector(){
+  const el=document.getElementById('invm_period');if(el)el.innerHTML='<option value="">현재(직접수정)</option>'+invHistPeriods().map(ym=>`<option value="${ym}"${ym===invmPricePeriod?' selected':''}>${esc(invPeriodLabel(ym))}</option>`).join('');
+  syncInvNewYmOptions();
+}
+function syncInvNewYmOptions(){
+  const type=(document.getElementById('invm_newtype')||{}).value||'month';
+  const el=document.getElementById('invm_newym');if(!el)return;
+  if(type==='quarter'){
+    el.innerHTML=QUARTER_PRESETS.map(x=>`<option value="${x.key}">${x.label}(${quarterToYm(x.key)}~)</option>`).join('');
+  }else{
+    const base=new Date();base.setDate(1);const cur=todayStr().slice(0,7);const opts=[];
+    for(let i=-2;i<30;i++){const d=new Date(base.getFullYear(),base.getMonth()+i,1);opts.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}
+    el.innerHTML=opts.map(ym=>`<option value="${ym}"${ym===cur?' selected':''}>${esc(invPeriodLabel(ym))}</option>`).join('');
+  }
+}
+function setInvPricePeriod(v){invmPricePeriod=v||'';renderInvMaster();}
+// "신규 시점": 선택한 월/분기부터 적용되는 단가 이력을 만들고 바로 편집할 수 있게 전환.
+// 이미 그 시점이 있으면 편집모드로만 전환(과거/미래 시점 단가를 나중에 고치기 쉽게).
+function addInvPricePoint(){
+  const type=(document.getElementById('invm_newtype')||{}).value||'month';
+  const raw=(document.getElementById('invm_newym')||{}).value;if(!raw){toast('시점을 선택하세요');return;}
+  const ym=type==='quarter'?quarterToYm(raw):raw;
+  const already=invHistPeriods().includes(ym);
+  if(!already){
+    INV_MASTER.forEach(m=>{
+      if(invItem(m.c).linkedProdId)return; // 연동 품목은 이력 대상 제외(항상 연동가 사용)
+      const seed=invPriceAt(m.c,ym); // 직전 유효가로 시딩 — 바뀐 품목만 수정하면 됨
+      const arr=invPriceHist[m.c]=invPriceHist[m.c]||[];
+      if(!arr.some(h=>h.ym===ym))arr.push({ym,p:seed});
+      arr.sort((a,b)=>a.ym.localeCompare(b.ym));
+    });
+    saveInvPriceHist();
+  }
+  invmPricePeriod=ym;syncInvPeriodSelector();renderInvMaster();
+  toast(already?`[${invPeriodLabel(ym)}] 시점 편집모드로 전환했습니다`:`[${invPeriodLabel(ym)}] 시점이 생성되었습니다 · 바뀐 품목만 단가를 수정하세요`);
+}
+function delInvPricePoint(){
+  const ym=invmPricePeriod;if(!ym){toast('삭제할 시점을 먼저 선택하세요');return;}
+  if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}
+  if(!confirm(`[${invPeriodLabel(ym)}] 시점의 단가 이력을 전체 삭제할까요?`))return;
+  Object.keys(invPriceHist).forEach(c=>{invPriceHist[c]=(invPriceHist[c]||[]).filter(h=>h.ym!==ym);});
+  saveInvPriceHist();invmPricePeriod='';syncInvPeriodSelector();renderInvMaster();toast('삭제되었습니다');
+}
+let _invHistAutoSaveT=null;
+function editInvHistPrice(code,ym,v){
+  const arr=invPriceHist[code]=invPriceHist[code]||[];
+  const idx=arr.findIndex(h=>h.ym===ym);
+  if(idx>=0)arr[idx].p=+v||0;else{arr.push({ym,p:+v||0});arr.sort((a,b)=>a.ym.localeCompare(b.ym));}
+  clearTimeout(_invHistAutoSaveT);_invHistAutoSaveT=setTimeout(saveInvPriceHist,500);
+}
 // 2026-09-20: 고객사 품명(custName)이 있으면 함께 보여줘 고객사 품명 기준으로도 선택·검색 가능하게 함
 function invProdOptions(selId){
   return '<option value="">(연동 안함)</option>'+prodData.slice()
@@ -6339,16 +6451,17 @@ function renderInflow(){
   items.sort((a,b)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(b.g);return (ia<0?9:ia)-(ib<0?9:ib);});
   if(only)items=items.filter(m=>invInDaily(m.c,ym)!=null&&invInDaily(m.c,ym)>0);
   let dayAmt=0,monAmt=0;
-  const body=items.map(m=>{const it=invItem(m.c);const dq=invInDay(m.c,d);const mq=invInDaily(m.c,ym)||0;const days=invInDays(m.c,ym);
-    dayAmt+=dq*it.p;monAmt+=mq*it.p;
+  const body=items.map(m=>{const it=invItem(m.c);const pr=invPriceAt(m.c,ym);const dq=invInDay(m.c,d);const mq=invInDaily(m.c,ym)||0;const days=invInDays(m.c,ym);
+    dayAmt+=dq*pr;monAmt+=mq*pr;
     // 2026-09-22: 품명(=고객사 품명) 직접 수정 가능 · 내화물 기본정보의 고객사 제품명이 이 목록에서 선택됨(요청 반영)
+    // 2026-09-26: 단가는 해당 월(ym) 시점에 유효했던 단가(invPriceAt)를 사용 — 시점 이력이 없으면 기존과 동일하게 라이브 단가.
     return `<tr>
       <td style="font-size:10.5px;color:var(--muted)">${esc(m.g)}</td>
-      <td><input class="iinp" style="min-width:150px;font-weight:600" value="${esc(it.n)}" onchange="setInvMasterField('${m.c}','n',this.value);renderInflow()"></td><td>${esc(it.u)}</td><td class="n">${iN(it.p)}</td>
+      <td><input class="iinp" style="min-width:150px;font-weight:600" value="${esc(it.n)}" onchange="setInvMasterField('${m.c}','n',this.value);renderInflow()"></td><td>${esc(it.u)}</td><td class="n">${iN(pr)}</td>
       <td class="n"><input type="number" class="iinp" value="${dq||''}" placeholder="0" onchange="setInflow('${m.c}','${d}',this.value)"></td>
-      <td class="n">${dq?iN(dq*it.p):'-'}</td>
+      <td class="n">${dq?iN(dq*pr):'-'}</td>
       <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq):'-'}</td>
-      <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq*it.p):'-'}</td>
+      <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq*pr):'-'}</td>
       <td style="font-size:11px;color:var(--muted)">${days?days+'일':'-'}</td></tr>`;}).join('');
   document.getElementById('inflowBody').innerHTML=body?body+`<tr style="background:#eef2f6;font-weight:800"><td colspan="5">합계</td><td class="n">${iN(dayAmt)}</td><td></td><td class="n">${iN(monAmt)}</td><td></td></tr>`:`<tr><td colspan="9"><div class="empty">품목이 없습니다.</div></td></tr>`;
   document.getElementById('ii_count').textContent=items.length+' 품목';
@@ -6362,7 +6475,7 @@ function renderInflow(){
 function downloadInflow(){
   const d=document.getElementById('ii_date').value;const ym=d.slice(0,7);
   let t=`<table><tr><th>설비</th><th>품명</th><th>단위</th><th>단가</th><th>${d} 입고</th><th>${ym} 월누적</th></tr>`;
-  INV_MASTER.forEach(m=>{const it=invItem(m.c);t+=`<tr><td>${esc(m.g)}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${it.p}</td><td>${invInDay(m.c,d)}</td><td>${invInDaily(m.c,ym)||0}</td></tr>`;});
+  INV_MASTER.forEach(m=>{const it=invItem(m.c);t+=`<tr><td>${esc(m.g)}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${invPriceAt(m.c,ym)}</td><td>${invInDay(m.c,d)}</td><td>${invInDaily(m.c,ym)||0}</td></tr>`;});
   downloadXls('내화물_일별입고_'+ym,'<table>'+t+'</table>');
 }
 const iN=n=>Math.round(n).toLocaleString();
@@ -6378,15 +6491,15 @@ function renderInvMonth(){
   items.sort((a,b)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(b.g);return (ia<0?9:ia)-(ib<0?9:ib);});
   let body='',lastG=null,gSum={amt:0},tot={amt:0,useKg:0};
   const flushG=()=>{if(lastG!=null)body+=`<tr class="grp-row"><td colspan="7">${esc(lastG)} 소계</td><td></td><td class="n"></td><td class="n">${prod?iU(gSum.amt/prod):'-'}</td></tr>`;};
-  items.forEach(m=>{const it=invItem(m.c);const code=m.c;
+  items.forEach(m=>{const it=invItem(m.c);const code=m.c;const pr=invPriceAt(code,ym);
     if(m.g!==lastG){flushG();lastG=m.g;gSum={amt:0};}
     const prev=invPrev(code,ym),inq=invIn(code,ym),end=invEnd(code,ym),use=invUse(code,ym);
-    const amt=use*it.p;gSum.amt+=amt;tot.amt+=amt;
+    const amt=use*pr;gSum.amt+=amt;tot.amt+=amt;
     const qOv=use/(prod||1),aOv=amt/(prod||1);
     body+=`<tr>
       <td style="font-size:10.5px;color:var(--muted)">${esc(m.g)}</td>
       <td><b>${esc(it.n)}</b></td>
-      <td class="n">${iN(it.p)}</td><td>${esc(it.u)}</td>
+      <td class="n">${iN(pr)}</td><td>${esc(it.u)}</td>
       <td class="n"><input type="number" class="iinp" value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
       <td class="n">${invInDaily(code,ym)!=null?`<span title="입고량 탭 일별 합계" style="color:#1d4ed8;font-weight:700">${iN(inq)}</span> <span style="font-size:9px;color:#94a3b8">일별</span>`:`<input type="number" class="iinp" value="${inq}" onchange="setInvField('${code}','${ym}','in',this.value)">`}</td>
       <td class="n"><input type="number" class="iinp" value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)"></td>
@@ -6405,8 +6518,8 @@ function renderInvMonth(){
 }
 // 월별/연도별 비교
 function invMonths(){const s=new Set(invData.map(r=>r.ym));s.add('2026-09');return [...s].sort();}
-function invTotAmt(ym){let a=0;INV_MASTER.forEach(m=>{a+=invUse(m.c,ym)*invItem(m.c).p;});return a;}
-function invGrpAmt(ym,g){let a=0;INV_MASTER.filter(m=>m.g===g).forEach(m=>{a+=invUse(m.c,ym)*invItem(m.c).p;});return a;}
+function invTotAmt(ym){let a=0;INV_MASTER.forEach(m=>{a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
+function invGrpAmt(ym,g){let a=0;INV_MASTER.filter(m=>m.g===g).forEach(m=>{a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
 function renderInvCompare(){
   const mode=document.getElementById('invc_mode').value;
   let keys,label,prodOf,amtOf;
@@ -6434,10 +6547,18 @@ function renderInvCompare(){
 function renderInvMaster(){
   const q=(document.getElementById('invm_search').value||'').toLowerCase();
   const items=INV_MASTER.filter(m=>!q||(m.n||'').toLowerCase().includes(q)||(m.c||'').toLowerCase().includes(q));
+  syncInvPeriodSelector();
+  const viewingHist=invmPricePeriod!=='';
+  const phEl=document.getElementById('invm_periodHint');
+  if(phEl)phEl.textContent=viewingHist
+    ?`※ 지금은 [${invPeriodLabel(invmPricePeriod)}] 시점 단가를 편집 중입니다(노란 칸) — 이 시점부터 적용되는 값으로 과거 달 계산에는 영향 없이 저장됩니다.`
+    :'';
   document.getElementById('invMasterBody').innerHTML=items.map(m=>{const it=invItem(m.c);const linked=it.linkedProdId;
     const priceCell=linked
       ?`<input type="number" class="iinp" value="${it.p}" disabled style="width:76px;background:#f4f6f8;color:var(--muted)" title="내화물 기본정보(${esc(it.linkedProd?it.linkedProd.name:'')}) 연동 · 단가는 그쪽에서 수정하세요">`
-      :`<input type="number" class="iinp" value="${it.p}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{p:+this.value});saveInvMOv();renderInvMonth()">`;
+      :viewingHist
+        ?`<input type="number" class="iinp" value="${invPriceAt(m.c,invmPricePeriod)}" style="width:76px;border-color:#f59e0b;background:#fffbeb" title="[${esc(invPeriodLabel(invmPricePeriod))}] 시점 단가" onchange="editInvHistPrice('${m.c}','${invmPricePeriod}',this.value)">`
+        :`<input type="number" class="iinp" value="${it.p}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{p:+this.value});saveInvMOv();renderInvMonth()">`;
     return `<tr><td style="font-size:11px;color:var(--muted)"><input class="iinp" style="width:56px;text-align:center;font-size:11px" value="${esc(m.g)}" onchange="setInvMasterField('${m.c}','g',this.value)"></td><td style="font-size:10.5px">${esc(m.c)}</td>
       <td><input class="iinp" style="min-width:170px" value="${esc(m.n)}" onchange="setInvMasterField('${m.c}','n',this.value)"></td>
       <td><input class="iinp" style="width:52px;text-align:center" value="${esc(it.u)}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{u:this.value});saveInvMOv();renderInvMonth()"></td>
@@ -6449,8 +6570,8 @@ function renderInvMaster(){
 function downloadInv(){
   const ym=document.getElementById('inv_ym').value;const prod=getProd(ym)||0;
   let t=`<table><tr><th>설비</th><th>품명</th><th>단가</th><th>단위</th><th>전월재고</th><th>입고</th><th>월말실재고</th><th>사용량</th><th>수량원단위</th><th>금액원단위</th></tr>`;
-  INV_MASTER.forEach(m=>{const it=invItem(m.c);const use=invUse(m.c,ym);const amt=use*it.p;
-    t+=`<tr><td>${esc(m.g)}</td><td>${esc(it.n)}</td><td>${it.p}</td><td>${esc(it.u)}</td><td>${invPrev(m.c,ym)}</td><td>${invIn(m.c,ym)}</td><td>${invEnd(m.c,ym)}</td><td>${use}</td><td>${prod?(use/prod).toFixed(3):''}</td><td>${prod?(amt/prod).toFixed(2):''}</td></tr>`;});
+  INV_MASTER.forEach(m=>{const it=invItem(m.c);const pr=invPriceAt(m.c,ym);const use=invUse(m.c,ym);const amt=use*pr;
+    t+=`<tr><td>${esc(m.g)}</td><td>${esc(it.n)}</td><td>${pr}</td><td>${esc(it.u)}</td><td>${invPrev(m.c,ym)}</td><td>${invIn(m.c,ym)}</td><td>${invEnd(m.c,ym)}</td><td>${use}</td><td>${prod?(use/prod).toFixed(3):''}</td><td>${prod?(amt/prod).toFixed(2):''}</td></tr>`;});
   t+=`</table>`;downloadXls('내화물원단위_'+ym,t);
 }
 function downloadInvCompare(){
@@ -6911,7 +7032,7 @@ function perfAggr(key,mode){ // returns {equip:{amt,cnt}}, prod
   const ms=mode==='year'?invMonths().filter(m=>m.startsWith(key)):[key];
   const prod=ms.reduce((s,m)=>s+getProd(m),0);
   const eq={};
-  INV_MASTER.forEach(m=>{const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invItem(m.c).p,0);
+  INV_MASTER.forEach(m=>{const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invPriceAt(m.c,ym),0);
     if(!eq[e])eq[e]={amt:0,cnt:0};eq[e].amt+=amt;if(amt>0)eq[e].cnt++;});
   return {eq,prod};
 }
@@ -6919,7 +7040,7 @@ function perfAggrRange(fromM,toM){ // 기간 조회: 시작월~종료월 범위�
   const ms=invMonths().filter(m=>m>=fromM&&m<=toM);
   const prod=ms.reduce((s,m)=>s+getProd(m),0);
   const eq={};
-  INV_MASTER.forEach(m=>{const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invItem(m.c).p,0);
+  INV_MASTER.forEach(m=>{const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invPriceAt(m.c,ym),0);
     if(!eq[e])eq[e]={amt:0,cnt:0};eq[e].amt+=amt;if(amt>0)eq[e].cnt++;});
   return {eq,prod,ms};
 }
@@ -10551,7 +10672,7 @@ function mpEafData(y){
   return out;}
 function invUnitOf(ym){
   try{const prod=getProd(ym)||0;if(!prod)return null;
-    let amt=0;INV_MASTER.forEach(m=>{const it=invItem(m.c);amt+=invUse(m.c,ym)*it.p;});
+    let amt=0;INV_MASTER.forEach(m=>{amt+=invUse(m.c,ym)*invPriceAt(m.c,ym);});
     return amt?Math.round(amt/prod):null;}catch(e){return null;}}
 function mpSeedM(y,m){return (MPERF_SEED.m||{})[y+'-'+String(m).padStart(2,'0')]||{};}
 function mpCell(prog,seed){           // 프로그램 값 우선, 없으면 엑셀 실적값(회색)
@@ -10843,28 +10964,41 @@ function mvLogout(){try{localStorage.removeItem('dgrns_me');}catch(e){}setRole('
 function mvOpen(v){
   const me=meEmp();if(!me&&v!=='appr'){toast('먼저 로그인하세요');return mvHome();}
   mvView=v;
-  if(v==='leave')mvLeave();else if(v==='ot')mvOt();else if(v==='ho')mvHo();
+  // 2026-09-26: 홈 메뉴에서 새로 들어올 때는 이전에 남아있을 수 있는 편집모드를 초기화
+  // (mvEditLeave/mvEditOt는 이 함수를 거치지 않고 직접 mvLeave()/mvOt()를 호출하므로 영향 없음)
+  if(v==='leave'){mvEditLvId=null;mvLeave();}
+  else if(v==='ot'){mvEditOtId=null;mvOt();}
+  else if(v==='ho')mvHo();
   else if(v==='my')mvMy();else if(v==='appr')mvAppr();
 }
 /* --- 휴가원 --- */
+// 2026-09-26: PC 수정과 마찬가지로, 결재가 진행되지 않은 본인 문서를 모바일에서도 바로
+// 고쳐 다시 상신할 수 있도록 편집모드 추가(mvEditLvId). 신규 작성 흐름은 기존과 동일.
+let mvEditLvId=null, mvEditOtId=null;
+function mvEditLeave(id){
+  const r=leaveData.find(x=>x.id===id);if(!r)return;
+  if(r.steps&&Object.keys(r.steps).length){toast('결재가 진행된 문서는 수정할 수 없습니다');return;}
+  mvEditLvId=id;mvView='leave';mvLeave();
+}
 function mvLeave(){
   const me=meEmp(),y=todayStr().slice(0,4),g=annualGrant(me,y),st=leaveStat(me.id,y);
-  mvHead('휴가원 신청','연차 잔여 '+(+(g-st.used-st.pend).toFixed(1))+'일',true);
+  const editing=mvEditLvId&&leaveData.find(x=>x.id===mvEditLvId);
+  mvHead(editing?'휴가원 수정':'휴가원 신청','연차 잔여 '+(+(g-st.used-st.pend).toFixed(1))+'일',true);
   const subs=empData.filter(e=>e.active!==0&&e.id!==me.id);   // 2026-09-21: 대근자는 소속 무관 전 직원
   document.getElementById('mvBody').innerHTML=`<div class="mv-card">
-    <div class="mv-f"><label>휴가 종류</label><select id="mv_type" onchange="mvDays()">${LEAVE_TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+    <div class="mv-f"><label>휴가 종류</label><select id="mv_type" onchange="mvDays()">${LEAVE_TYPES.map(t=>`<option${editing&&editing.type===t?' selected':''}>${t}</option>`).join('')}</select></div>
     <div class="mv-2">
-      <div class="mv-f"><label>시작일</label><input type="date" id="mv_s" value="${todayStr()}" onchange="mvDays()"></div>
-      <div class="mv-f"><label>종료일</label><input type="date" id="mv_e" value="${todayStr()}" onchange="mvDays()"></div>
+      <div class="mv-f"><label>시작일</label><input type="date" id="mv_s" value="${editing?editing.start:todayStr()}" onchange="mvDays()"></div>
+      <div class="mv-f"><label>종료일</label><input type="date" id="mv_e" value="${editing?editing.end:todayStr()}" onchange="mvDays()"></div>
     </div>
     <div class="mv-2">
-      <div class="mv-f"><label>일수</label><input type="number" step="0.5" id="mv_d" value="1"></div>
-      <div class="mv-f"><label>대근자 (교대)</label><select id="mv_sub"><option value="">없음</option>${subs.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>
+      <div class="mv-f"><label>일수</label><input type="number" step="0.5" id="mv_d" value="${editing?editing.days:1}"></div>
+      <div class="mv-f"><label>대근자 (교대)</label><select id="mv_sub"><option value="">없음</option>${subs.map(e=>`<option value="${e.id}"${editing&&editing.sub===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}</select></div>
     </div>
-    <div class="mv-f"><label>사유</label><input id="mv_r" placeholder="예: 개인 사유"></div>
+    <div class="mv-f"><label>사유</label><input id="mv_r" placeholder="예: 개인 사유" value="${esc(editing?(editing.reason||''):'')}"></div>
     <div class="mv-sub">상신하면 주임 → 계장 → 기성 → 사업소장 순으로 결재되고, 관리직이 확인(회사 시스템 입력)합니다.</div>
   </div>`;
-  mvGo(`<button class="go2" onclick="mvHome()">취소</button><button class="go1" onclick="mvSubmitLeave()">휴가원 상신</button>`);
+  mvGo(`<button class="go2" onclick="${editing?'mvMy()':'mvHome()'}">취소</button><button class="go1" onclick="mvSubmitLeave()">${editing?'수정 완료':'휴가원 상신'}</button>`);
 }
 function mvDays(){
   const t=document.getElementById('mv_type').value,a=document.getElementById('mv_s').value,b=document.getElementById('mv_e').value;
@@ -10876,37 +11010,50 @@ async function mvSubmitLeave(){
   const me=meEmp();if(!me)return;
   const a=document.getElementById('mv_s').value;if(!a){toast('시작일을 입력하세요');return;}
   const sid=document.getElementById('mv_sub').value,se=empData.find(x=>x.id===sid);
-  const rec={id:uid(),empId:me.id,name:me.name,dept:me.dept||'',type:document.getElementById('mv_type').value,
+  const editing=mvEditLvId&&leaveData.find(x=>x.id===mvEditLvId);
+  const rec={id:editing?editing.id:uid(),empId:me.id,name:me.name,dept:me.dept||'',type:document.getElementById('mv_type').value,
     sub:sid,subName:se?se.name:'',start:a,end:document.getElementById('mv_e').value||a,
     days:+document.getElementById('mv_d').value||0,reason:document.getElementById('mv_r').value.trim(),
     status:startStatus(me),st0:startStatus(me),line:docLineFor(me),lineConf:docConfFor(me),
-    who:((apprLineOf(me.id)||{}).who)||{},steps:{},conf:null,at:todayStr(),seq:Date.now()};
-  await putRec('leave',rec);leaveData.push(rec);flashSave();
-  toast('휴가원을 상신했습니다');mvHome();
+    who:((apprLineOf(me.id)||{}).who)||{},steps:{},conf:null,
+    at:editing?editing.at:todayStr(),seq:editing?editing.seq:Date.now()};
+  await putRec('leave',rec);flashSave();
+  const i=leaveData.findIndex(x=>x.id===rec.id);if(i>=0)leaveData[i]=rec;else leaveData.push(rec);
+  toast(editing?'휴가원을 수정했습니다':'휴가원을 상신했습니다');
+  mvEditLvId=null;
+  if(editing)mvMy();else mvHome();
 
 }
 /* --- 잔업 --- */
+// 2026-09-26: mvLeave와 동일한 방식으로 편집모드 추가(mvEditOtId).
+function mvEditOt(id){
+  const r=otData.find(x=>x.id===id);if(!r)return;
+  if(r.steps&&Object.keys(r.steps).length){toast('결재가 진행된 문서는 수정할 수 없습니다');return;}
+  mvEditOtId=id;mvView='ot';mvOt();
+}
 function mvOt(){
   const me=meEmp();
-  mvHead('잔업 신청','4시간마다 30분 휴게 자동공제',true);
+  const editing=mvEditOtId&&otData.find(x=>x.id===mvEditOtId);
+  mvHead(editing?'잔업 수정':'잔업 신청','4시간마다 30분 휴게 자동공제',true);
   document.getElementById('mvBody').innerHTML=`<div class="mv-card">
-    <div class="mv-f"><label>근무일</label><input type="date" id="mv_od" value="${todayStr()}"></div>
+    <div class="mv-f"><label>근무일</label><input type="date" id="mv_od" value="${editing?editing.date:todayStr()}"></div>
     <div class="mv-2">
-      <div class="mv-f"><label>시작</label><input type="time" id="mv_ost" value="17:30" onchange="mvOtCalc()"></div>
-      <div class="mv-f"><label>종료</label><input type="time" id="mv_oet" value="20:00" onchange="mvOtCalc()"></div>
+      <div class="mv-f"><label>시작</label><input type="time" id="mv_ost" value="${editing?editing.st:'17:30'}" onchange="mvOtCalc()"></div>
+      <div class="mv-f"><label>종료</label><input type="time" id="mv_oet" value="${editing?editing.et:'20:00'}" onchange="mvOtCalc()"></div>
     </div>
     <div class="mv-2">
       <div class="mv-f"><label>총시간</label><input id="mv_og" readonly></div>
       <div class="mv-f"><label>휴게</label><input id="mv_or" readonly></div>
     </div>
-    <div class="mv-f"><label>실 잔업시간</label><input type="number" step="0.5" id="mv_oh"></div>
+    <div class="mv-f"><label>실 잔업시간</label><input type="number" step="0.5" id="mv_oh" value="${editing?editing.hours:''}"></div>
     <div class="mv-f"><label>근로 유형</label><select id="mv_otype">
-      <option value="normal">일반작업</option><option value="holiday">휴일근로</option>
+      <option value="normal"${editing&&(editing.type||'normal')==='normal'?' selected':''}>일반작업</option><option value="holiday"${editing&&editing.type==='holiday'?' selected':''}>휴일근로</option>
     </select></div>
-    <div class="mv-f"><label>작업 내용</label><input id="mv_orz" placeholder="예: 래들 3호 축조 지원"></div>
+    <div class="mv-f"><label>작업 내용</label><input id="mv_orz" placeholder="예: 래들 3호 축조 지원" value="${esc(editing?(editing.reason||''):'')}"></div>
   </div>`;
   mvOtCalc();
-  mvGo(`<button class="go2" onclick="mvHome()">취소</button><button class="go1" onclick="mvSubmitOt()">잔업 상신</button>`);
+  if(editing){document.getElementById('mv_og').value=editing.gross;document.getElementById('mv_or').value=editing.rest;document.getElementById('mv_oh').value=editing.hours;}
+  mvGo(`<button class="go2" onclick="${editing?'mvMy()':'mvHome()'}">취소</button><button class="go1" onclick="mvSubmitOt()">${editing?'수정 완료':'잔업 상신'}</button>`);
 }
 function mvOtCalc(){
   const a=document.getElementById('mv_ost').value,b=document.getElementById('mv_oet').value;if(!a||!b)return;
@@ -10919,13 +11066,19 @@ function mvOtCalc(){
 async function mvSubmitOt(){
   const me=meEmp();if(!me)return;
   const d=document.getElementById('mv_od').value;if(!d){toast('근무일을 입력하세요');return;}
-  const rec={id:uid(),empId:me.id,name:me.name,dept:me.dept||'',date:d,
+  const editing=mvEditOtId&&otData.find(x=>x.id===mvEditOtId);
+  const rec={id:editing?editing.id:uid(),empId:me.id,name:me.name,dept:me.dept||'',date:d,
     st:document.getElementById('mv_ost').value,et:document.getElementById('mv_oet').value,
     gross:+document.getElementById('mv_og').value||0,rest:+document.getElementById('mv_or').value||0,
     hours:+document.getElementById('mv_oh').value||0,type:(document.getElementById('mv_otype')||{}).value||'normal',reason:document.getElementById('mv_orz').value.trim(),
     status:startStatus(me),st0:startStatus(me),line:docLineFor(me),lineConf:docConfFor(me),
-    who:((apprLineOf(me.id)||{}).who)||{},steps:{},conf:null,at:todayStr(),seq:Date.now()};
-  await putRec('ot',rec);otData.push(rec);flashSave();toast('잔업신청을 상신했습니다');mvHome();
+    who:((apprLineOf(me.id)||{}).who)||{},steps:{},conf:null,
+    at:editing?editing.at:todayStr(),seq:editing?editing.seq:Date.now()};
+  await putRec('ot',rec);
+  const i=otData.findIndex(x=>x.id===rec.id);if(i>=0)otData[i]=rec;else otData.push(rec);
+  flashSave();toast(editing?'잔업신청을 수정했습니다':'잔업신청을 상신했습니다');
+  mvEditOtId=null;
+  if(editing)mvMy();else mvHome();
 
 }
 /* --- 교대 인수인계 --- */
@@ -10957,18 +11110,30 @@ async function mvSubmitHo(){
   await putRec('handover',rec);hoData.push(rec);flashSave();toast('인수인계를 등록했습니다');mvHome();
 }
 /* --- 내 신청 현황 --- */
+// 2026-09-26: PC 화면과 동일하게, 아직 결재가 한 단계도 진행되지 않은 문서는
+// 본인이 여기서 바로 수정·삭제(회수)할 수 있게 버튼 추가(모바일에는 기존에 없었음).
 function mvMy(){
   const me=meEmp();
   mvHead('내 신청 현황','결재 진행 상황',true);mvGo('');
   const lv=leaveData.filter(d=>d.empId===me.id).sort((a,b)=>(b.at||'').localeCompare(a.at||'')).slice(0,15);
   const ot=otData.filter(d=>d.empId===me.id).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
-  const row=(t,r)=>`<div class="mv-row"><div class="r1">${stStr(r)} <span>${t}</span></div>
+  const row=(t,r)=>{const noSteps=!(r.steps&&Object.keys(r.steps).length);
+    return `<div class="mv-row"><div class="r1">${stStr(r)} <span>${t}</span></div>
     <div class="r2">${t==='휴가'?esc(r.type)+' · '+esc(r.start)+(r.end&&r.end!==r.start?'~'+esc(r.end):'')+' · '+r.days+'일'
       :esc(r.date)+' · '+esc(r.st)+'~'+esc(r.et)+' · '+r.hours+'시간 · '+((r.type||'normal')==='holiday'?'휴일근로':'일반작업')}${r.reason?' · '+esc(r.reason):''}</div>
-    <div class="r2">${stepBar(r)}</div></div>`;
+    <div class="r2">${stepBar(r)}</div>
+    ${noSteps?`<div style="display:flex;gap:8px;margin-top:9px">
+      <button class="btn sm" style="flex:1;padding:8px" onclick="${t==='휴가'?`mvEditLeave('${r.id}')`:`mvEditOt('${r.id}')`}">✎ 수정</button>
+      <button class="btn sm danger" style="flex:1;padding:8px" onclick="mvCancelDoc('${t==='휴가'?'leave':'ot'}','${r.id}')">🗑 삭제</button>
+    </div>`:''}
+    </div>`;};
   document.getElementById('mvBody').innerHTML=
     `<div class="mv-card"><div class="mv-h">휴가원 ${lv.length}건</div>${lv.length?lv.map(r=>row('휴가',r)).join(''):'<div class="mv-empty">신청 내역 없음</div>'}</div>
      <div class="mv-card"><div class="mv-h">잔업신청 ${ot.length}건</div>${ot.length?ot.map(r=>row('잔업',r)).join(''):'<div class="mv-empty">신청 내역 없음</div>'}</div>`;
+}
+async function mvCancelDoc(kind,id){
+  await cancelDoc(kind,id);
+  mvMy();
 }
 /* --- 결재함 --- */
 function mvAppr(){
