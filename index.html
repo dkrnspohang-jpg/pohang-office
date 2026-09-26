@@ -1072,6 +1072,7 @@
       </select>
       <span class="spacer"></span>
       <button class="btn primary" onclick="addStockRow('신동내화')">＋ 품목 추가</button>
+      <button class="btn primary" onclick="saveStockAll('신동내화')" title="칸마다 입력 즉시 자동 저장되지만, 저장 완료를 눈으로 확인하고 싶을 때 누르세요">💾 저장</button>
       <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
       <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
       <button class="btn" onclick="autoSetStockTarget('신동내화')" title="예상사용량(월) × 3개월 기준으로 적정재고를 다시 계산합니다">📐 적정재고 자동설정(3개월)</button>
@@ -1108,6 +1109,7 @@
       </select>
       <span class="spacer"></span>
       <button class="btn primary" onclick="addStockRow('베수비우스')">＋ 품목 추가</button>
+      <button class="btn primary" onclick="saveStockAll('베수비우스')" title="칸마다 입력 즉시 자동 저장되지만, 저장 완료를 눈으로 확인하고 싶을 때 누르세요">💾 저장</button>
       <button class="btn" onclick="autoSetStockTarget('베수비우스')" title="예상사용량(월) × 4개월 기준으로 적정재고를 다시 계산합니다">📐 적정재고 자동설정(4개월)</button>
       <button class="btn" onclick="downloadStockCSV('베수비우스')">📤 CSV 내보내기</button>
     </div>
@@ -1987,6 +1989,7 @@ service cloud.firestore {
       <button class="subtab" data-sp="matrix" onclick="poscoTab('matrix')">🏷️ 업체별 입찰가능 품목</button>
       <button class="subtab" data-sp="rank" onclick="poscoTab('rank')">🏆 입찰순위 · 경쟁현황</button>
       <button class="subtab" data-sp="schedule" onclick="poscoTab('schedule')">🗓️ 입찰일정</button>
+      <button class="subtab" data-sp="master" onclick="poscoTab('master')">📇 품목마스터</button>
     </div>
     <div class="cards" id="poscoCards"></div>
     <div class="toolrow">
@@ -2041,6 +2044,13 @@ service cloud.firestore {
       <div class="tablewrap"><table class="bomtbl" style="min-width:auto">
         <thead><tr><th>일시</th><th>품명</th><th>항목</th><th>변경전</th><th>변경후</th></tr></thead>
         <tbody id="poscoLogBody"></tbody>
+      </table></div>
+    </div>
+    <div class="subpanel" id="psp-master">
+      <div class="subhead">포스코 품목마스터 <span class="hint">품목코드(예: A-19)에 정식품명·규격·원료계열·비고를 등록해 품목을 관리합니다 — 직접 입력한 정보만 저장되며, 입력 즉시 자동저장됩니다</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:1100px">
+        <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:180px">정식품명</th><th style="min-width:140px">규격</th><th style="min-width:120px">원료계열</th><th style="min-width:112px">제철소</th><th style="min-width:220px">비고</th></tr></thead>
+        <tbody id="poscoMasterBody"></tbody>
       </table></div>
     </div>
   </section>
@@ -5701,10 +5711,44 @@ function downloadEafRepairExcel(){
    내화물 실적자료(원단위·EAF 발코니/로저전극 교체현황·래들/턴디쉬 수명현황·원가요약) PPT를
    프로그램에 이미 입력된 데이터로 자동 생성한다. 완전히 오프라인으로 동작하도록
    PptxGenJS·JSZip 라이브러리를 파일 자체에 내장했다(본 화면 상단 <script>).
-   2026-09-22: 일일 보고는 제외하고 월간 보고만 제공 · [내화물 실적자료] PPT 양식(폼)의 슬라이드
-   구성·제목을 그대로 따름. 단, 연도별 원단위 벤치마크(19~25년)·앙카허스 13개월 사용량·원가
-   세부현황(설비별 4분할 패널)은 그 원본 수치가 프로그램에 없어 아직 포함하지 않음 — 데이터가
-   쌓이거나 별도로 입력받으면 다음 단계에서 추가 예정. */
+   2026-09-26: [내화물 실적자료] 원본 PPT(2026년8월호)를 python-pptx로 슬라이드 XML까지 직접 뜯어
+   분석해서(슬라이드 크기 4:3, 타이틀 폰트·색상, 제목 아래 그라데이션 띠, 표지의 적색/남색 하단 바,
+   차트별 실제 계열명·색상까지) 슬라이드 구성과 디자인을 원본과 최대한 동일하게 재구성했다
+   (①표지 ②내화물 실원가 현황 ③내화물 원가 세부현황 ④설비별 원단가 현황 ⑤발코니·로저전극 교체
+   현황 ⑥앙카허스 사용량 ⑦래들(LD) 수명현황 ⑧턴디쉬(TD) 수명현황). 원본에만 있던 연도별 벤치마크
+   (19~25년)·13개월 트렌드·EAF 해체이력·품목별 원가 세부현황(로상재/로벽연와/건닝재/C52+ONQC 등)은
+   REPORT_SEED에 참고자료로 내장했고, 그 범위(2025.09~2026.08) 밖의 월은 프로그램에 실제 입력된
+   데이터로 자동 계산한다. 단, 품목별 원가 세부현황(③번 슬라이드)은 프로그램이 로상재·로벽연와·
+   건닝재·C52+ONQC를 별도 카테고리로 추적하지 않으므로, 시드 범위 밖 월은 "데이터 없음"으로 정직하게
+   표시한다(수치를 임의로 만들어 채우지 않음). */
+// [내화물 실적자료] PPT 원본에서 추출한 과거 실적 참고자료(정밀 수치, python-pptx로 추출).
+// 연도별 벤치마크·13개월 트렌드·EAF 해체이력·원가 세부현황(품목별)을 담고 있으며, 이 범위를 벗어난
+// 월은 프로그램의 실사용 데이터로 자동 계산된다.
+const REPORT_SEED = {
+  months: ["2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08"],
+  unitcost: [11206.0, 11559.0, 10354.0, 11489.0, 10684.0, 9916.0, 10844.0, 10734.0, 10886.0, 10702.0, 9699.0, 10025.0],
+  prod: [116358.0, 99576.0, 104708.0, 103955.0, 120684.0, 91769.0, 120216.0, 118888.0, 120675.0, 115997.0, 123949.0, 122279.0],
+  eafPrice: [3568.0, 3947.0, 4189.0, 3689.0, 2988.0, 3143.0, 4055.0, 3741.0, 4306.0, 3680.0, 3680.0, 3322.0],
+  ladlePrice: [5489.0, 5271.0, 4297.0, 5606.0, 5061.0, 4970.0, 4694.0, 5204.0, 4936.0, 5040.0, 5109.0, 4860.0],
+  tdPrice: [2091.0, 1930.0, 1714.0, 2112.0, 2252.0, 1718.0, 2003.0, 1764.0, 1771.0, 1914.0, 1914.0, 1925.0],
+  anka: [76.096, 60.702, 62.25, 55.745, 46.94, 41.345, 78.2, 46.77, 78.058, 69.663, 53.887, 75.39],
+  yearlyUnitCost: {'2019':8197,'2020':8270,'2021':8187,'2022':9990,'2023':10122,'2024':10143,'2025':10971},
+  costDetail: {
+    '2026-08': { eaf:[["열간보수재", 2087], ["로상재", 766], ["로벽연와", null]], ladle:[["마모장", 3357], ["영구장", 417], ["캐스터블", 94]], td:[["건닝재", 347], ["C52+ONQC", 787], ["영구장", 216]] },
+    '2026-07': { eaf:[["열간보수재", 1969], ["로상재", 554], ["로벽연와", 568]], ladle:[["마모장", 3634], ["영구장", 151], ["캐스터블", 449]], td:[["건닝재", 471], ["C52+ONQC", 872], ["영구장", 40]] }
+  },
+  // 2026-09-26: 슬라이드⑤의 4개 차트는 원본 PPT의 chart4~7.xml에서 실제 계열명을 직접 확인함(추정 아님).
+  // 위→아래 순서, 색상도 원본 그대로: "A로" 계열=남색 002060, "B로" 계열=파란색 4F81BD(테마 기본색)
+  eafTdCharts: [
+    { label:"A로 로저전극", color:"002060", cats:["19.11월", "20.2월", "20.9월", "20.12월", "21.08월", "22.04월", "22.09월", "23.02월", "23.07월", "23.12월", "24.05월", "24.10월", "25.03월", "25.07월", "25.12월", "26.05월"], vals:[4537.0, 1355.0, 2793.0, 1406.0, 3082.0, 3185.0, 1946.0, 1710.0, 1989.0, 1970.0, 1913.0, 1990.0, 1825.0, 1048.0, 2037.0, 1910.0] },
+    { label:"B로 로저전극", color:"4F81BD", cats:["19.8월", "20.4월", "20.10월", "21.06월", "22.02월", "22.12월", "23.05월", "23.07월", "23.10월", "24.04월", "24.08월", "24.12월", "25.04월", "25.05월", "25.07월", "25.11월", "26.03월", "26.07월"], vals:[3833.0, 3160.0, 2508.0, 3494.0, 3171.0, 3955.0, 1912.0, 783.0, 1137.0, 2083.0, 1641.0, 1465.0, 1184.0, 503.0, 820.0, 1461.0, 1588.0, 1457.0] },
+    { label:"A로 발코니", color:"002060", cats:["20.1월", "20.4월", "20.7월", "20.9월", "20.12월", "21.5월", "21.8월", "22.1월", "22.6월", "22.10월", "23.01월", "23.10월", "24.04월", "24.08월", "24.11월", "25.02월", "25.05월", "25.08월", "25.11월", "26.06월"], vals:[1134.0, 1129.0, 1035.0, 850.0, 1406.0, 1982.0, 1317.0, 1801.0, 1862.0, 1687.0, 2101.0, 2989.0, 2517.0, 1711.0, 1177.0, 918.0, 894.0, 1191.0, 1333.0, 2602.0] },
+    { label:"B로 발코니", color:"4F81BD", cats:["20.6월", "20.10월", "21.4월", "21.8월", "21.12월", "22.5월", "22.8월", "23.01월", "23.08월", "23.10월", "24.1월", "24.5월", "24.08월", "24.11월", "25.02월", "25.07월", "25.10월", "26.04월"], vals:[1767.0, 1634.0, 2480.0, 1551.0, 1302.0, 1808.0, 1391.0, 1937.0, 2487.0, 719.0, 1256.0, 1728.0, 833.0, 1207.0, 1193.0, 1732.0, 1330.0, 1978.0] }
+  ],
+  ankaReplace: [["B로", "24년8월"], ["A로", "24년10월"], ["B로", "24년12월"], ["A로", "25년3월"], ["B로", "25년4월"], ["B로", "25년5월"], ["A로/B로", "25년7월"], ["B로", "25년11월"], ["A로", "25년12월"], ["B로", "26년3월"], ["A로", "26년5월"], ["B로", "26년7월"]],
+  // 원본 슬라이드에 직접 표기된 "합 계(원/ton)" 값 — 개별 설비별 원가 3개의 단순 합과 다를 수 있어(원본 그대로) 별도 보관
+  costTotal: {'2026-08':10107,'2026-07':10193}
+};
 function initReport(){
   const ySel=document.getElementById('rpt_year');
   if(ySel&&!ySel.options.length){
@@ -5730,83 +5774,211 @@ function renderReportPreview(){
   cardsEl.innerHTML=card('보고 대상월',y+'년 '+m+'월','')
     +card('전기로 조업 CH',eafM.reduce((s,r)=>s+(+r.ch||0),0).toLocaleString(),'CH')
     +card('래들 해체',ltM.length,'대')+card('턴디쉬 사용',tdM.length,'대');
-  const slideList=['① 표지','② 설비별 원단가 현황(월별 원단위 트렌드)','③ EAF 발코니·로저전극 교체 현황','④ 래들(LD) 수명현황','⑤ 턴디쉬(TD) 수명현황','⑥ 내화물 원가 요약'];
+  const slideList=['① 표지','② 내화물 실원가 현황','③ 내화물 원가 세부현황','④ 설비별 원단가 현황','⑤ 발코니·로저전극 교체 현황','⑥ 앙카허스 사용량','⑦ 래들(LD) 수명현황','⑧ 턴디쉬(TD) 수명현황'];
   prevEl.innerHTML='<div class="tablewrap"><table class="mini"><tbody>'
     +slideList.map(s=>`<tr><td style="padding:8px 12px">${esc(s)}</td></tr>`).join('')+'</tbody></table></div>';
 }
-/* ---- PptxGenJS 슬라이드 조립 헬퍼 ---- */
-const RPT_NAVY='1D4ED8', RPT_DARK='1F2937', RPT_GRAY='64748B', RPT_LIGHT='F1F5F9';
+/* ---- PptxGenJS 슬라이드 조립 헬퍼 ----
+   2026-09-26: [내화물 실적자료] 원본 PPT의 실제 디자인(4:3 슬라이드, 제목 좌측 상단 검정 굵은 글씨 +
+   제목 아래 노랑→주황→빨강→흑적색 그라데이션 띠, 표지의 적색 이탤릭 제목 + 하단 남색/빨강 2색 바,
+   차트별 실제 색상)을 슬라이드 XML에서 직접 확인해 그대로 반영함. */
+const RPT_W=10, RPT_H=7.5; // 원본과 동일한 4:3(10in x 7.5in) 캔버스
+const RPT_TITLE_FONT='HY헤드라인M', RPT_BODY_FONT='굴림체', RPT_COVER_FONT='맑은 고딕';
+const RPT_BLACK='000000', RPT_GRAY='64748B';
+const RPT_ACCENT_BLUE='4F81BD'; // 테마 accent1(원본 표 헤더·차트 기본색)
+let _rptStripeCache=null;
+function rptGradientStripeDataUri(){
+  if(_rptStripeCache)return _rptStripeCache;
+  try{
+    const cv=document.createElement('canvas');cv.width=1200;cv.height=8;
+    const ctx=cv.getContext('2d');
+    const g=ctx.createLinearGradient(0,0,1200,0);
+    g.addColorStop(0,'#FFF200');g.addColorStop(0.45,'#FF7A00');g.addColorStop(0.70,'#FF0300');g.addColorStop(1,'#4D0808');
+    ctx.fillStyle=g;ctx.fillRect(0,0,1200,8);
+    _rptStripeCache=cv.toDataURL('image/png');
+  }catch(e){_rptStripeCache=null;}
+  return _rptStripeCache;
+}
+// ① 표지 — 원본 슬라이드1: 흰 배경, 빨간 이탤릭 굵은 제목(맑은 고딕), 남색 이탤릭 부제, 하단 남색/빨강 2색 바
 function rptTitleSlide(pptx,title,sub1,sub2){
   const s=pptx.addSlide();s.background={color:'FFFFFF'};
-  s.addShape('rect',{x:0,y:0,w:13.33,h:1.9,fill:{color:RPT_NAVY}});
-  s.addText('동국알앤에스 · 포항사업소',{x:0.6,y:0.28,w:9,h:0.5,fontSize:14,color:'FFFFFF',bold:true});
-  s.addText(title,{x:0.6,y:0.72,w:12,h:1,fontSize:30,color:'FFFFFF',bold:true});
-  if(sub1)s.addText(sub1,{x:0.6,y:2.35,w:11,h:0.5,fontSize:17,color:RPT_DARK,bold:true});
-  if(sub2)s.addText(sub2,{x:0.6,y:2.85,w:11,h:0.5,fontSize:12,color:RPT_GRAY});
-  s.addText('생성일 '+todayStr()+'  ·  프로그램에서 자동 생성된 자료입니다',{x:0.6,y:6.95,w:11,h:0.4,fontSize:9,color:RPT_GRAY});
+  const runs=[{text:title,options:{breakLine:true}}];
+  if(sub1)runs.push({text:sub1,options:{}});
+  s.addText(runs,{x:0.4,y:1.55,w:9.2,h:1.9,fontSize:32,bold:true,italic:true,color:'C41F2A',fontFace:RPT_COVER_FONT,align:'center',valign:'m'});
+  if(sub2)s.addText(sub2,{x:2.6,y:4.85,w:4.8,h:0.85,fontSize:22,bold:true,italic:true,color:'002452',fontFace:RPT_COVER_FONT,align:'center',valign:'m'});
+  s.addShape('rect',{x:0,y:7.14,w:5.0,h:0.36,fill:{color:'002060'},line:{type:'none'}});
+  s.addShape('rect',{x:5.0,y:7.14,w:5.0,h:0.36,fill:{color:'FF0000'},line:{type:'none'}});
   return s;
 }
+// 내용 슬라이드 공통 헤더 — 검정 굵은 좌측정렬 제목 + 바로 아래 그라데이션 띠(원본 그대로)
 function rptSectionHeader(s,title){
-  s.addShape('rect',{x:0,y:0,w:13.33,h:0.9,fill:{color:RPT_NAVY}});
-  s.addText(title,{x:0.5,y:0.12,w:12,h:0.66,fontSize:19,bold:true,color:'FFFFFF'});
+  s.addText(title,{x:0.05,y:0.05,w:9.4,h:0.55,fontSize:19,bold:true,color:RPT_BLACK,fontFace:RPT_TITLE_FONT,align:'l',valign:'m'});
+  const uri=rptGradientStripeDataUri();
+  if(uri)s.addImage({data:uri,x:0,y:0.62,w:RPT_W,h:0.05});
+  else s.addShape('rect',{x:0,y:0.62,w:RPT_W,h:0.05,fill:{color:'FF7A00'},line:{type:'none'}});
 }
 function rptTableSlide(pptx,title,headerRow,bodyRows,opts){
   opts=opts||{};
   const s=pptx.addSlide();s.background={color:'FFFFFF'};
   rptSectionHeader(s,title);
-  const head=headerRow.map(h=>({text:String(h),options:{bold:true,color:'FFFFFF',fill:{color:RPT_GRAY},fontSize:11,align:'center'}}));
+  const head=headerRow.map(h=>({text:String(h),options:{bold:true,color:'FFFFFF',fill:{color:RPT_ACCENT_BLUE},fontSize:11,align:'center',fontFace:RPT_BODY_FONT}}));
   const rows=[head].concat((bodyRows.length?bodyRows:[['(데이터 없음)']]).map(r=>r.map((c,ci)=>({text:c==null?'':(typeof c==='number'?c.toLocaleString():String(c)),
-    options:{fontSize:10.5,align:(ci>0&&typeof c==='number')?'right':'left',color:RPT_DARK}}))));
-  s.addTable(rows,{x:0.5,y:1.15,w:12.33,border:{type:'solid',color:'E2E8F0',pt:0.5},fontFace:'맑은 고딕',autoPageLineWeight:0.5});
-  if(opts.note)s.addText(opts.note,{x:0.5,y:7.05,w:12,h:0.35,fontSize:9,color:RPT_GRAY});
+    options:{fontSize:10.5,align:(ci>0&&typeof c==='number')?'right':'left',color:RPT_BLACK,fontFace:RPT_BODY_FONT}}))));
+  s.addTable(rows,{x:0.4,y:0.82,w:9.2,border:{type:'solid',color:'D9D9D9',pt:0.5},fontFace:RPT_BODY_FONT,autoPageLineWeight:0.5});
+  if(opts.note)s.addText(opts.note,{x:0.4,y:7.1,w:9.2,h:0.32,fontSize:8.5,color:RPT_GRAY,fontFace:RPT_BODY_FONT});
   return s;
 }
 function rptBulletSlide(pptx,title,items){
   const s=pptx.addSlide();s.background={color:'FFFFFF'};
   rptSectionHeader(s,title);
-  if(!items.length){s.addText('해당 사항 없음',{x:0.6,y:1.6,w:11,h:0.6,fontSize:14,color:RPT_GRAY,italic:true});return s;}
-  const text=items.map(it=>({text:it,options:{bullet:{code:'25A0'},breakLine:true,fontSize:13,color:RPT_DARK,paraSpaceAfter:8}}));
-  s.addText(text,{x:0.6,y:1.25,w:12,h:5.6,valign:'top'});
+  if(!items.length){s.addText('해당 사항 없음',{x:0.5,y:1.5,w:9,h:0.6,fontSize:14,color:RPT_GRAY,italic:true,fontFace:RPT_BODY_FONT});return s;}
+  const text=items.map(it=>({text:it,options:{bullet:{code:'25A0'},breakLine:true,fontSize:13,color:RPT_BLACK,paraSpaceAfter:8,fontFace:RPT_BODY_FONT}}));
+  s.addText(text,{x:0.5,y:1.0,w:9,h:5.8,valign:'top'});
   return s;
 }
 function rptCardsSlide(pptx,title,cards){
   const s=pptx.addSlide();s.background={color:'FFFFFF'};
   rptSectionHeader(s,title);
-  const n=cards.length,gap=0.3,w=(12.33-(gap*(n-1)))/n;
+  const n=cards.length,gap=0.25,w=(9.2-(gap*(n-1)))/n;
   cards.forEach((c,i)=>{
-    const x=0.5+i*(w+gap);
-    s.addShape('roundRect',{x,y:1.4,w,h:2.1,fill:{color:RPT_LIGHT},line:{color:'E2E8F0',width:1},rectRadius:0.06});
-    s.addText(String(c.label),{x:x+0.15,y:1.55,w:w-0.3,h:0.55,fontSize:12,color:RPT_GRAY,bold:true});
-    s.addText(String(c.value)+(c.unit?' '+c.unit:''),{x:x+0.15,y:2.1,w:w-0.3,h:1.2,fontSize:25,color:RPT_NAVY,bold:true});
+    const x=0.4+i*(w+gap);
+    s.addShape('roundRect',{x,y:1.1,w,h:2.0,fill:{color:'F1F5F9'},line:{color:'D9D9D9',width:1},rectRadius:0.06});
+    s.addText(String(c.label),{x:x+0.15,y:1.25,w:w-0.3,h:0.55,fontSize:12,color:RPT_GRAY,bold:true,fontFace:RPT_BODY_FONT});
+    s.addText(String(c.value)+(c.unit?' '+c.unit:''),{x:x+0.15,y:1.75,w:w-0.3,h:1.1,fontSize:22,color:'002060',bold:true,fontFace:RPT_BODY_FONT});
   });
   return s;
 }
-// 2026-09-22: [내화물 실적자료] PPT의 라인차트 슬라이드(설비별 원단가·EAF 교체현황)를 재현하기 위한 헬퍼
+// 설비별 원단가(④)·앙카허스(⑥) 등 단일 라인차트 슬라이드 — 계열별 실제 색상 + 값 라벨(원본처럼 색상 일치)
 function rptLineChartSlide(pptx,title,categories,series,opts){
   opts=opts||{};
   const s=pptx.addSlide();s.background={color:'FFFFFF'};
   rptSectionHeader(s,title);
-  const colors=['1D4ED8','DC2626','059669','D97706','7C3AED'];
+  const defColors=['002060','FF0000','00B050','FF7A00','7C3AED'];
   const chartData=series.map((sr,i)=>({name:sr.name,labels:categories,values:sr.values}));
+  const colors=series.map((sr,i)=>sr.color||defColors[i%defColors.length]);
   s.addChart(pptx.ChartType.line,chartData,{
-    x:0.5,y:1.15,w:12.33,h:5.55,
-    chartColors:series.map((_,i)=>colors[i%colors.length]),
-    showLegend:series.length>1,legendPos:'b',legendFontSize:11,
-    lineSize:2.25,lineDataSymbol:'circle',lineDataSymbolSize:6,
-    catAxisLabelFontSize:10,valAxisLabelFontSize:10,
-    valAxisTitle:opts.unit||'',showValAxisTitle:!!opts.unit,valAxisTitleFontSize:10
+    x:0.4,y:0.82,w:9.2,h:opts.note?5.85:6.1,
+    chartColors:colors,
+    showLegend:series.length>1,legendPos:'l',legendFontSize:10,
+    lineSize:2,lineDataSymbol:'circle',lineDataSymbolSize:5,
+    showValue:true,dataLabelFontSize:8,dataLabelColor:RPT_BLACK,dataLabelPosition:'t',
+    catAxisLabelFontSize:8,valAxisLabelFontSize:9,
+    valAxisTitle:opts.unit||'',showValAxisTitle:!!opts.unit,valAxisTitleFontSize:9
   });
-  if(opts.note)s.addText(opts.note,{x:0.5,y:6.85,w:12,h:0.4,fontSize:9,color:RPT_GRAY});
+  if(opts.note)s.addText(opts.note,{x:0.4,y:7.1,w:9.2,h:0.32,fontSize:8,color:RPT_GRAY,fontFace:RPT_BODY_FONT});
   return s;
 }
-// 설비별(EAF·래들·턴디쉬) 월별 금액원단위(원/톤) 트렌드 — 내화물 원단위 화면 데이터 기준
+// ② 내화물 실원가 현황 — 원본처럼 원단위(초록 막대+빨강 값라벨)와 생산량(보조축, 남색 값라벨만 표시)을
+// 한 차트에 겹쳐 표현. 우측 상단 노란 박스에 19~25년 연도별 평균(원본 그대로) 표시.
+function rptComboSlide(pptx,title,categories,barSeries,lineSeries,opts){
+  opts=opts||{};
+  const s=pptx.addSlide();s.background={color:'FFFFFF'};
+  rptSectionHeader(s,title);
+  if(opts.yearsText){
+    s.addShape('rect',{x:7.55,y:0.05,w:2.35,h:1.5,fill:{color:'FFFF00'},line:{color:'002060',width:1}});
+    s.addText(opts.yearsText,{x:7.62,y:0.08,w:2.2,h:1.44,fontSize:9,color:RPT_BLACK,bold:true,fontFace:RPT_BODY_FONT,align:'center',valign:'m',lineSpacing:11});
+  }
+  s.addChart([
+    {type:pptx.ChartType.bar,data:[{name:barSeries.name,labels:categories,values:barSeries.values}],
+      options:{chartColors:['00B050'],showValue:true,dataLabelFontSize:9,dataLabelColor:'FF0000',dataLabelPosition:'outEnd',dataLabelFormatCode:'#,##0'}},
+    {type:pptx.ChartType.line,data:[{name:lineSeries.name,labels:categories,values:lineSeries.values}],
+      options:{chartColors:['FFFFFF'],secondaryValAxis:true,secondaryCatAxis:true,lineSize:0,lineDataSymbol:'none',
+        showValue:true,dataLabelFontSize:8,dataLabelColor:'002060',dataLabelPosition:'b',dataLabelFormatCode:'#,##0'}}
+  ],{
+    x:0.4,y:1.75,w:9.2,h:5.2,
+    valAxes:[
+      {showValAxisTitle:true,valAxisTitle:barSeries.unit||'',valAxisTitleFontSize:9,valAxisLabelFontSize:9},
+      {showValAxisTitle:false,valAxisHidden:true,valGridLine:{style:'none'}}
+    ],
+    catAxes:[
+      {catAxisLabelFontSize:9},
+      {catAxisHidden:true}
+    ],
+    showLegend:true,legendPos:'b',legendFontSize:10
+  });
+  if(opts.note)s.addText(opts.note,{x:0.4,y:7.1,w:9.2,h:0.32,fontSize:8,color:RPT_GRAY,fontFace:RPT_BODY_FONT});
+  return s;
+}
+// ③ 내화물 원가 세부현황 — 전기로/래들/턴디쉬 × 이번달/전달 품목별 매트릭스(원본처럼 흰 배경, 색 없는 표)
+function rptCostDetailSlide(pptx,title,ym,ymPrev,thisLabel,prevLabel){
+  const s=pptx.addSlide();s.background={color:'FFFFFF'};
+  rptSectionHeader(s,title);
+  const groups=[{k:'eaf',name:'전기로'},{k:'ladle',name:'래  들'},{k:'td',name:'턴디쉬'}];
+  const cd=REPORT_SEED.costDetail[ym]||null, cdPrev=REPORT_SEED.costDetail[ymPrev]||null;
+  if(!cd&&!cdPrev){
+    s.addText('선택하신 월(및 전월)의 품목별 원가 세부현황 데이터가 없습니다.\n현재 프로그램은 로상재·로벽연와·건닝재·C52+ONQC 등 세부 품목을 별도 카테고리로 추적하지 않아,\n2026년 7월·8월은 [내화물 실적자료] PPT 원본의 참고값만 제공됩니다.',
+      {x:0.6,y:2.6,w:8.8,h:1.8,fontSize:13,color:RPT_GRAY,italic:true,valign:'top',fontFace:RPT_BODY_FONT});
+    return s;
+  }
+  const gap=0.2,w=(9.2-gap*2)/3;
+  const epThis=rptEquipPriceAt(ym), epPrev=rptEquipPriceAt(ymPrev);
+  const groupPriceKey={eaf:'eaf',ladle:'ladle',td:'td'};
+  groups.forEach((g,i)=>{
+    const x=0.4+i*(w+gap);
+    s.addText(g.name,{x,y:0.78,w,h:0.35,fontSize:12.5,bold:true,color:'002060',align:'center',fontFace:RPT_BODY_FONT});
+    const thisItems=(cd&&cd[g.k])||[];
+    const prevItems=(cdPrev&&cdPrev[g.k])||[];
+    const names=[...new Set([...thisItems.map(r=>r[0]),...prevItems.map(r=>r[0])])];
+    const rows=[[{text:'품목',options:{bold:true,fontSize:9,align:'center',fontFace:RPT_BODY_FONT}},
+                 {text:thisLabel,options:{bold:true,fontSize:9,align:'center',fontFace:RPT_BODY_FONT}},
+                 {text:prevLabel,options:{bold:true,fontSize:9,align:'center',fontFace:RPT_BODY_FONT}}]];
+    names.forEach(nm=>{
+      const tv=thisItems.find(r=>r[0]===nm), pv=prevItems.find(r=>r[0]===nm);
+      const tvv=tv?tv[1]:null, pvv=pv?pv[1]:null;
+      rows.push([
+        {text:nm,options:{fontSize:9.5,color:RPT_BLACK,fontFace:RPT_BODY_FONT}},
+        {text:tvv==null?'-':tvv.toLocaleString(),options:{fontSize:9.5,align:'right',color:RPT_BLACK,fontFace:RPT_BODY_FONT}},
+        {text:pvv==null?'-':pvv.toLocaleString(),options:{fontSize:9.5,align:'right',color:RPT_BLACK,fontFace:RPT_BODY_FONT}}
+      ]);
+    });
+    const pk=groupPriceKey[g.k],tTot=epThis[pk],pTot=epPrev[pk];
+    rows.push([
+      {text:'설비별 원가',options:{bold:true,fontSize:9.5,color:RPT_BLACK,fontFace:RPT_BODY_FONT}},
+      {text:tTot==null?'-':tTot.toLocaleString(),options:{bold:true,fontSize:9.5,align:'right',color:'C41F2A',fontFace:RPT_BODY_FONT}},
+      {text:pTot==null?'-':pTot.toLocaleString(),options:{bold:true,fontSize:9.5,align:'right',color:'C41F2A',fontFace:RPT_BODY_FONT}}
+    ]);
+    s.addTable(rows,{x,y:1.15,w,border:{type:'solid',color:'BFBFBF',pt:0.5},fontFace:RPT_BODY_FONT,autoPageLineWeight:0.5,fill:{color:'FFFFFF'}});
+  });
+  const totThis=REPORT_SEED.costTotal[ym]!=null?REPORT_SEED.costTotal[ym]:((epThis.eaf||0)+(epThis.ladle||0)+(epThis.td||0)||null);
+  const totPrev=REPORT_SEED.costTotal[ymPrev]!=null?REPORT_SEED.costTotal[ymPrev]:((epPrev.eaf||0)+(epPrev.ladle||0)+(epPrev.td||0)||null);
+  s.addText('합 계 (원/ton)   '+thisLabel+' : '+(totThis!=null?totThis.toLocaleString():'-')+'      '+prevLabel+' : '+(totPrev!=null?totPrev.toLocaleString():'-'),
+    {x:0.4,y:4.9,w:9.2,h:0.5,fontSize:13,bold:true,color:'C41F2A',align:'center',fontFace:RPT_BODY_FONT});
+  s.addText('※ 2026년 7월·8월은 [내화물 실적자료] PPT 원본의 품목별 세부현황을 그대로 표시합니다. 그 외 월은 세부 품목이 프로그램에 별도 추적되지 않아 표시되지 않습니다.',
+    {x:0.4,y:7.1,w:9.2,h:0.32,fontSize:8,color:RPT_GRAY,fontFace:RPT_BODY_FONT});
+  return s;
+}
+// ⑤ 발코니·로저전극 교체 현황 / ⑧ 턴디쉬 구경별 수명추이 — 원본처럼 슬라이드 전체 폭에 걸쳐
+// 세로로 쌓인(stacked) 미니 라인차트(원본 slide5·slide8 구조 그대로: 2x2 그리드가 아니라 세로 나열)
+function rptStackedCharts(pptx,title,charts,opts){
+  opts=opts||{};
+  const s=pptx.addSlide();s.background={color:'FFFFFF'};
+  rptSectionHeader(s,title);
+  const n=Math.max(1,charts.length);
+  const top=0.78, bottom=opts.note?7.05:7.3, h=(bottom-top)/n;
+  const defColors=['002060','FF0000','00B050','FF7A00','7C3AED','C0504D'];
+  charts.forEach((c,i)=>{
+    const y=top+i*h;
+    s.addChart(pptx.ChartType.line,[{name:c.label,labels:c.cats,values:c.vals}],{
+      x:0.35,y,w:9.3,h,
+      chartColors:[c.color||defColors[i%defColors.length]],
+      showTitle:true,title:c.label,titleFontSize:10,titleColor:RPT_BLACK,titleFontFace:RPT_BODY_FONT,
+      showLegend:false,
+      lineSize:1.5,lineDataSymbol:'circle',lineDataSymbolSize:3,
+      showValue:true,dataLabelFontSize:6,dataLabelColor:RPT_BLACK,dataLabelPosition:'t',
+      catAxisLabelFontSize:6,valAxisLabelFontSize:6
+    });
+  });
+  if(opts.note)s.addText(opts.note,{x:0.4,y:7.1,w:9.2,h:0.3,fontSize:7.5,color:RPT_GRAY,fontFace:RPT_BODY_FONT});
+  return s;
+}
+// 설비별(EAF·래들·턴디쉬) 월별 금액원단위(원/톤) 트렌드 — 내화물 원단위 화면 데이터 기준(예비용, 현재 미사용)
 function reportUnitCostSeries(){
   const months=invMonths();
   const groups=[{g:'EAF',name:'전기로'},{g:'LF',name:'래들'},{g:'CC',name:'턴디쉬'}];
   const series=groups.map(gr=>({name:gr.name,values:months.map(ym=>{const prod=getProd(ym);return prod?Math.round(invGrpAmt(ym,gr.g)/prod):0;})}));
   return {categories:months.map(ym=>ym.slice(2).replace('-','.')+'월'),series};
 }
-// EAF 발코니·로저전극 교체 시점 수명(CH) 추이 — 전기로 해체 점검 보고서(eafTdData) 기준
+// EAF 발코니·로저전극 교체 시점 수명(CH) 추이 — 전기로 해체 점검 보고서(eafTdData) 기준(예비용, 현재 미사용)
 function reportEafTdSeries(){
   const targets=[{t:'발코니',name:'발코니'},{t:'로저전극',name:'로저전극'}];
   const dates=[...new Set(eafTdData.map(r=>r.date))].filter(Boolean).sort();
@@ -5833,6 +6005,13 @@ function reportLadleVendorRows(){
   rows.push(['합계',totCnt,'100%',totCnt?Math.round(totSum/totCnt):'-','-','-',totSum,sls.length,avgArr(sls.map(r=>r.daily))]);
   return rows;
 }
+// 래들(LD) 해체 시점 수명(CH) 추이 — 원본 slide7의 "수명" 라인차트에 대응(최근 해체 순서대로, 실사용 데이터)
+function reportLadleLifeSeries(limit){
+  const rows=ladleData.filter(r=>END_EVT.includes(r.type)&&r.daily&&!isExcl(r))
+    .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const list=limit?rows.slice(-limit):rows;
+  return {cats:list.map(r=>fmtYMD(r.date)),vals:list.map(r=>r.daily||0)};
+}
 // 턴디쉬(TD) 수명현황 — 호수별 현재 상태(턴디쉬 수명관리 화면과 동일 계산)
 function reportTundishRows(){
   const g={};tundishData.forEach(r=>{(g[r.no]=g[r.no]||[]).push(r);});
@@ -5846,62 +6025,141 @@ function reportTundishRows(){
     return [no,last.kind||'-',done?'해체':'사용중',camps,maxCH,last._shell||0];
   });
 }
+// 턴디쉬 종류(150각/BB/B·L 등)별 해체 시점 누적수명(CH) 추이 — 원본 slide8의 구경별 스택 차트에 대응(실사용 데이터)
+function reportTundishKindSeries(){
+  const byNo={};tundishData.forEach(r=>{(byNo[r.no]=byNo[r.no]||[]).push(r);});
+  const allEnd=[];
+  Object.keys(byNo).forEach(no=>{
+    const list=withCum(byNo[no]);
+    list.filter(r=>END_EVT.includes(r.type)).forEach(r=>allEnd.push({kind:r.kind||'기타',date:r.date,camp:r._camp||0,no}));
+  });
+  const kinds=[...new Set(allEnd.map(r=>r.kind))];
+  return kinds.map(k=>{
+    const rows=allEnd.filter(r=>r.kind===k).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    return {label:k,cats:rows.map(r=>fmtYMD(r.date)+' '+r.no+'호'),vals:rows.map(r=>r.camp)};
+  });
+}
+// 2026-09-26: 월(ym) 가감 유틸 — REPORT_SEED와 실사용 데이터를 잇는 12개월 트렌드 창을 만들 때 사용
+function ymAdd(ym,n){
+  let [y,m]=ym.split('-').map(Number);m+=n;while(m<1){m+=12;y--;}while(m>12){m-=12;y++;}return y+'-'+String(m).padStart(2,'0');
+}
+function ymWindow(endYm,count){const arr=[];for(let i=count-1;i>=0;i--)arr.push(ymAdd(endYm,-i));return arr;}
+// [내화물 실적자료] 원본처럼 "연도가 바뀔 때만 YY년" 접두어를 붙이는 라벨 규칙(첫 항목은 접두어 없이 M월)
+function rptMonthLabels(months){
+  return months.map((ym,i)=>{
+    const [y,mo]=ym.split('-');const mm=+mo;
+    if(i===0)return mm+'월';
+    const py=months[i-1].split('-')[0];
+    return (y!==py)?(y.slice(2)+'년'+mm+'월'):(mm+'월');
+  });
+}
+// REPORT_SEED(2025.09~2026.08 참고자료) 우선, 범위 밖 월은 실사용 데이터로 자동 계산
+function rptUnitCostAt(ym){
+  const idx=REPORT_SEED.months.indexOf(ym);
+  if(idx>=0)return {unitcost:REPORT_SEED.unitcost[idx],prod:REPORT_SEED.prod[idx]};
+  const prod=getProd(ym);
+  const amt=invGrpAmt(ym,'EAF')+invGrpAmt(ym,'LF')+invGrpAmt(ym,'CC');
+  return {unitcost:prod?Math.round(amt/prod):null,prod:prod||null};
+}
+function rptEquipPriceAt(ym){
+  const idx=REPORT_SEED.months.indexOf(ym);
+  if(idx>=0)return {eaf:REPORT_SEED.eafPrice[idx],ladle:REPORT_SEED.ladlePrice[idx],td:REPORT_SEED.tdPrice[idx]};
+  const prod=getProd(ym);
+  const per=g=>prod?Math.round(invGrpAmt(ym,g)/prod):null;
+  return {eaf:per('EAF'),ladle:per('LF'),td:per('CC')};
+}
+function rptAnkaAt(ym){
+  const idx=REPORT_SEED.months.indexOf(ym);
+  if(idx>=0)return REPORT_SEED.anka[idx];
+  try{const u=invUse('U12120112',ym);return (u==null)?null:+(u/1000).toFixed(3);}catch(e){return null;}
+}
 async function buildMonthlyReportSlides(pptx){
   const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
   const m=+((document.getElementById('rpt_month')||{}).value||(new Date().getMonth()+1));
   const ym=y+'-'+String(m).padStart(2,'0');
+  const ymPrev=ymAdd(ym,-1);
+  const window12=ymWindow(ym,12);
+  const catLabels=rptMonthLabels(window12);
+  const lastSeedDate='2026-07-31';
+
   // ① 표지 — [내화물 실적자료] 원본 PPT의 표지 문구 형식을 그대로 따름
   rptTitleSlide(pptx,y.slice(2)+'년 '+m+'월 내화물 실적 자료','(동국제강 포항공장)','㈜ 동국알앤에스');
-  // ② 설비별 원단가 현황
-  const uc=reportUnitCostSeries();
-  rptLineChartSlide(pptx,'설비별 원단가 현황(월별 금액원단위)',uc.categories,uc.series,
-    {unit:'원/톤',note:'※ 내화물 원단위 화면의 재고·입고·사용 데이터를 기준으로 자동 계산됩니다(자사 품목 기준).'});
-  // ③ EAF 발코니·로저전극 교체 현황
-  const et=reportEafTdSeries();
-  if(et.categories.length){
-    rptLineChartSlide(pptx,'EAF 발코니·로저전극 교체 현황(교체 시점 수명)',et.categories,et.series,
-      {unit:'CH',note:'※ 전기로 수명관리 > 해체 점검 보고서에 등록된 교체 기록 기준입니다.'});
-  }else{
-    rptBulletSlide(pptx,'EAF 발코니·로저전극 교체 현황',
-      ['등록된 전기로 해체 점검 보고서가 없습니다','[전기로 수명관리 > 해체 점검 보고서]에서 등록하면 다음 생성부터 자동 반영됩니다']);
+
+  // ② 내화물 실원가 현황 — 연도별 벤치마크(19~25년, 참고자료) + 12개월 생산량·원단위 콤보차트
+  const ucArr=window12.map(rptUnitCostAt);
+  const yearsText='평균 원단위\n'+Object.keys(REPORT_SEED.yearlyUnitCost).map(yy=>yy.slice(2)+'년 : '+REPORT_SEED.yearlyUnitCost[yy].toLocaleString()).join('\n');
+  rptComboSlide(pptx,'내화물 실원가 현황',catLabels,
+    {name:'원단위',unit:'원/톤',values:ucArr.map(r=>r.unitcost)},
+    {name:'생산량',unit:'톤',values:ucArr.map(r=>r.prod)},
+    {yearsText,note:'※ 19~25년 연도별 평균은 [내화물 실적자료] PPT 원본 참고값입니다. 월별 추이는 2025.09~2026.08은 원본 참고값, 이후는 내화물 원단위 화면의 실사용 데이터입니다.'});
+
+  // ③ 내화물 원가 세부현황 — 전기로/래들/턴디쉬 × 이번달/전달 품목별 매트릭스
+  rptCostDetailSlide(pptx,'내화물 원가 세부현황(전기로·래들·턴디쉬)',ym,ymPrev,m+'월',(+ymPrev.split('-')[1])+'월');
+
+  // ④ 설비별 원단가 현황
+  const epArr=window12.map(rptEquipPriceAt);
+  rptLineChartSlide(pptx,'설비별 원단가 현황(월별 금액원단위)',catLabels,[
+    {name:'전기로',color:'002060',values:epArr.map(r=>r.eaf)},
+    {name:'래들',color:'FF0000',values:epArr.map(r=>r.ladle)},
+    {name:'턴디쉬',color:'00B050',values:epArr.map(r=>r.td)}
+  ],{unit:'원/톤',note:'※ 2025.09~2026.08은 [내화물 실적자료] PPT 원본 참고값, 이후 신규월은 내화물 원단위 화면의 실사용 데이터를 기준으로 자동 계산됩니다.'});
+
+  // ⑤ 발코니·로저전극 교체 현황 — 원본 slide5와 동일하게 4개 차트를 세로로 나열(실제 계열명·색상)
+  rptStackedCharts(pptx,'발코니·로저전극 교체 현황(교체 시점 수명·CH)',REPORT_SEED.eafTdCharts,
+    {note:'※ [내화물 실적자료] PPT 원본의 과거 이력(~2026.07)입니다. 계열명·순서는 원본 차트 데이터를 그대로 사용했습니다.'});
+  try{
+    const newTd=eafTdData.filter(r=>r.date&&r.date>lastSeedDate&&(r.target==='발코니'||r.target==='로저전극'));
+    if(newTd.length){
+      rptTableSlide(pptx,'발코니·로저전극 교체 현황(신규 등록분)',
+        ['일자','대상','호기','교체시점 수명(CH)'],
+        newTd.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>[fmtYMD(r.date),r.target,(r.ro||'-')+'로',r.lifeCh||0]),
+        {note:'※ [전기로 수명관리 > 해체 점검 보고서]에 새로 등록된 기록입니다.'});
+    }
+  }catch(e){}
+
+  // ⑥ 앙카허스 사용량 — 12개월 트렌드(빨간 선) + 로저전극 교체 내역(원본 표)
+  const ankaArr=window12.map(rptAnkaAt);
+  rptLineChartSlide(pptx,'앙카허스 사용량',catLabels,[{name:'앙카허스 사용량',color:'FF0000',values:ankaArr}],
+    {unit:'톤',note:'※ 2025.09~2026.08은 [내화물 실적자료] PPT 원본 참고값, 이후 신규월은 원단위 품목마스터(앙카허스,DC25)의 실사용 데이터를 기준으로 자동 계산됩니다.'});
+  rptTableSlide(pptx,'◆ 전기로 로저전극 교체 내역',
+    ['구분',...REPORT_SEED.ankaReplace.map(r=>r[0])],
+    [['교체 월',...REPORT_SEED.ankaReplace.map(r=>r[1])]],
+    {note:'※ [내화물 실적자료] PPT 원본 이력(2024.08~2026.07)입니다.'});
+  try{
+    const newRo=eafTdData.filter(r=>r.date&&r.date>lastSeedDate&&r.target==='로저전극');
+    if(newRo.length){
+      rptTableSlide(pptx,'전기로 로저전극 교체 내역(신규 등록분)',
+        ['일자','호기','교체시점 수명(CH)'],
+        newRo.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>[fmtYMD(r.date),(r.ro||'-')+'로',r.lifeCh||0]));
+    }
+  }catch(e){}
+
+  // ⑦ 래들(LD) 수명현황 — 원본처럼 해체 시점 수명 추이(빨간 선, 최근 실적) + 업체별 누적 실적표
+  const ldLife=reportLadleLifeSeries(24);
+  if(ldLife.cats.length){
+    rptLineChartSlide(pptx,'래들(LD) 수명현황 · 해체 시점 수명 추이(최근)',ldLife.cats,
+      [{name:'수명',color:'FF0000',values:ldLife.vals}],{unit:'CH',note:'※ 래들 수명관리 화면의 해체 기록(daily 수명) 기준, 최근 실적입니다.'});
   }
-  // ④ 래들(LD) 수명현황
   rptTableSlide(pptx,'래들(LD) 수명현황 · 업체별 해체 실적(누적)',
     ['업체','해체건수','비율','평균해체수명','최고','최저','누적CH','SL건수','평균SL보수'],
     reportLadleVendorRows(),{note:'※ 래들 수명관리 화면의 업체별 현황과 동일한 기준(전체기간 누적)입니다.'});
-  // ⑤ 턴디쉬(TD) 수명현황
+
+  // ⑧ 턴디쉬(TD) 수명현황 — 원본처럼 종류별(150각/BB/B·L 등) 해체 수명 추이를 세로로 나열 + 호수별 현황표
+  const tdKindSeries=reportTundishKindSeries();
+  if(tdKindSeries.length){
+    rptStackedCharts(pptx,'턴디쉬(TD) 수명현황 · 종류별 해체 수명 추이',tdKindSeries,
+      {note:'※ 턴디쉬 수명관리 화면의 종류(150각/BB/B·L 등)별 해체 기록 기준, 실사용 데이터입니다.'});
+  }
   rptTableSlide(pptx,'턴디쉬(TD) 수명현황 · 호수별 현황',
     ['호수','종류','상태','차수','최고CH','영구장누적'],
     reportTundishRows(),{note:'※ 턴디쉬 수명관리 화면의 호수별 현황과 동일한 기준(전체기간 누적)입니다.'});
-  // ⑥ 내화물 원가 요약(당월)
-  const eafM=eafData.filter(r=>String(r.date||'').slice(0,7)===ym);
-  const ltM=ladleData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
-  const tdM=tundishData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,7)===ym&&r.daily);
-  let ladleCostRows=[],tdCostRows=[];
-  try{ladleCostRows=teardownCostRows().filter(r=>String(r.date||'').slice(0,7)===ym);}catch(e){}
-  try{tdCostRows=tundishTeardownCostRows().filter(r=>String(r.date||'').slice(0,7)===ym);}catch(e){}
-  const eafRepM=eafRepairData.filter(r=>String(r.date||'').slice(0,7)===ym);
-  const ladleSum=ladleCostRows.reduce((s,r)=>s+(+r.total||0),0);
-  const tdSum=tdCostRows.reduce((s,r)=>s+(+r.total||0),0);
-  const eafSum=eafRepM.reduce((s,r)=>s+(+r.amount||0),0);
-  rptCardsSlide(pptx,y+'년 '+m+'월 실적 요약',[
-    {label:'전기로 조업 CH',value:eafM.reduce((s,r)=>s+(+r.ch||0),0).toLocaleString(),unit:'CH'},
-    {label:'생산량',value:eafM.reduce((s,r)=>s+(+r.ton||0),0).toLocaleString(),unit:'TON'},
-    {label:'래들 해체',value:ltM.length,unit:'대'},
-    {label:'턴디쉬 사용',value:tdM.length,unit:'대'}]);
-  rptTableSlide(pptx,y+'년 '+m+'월 내화물 원가 요약',
-    ['설비','건수','원가 합계(백만원)'],
-    [['래들',ladleCostRows.length,(ladleSum/1e6).toFixed(1)],
-     ['턴디쉬',tdCostRows.length,(tdSum/1e6).toFixed(1)],
-     ['전기로(보수)',eafRepM.length,(eafSum/1e6).toFixed(1)],
-     ['합계',ladleCostRows.length+tdCostRows.length+eafRepM.length,((ladleSum+tdSum+eafSum)/1e6).toFixed(1)]],
-    {note:'※ 래들·턴디쉬는 해체 이벤트 로그 기반 자동집계, 전기로는 전기로 원가관리 화면에 직접 등록한 보수내역 기준입니다.'});
 }
 async function generateReportPpt(){
   if(typeof PptxGenJS==='undefined'){alert('PPT 생성 모듈을 불러오지 못했습니다. 페이지를 새로고침 후 다시 시도해주세요.');return;}
   try{
     const pptx=new PptxGenJS();
-    pptx.layout='LAYOUT_WIDE';
+    pptx.defineLayout({name:'DK4X3',width:RPT_W,height:RPT_H});
+    pptx.layout='DK4X3';
     pptx.author='동국알앤에스 포항사업소';
     pptx.company='동국알앤에스';
     const y=(document.getElementById('rpt_year')||{}).value||todayStr().slice(0,4);
@@ -5912,19 +6170,56 @@ async function generateReportPpt(){
     toast('PPT 파일이 생성되었습니다');
   }catch(e){console.error(e);alert('PPT 생성 중 오류가 발생했습니다: '+e.message);}
 }
+
 /* ============ 전기로 해체 점검 보고서 (로저전극해체 / 발코니해체) ============
    현장 점검보고서(PDF) 2건("B로 로저전극해체 점검 보고서","A로 발코니 연와 교체 보고서") 양식을 그대로 반영:
    - 정비대상(로저전극/발코니)에 따라 잔존현황 부위가 자동 전환 (로저전극: #1·#2·#3 / 발코니: 발코니·벽체연와)
    - 교체 범위(EBT·EBT외주링 1~3단·전기로 벽체 좌/우/발코니/작업구) 체크 시 노란색 하이라이트 + 벽체 단면 개략도에 반영
    - 내화물 사용량은 구분(카테고리)별로 묶어 소계·합계 자동 계산 (PDF 3페이지 표와 동일 구조)
    - 등록된 전체 보고서를 연도별·A로/B로별로 자동 집계하는 "전기로 보수 내역" 표 제공 (PDF 하단표와 동일 형식)
-   ※ 용손율 산식은 PDF만으로 정확히 확인되지 않아 "자동"버튼(1-잔존/원치수)으로 제공, 직접 수정 가능
+   ※ 용손율 = (원치수−잔존)÷수명(CH) — 실제 해체점검 보고서 원본(★2026_전기로 보수 점검 보고서.xlsx) 7건의
+     실측값과 대조하여 확인된 산식이며, 프로그램 내 래들 잔존관리(라이닝 다이어그램)와 동일한 산식이다.
+     (2026-09-26 확인 전까지는 1-잔존/원치수 로 잘못 계산되고 있었음 — "자동"버튼으로 재계산 가능, 직접 수정도 가능)
    ※ 벽체 단면도는 실제 도면이 아닌 교체범위 파악용 단순 개략도입니다. */
 const EAF_TD_TYPES=['전극교체','발코니교체','대보수','주간보수'];
 const EAF_ITEM_CATS=['로저전극내화물','SMC-95','PGT-FM7C','AMUD-85P','열간보수재','램밍재','MAGRAM-95CR','MAGRAM-98','앙카허스','기타'];
 function loadEafTd(){try{const s=JSON.parse(localStorage.getItem('dgrns_eaf_teardown'));if(Array.isArray(s))return s;}catch(e){}return [];}
 function saveEafTd(){try{localStorage.setItem('dgrns_eaf_teardown',JSON.stringify(eafTdData));}catch(e){}}
 let eafTdData=loadEafTd();
+/* 2026-09-26: 사용자가 전달한 실제 해체점검 원본("★2026_전기로 보수 점검 보고서.xlsx") 7건을
+   과거 이력으로 최초 1회만 자동 반영(dgrns_eaf_td_seeded 플래그, 이후 수동 수정분은 덮어쓰지 않음).
+   로(A/B) 구분은 각 시트 탭명을 기준으로 등록 — 아래 2건은 시트 탭명과 보고서 제목의 A/B로 표기가
+   서로 달라 note에 표기해둠(사용자 확인 후 정정 요청 시 즉시 수정). */
+const EAF_TD_SEED=[
+  {ro:'A',date:'2026-09-15',target:'로저전극',types:['전극교체'],lifeCh:1684,reasonCode:'바닥부상',reason:'바닥 부상으로 인한 교체',
+   note:'⚠ 원본 보고서 제목은 "B로 로저전극 교체 보고서"로 표기(시트 탭명은 A로) — 잔존측정값이 2026-07-03(B로) 기록과 완전히 동일해 확인 필요. 우선 시트 탭 기준 A로 등록.',
+   residual:[{part:'#1',orig:1440,remain:770,rate:0.40},{part:'#2',orig:1440,remain:760,rate:0.40},{part:'#3',orig:1440,remain:770,rate:0.40}]},
+  {ro:'B',date:'2026-07-03',target:'로저전극',types:['전극교체'],lifeCh:1455,reasonCode:'바닥부상',reason:'바닥 부상으로 인한 교체',note:'',
+   residual:[{part:'#1',orig:1440,remain:770,rate:0.46},{part:'#2',orig:1440,remain:760,rate:0.47},{part:'#3',orig:1440,remain:770,rate:0.46}]},
+  {ro:'A',date:'2026-06-16',target:'발코니',types:['발코니교체'],lifeCh:2601,reasonCode:'잔존부족',reason:'발코니 잔존부족으로 인한 교체',note:'',
+   residual:[{part:'발코니',orig:450,remain:120,rate:0.13},{part:'벽체연와',orig:350,remain:100,rate:0.10}]},
+  {ro:'A',date:'2026-05-13',target:'로저전극',types:['전극교체'],lifeCh:1911,reasonCode:'바닥부상',reason:'바닥 부상으로 인한 교체',note:'',
+   residual:[{part:'#1',orig:1440,remain:500,rate:0.49},{part:'#2',orig:1440,remain:520,rate:0.48},{part:'#3',orig:1440,remain:520,rate:0.48}]},
+  {ro:'A',date:'2025-11-26',target:'발코니',types:['발코니교체'],lifeCh:1333,reasonCode:'잔존부족',reason:'발코니 잔존부족으로 인한 교체',
+   note:'⚠ 원본 보고서 제목은 "B로 발코니 연와 교체 보고서"로 표기(시트 탭명은 A로) — 확인 필요. 우선 시트 탭 기준 A로 등록.',
+   residual:[{part:'발코니',orig:450,remain:150,rate:0.23},{part:'벽체연와',orig:350,remain:80,rate:0.20}]},
+  {ro:'B',date:'2025-11-13',target:'로저전극',types:['전극교체'],lifeCh:1462,reasonCode:'바닥부상',reason:'바닥 부상으로 인한 교체',
+   note:'원본에 수명 항목이 "발코니 수명"으로 오기되어 있었음(실제는 로저전극수명, 값 1462는 정상 사용됨)',
+   residual:[{part:'#1',orig:1440,remain:680,rate:0.52},{part:'#2',orig:1440,remain:690,rate:0.51},{part:'#3',orig:1440,remain:740,rate:0.48}]},
+  {ro:'B',date:'2025-10-29',target:'발코니',types:['발코니교체'],lifeCh:1330,reasonCode:'잔존부족',reason:'발코니 잔존부족으로 인한 교체',note:'',
+   residual:[{part:'발코니',orig:450,remain:120,rate:0.25},{part:'벽체연와',orig:350,remain:80,rate:0.20}]}
+];
+function seedEafTdFromHistory(){
+  if(localStorage.getItem('dgrns_eaf_td_seeded'))return;
+  EAF_TD_SEED.forEach(s=>{
+    eafTdData.push({id:uid(),ro:s.ro,date:s.date,target:s.target,types:s.types.slice(),lifeCh:s.lifeCh,
+      reasonCode:s.reasonCode,reason:s.reason,note:s.note,zones:eafTdReadZonesEmpty(),
+      residual:s.residual.map(r=>({...r})),items:[],photos:[],residualPhotos:[],seq:new Date(s.date).getTime(),src:'seed'});
+  });
+  saveEafTd();
+  try{localStorage.setItem('dgrns_eaf_td_seeded','1');}catch(e){}
+}
+function eafTdReadZonesEmpty(){return {ebt:false,ring1:false,ring2:false,ring3:false,wallL:false,wallR:false,balcony:false,workhole:false};}
 function eafTdDefaultResidual(target){
   return target==='발코니'?[{part:'발코니',orig:0,remain:0,rate:0},{part:'벽체연와',orig:0,remain:0,rate:0}]
                           :[{part:'#1',orig:0,remain:0,rate:0},{part:'#2',orig:0,remain:0,rate:0},{part:'#3',orig:0,remain:0,rate:0}];
@@ -5958,13 +6253,20 @@ function eafTdReadZones(){
 }
 function eafTdSetZoneInputs(z){z=z||{};['ebt','ring1','ring2','ring3','wallL','wallR','balcony','workhole'].forEach(k=>{const el=document.getElementById('etz_'+k);if(el)el.checked=!!z[k];});}
 function eafTdInitForm(){
+  seedEafTdFromHistory();
   const d=document.getElementById('etd_date');if(d&&!d.value)d.value=todayStr();
   const chk=document.getElementById('etd_types');
   if(chk&&!chk.dataset.done){chk.innerHTML=EAF_TD_TYPES.map(t=>`<label style="font-weight:500;white-space:nowrap;margin-right:10px"><input type="checkbox" value="${t}"> ${t}</label>`).join('');chk.dataset.done='1';}
   eafTdSyncLabels();eafTdRenderResidual();eafTdRenderItems();eafTdRenderPhotos();eafTdRenderResidualPhotos();renderEafTdList();renderEafTdHistory();
 }
 function eafTdSetResidual(i,k,v){eafTdResidual[i][k]=(k==='part')?v:(+v||0);eafTdRenderResidual();}
-function eafTdAutoRate(i){const r=eafTdResidual[i];r.rate=r.orig?+((1-r.remain/r.orig).toFixed(2)):0;eafTdRenderResidual();}
+function eafTdAutoRate(i){
+  const r=eafTdResidual[i];
+  const ch=num((document.getElementById('etd_life')||{}).value)||0;
+  const wear=Math.max(0,(+r.orig||0)-(+r.remain||0));
+  r.rate=ch?+((wear/ch).toFixed(2)):0;
+  eafTdRenderResidual();
+}
 function eafTdRenderResidual(){
   const box=document.getElementById('etd_residualBody');if(!box)return;
   box.innerHTML=eafTdResidual.map((r,i)=>`<tr>
@@ -5972,7 +6274,7 @@ function eafTdRenderResidual(){
     <td class="n"><input class="iinp" type="number" style="width:70px" value="${r.orig||''}" onchange="eafTdSetResidual(${i},'orig',this.value)"></td>
     <td class="n"><input class="iinp" type="number" style="width:70px;background:#fef9c3" value="${r.remain||''}" onchange="eafTdSetResidual(${i},'remain',this.value)"></td>
     <td class="n"><input class="iinp" type="number" step="0.01" style="width:56px" value="${r.rate||''}" onchange="eafTdSetResidual(${i},'rate',this.value)">
-      <button class="btn sm" style="font-size:9.5px;padding:0 4px" onclick="eafTdAutoRate(${i})" title="용손율 = 1-잔존/원치수 로 자동계산">자동</button></td>
+      <button class="btn sm" style="font-size:9.5px;padding:0 4px" onclick="eafTdAutoRate(${i})" title="용손율 = (원치수−잔존)÷수명(CH) 로 자동계산 (래들 잔존관리와 동일 산식)">자동</button></td>
     <td></td></tr>`).join('');
 }
 function eafTdAddItemRow(){eafTdItems.push({cat:EAF_ITEM_CATS[0],code:'',name:'',spec:'',uw:0,qty:0,price:0});eafTdRenderItems();}
@@ -7398,7 +7700,7 @@ function renderPosco(){
   const allocCell=r=>{const v=poscoField(r,'alloc')||'';const ch=poscoFieldChanged(r,'alloc');
     return `<input type="text" class="dtxt" style="width:60px;text-align:center${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="80:20" title="${ch?'원본 '+esc(r.alloc||'-')+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','alloc',this.value)">`;};
   const rowHtml=r=>`<tr${r.dkWin>0?' style="background:#f0fdf4"':''}>
-      <td style="white-space:nowrap"><b>${esc(r.item)}</b></td><td>${poscoSiteSel(r.item)}</td><td>${vendorPlainTags(r)}</td><td>${vendorRankTags(r)}</td><td style="font-size:12px;white-space:nowrap">${esc(r.baseVendor||'-')}</td>
+      <td style="white-space:nowrap"><b>${esc(r.item)}</b>${poscoMasterInfo(r.item).name?`<br><span style="font-size:10.5px;font-weight:400;color:var(--muted)">${esc(poscoMasterInfo(r.item).name)}</span>`:''}</td><td>${poscoSiteSel(r.item)}</td><td>${vendorPlainTags(r)}</td><td>${vendorRankTags(r)}</td><td style="font-size:12px;white-space:nowrap">${esc(r.baseVendor||'-')}</td>
       <td class="n">${editCell(r,'basePrice')}</td><td class="n">${editCell(r,'winPrice')}</td>
       <td class="n">${editCell(r,'qty')}</td><td class="n">${pN(r.amount)}</td>
       <td>${allocCell(r)}</td>
@@ -7417,6 +7719,8 @@ function renderPosco(){
   if(poscoSub==='rank')renderPoscoRank(all);
   // 입찰일정 · 변경이력
   if(poscoSub==='schedule')renderPoscoSchedule(all);
+  // 품목마스터
+  if(poscoSub==='master')renderPoscoMaster();
 }
 function renderPoscoMatrix(rows0){
   const {all:rows}=poscoSplit(rows0);
@@ -7467,11 +7771,48 @@ function renderPoscoRank(all){
     return `<tr style="border-left:4px solid ${col}"><td><span class="tag" style="color:#fff;background:${col};font-size:10.5px">${esc(v)}</span></td><td class="n">${part}</td><td class="n">${comp}</td><td class="n">${win1}</td></tr>`;}).join('');
 }
 function downloadPosco(){
+  if(poscoSub==='master'){downloadPoscoMaster();return;}
   const rows=poscoRows();
   let t=`<table><tr><th>품명</th><th>제철소</th><th>기존업체</th><th>기준단가</th><th>낙찰가</th><th>물량</th><th>금액</th><th>배분율</th><th>동국순위</th><th>동국낙찰금액</th><th>계약업체</th><th>계약기간</th>`+PVEND.map(v=>`<th>${v}</th>`).join('')+`</tr>`;
   rows.forEach(r=>{const vm=r.vmap||{};const ct=poscoContractStore[r.item]||{};
     t+=`<tr><td>${esc(r.item)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(r.baseVendor||'')}</td><td>${poscoField(r,'basePrice')??''}</td><td>${poscoField(r,'winPrice')??''}</td><td>${poscoField(r,'qty')??''}</td><td>${r.amount??''}</td><td>${esc(poscoField(r,'alloc')||'')}</td><td>${r.dkWin>0?'낙찰':esc(r.dkRank)}</td><td>${r.dkWin||''}</td><td>${esc(ct.vendor||'')}</td><td>${esc(ct.period||'')}</td>`+PVEND.map(v=>`<td>${esc(vm[v]||'')}</td>`).join('')+`</tr>`;});
   t+=`</table>`;downloadXls('포스코_범용B_입찰통합',t);
+}
+/* ============ 포스코 품목마스터 (2026-09-26 신설) ============
+   범용B 통합 품목코드(예: A-19)는 그 자체로는 정식 품명이 아니어서, 코드별로 정식품명·규격·
+   원료계열·비고를 등록해두는 참고 마스터. POSCO_SEED(원본)는 건드리지 않고 별도 오버레이로
+   저장(래들·전기로 등 다른 화면의 override 패턴과 동일) — 입력한 항목만 저장되고, 지우면 빈 값으로
+   돌아간다(원본 자체에 정식품명 데이터가 없으므로 '복귀'가 아니라 단순 초기화). */
+function loadPoscoMaster(){try{return JSON.parse(localStorage.getItem('dgrns_posco_master')||'{}');}catch(e){return{};}}
+function savePoscoMaster(){try{localStorage.setItem('dgrns_posco_master',JSON.stringify(poscoMaster));}catch(e){}}
+let poscoMaster=loadPoscoMaster();
+function poscoMasterInfo(item){return poscoMaster[item]||{name:'',spec:'',category:'',note:''};}
+function setPoscoMaster(item,key,v){
+  const cur=poscoMaster[item]||{name:'',spec:'',category:'',note:''};
+  cur[key]=v;
+  if(!cur.name&&!cur.spec&&!cur.category&&!cur.note)delete poscoMaster[item];else poscoMaster[item]=cur;
+  savePoscoMaster();
+}
+function renderPoscoMaster(){
+  const box=document.getElementById('poscoMasterBody');if(!box)return;
+  const rows=poscoRows();
+  const cell=(item,key,ph,w)=>{const v=poscoMasterInfo(item)[key];
+    return `<input class="binp" style="width:${w||'100%'};border:1px solid var(--line)" value="${esc(v)}" placeholder="${ph}" onchange="setPoscoMaster('${esc(item)}','${key}',this.value)">`;};
+  box.innerHTML=rows.map(r=>`<tr>
+      <td style="white-space:nowrap"><b>${esc(r.item)}</b></td>
+      <td>${cell(r.item,'name','정식품명 입력')}</td>
+      <td>${cell(r.item,'spec','규격 입력')}</td>
+      <td>${cell(r.item,'category','예: MgO계')}</td>
+      <td>${esc(poscoSite(r.item))}</td>
+      <td>${cell(r.item,'note','비고')}</td></tr>`).join('')
+    ||`<tr><td colspan="6"><div class="empty">해당 조건의 품목이 없습니다.</div></td></tr>`;
+}
+function downloadPoscoMaster(){
+  const rows=poscoRows();
+  let t=`<table><tr><th>품목코드</th><th>정식품명</th><th>규격</th><th>원료계열</th><th>제철소</th><th>비고</th></tr>`;
+  rows.forEach(r=>{const m=poscoMasterInfo(r.item);
+    t+=`<tr><td>${esc(r.item)}</td><td>${esc(m.name)}</td><td>${esc(m.spec)}</td><td>${esc(m.category)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(m.note)}</td></tr>`;});
+  t+=`</table>`;downloadXls('포스코_품목마스터',t);
 }
 
 /* ============ 전체 데이터 백업 ============
@@ -8233,6 +8574,15 @@ async function autoSetStockTarget(sup){
   for(const r of targets){r.target=Math.round((+r.expUse||0)*months);r.upd=todayStr();await putRec('stock',r);}
   flashSave();renderStock(sup);
   toast(`${sup} 적정재고를 ${months}개월 기준으로 재계산했습니다 (${targets.length}건)`);
+}
+// 2026-09-26: 재고관리는 칸마다 입력 즉시(oninput) IndexedDB에 저장되고 있었지만,
+// 다른 화면(내화물 기본정보·원단위 등)과 달리 화면에 "💾 저장" 버튼이 없어 저장 여부를
+// 눈으로 확인하기 어렵다는 요청 — 현재 표시된 품목 전체를 다시 한 번 명시적으로 저장하고
+// 상단 저장 표시(자동 저장됨)를 띄워줌(기존 자동저장 동작 자체는 그대로 유지).
+async function saveStockAll(sup){
+  const rows=stockData.filter(r=>r.supplier===sup);
+  for(const r of rows){await putRec('stock',r);}
+  flashSave();toast(sup+' 재고관리가 저장되었습니다('+rows.length+'건)');
 }
 async function delStockRow(id){
   const r=stockData.find(x=>x.id===id);
