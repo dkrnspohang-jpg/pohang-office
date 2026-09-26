@@ -2035,9 +2035,9 @@ service cloud.firestore {
       </table></div>
     </div>
     <div class="subpanel" id="psp-schedule">
-      <div class="subhead">계약기간 · 다음 입찰(계약) 일정 <span class="hint">품목을 클릭하면 계약정보를 수정할 수 있습니다 · 다음 예정이 등록된 품목이 위로 정렬됩니다</span></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:900px">
-        <thead><tr><th>품명</th><th>제철소</th><th>현재 계약업체</th><th>현재 계약기간</th><th style="color:#b45309">다음 예정업체</th><th style="color:#b45309">다음 예정기간</th></tr></thead>
+      <div class="subhead">계약 완료기간 · 다음입찰일정 <span class="hint">품목을 클릭하면 일정을 수정할 수 있습니다 · 다음입찰일정이 등록된 품목이 위로 정렬됩니다</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:700px">
+        <thead><tr><th>품명</th><th>제철소</th><th>계약 완료기간</th><th style="color:#b45309">다음입찰일정</th></tr></thead>
         <tbody id="poscoScheduleBody"></tbody>
       </table></div>
       <div class="subhead" style="margin-top:14px">최근 변경 이력 <span class="hint">기준단가·낙찰가·물량·배분율을 수정할 때마다 자동으로 기록됩니다 (최신순 최대 40건)</span></div>
@@ -2047,9 +2047,10 @@ service cloud.firestore {
       </table></div>
     </div>
     <div class="subpanel" id="psp-master">
-      <div class="subhead">포스코 품목마스터 <span class="hint">품목코드(예: A-19)에 정식품명·규격·원료계열·비고를 등록해 품목을 관리합니다 — 직접 입력한 정보만 저장되며, 입력 즉시 자동저장됩니다</span></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:1100px">
-        <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:180px">정식품명</th><th style="min-width:140px">규격</th><th style="min-width:120px">원료계열</th><th style="min-width:112px">제철소</th><th style="min-width:220px">비고</th></tr></thead>
+      <div class="subhead">포스코 품목마스터 <span class="hint">품목코드(예: A-19)마다 규격·Q코드를 등록합니다 — 규격이 여러 개면 [＋]로 행을 추가하세요. 입력 즉시 자동저장됩니다. "범용B 입찰현황" 탭에서 품목코드를 클릭하면 여기서 해당 품목만 볼 수 있습니다.</span></div>
+      <div id="poscoMasterFocusBar" style="margin-bottom:8px;font-size:12px;color:var(--muted)"></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:640px">
+        <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:112px">제철소</th><th style="min-width:180px">규격</th><th style="min-width:140px">Q코드</th><th style="min-width:70px"></th></tr></thead>
         <tbody id="poscoMasterBody"></tbody>
       </table></div>
     </div>
@@ -7700,7 +7701,7 @@ function renderPosco(){
   const allocCell=r=>{const v=poscoField(r,'alloc')||'';const ch=poscoFieldChanged(r,'alloc');
     return `<input type="text" class="dtxt" style="width:60px;text-align:center${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="80:20" title="${ch?'원본 '+esc(r.alloc||'-')+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','alloc',this.value)">`;};
   const rowHtml=r=>`<tr${r.dkWin>0?' style="background:#f0fdf4"':''}>
-      <td style="white-space:nowrap"><b>${esc(r.item)}</b>${poscoMasterInfo(r.item).name?`<br><span style="font-size:10.5px;font-weight:400;color:var(--muted)">${esc(poscoMasterInfo(r.item).name)}</span>`:''}</td><td>${poscoSiteSel(r.item)}</td><td>${vendorPlainTags(r)}</td><td>${vendorRankTags(r)}</td><td style="font-size:12px;white-space:nowrap">${esc(r.baseVendor||'-')}</td>
+      <td style="white-space:nowrap"><b style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted" onclick="poscoGotoMaster('${esc(r.item)}')" title="클릭하면 품목마스터에서 규격·Q코드를 볼 수 있습니다">${esc(r.item)}</b></td><td>${poscoSiteSel(r.item)}</td><td>${vendorPlainTags(r)}</td><td>${vendorRankTags(r)}</td><td style="font-size:12px;white-space:nowrap">${esc(r.baseVendor||'-')}</td>
       <td class="n">${editCell(r,'basePrice')}</td><td class="n">${editCell(r,'winPrice')}</td>
       <td class="n">${editCell(r,'qty')}</td><td class="n">${pN(r.amount)}</td>
       <td>${allocCell(r)}</td>
@@ -7743,9 +7744,9 @@ function renderPoscoSchedule(all){
     const hasNext=c.next&&(c.next.vendor||c.next.period);
     return `<tr${hasNext?' style="background:#fffbeb"':''} style="cursor:pointer" onclick="editPoscoContract('${esc(r.item)}')">
       <td style="white-space:nowrap"><b>${esc(r.item)}</b></td><td>${esc(poscoSite(r.item))}</td>
-      <td>${esc(c.vendor||'-')}</td><td style="font-size:12px;color:var(--muted)">${esc(c.period||'-')}</td>
-      <td style="color:#b45309">${esc((c.next&&c.next.vendor)||'-')}</td><td style="font-size:12px;color:#b45309">${esc((c.next&&c.next.period)||'-')}</td></tr>`;
-  }).join('')||`<tr><td colspan="6"><div class="empty">품목이 없습니다.</div></td></tr>`;
+      <td style="font-size:12px;color:var(--muted)">${esc(c.period||'-')}</td>
+      <td style="font-size:12px;color:#b45309">${esc((c.next&&c.next.period)||'-')}</td></tr>`;
+  }).join('')||`<tr><td colspan="4"><div class="empty">품목이 없습니다.</div></td></tr>`;
   const log=poscoFieldLog.slice().reverse().slice(0,40);
   const fmtV=(k,v)=>k==='alloc'?esc(v||'-'):pN(v);
   document.getElementById('poscoLogBody').innerHTML=log.map(l=>
@@ -7778,40 +7779,72 @@ function downloadPosco(){
     t+=`<tr><td>${esc(r.item)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(r.baseVendor||'')}</td><td>${poscoField(r,'basePrice')??''}</td><td>${poscoField(r,'winPrice')??''}</td><td>${poscoField(r,'qty')??''}</td><td>${r.amount??''}</td><td>${esc(poscoField(r,'alloc')||'')}</td><td>${r.dkWin>0?'낙찰':esc(r.dkRank)}</td><td>${r.dkWin||''}</td><td>${esc(ct.vendor||'')}</td><td>${esc(ct.period||'')}</td>`+PVEND.map(v=>`<td>${esc(vm[v]||'')}</td>`).join('')+`</tr>`;});
   t+=`</table>`;downloadXls('포스코_범용B_입찰통합',t);
 }
-/* ============ 포스코 품목마스터 (2026-09-26 신설) ============
-   범용B 통합 품목코드(예: A-19)는 그 자체로는 정식 품명이 아니어서, 코드별로 정식품명·규격·
-   원료계열·비고를 등록해두는 참고 마스터. POSCO_SEED(원본)는 건드리지 않고 별도 오버레이로
-   저장(래들·전기로 등 다른 화면의 override 패턴과 동일) — 입력한 항목만 저장되고, 지우면 빈 값으로
-   돌아간다(원본 자체에 정식품명 데이터가 없으므로 '복귀'가 아니라 단순 초기화). */
+/* ============ 포스코 품목마스터 (2026-09-26 신설, 2026-09-26 구조 변경) ============
+   품목코드(예: A-19) 하나에 여러 규격이 붙을 수 있고, 규격마다 고유 Q코드가 존재한다는
+   사용자 피드백을 반영 — poscoMaster[item]을 단일 객체가 아닌 규격행 배열로 저장
+   ([{spec,qcode}, ...]). 정식품명·원료계열은 불필요하다는 피드백에 따라 제거, 제철소는
+   기존 poscoSiteOv를 그대로 사용(품목별 공용 — 규격행마다 따로 두지 않음).
+   "범용B 입찰현황" 탭에서 품목코드를 클릭하면 poscoGotoMaster()로 품목마스터 탭으로 이동하며
+   해당 품목 하나만 보이도록 필터된다(poscoMasterFocus). */
 function loadPoscoMaster(){try{return JSON.parse(localStorage.getItem('dgrns_posco_master')||'{}');}catch(e){return{};}}
 function savePoscoMaster(){try{localStorage.setItem('dgrns_posco_master',JSON.stringify(poscoMaster));}catch(e){}}
 let poscoMaster=loadPoscoMaster();
-function poscoMasterInfo(item){return poscoMaster[item]||{name:'',spec:'',category:'',note:''};}
-function setPoscoMaster(item,key,v){
-  const cur=poscoMaster[item]||{name:'',spec:'',category:'',note:''};
-  cur[key]=v;
-  if(!cur.name&&!cur.spec&&!cur.category&&!cur.note)delete poscoMaster[item];else poscoMaster[item]=cur;
+let poscoMasterFocus=null;
+function poscoGotoMaster(item){poscoMasterFocus=item;poscoTab('master');}
+function poscoMasterClearFocus(){poscoMasterFocus=null;renderPoscoMaster();}
+function poscoMasterRows(item){const r=poscoMaster[item];return (Array.isArray(r)&&r.length)?r:[{spec:'',qcode:''}];}
+function poscoMasterPersist(item,rows){
+  const cleaned=rows.filter(r=>(r.spec||'').trim()||(r.qcode||'').trim());
+  if(cleaned.length)poscoMaster[item]=cleaned;else delete poscoMaster[item];
   savePoscoMaster();
+}
+function setPoscoMasterRow(item,idx,key,v){
+  const rows=poscoMasterRows(item).map(r=>({...r}));
+  rows[idx][key]=v;
+  poscoMasterPersist(item,rows);
+}
+function addPoscoMasterRow(item){
+  const rows=poscoMasterRows(item).map(r=>({...r}));
+  rows.push({spec:'',qcode:''});
+  poscoMaster[item]=rows;savePoscoMaster();renderPoscoMaster();
+}
+function removePoscoMasterRow(item,idx){
+  const rows=poscoMasterRows(item).map(r=>({...r}));
+  rows.splice(idx,1);
+  poscoMasterPersist(item,rows.length?rows:[{spec:'',qcode:''}]);
+  renderPoscoMaster();
+}
+function poscoMasterItemHtml(r){
+  const rows=poscoMasterRows(r.item);
+  const n=rows.length;
+  return rows.map((row,idx)=>{
+    const specCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.spec)}" placeholder="규격 입력" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'spec',this.value)">`;
+    const qCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.qcode)}" placeholder="Q코드" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'qcode',this.value)">`;
+    const actions=(idx===n-1?`<button class="btn sm" onclick="addPoscoMasterRow('${esc(r.item)}')" title="이 품목에 규격 행 추가">＋</button>`:'')
+      +(n>1?`<button class="btn sm danger" onclick="removePoscoMasterRow('${esc(r.item)}',${idx})" title="이 규격 행 삭제">×</button>`:'');
+    if(idx===0){
+      return `<tr>
+        <td rowspan="${n}" style="white-space:nowrap;vertical-align:top;cursor:pointer" onclick="poscoGotoMaster('${esc(r.item)}')" title="클릭하면 이 품목만 보기"><b>${esc(r.item)}</b></td>
+        <td rowspan="${n}" style="vertical-align:top">${poscoSiteSel(r.item)}</td>
+        <td>${specCell}</td><td>${qCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+    }
+    return `<tr><td>${specCell}</td><td>${qCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+  }).join('');
 }
 function renderPoscoMaster(){
   const box=document.getElementById('poscoMasterBody');if(!box)return;
-  const rows=poscoRows();
-  const cell=(item,key,ph,w)=>{const v=poscoMasterInfo(item)[key];
-    return `<input class="binp" style="width:${w||'100%'};border:1px solid var(--line)" value="${esc(v)}" placeholder="${ph}" onchange="setPoscoMaster('${esc(item)}','${key}',this.value)">`;};
-  box.innerHTML=rows.map(r=>`<tr>
-      <td style="white-space:nowrap"><b>${esc(r.item)}</b></td>
-      <td>${cell(r.item,'name','정식품명 입력')}</td>
-      <td>${cell(r.item,'spec','규격 입력')}</td>
-      <td>${cell(r.item,'category','예: MgO계')}</td>
-      <td>${esc(poscoSite(r.item))}</td>
-      <td>${cell(r.item,'note','비고')}</td></tr>`).join('')
-    ||`<tr><td colspan="6"><div class="empty">해당 조건의 품목이 없습니다.</div></td></tr>`;
+  const focusBox=document.getElementById('poscoMasterFocusBar');
+  if(focusBox)focusBox.innerHTML=poscoMasterFocus?`🔎 <b>${esc(poscoMasterFocus)}</b> 품목만 표시 중 <button class="btn sm" onclick="poscoMasterClearFocus()">전체보기</button>`:'';
+  const rows=poscoMasterFocus?POSCO_SEED.filter(r=>r.item===poscoMasterFocus):poscoRows();
+  box.innerHTML=rows.map(poscoMasterItemHtml).join('')
+    ||`<tr><td colspan="5"><div class="empty">해당 조건의 품목이 없습니다.</div></td></tr>`;
 }
 function downloadPoscoMaster(){
-  const rows=poscoRows();
-  let t=`<table><tr><th>품목코드</th><th>정식품명</th><th>규격</th><th>원료계열</th><th>제철소</th><th>비고</th></tr>`;
-  rows.forEach(r=>{const m=poscoMasterInfo(r.item);
-    t+=`<tr><td>${esc(r.item)}</td><td>${esc(m.name)}</td><td>${esc(m.spec)}</td><td>${esc(m.category)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(m.note)}</td></tr>`;});
+  const rows=poscoMasterFocus?POSCO_SEED.filter(r=>r.item===poscoMasterFocus):poscoRows();
+  let t=`<table><tr><th>품목코드</th><th>제철소</th><th>규격</th><th>Q코드</th></tr>`;
+  rows.forEach(r=>{poscoMasterRows(r.item).forEach(row=>{
+    t+=`<tr><td>${esc(r.item)}</td><td>${esc(poscoSite(r.item))}</td><td>${esc(row.spec)}</td><td>${esc(row.qcode)}</td></tr>`;
+  });});
   t+=`</table>`;downloadXls('포스코_품목마스터',t);
 }
 
