@@ -1883,10 +1883,26 @@ service cloud.firestore {
       </div>
       <div class="costgrid" id="inflowCards"></div>
       <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 10px">※ 매일 입고분을 품목별로 입력하세요. 그 달 1~말일 입고가 합산되어 [월별 원단위]의 입고량으로 자동 반영됩니다. 오른쪽 '월 누적'은 해당 월 총 입고입니다.</div>
-      <div class="tablewrap"><table class="bomtbl" id="inflowTbl" style="min-width:820px">
-        <thead><tr><th>설비</th><th>고객사 품명</th><th>단위</th><th class="n">단가</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n">월 누적입고</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
+      <div class="tablewrap"><table class="bomtbl" id="inflowTbl" style="min-width:860px">
+        <thead><tr><th>설비</th><th style="min-width:200px">고객사 품명</th><th>단위</th><th class="n">단가</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n">월 누적입고</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
         <tbody id="inflowBody"></tbody>
       </table></div>
+      <div class="subhead" style="margin-top:16px;cursor:pointer" onclick="toggleInflowRange()">📅 기간별 입고 내역 조회 <span class="hint">시작일~종료일 사이의 입고 기록을 한 번에 확인 (잘못 입력된 날짜 찾기용) · <span id="ir_toggle">▼ 펼치기</span></span></div>
+      <div id="ir_box" class="hidden">
+        <div class="toolrow">
+          <label style="font-size:12px;color:var(--muted)">시작일</label>
+          <input type="date" class="selbox" id="ir_from" onchange="renderInflowRange()">
+          <label style="font-size:12px;color:var(--muted)">종료일</label>
+          <input type="date" class="selbox" id="ir_to" onchange="renderInflowRange()">
+          <input class="search" id="ir_search" placeholder="품명·설비 검색" oninput="renderInflowRange()">
+          <button class="btn" onclick="downloadInflowRange()">📥 엑셀</button>
+          <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="ir_count"></span>
+        </div>
+        <div class="tablewrap"><table class="bomtbl" id="inflowRangeTbl" style="min-width:700px">
+          <thead><tr><th>일자</th><th>설비</th><th style="min-width:200px">품명</th><th class="n">입고량</th><th class="n">단가</th><th class="n">입고금액</th></tr></thead>
+          <tbody id="inflowRangeBody"></tbody>
+        </table></div>
+      </div>
     </div>
     <!-- 월별 원단위 -->
     <div class="subpanel" id="isp-month">
@@ -1940,10 +1956,11 @@ service cloud.firestore {
       </div>
       <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="invm_periodHint"></div>
       <div class="tablewrap"><table class="bomtbl" style="min-width:960px">
-        <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:180px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:170px">내화물 기본정보 연동</th><th style="min-width:100px">관리</th></tr></thead>
+        <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:180px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:170px">내화물 기본정보 연동</th><th style="min-width:120px">원가보고서 분류</th><th style="min-width:100px">관리</th></tr></thead>
         <tbody id="invMasterBody"></tbody>
       </table></div>
       <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ "현재(직접수정)"에서 단가를 고치면 즉시 라이브 단가로 적용되어 월별 원단위·입고금액 등 모든 계산에 오늘부터 반영됩니다. 특정 월(또는 분기)부터 적용될 단가를 미리 준비하려면 🆕 신규 시점을 눌러 그 시점만 따로 편집하세요 — 과거 달의 원단위·비교 화면은 그 달 시점에 유효했던 단가로 자동 계산됩니다.</div>
+      <div style="font-size:11.5px;color:var(--accent);margin-top:4px">※ "원가보고서 분류"를 지정한 품목은 [월별 실적관리]·[보고서 자동생성] PPT의 "내화물 원가 세부현황"에 매달 자동으로 집계됩니다 — 설비(EAF/래들/턴디쉬)별로 고를 수 있는 분류가 다릅니다.</div>
     </div>
   </section>
 
@@ -5910,9 +5927,11 @@ function rptCostDetailSlide(pptx,title,ym,ymPrev,thisLabel,prevLabel){
   const s=pptx.addSlide();s.background={color:'FFFFFF'};
   rptSectionHeader(s,title);
   const groups=[{k:'eaf',name:'전기로'},{k:'ladle',name:'래  들'},{k:'td',name:'턴디쉬'}];
-  const cd=REPORT_SEED.costDetail[ym]||null, cdPrev=REPORT_SEED.costDetail[ymPrev]||null;
+  // 2026-09-27: 2026.07~08(원본 참고값) 범위 밖 월은, 내화물 원단위 품목마스터에서 사용자가 지정한
+  // "원가보고서 분류" 태그 기준으로 실사용 데이터를 자동 집계함(liveCostDetailAt) — 태그가 하나도 없으면 null.
+  const cd=REPORT_SEED.costDetail[ym]||liveCostDetailAt(ym)||null, cdPrev=REPORT_SEED.costDetail[ymPrev]||liveCostDetailAt(ymPrev)||null;
   if(!cd&&!cdPrev){
-    s.addText('선택하신 월(및 전월)의 품목별 원가 세부현황 데이터가 없습니다.\n현재 프로그램은 로상재·로벽연와·건닝재·C52+ONQC 등 세부 품목을 별도 카테고리로 추적하지 않아,\n2026년 7월·8월은 [내화물 실적자료] PPT 원본의 참고값만 제공됩니다.',
+    s.addText('선택하신 월(및 전월)의 품목별 원가 세부현황 데이터가 없습니다.\n[내화물 원단위 > 품목 마스터]에서 품목별로 "원가보고서 분류"를 지정하면 다음부터 자동 집계됩니다.\n2026년 7월·8월은 [내화물 실적자료] PPT 원본의 참고값을 제공합니다.',
       {x:0.6,y:2.6,w:8.8,h:1.8,fontSize:13,color:RPT_GRAY,italic:true,valign:'top',fontFace:RPT_BODY_FONT});
     return s;
   }
@@ -5949,7 +5968,7 @@ function rptCostDetailSlide(pptx,title,ym,ymPrev,thisLabel,prevLabel){
   const totPrev=REPORT_SEED.costTotal[ymPrev]!=null?REPORT_SEED.costTotal[ymPrev]:((epPrev.eaf||0)+(epPrev.ladle||0)+(epPrev.td||0)||null);
   s.addText('합 계 (원/ton)   '+thisLabel+' : '+(totThis!=null?totThis.toLocaleString():'-')+'      '+prevLabel+' : '+(totPrev!=null?totPrev.toLocaleString():'-'),
     {x:0.4,y:4.9,w:9.2,h:0.5,fontSize:13,bold:true,color:'C41F2A',align:'center',fontFace:RPT_BODY_FONT});
-  s.addText('※ 2026년 7월·8월은 [내화물 실적자료] PPT 원본의 품목별 세부현황을 그대로 표시합니다. 그 외 월은 세부 품목이 프로그램에 별도 추적되지 않아 표시되지 않습니다.',
+  s.addText('※ 2026년 7월·8월은 [내화물 실적자료] PPT 원본의 품목별 세부현황을 그대로 표시합니다. 그 외 월은 [내화물 원단위 > 품목 마스터]에서 "원가보고서 분류"를 지정한 품목만 자동 집계되며, 지정하지 않은 분류는 "-"로 표시됩니다.',
     {x:0.4,y:7.1,w:9.2,h:0.32,fontSize:8,color:RPT_GRAY,fontFace:RPT_BODY_FONT});
   return s;
 }
@@ -6010,6 +6029,21 @@ function reportLadleVendorRows(){
   const totSum=teardowns.reduce((x,r)=>x+r.daily,0);
   rows.push(['합계',totCnt,'100%',totCnt?Math.round(totSum/totCnt):'-','-','-',totSum,sls.length,avgArr(sls.map(r=>r.daily))]);
   return rows;
+}
+// 래들(LD) 이번달 호기별 해체 목록 — 원본 slide7의 "L/D NO·해체수명·업체·비고" 표에 대응(해당 월 해체 기록만)
+// 2026-09-26: 같은 호기·같은 캠페인이 "원본 이력(NO.2 등, 업체명 있음)"과 "엑셀 월간요약 자동반영(2 등, 업체명 없음)"
+// 두 자료원에 중복 기록되는 경우가 있어(둘 다 실제 데이터, 수명 수치는 동일) 중복 표시를 막기 위해
+// 호기 번호 기준으로 묶어 업체명이 채워진(더 상세한) 쪽을 우선 채택함.
+function reportLadleMonthRows(ym){
+  try{annotate();}catch(e){}
+  const rows=ladleData.filter(r=>END_EVT.includes(r.type)&&r.daily&&!isExcl(r)&&String(r.date||'').slice(0,7)===ym);
+  const byNo={};
+  rows.forEach(r=>{
+    const key=String(r.no||'').replace(/\D/g,'')||String(r.no||'');
+    if(!byNo[key]||(!byNo[key].vendor&&r.vendor))byNo[key]=r;
+  });
+  const out=Object.values(byNo).sort((a,b)=>cmpNo(a.no,b.no)||(a.date||'').localeCompare(b.date||''));
+  return out.map(r=>[r.no,r.daily||0,r.vendor||'-',r._campSL?'SL보수':'무보수']);
 }
 // 래들(LD) 해체 시점 수명(CH) 추이 — 원본 slide7의 "수명" 라인차트에 대응(최근 해체 순서대로, 실사용 데이터)
 function reportLadleLifeSeries(limit){
@@ -6086,7 +6120,6 @@ async function buildMonthlyReportSlides(pptx){
   const ymPrev=ymAdd(ym,-1);
   const window12=ymWindow(ym,12);
   const catLabels=rptMonthLabels(window12);
-  const lastSeedDate='2026-07-31';
 
   // ① 표지 — [내화물 실적자료] 원본 PPT의 표지 문구 형식을 그대로 따름
   rptTitleSlide(pptx,y.slice(2)+'년 '+m+'월 내화물 실적 자료','(동국제강 포항공장)','㈜ 동국알앤에스');
@@ -6111,19 +6144,11 @@ async function buildMonthlyReportSlides(pptx){
   ],{unit:'원/톤',note:'※ 2025.09~2026.08은 [내화물 실적자료] PPT 원본 참고값, 이후 신규월은 내화물 원단위 화면의 실사용 데이터를 기준으로 자동 계산됩니다.'});
 
   // ⑤ 발코니·로저전극 교체 현황 — 원본 slide5와 동일하게 4개 차트를 세로로 나열(실제 계열명·색상)
+  // 2026-09-26: "신규 등록분" 추가표는 사용자의 실제 PPT(원본 8슬라이드)에는 없는 슬라이드라 제거함(요청 반영: 원본에 있는 부분만).
   rptStackedCharts(pptx,'발코니·로저전극 교체 현황(교체 시점 수명·CH)',REPORT_SEED.eafTdCharts,
     {note:'※ [내화물 실적자료] PPT 원본의 과거 이력(~2026.07)입니다. 계열명·순서는 원본 차트 데이터를 그대로 사용했습니다.'});
-  try{
-    const newTd=eafTdData.filter(r=>r.date&&r.date>lastSeedDate&&(r.target==='발코니'||r.target==='로저전극'));
-    if(newTd.length){
-      rptTableSlide(pptx,'발코니·로저전극 교체 현황(신규 등록분)',
-        ['일자','대상','호기','교체시점 수명(CH)'],
-        newTd.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>[fmtYMD(r.date),r.target,(r.ro||'-')+'로',r.lifeCh||0]),
-        {note:'※ [전기로 수명관리 > 해체 점검 보고서]에 새로 등록된 기록입니다.'});
-    }
-  }catch(e){}
 
-  // ⑥ 앙카허스 사용량 — 12개월 트렌드(빨간 선) + 로저전극 교체 내역(원본 표)
+  // ⑥ 앙카허스 사용량 — 12개월 트렌드(빨간 선) + 로저전극 교체 내역(원본 표) · 원본 slide6과 동일 구성
   const ankaArr=window12.map(rptAnkaAt);
   rptLineChartSlide(pptx,'앙카허스 사용량',catLabels,[{name:'앙카허스 사용량',color:'FF0000',values:ankaArr}],
     {unit:'톤',note:'※ 2025.09~2026.08은 [내화물 실적자료] PPT 원본 참고값, 이후 신규월은 원단위 품목마스터(앙카허스,DC25)의 실사용 데이터를 기준으로 자동 계산됩니다.'});
@@ -6131,16 +6156,14 @@ async function buildMonthlyReportSlides(pptx){
     ['구분',...REPORT_SEED.ankaReplace.map(r=>r[0])],
     [['교체 월',...REPORT_SEED.ankaReplace.map(r=>r[1])]],
     {note:'※ [내화물 실적자료] PPT 원본 이력(2024.08~2026.07)입니다.'});
-  try{
-    const newRo=eafTdData.filter(r=>r.date&&r.date>lastSeedDate&&r.target==='로저전극');
-    if(newRo.length){
-      rptTableSlide(pptx,'전기로 로저전극 교체 내역(신규 등록분)',
-        ['일자','호기','교체시점 수명(CH)'],
-        newRo.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>[fmtYMD(r.date),(r.ro||'-')+'로',r.lifeCh||0]));
-    }
-  }catch(e){}
 
-  // ⑦ 래들(LD) 수명현황 — 원본처럼 해체 시점 수명 추이(빨간 선, 최근 실적) + 업체별 누적 실적표
+  // ⑦ 래들(LD) 수명현황 — 원본 slide7과 동일 구성: 이번달 호기별 해체 목록 + 해체 시점 수명 추이 + 업체별 누적 실적표
+  const ldMonthRows=reportLadleMonthRows(ym);
+  if(ldMonthRows.length){
+    rptTableSlide(pptx,'래들(LD) 수명현황 · '+m+'월 해체 목록',
+      ['L/D NO','해체수명','업체','비고'],ldMonthRows,
+      {note:'※ 래들 수명관리 화면의 '+ym+' 해체 기록입니다.'});
+  }
   const ldLife=reportLadleLifeSeries(24);
   if(ldLife.cats.length){
     rptLineChartSlide(pptx,'래들(LD) 수명현황 · 해체 시점 수명 추이(최근)',ldLife.cats,
@@ -6150,15 +6173,13 @@ async function buildMonthlyReportSlides(pptx){
     ['업체','해체건수','비율','평균해체수명','최고','최저','누적CH','SL건수','평균SL보수'],
     reportLadleVendorRows(),{note:'※ 래들 수명관리 화면의 업체별 현황과 동일한 기준(전체기간 누적)입니다.'});
 
-  // ⑧ 턴디쉬(TD) 수명현황 — 원본처럼 종류별(150각/BB/B·L 등) 해체 수명 추이를 세로로 나열 + 호수별 현황표
+  // ⑧ 턴디쉬(TD) 수명현황 — 원본 slide8과 동일하게 종류별(150각/BB/B·L 등) 해체 수명 추이 차트만 구성.
+  // 2026-09-26: "호수별 현황" 표는 원본에 없는 슬라이드라 제거함(요청 반영: 원본에 있는 부분만).
   const tdKindSeries=reportTundishKindSeries();
   if(tdKindSeries.length){
     rptStackedCharts(pptx,'턴디쉬(TD) 수명현황 · 종류별 해체 수명 추이',tdKindSeries,
       {note:'※ 턴디쉬 수명관리 화면의 종류(150각/BB/B·L 등)별 해체 기록 기준, 실사용 데이터입니다.'});
   }
-  rptTableSlide(pptx,'턴디쉬(TD) 수명현황 · 호수별 현황',
-    ['호수','종류','상태','차수','최고CH','영구장누적'],
-    reportTundishRows(),{note:'※ 턴디쉬 수명관리 화면의 호수별 현황과 동일한 기준(전체기간 누적)입니다.'});
 }
 async function generateReportPpt(){
   if(typeof PptxGenJS==='undefined'){alert('PPT 생성 모듈을 불러오지 못했습니다. 페이지를 새로고침 후 다시 시도해주세요.');return;}
@@ -6614,6 +6635,39 @@ const INV_GRP_ORDER=['EAF','LF','CC','공통'];
 function invMasterOv(){try{return JSON.parse(localStorage.getItem('dgrns_invmaster')||'{}');}catch(e){return{};}}
 let invMOv=invMasterOv();
 function saveInvMOv(){try{localStorage.setItem('dgrns_invmaster',JSON.stringify(invMOv));}catch(e){}}
+// 2026-09-27: 내화물 원가 세부현황(PPT) 자동집계용 — 설비별로 고를 수 있는 카테고리를 사용자가 직접 지정
+// (자동 키워드 추정 대신 사용자가 확정) → rptCostDetailSlide()가 이 태그로 매달 자동 집계함.
+const INV_COST_CATS={EAF:['열간보수재','로상재','로벽연와'],LF:['마모장','영구장','캐스터블'],CC:['건닝재','C52+ONQC','영구장']};
+function invCostCat(code){return (invMOv[code]||{}).costCat||'';}
+function setInvCostCat(code,val){invMOv[code]=Object.assign(invMOv[code]||{},{costCat:val});saveInvMOv();}
+function invCostCatOptions(g,sel){
+  const cats=INV_COST_CATS[g];
+  if(!cats)return '<option value="">-</option>';
+  return '<option value=""'+(sel?'':' selected')+'>미지정</option>'
+    +cats.map(c=>`<option value="${esc(c)}"${c===sel?' selected':''}>${esc(c)}</option>`).join('');
+}
+// 원가보고서 분류가 지정된 품목들을, 설비(EAF/래들/턴디쉬)·분류별로 그 달 사용금액(원)을 합산해
+// 생산량(TON)으로 나눈 원/톤 값으로 집계 — REPORT_SEED.costDetail[ym]과 동일한 모양으로 반환.
+// 태그된 품목이 하나도 없으면 null(=아직 집계할 게 없음, "데이터 없음" 안내로 이어짐).
+function liveCostDetailAt(ym){
+  const prod=getProd(ym)||0;
+  const groups=[['EAF','eaf'],['LF','ladle'],['CC','td']];
+  let any=false;
+  const out={};
+  groups.forEach(([g,key])=>{
+    const cats=INV_COST_CATS[g];
+    const sums={};cats.forEach(c=>{sums[c]=null;});
+    INV_MASTER.filter(m=>m.g===g).forEach(m=>{
+      const cat=invCostCat(m.c);if(!cat||!cats.includes(cat))return;
+      any=true;
+      if(!prod)return;
+      const amt=invUse(m.c,ym)*invPriceAt(m.c,ym)/prod;
+      sums[cat]=(sums[cat]||0)+amt;
+    });
+    out[key]=cats.map(c=>[c,sums[c]!=null?Math.round(sums[c]):null]);
+  });
+  return any?out:null;
+}
 function invItem(code){const m=invM.get(code)||{c:code,n:code,u:'',p:0,g:'',cl:''};const o=invMOv[code]||{};
   const lp=o.linkedProdId?prodById(o.linkedProdId):null;
   const p=lp?(+lp.price||0):(o.p!=null?o.p:m.p);
@@ -6695,6 +6749,16 @@ function invProdOptions(selId){
     .map(p=>{const label=p.custName?`${esc(p.custName)} (${esc(p.name)})`:esc(p.name);
       return `<option value="${p.id}"${p.id===selId?' selected':''}>${label}${p.spec?' · '+esc(p.spec):''}</option>`;}).join('');}
 function setInvLink(code,pid){invMOv[code]=Object.assign(invMOv[code]||{},{linkedProdId:pid});saveInvMOv();renderInvMaster();renderInvMonth();}
+// 2026-09-26: 거대한 native <select>(수백개 옵션) 대신 검색 가능한 팝업으로 변경 — 클릭 한 번으로 검색·선택
+function invLinkLabel(p){return p.custName?`${p.custName} (${p.name})`:p.name;}
+function openInvLinkPicker(code){
+  const it=invItem(code);
+  const items=[{v:'',no:'—',label:'(연동 안함)',sub:''}].concat(
+    prodData.slice()
+      .sort((a,b)=>(a.custName||a.name||'').localeCompare(b.custName||b.name||'','en')||(a.spec||'').localeCompare(b.spec||'','en'))
+      .map(p=>({v:p.id,no:'🔗',label:invLinkLabel(p),sub:p.spec||''})));
+  openPicker('🔗 내화물 기본정보 연동 선택','품목: '+(it.n||code)+' · 검색해서 선택하세요',items,it.linkedProdId||'',pid=>{setInvLink(code,pid);});
+}
 function invProdMap(){try{return JSON.parse(localStorage.getItem('dgrns_invprod')||'{}');}catch(e){return{};}}
 let invProd=invProdMap();
 function getProd(ym){if(invProd[ym]!=null)return invProd[ym];if(ym==='2026-09')return INV_PROD09;return 0;}
@@ -6765,7 +6829,7 @@ function renderInflow(){
     // 2026-09-26: 단가는 해당 월(ym) 시점에 유효했던 단가(invPriceAt)를 사용 — 시점 이력이 없으면 기존과 동일하게 라이브 단가.
     return `<tr>
       <td style="font-size:10.5px;color:var(--muted)">${esc(m.g)}</td>
-      <td><input class="iinp" style="min-width:150px;font-weight:600" value="${esc(it.n)}" onchange="setInvMasterField('${m.c}','n',this.value);renderInflow()"></td><td>${esc(it.u)}</td><td class="n">${iN(pr)}</td>
+      <td><input class="iinp" style="min-width:190px;text-align:left;font-weight:600" value="${esc(it.n)}" title="${esc(it.n)}" onchange="setInvMasterField('${m.c}','n',this.value);renderInflow()"></td><td>${esc(it.u)}</td><td class="n">${iN(pr)}</td>
       <td class="n"><input type="number" class="iinp" value="${dq||''}" placeholder="0" onchange="setInflow('${m.c}','${d}',this.value)"></td>
       <td class="n">${dq?iN(dq*pr):'-'}</td>
       <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq):'-'}</td>
@@ -6785,6 +6849,50 @@ function downloadInflow(){
   let t=`<table><tr><th>설비</th><th>품명</th><th>단위</th><th>단가</th><th>${d} 입고</th><th>${ym} 월누적</th></tr>`;
   INV_MASTER.forEach(m=>{const it=invItem(m.c);t+=`<tr><td>${esc(m.g)}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${invPriceAt(m.c,ym)}</td><td>${invInDay(m.c,d)}</td><td>${invInDaily(m.c,ym)||0}</td></tr>`;});
   downloadXls('내화물_일별입고_'+ym,'<table>'+t+'</table>');
+}
+/* 2026-09-26: 기간별 입고 내역 조회 — 하루씩 넘겨보지 않아도 특정 기간의 입고 기록을 한번에 스캔해
+   잘못 입력된 날짜(오타·중복 등)를 바로 찾을 수 있게 함. 기존 일별 입력 화면과 데이터는 동일(invInData),
+   조회 전용이라 아무 것도 수정하지 않음. */
+function toggleInflowRange(){
+  const box=document.getElementById('ir_box');
+  const willShow=box.classList.contains('hidden');
+  box.classList.toggle('hidden',!willShow);
+  document.getElementById('ir_toggle').textContent=willShow?'▲ 접기':'▼ 펼치기';
+  if(willShow){
+    if(!document.getElementById('ir_from').value){
+      const to=document.getElementById('ii_date').value||todayStr();
+      const fd=new Date(to);fd.setDate(fd.getDate()-6);
+      document.getElementById('ir_from').value=fd.toISOString().slice(0,10);
+      document.getElementById('ir_to').value=to;
+    }
+    renderInflowRange();
+  }
+}
+function inflowRangeRows(){
+  const from=document.getElementById('ir_from').value,to=document.getElementById('ir_to').value;
+  if(!from||!to)return [];
+  const q=(document.getElementById('ir_search').value||'').toLowerCase();
+  return invInData.filter(r=>r.ymd>=from&&r.ymd<=to&&(+r.qty||0)>0)
+    .map(r=>{const m=invM.get(r.code)||{};const it=invItem(r.code);const pr=invPriceAt(r.code,r.ymd.slice(0,7));
+      return {ymd:r.ymd,g:m.g||'',n:it.n,qty:+r.qty||0,pr,amt:(+r.qty||0)*pr};})
+    .filter(r=>!q||(r.n||'').toLowerCase().includes(q)||(r.g||'').toLowerCase().includes(q))
+    .sort((a,b)=>b.ymd.localeCompare(a.ymd)||(a.g||'').localeCompare(b.g||''));
+}
+function renderInflowRange(){
+  const from=document.getElementById('ir_from').value,to=document.getElementById('ir_to').value;
+  if(!from||!to){document.getElementById('inflowRangeBody').innerHTML='<tr><td colspan="6"><div class="empty">시작일·종료일을 선택하세요.</div></td></tr>';document.getElementById('ir_count').textContent='';return;}
+  const rows=inflowRangeRows();
+  let tot=0;
+  const body=rows.map(r=>{tot+=r.amt;return `<tr><td style="white-space:nowrap">${esc(r.ymd)}</td><td style="font-size:10.5px;color:var(--muted)">${esc(r.g)}</td><td style="text-align:left" title="${esc(r.n)}">${esc(r.n)}</td><td class="n">${iN(r.qty)}</td><td class="n">${iN(r.pr)}</td><td class="n">${iN(r.amt)}</td></tr>`;}).join('');
+  document.getElementById('inflowRangeBody').innerHTML=body?body+`<tr style="background:#eef2f6;font-weight:800"><td colspan="5">합계</td><td class="n">${iN(tot)}</td></tr>`:`<tr><td colspan="6"><div class="empty">해당 기간에 입고 기록이 없습니다.</div></td></tr>`;
+  document.getElementById('ir_count').textContent=rows.length+'건';
+}
+function downloadInflowRange(){
+  const from=document.getElementById('ir_from').value,to=document.getElementById('ir_to').value;
+  const rows=inflowRangeRows().slice().sort((a,b)=>a.ymd.localeCompare(b.ymd));
+  let t=`<table><tr><th>일자</th><th>설비</th><th>품명</th><th>입고량</th><th>단가</th><th>입고금액</th></tr>`;
+  rows.forEach(r=>{t+=`<tr><td>${esc(r.ymd)}</td><td>${esc(r.g)}</td><td>${esc(r.n)}</td><td>${r.qty}</td><td>${r.pr}</td><td>${r.amt}</td></tr>`;});
+  t+=`</table>`;downloadXls('내화물_기간별입고_'+(from||'')+'_'+(to||''),t);
 }
 const iN=n=>Math.round(n).toLocaleString();
 const iU=n=>(Math.abs(n)>=100?n.toFixed(0):n.toFixed(2));
@@ -6867,12 +6975,14 @@ function renderInvMaster(){
       :viewingHist
         ?`<input type="number" class="iinp" value="${invPriceAt(m.c,invmPricePeriod)}" style="width:76px;border-color:#f59e0b;background:#fffbeb" title="[${esc(invPeriodLabel(invmPricePeriod))}] 시점 단가" onchange="editInvHistPrice('${m.c}','${invmPricePeriod}',this.value)">`
         :`<input type="number" class="iinp" value="${it.p}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{p:+this.value});saveInvMOv();renderInvMonth()">`;
+    const linkLabel=linked&&it.linkedProd?invLinkLabel(it.linkedProd):'';
     return `<tr><td style="font-size:11px;color:var(--muted)"><input class="iinp" style="width:56px;text-align:center;font-size:11px" value="${esc(m.g)}" onchange="setInvMasterField('${m.c}','g',this.value)"></td><td style="font-size:10.5px">${esc(m.c)}</td>
-      <td><input class="iinp" style="min-width:170px" value="${esc(m.n)}" onchange="setInvMasterField('${m.c}','n',this.value)"></td>
+      <td><input class="iinp" style="min-width:170px;text-align:left" value="${esc(m.n)}" title="${esc(m.n)}" onchange="setInvMasterField('${m.c}','n',this.value)"></td>
       <td><input class="iinp" style="width:52px;text-align:center" value="${esc(it.u)}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{u:this.value});saveInvMOv();renderInvMonth()"></td>
       <td class="n">${priceCell}</td>
       <td style="font-size:11px">${esc(m.cl||'')}</td>
-      <td><select class="iinp" style="font-size:10.5px;max-width:160px" onchange="setInvLink('${m.c}',this.value)" title="내화물 기본정보(품목마스터)의 제품과 연동하면 단가가 자동으로 따라옵니다">${invProdOptions(linked)}</select></td>
+      <td><button type="button" class="btn sm" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;text-align:left" onclick="openInvLinkPicker('${m.c}')" title="${linked?esc(linkLabel)+' 연동중 · 클릭하여 변경':'클릭하여 내화물 기본정보와 연동'}">${linked?'🔗 '+esc(linkLabel):'연동 안함'}</button></td>
+      <td><select class="iinp" style="font-size:10.5px;max-width:110px" onchange="setInvCostCat('${m.c}',this.value)" title="내화물 원가 세부현황(PPT) 자동집계용 분류">${invCostCatOptions(m.g,invCostCat(m.c))}</select></td>
       <td><div class="acts"><button class="btn sm" onclick="copyInvItem('${m.c}')" title="이 품목을 복사해 새 품목 만들기">복사</button>${invIsUser(m.c)?`<button class="btn sm danger" onclick="delInvUserItem('${m.c}')">삭제</button>`:''}</div></td></tr>`;}).join('');
 }
 function downloadInv(){
@@ -6887,8 +6997,8 @@ function downloadInvCompare(){
   downloadXls('원단위_비교','<table>'+rows+'</table>');
 }
 function downloadInvMaster(){
-  let t=`<table><tr><th>설비</th><th>코드</th><th>품명</th><th>단위</th><th>단가</th><th>분류</th></tr>`;
-  INV_MASTER.forEach(m=>{const it=invItem(m.c);t+=`<tr><td>${esc(m.g)}</td><td>${esc(m.c)}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${it.p}</td><td>${esc(m.cl||'')}</td></tr>`;});
+  let t=`<table><tr><th>설비</th><th>코드</th><th>품명</th><th>단위</th><th>단가</th><th>분류</th><th>원가보고서 분류</th></tr>`;
+  INV_MASTER.forEach(m=>{const it=invItem(m.c);t+=`<tr><td>${esc(m.g)}</td><td>${esc(m.c)}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${it.p}</td><td>${esc(m.cl||'')}</td><td>${esc(invCostCat(m.c))}</td></tr>`;});
   downloadXls('내화물_품목마스터','<table>'+t+'</table>');
 }
 
