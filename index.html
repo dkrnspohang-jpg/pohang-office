@@ -95,8 +95,13 @@
   thead th{background:var(--head);text-align:left;padding:9px 10px;font-size:12px;color:#3a4552;font-weight:700;
     border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0}
   tbody td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+  tbody tr:nth-child(odd){background:#fff}
+  tbody tr:nth-child(even){background:var(--accent-soft)}
   tbody tr:hover{background:#fafbfc}
   tbody tr:last-child td{border-bottom:none}
+  /* 내화물 기본정보(품목마스터) 표: 가로 스크롤해도 맨 앞 "선택" 체크박스 열이 잘리지 않도록 고정 */
+  #prodMasterTbl thead th:first-child{position:sticky;left:0;z-index:3}
+  #prodMasterTbl tbody td:first-child{position:sticky;left:0;z-index:1;background:inherit;box-shadow:2px 0 4px -2px rgba(0,0,0,.15)}
   .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12.5px;font-weight:600;white-space:nowrap}
   .t-use{background:#eef2f6;color:#516170}.t-new{background:#ede9fe;color:#6d28d9;font-weight:800;border:1px solid #c9bcf5}  /* 신축 보라 */
   .t-cone{background:#f3edfb;color:#6b3fa0}.t-sl{background:var(--warn-soft);color:var(--warn)}
@@ -494,6 +499,7 @@
     --side:#131c2e; --side-ink:#c6d3e4; --side-active:#2563eb;
     --brand1:#1d4ed8; --brand2:#0e7490; --sidehover:#1e2a40; --sideactive1:#2563eb; --sideactive2:#3b82f6;}
   html[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
+  html[data-theme="dark"] tbody tr:nth-child(odd){background:var(--panel)}
   html[data-theme="dark"] .card,html[data-theme="dark"] .formbar,html[data-theme="dark"] .costbox,
   html[data-theme="dark"] .tablewrap,html[data-theme="dark"] .fcard,html[data-theme="dark"] table{background:var(--panel);color:var(--ink)}
   html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{
@@ -1014,7 +1020,7 @@
       <button class="btn danger del-rec" onclick="delSnap()" title="현재 조회중인 확정분기 삭제">확정 삭제</button>
     </div>
     <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="pm_periodHint"></div>
-    <div class="tablewrap"><table class="bomtbl">
+    <div class="tablewrap"><table class="bomtbl" id="prodMasterTbl">
       <thead><tr><th style="width:30px" title="표시된 전체 선택"><input type="checkbox" id="pm_all" onchange="toggleAllShown(this.checked)"></th><th style="width:60px">설비</th><th style="width:66px">구분</th><th style="width:160px">당사 제품명</th><th style="width:140px">고객사 제품명</th><th style="width:150px">배합</th><th style="width:170px">규격</th><th class="n" style="width:64px">단중</th><th style="width:78px">단가유형</th><th class="n" style="width:84px">단가(원)</th><th class="n" style="width:92px">변동</th><th style="width:60px">등록</th><th style="width:44px">사용</th><th class="n" style="width:44px">물량</th><th style="width:34px"></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table></div>
@@ -1926,6 +1932,13 @@ service cloud.firestore {
     </div>
     <!-- 월·연도 비교 -->
     <div class="subpanel" id="isp-compare">
+      <div class="subhead">두 기간 직접 비교 <span class="hint">예: 2025년 9월 vs 2026년 9월</span></div>
+      <div class="toolrow">
+        <select class="selbox" id="invc_a" onchange="renderInvCompareAB()"></select>
+        <span style="font-size:12px;color:var(--muted)">vs</span>
+        <select class="selbox" id="invc_b" onchange="renderInvCompareAB()"></select>
+      </div>
+      <div id="invCompareAB" style="margin-bottom:16px"></div>
       <div class="toolrow">
         <select class="selbox" id="invc_mode" onchange="renderInvCompare()"><option value="month">월별 추이</option><option value="year">연도별</option></select>
         <button class="btn" onclick="downloadInvCompare()">📥 엑셀</button>
@@ -1956,7 +1969,7 @@ service cloud.firestore {
       </div>
       <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="invm_periodHint"></div>
       <div class="tablewrap"><table class="bomtbl" style="min-width:960px">
-        <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:180px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:170px">내화물 기본정보 연동</th><th style="min-width:120px">원가보고서 분류</th><th style="min-width:100px">관리</th></tr></thead>
+        <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:180px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:210px" title="이 원단위 품목을 [내화물 기본정보]에 등록된 상품과 연결하는 기능 · 연동하면 단가를 그쪽에서 자동으로 가져와 여기서 따로 입력할 필요가 없습니다">내화물 기본정보 연동</th><th style="min-width:120px">원가보고서 분류</th><th style="min-width:100px">관리</th></tr></thead>
         <tbody id="invMasterBody"></tbody>
       </table></div>
       <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ "현재(직접수정)"에서 단가를 고치면 즉시 라이브 단가로 적용되어 월별 원단위·입고금액 등 모든 계산에 오늘부터 반영됩니다. 특정 월(또는 분기)부터 적용될 단가를 미리 준비하려면 🆕 신규 시점을 눌러 그 시점만 따로 편집하세요 — 과거 달의 원단위·비교 화면은 그 달 시점에 유효했던 단가로 자동 계산됩니다.</div>
@@ -6936,7 +6949,46 @@ function renderInvMonth(){
 function invMonths(){const s=new Set(invData.map(r=>r.ym));s.add('2026-09');return [...s].sort();}
 function invTotAmt(ym){let a=0;INV_MASTER.forEach(m=>{a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
 function invGrpAmt(ym,g){let a=0;INV_MASTER.filter(m=>m.g===g).forEach(m=>{a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
+/* 2026-09-27: "두 기간 직접 비교" — 실제 사용 데이터가 없는 과거 달(예: 2025년 9월)은
+   [내화물 실적자료] PPT 원본의 월별 원단위·생산량 참고값(REPORT_SEED)으로 보완해서 비교 가능하게 함.
+   실사용 데이터가 있는 달은 항상 실사용 값을 우선한다. */
+function invMonthLabel(ym){return ym.slice(0,4)+'년 '+(+ym.slice(5,7))+'월';}
+function invCompareMonthList(){
+  const s=new Set([...(REPORT_SEED.months||[]),...invMonths(),todayStr().slice(0,7)]);
+  return [...s].sort();
+}
+function invUnitDataAt(ym){
+  const prod=getProd(ym),amt=invTotAmt(ym);
+  if(prod&&amt)return {prod,amt,unit:amt/prod,src:'live'};
+  const idx=(REPORT_SEED.months||[]).indexOf(ym);
+  if(idx>=0){const p=REPORT_SEED.prod[idx],u=REPORT_SEED.unitcost[idx];return {prod:p,amt:Math.round(u*p),unit:u,src:'ref'};}
+  return null;
+}
+function renderInvCompareAB(){
+  const list=invCompareMonthList();
+  const selA=document.getElementById('invc_a'),selB=document.getElementById('invc_b');
+  if(!selA||!selB)return;
+  if(!selA.options.length){
+    const opts=list.map(m=>`<option value="${m}">${esc(invMonthLabel(m))}</option>`).join('');
+    selA.innerHTML=opts;selB.innerHTML=opts;
+    const last=list[list.length-1]||todayStr().slice(0,7);
+    const lastYearSame=(+last.slice(0,4)-1)+last.slice(4);
+    selA.value=list.includes(lastYearSame)?lastYearSame:list[0];
+    selB.value=last;
+  }
+  const box=document.getElementById('invCompareAB');if(!box)return;
+  const a=selA.value,b=selB.value,da=invUnitDataAt(a),db=invUnitDataAt(b);
+  if(!da||!db){box.innerHTML='<div class="empty">선택한 기간의 데이터가 없습니다.</div>';return;}
+  const diff=db.unit-da.unit,pct=da.unit?diff/da.unit*100:0;
+  const srcTxt=s=>s==='ref'?' <span style="color:var(--muted);font-size:11px">(PPT 참고치)</span>':'';
+  box.innerHTML=`<table class="bomtbl" style="min-width:auto"><thead><tr><th>구분</th><th class="n">생산량(TON)</th><th class="n">금액원단위(원/톤)</th></tr></thead><tbody>
+    <tr><td>${esc(invMonthLabel(a))}${srcTxt(da.src)}</td><td class="n">${iN(da.prod)}</td><td class="n"><b>${iN(Math.round(da.unit))}</b></td></tr>
+    <tr><td>${esc(invMonthLabel(b))}${srcTxt(db.src)}</td><td class="n">${iN(db.prod)}</td><td class="n"><b>${iN(Math.round(db.unit))}</b></td></tr>
+    <tr style="font-weight:700"><td>증감(${esc(invMonthLabel(b))} − ${esc(invMonthLabel(a))})</td><td class="n">-</td><td class="n" style="color:${diff<0?'#15803d':diff>0?'#c81e1e':'inherit'}">${diff===0?'-':(diff<0?'▼':'▲')+' '+iN(Math.abs(Math.round(diff)))+' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)'}</td></tr>
+  </tbody></table>`;
+}
 function renderInvCompare(){
+  renderInvCompareAB();
   const mode=document.getElementById('invc_mode').value;
   let keys,label,prodOf,amtOf;
   if(mode==='year'){
@@ -6981,8 +7033,8 @@ function renderInvMaster(){
       <td><input class="iinp" style="width:52px;text-align:center" value="${esc(it.u)}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{u:this.value});saveInvMOv();renderInvMonth()"></td>
       <td class="n">${priceCell}</td>
       <td style="font-size:11px">${esc(m.cl||'')}</td>
-      <td><button type="button" class="btn sm" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;text-align:left" onclick="openInvLinkPicker('${m.c}')" title="${linked?esc(linkLabel)+' 연동중 · 클릭하여 변경':'클릭하여 내화물 기본정보와 연동'}">${linked?'🔗 '+esc(linkLabel):'연동 안함'}</button></td>
-      <td><select class="iinp" style="font-size:10.5px;max-width:110px" onchange="setInvCostCat('${m.c}',this.value)" title="내화물 원가 세부현황(PPT) 자동집계용 분류">${invCostCatOptions(m.g,invCostCat(m.c))}</select></td>
+      <td><button type="button" class="btn sm" style="width:100%;min-width:190px;white-space:normal;word-break:break-word;line-height:1.3;display:block;text-align:left" onclick="openInvLinkPicker('${m.c}')" title="${linked?esc(linkLabel)+' 연동중 · 클릭하여 변경':'클릭하면 이 품목을 [내화물 기본정보]의 상품과 연결합니다(연동하면 단가를 그쪽에서 자동으로 가져옵니다)'}">${linked?'🔗 '+esc(linkLabel):'연동 안함'}</button></td>
+      <td><select class="iinp" style="font-size:10.5px;width:100%;min-width:108px" onchange="setInvCostCat('${m.c}',this.value)" title="내화물 원가 세부현황(PPT) 자동집계용 분류">${invCostCatOptions(m.g,invCostCat(m.c))}</select></td>
       <td><div class="acts"><button class="btn sm" onclick="copyInvItem('${m.c}')" title="이 품목을 복사해 새 품목 만들기">복사</button>${invIsUser(m.c)?`<button class="btn sm danger" onclick="delInvUserItem('${m.c}')">삭제</button>`:''}</div></td></tr>`;}).join('');
 }
 function downloadInv(){
@@ -8209,8 +8261,11 @@ async function ensureVesuviusLinks(){
    - type:'SL보수'/'1~3차콘교체' → 비누적 체크포인트(NON_ACCUM), 표시·이력 참고용
    - 정확한 시공/해체 일자가 일지에서 특정되지 않는 항목은 해당 월 마지막 해체일(또는 월말)로 근사 표기하고
      note에 그 사실을 명시함(안전판단용 원본 대조는 항상 note로 가능).
-   기존 수기입력 기록(src:'manual')은 전혀 건드리지 않으며, 버전 플래그로 1회만 실행됨(재실행 안전). */
-const LADLE2026_IMPORT_VERSION='2026-09-26-ladle2026v1';
+   기존 수기입력 기록(src:'manual')은 전혀 건드리지 않는다.
+   2026-09-27: 사용자가 래들 사용일지 최신판(9월 실제 해체일 반영)을 갱신 제공 → 재반영.
+   버전이 바뀌면 기존 excel2026m(이전 버전) 레코드를 먼저 제거하고 새 세트로 교체하여,
+   같은 캠페인이 다른 날짜로 중복 표시되는 것을 방지한다(수기입력은 src가 달라 영향 없음). */
+const LADLE2026_IMPORT_VERSION='2026-09-27-ladle2026v2';
 const LADLE2026_SEED=[
 {no:"10",date:"2026-01-29",type:"SL보수",vendor:"",daily:65,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
 {no:"10",date:"2026-01-29",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
@@ -8257,12 +8312,12 @@ const LADLE2026_SEED=[
 {no:"11",date:"2026-07-16",type:"해체",vendor:"",daily:130,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
 {no:"11",date:"2026-07-16",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"11",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
-{no:"11",date:"2026-09-07",type:"SL보수",vendor:"",daily:96,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
-{no:"11",date:"2026-09-07",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
-{no:"11",date:"2026-09-07",type:"2차콘교체",vendor:"",daily:29,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
-{no:"11",date:"2026-09-07",type:"3차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
-{no:"11",date:"2026-09-07",type:"해체",vendor:"",daily:162,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
-{no:"11",date:"2026-09-07",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"11",date:"2026-09-22",type:"SL보수",vendor:"",daily:96,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
+{no:"11",date:"2026-09-22",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-09-22",type:"2차콘교체",vendor:"",daily:29,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-09-22",type:"3차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(3차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"11",date:"2026-09-22",type:"해체",vendor:"",daily:162,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:59/59"},
+{no:"11",date:"2026-09-22",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"12",date:"2026-01-31",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
 {no:"12",date:"2026-02-28",type:"1차콘교체",vendor:"",daily:65,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
 {no:"12",date:"2026-02-28",type:"2차콘교체",vendor:"",daily:64,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
@@ -8331,7 +8386,10 @@ const LADLE2026_SEED=[
 {no:"15",date:"2026-06-30",type:"해체",vendor:"",daily:128,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:35/34"},
 {no:"15",date:"2026-06-30",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"15",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
-{no:"15",date:"2026-09-30",type:"1차콘교체",vendor:"",daily:62,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
+{no:"15",date:"2026-09-11",type:"1차콘교체",vendor:"",daily:69,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-09-11",type:"2차콘교체",vendor:"",daily:54,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"15",date:"2026-09-11",type:"해체",vendor:"",daily:123,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"15",date:"2026-09-11",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"2",date:"2026-01-23",type:"SL보수",vendor:"",daily:71,note:"엑셀 월간요약(SL보수) 자동반영 · 정확한 시공일 불명(월말/해체일 기준 근사)"},
 {no:"2",date:"2026-01-23",type:"1차콘교체",vendor:"",daily:71,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
 {no:"2",date:"2026-01-23",type:"2차콘교체",vendor:"",daily:44,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
@@ -8426,10 +8484,10 @@ const LADLE2026_SEED=[
 {no:"6",date:"2026-07-13",type:"해체",vendor:"",daily:141,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
 {no:"6",date:"2026-07-13",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"6",date:"2026-08-31",type:"1차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(월말로 표기)"},
-{no:"6",date:"2026-09-01",type:"1차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
-{no:"6",date:"2026-09-01",type:"2차콘교체",vendor:"",daily:52,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
-{no:"6",date:"2026-09-01",type:"해체",vendor:"",daily:110,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
-{no:"6",date:"2026-09-01",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"6",date:"2026-09-18",type:"1차콘교체",vendor:"",daily:58,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-09-18",type:"2차콘교체",vendor:"",daily:52,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"6",date:"2026-09-18",type:"해체",vendor:"",daily:110,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:72/72"},
+{no:"6",date:"2026-09-18",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"7",date:"2026-01-05",type:"SL보수",vendor:"",daily:68,note:"엑셀 월간요약(SL보수) 자동반영"},
 {no:"7",date:"2026-01-29",type:"1차콘교체",vendor:"",daily:68,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
 {no:"7",date:"2026-01-29",type:"2차콘교체",vendor:"",daily:61,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
@@ -8457,6 +8515,10 @@ const LADLE2026_SEED=[
 {no:"7",date:"2026-07-25",type:"2차콘교체",vendor:"",daily:72,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
 {no:"7",date:"2026-07-25",type:"해체",vendor:"",daily:133,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
 {no:"7",date:"2026-07-25",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
+{no:"7",date:"2026-09-16",type:"1차콘교체",vendor:"",daily:67,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-09-16",type:"2차콘교체",vendor:"",daily:43,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
+{no:"7",date:"2026-09-16",type:"해체",vendor:"",daily:110,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:해체"},
+{no:"7",date:"2026-09-16",type:"신축",vendor:"",daily:0,note:"엑셀 반영: 해체 직후 신규 캠페인 시작 마커(정확한 축조완료일 불명, 해체일로 근사)"},
 {no:"8",date:"2026-01-24",type:"1차콘교체",vendor:"",daily:66,note:"엑셀 월간요약(1차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
 {no:"8",date:"2026-01-24",type:"2차콘교체",vendor:"",daily:43,note:"엑셀 월간요약(2차콘수명) 자동반영 · 정확한 시공일 불명(해체일 기준 근사)"},
 {no:"8",date:"2026-01-24",type:"해체",vendor:"",daily:109,note:"엑셀 월간요약(해체수명) 자동반영 · 원자료:56/56"},
@@ -8514,6 +8576,11 @@ const LADLE2026_SEED=[
 ];
 async function ensureLadle2026Import(){
   if(getMeta('ladle2026ImportVersion')===LADLE2026_IMPORT_VERSION)return;
+  // 이전 버전에서 가져온 자동반영 레코드가 있으면 새 세트로 교체하기 전에 먼저 제거
+  // (수기입력 기록은 src가 달라 전혀 영향 없음)
+  const oldAuto=ladleData.filter(r=>r.src==='excel2026m');
+  for(const r of oldAuto){await delRec('ladle',r.id);}
+  if(oldAuto.length)ladleData=ladleData.filter(r=>r.src!=='excel2026m');
   for(const s of LADLE2026_SEED){
     const rec={id:uid(),date:s.date,no:s.no,vendor:s.vendor||'',type:s.type,slPat:'',
       daily:s.daily,note:s.note,seq:Date.now()+Math.random(),src:'excel2026m'};
