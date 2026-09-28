@@ -1381,7 +1381,6 @@
       <input class="search" id="em_search" placeholder="성명·직책 검색" oninput="renderEmp()">
       <button class="btn" onclick="downloadEmp()">📥 엑셀</button>
       <button class="btn primary" onclick="openBulkEmp()" title="엑셀·메모장에서 복사한 여러 명을 한 번에 등록">📋 직원 일괄 등록</button>
-      <button class="btn" onclick="setPartPin()" title="업무 파트별 공용 PIN 설정(관리자)">🔒 파트 PIN 설정</button>
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="em_count"></span>
     </div>
     <div class="tablewrap"><table style="min-width:1560px">
@@ -2349,7 +2348,7 @@ service cloud.firestore {
   <div class="loginbox">
     <div class="lg-h" id="lgTitle">파트 로그인</div>
     <div class="lg-s" id="lgSub">본인 확인 후 해당 파트 업무를 사용할 수 있습니다.</div>
-    <div class="field" id="lgPinWrap" hidden><label>파트 PIN</label><input type="password" id="lg_pin" placeholder="파트 공용 PIN"></div>
+    <div class="field" id="lgPinWrap" hidden><label>관리자 PIN</label><input type="password" id="lg_pin" placeholder="관리자 PIN"></div>
     <div class="field" id="lgEmpWrap"><label>본인 선택</label><select id="lg_emp"></select></div>
     <div class="field" id="lgPwWrap"><label>개인 비밀번호</label><input type="password" id="lg_pw" placeholder="개인 비밀번호"></div>
     <div id="lg_msg" style="font-size:12px;color:#c81e1e;min-height:17px;margin:2px 0 8px"></div>
@@ -9635,22 +9634,6 @@ async function hashPw(txt){
     return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
   }catch(e){ let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return 'x'+h.toString(16); }
 }
-/* ---- 파트(업무 파트) PIN ---- */
-function partPins(){try{return JSON.parse(localStorage.getItem('dgrns_partpin')||'{}');}catch(e){return {};}}
-function savePartPins(o){try{localStorage.setItem('dgrns_partpin',JSON.stringify(o));}catch(e){}}
-async function setPartPin(){
-  if(!requireAdmin())return;
-  const cur=partPins();
-  const list=MODE_LIST.map((m,i)=>' '+(i+1)+' = '+m[1]+(cur[m[0]]?' (설정됨)':''));
-  const v=prompt('PIN을 설정할 업무 파트를 선택하세요.\n'+list.join('\n'),'1');
-  if(v==null)return;const idx=parseInt(v,10)-1;const m=MODE_LIST[idx];
-  if(!m){alert('번호를 정확히 입력해 주세요');return;}
-  const pin=prompt(m[1]+' 파트 PIN을 입력하세요. (비우면 PIN 해제)','');
-  if(pin==null)return;
-  if(!pin){delete cur[m[0]];savePartPins(cur);toast(m[1]+' 파트 PIN 해제됨');return;}
-  cur[m[0]]=await hashPw(pin);savePartPins(cur);
-  toast(m[1]+' 파트 PIN이 설정되었습니다 · 팀 공유로 다른 PC에도 적용됩니다');
-}
 /* ---- 개인 비밀번호 ---- */
 async function setEmpPw(id){
   const e=empData.find(x=>x.id===id);if(!e)return;
@@ -11807,7 +11790,9 @@ const PART_DEPTS={admin:['사업소장'],office:['관리직'],foreman:['기성']
                   safety:['안전관리담당자']};
 function pickMode(r){
   lgRole=r;
-  const needPin=!!(partPins()[r]||(r==='admin'&&adminPin()));
+  // 2026-09-28: 파트별 공용 PIN은 직원 의견을 반영해 폐지 — 이제 개인 비밀번호로만 로그인함.
+  // (사업소장 전환 시의 관리자 PIN은 별도 보안장치로 그대로 유지)
+  const needPin=!!(r==='admin'&&adminPin());
   const cands=empData.filter(e=>e.active!==0&&empPart(e)===r);
   if(!needPin&&!cands.length){   // PIN·직원 등록 전이면 바로 전환
     setRole(r);updateRoleChip();renderModePanel();
@@ -11816,7 +11801,7 @@ function pickMode(r){
     return;}
   document.getElementById('lgTitle').textContent=ROLE_LABEL[r]+' 파트 로그인';
   document.getElementById('lgSub').textContent=needPin
-    ? '파트 PIN'+(cands.length?'과 본인 비밀번호를':'를')+' 입력하세요.'
+    ? '관리자 PIN'+(cands.length?'과 본인 비밀번호를':'을')+' 입력하세요.'
     : '본인을 선택하고 개인 비밀번호를 입력하세요.';
   document.getElementById('lgPinWrap').hidden=!needPin;
   document.getElementById('lgEmpWrap').hidden=!cands.length;
@@ -11835,12 +11820,11 @@ function closeLogin(){document.getElementById('loginOverlay').classList.remove('
 async function doLogin(){
   const r=lgRole;if(!r)return closeLogin();
   const msg=document.getElementById('lg_msg');
-  // 1) 파트 PIN
-  const ph=partPins()[r]||'';
+  // 1) 관리자 PIN (사업소장 전환 시에만 해당)
   if(!document.getElementById('lgPinWrap').hidden){
     const v=document.getElementById('lg_pin').value;
-    const ok=ph?((await hashPw(v))===ph):(r==='admin'&&adminPin()?v===adminPin():true);
-    if(!ok){msg.textContent='파트 PIN이 일치하지 않습니다.';return;}
+    const ok=(r==='admin'&&adminPin())?v===adminPin():true;
+    if(!ok){msg.textContent='관리자 PIN이 일치하지 않습니다.';return;}
   }
   // 2) 개인 비밀번호
   let emp=null;
