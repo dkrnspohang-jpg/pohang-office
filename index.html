@@ -742,15 +742,12 @@
     <div class="side-item" data-view="approve" onclick="nav('approve')"><span class="ic">✍️</span>결재함 <span id="apprBadge" class="apbadge" hidden>0</span></div>
     <div class="side-item" data-view="emp" onclick="nav('emp')"><span class="ic">👥</span>직원 관리</div>
   </div>
-  <!-- 2026-09-28 사이드바 재편: 내화물 기준정보를 업체별(동국제강/포스코) 폴더로 분리해 상단으로 이동 -->
+  <!-- 2026-09-29: "다른 사람이 보기엔 항목이 너무 많다"는 요청으로 동국제강/포스코 폴더를 다시 하나로 합침.
+       대신 [내화물 품목마스터] 화면 상단에 동국제강/포스코 전환 탭을 두어 같은 화면 안에서 오간다(아래 v-prodm 참조). -->
   <div class="side-group">
-    <div class="gh">내화물 기준정보 · 동국제강</div>
+    <div class="gh">내화물 기준정보</div>
     <div class="side-item" data-view="prodm" onclick="nav('prodm')"><span class="ic">📦</span>내화물 품목마스터</div>
     <div class="side-item" data-view="bom" onclick="nav('bom')"><span class="ic">🧱</span>내화물 축조물량표</div>
-  </div>
-  <div class="side-group">
-    <div class="gh">내화물 기준정보 · 포스코</div>
-    <div class="side-item" data-view="poscobase" onclick="nav('poscobase')"><span class="ic">📇</span>포스코 품목단가</div>
     <div class="side-item" data-view="poscononsup" onclick="nav('poscononsup')"><span class="ic">🆕</span>입찰용(미납품 품목)</div>
   </div>
   <div class="side-group">
@@ -1021,8 +1018,16 @@
 
   <!-- ===== 제품 마스터 (백데이터 · 전 설비 공용) ===== -->
   <section id="v-prodm" class="hidden">
+    <!-- 2026-09-29: "다른 사람이 보기엔 항목이 너무 많다"는 요청으로 동국제강/포스코를 사이드바에서 폴더로
+         나누지 않고, 이 화면 안에서 위 탭으로 전환하도록 합침(내용은 그대로, 화면 위치만 통합). -->
+    <div class="subtabs" id="prodmToggle">
+      <button class="subtab active" data-sub="dk" onclick="prodmTab('dk')">🧱 동국제강</button>
+      <button class="subtab" data-sub="posco" onclick="prodmTab('posco')">🏭 포스코</button>
+    </div>
+    <div id="prodm-dk">
     <div class="toolrow">
       <input class="search" id="pm_search" placeholder="제품명·고객사품명·자재코드·배합·규격·종류 검색" oninput="renderProdMaster()">
+      <button class="btn sm" id="pm_clearSearch" onclick="clearProdSearch()" title="검색어·모아보기 필터를 지우고 전체 품목을 다시 봅니다" style="display:none">✕ 전체 보기</button>
       <select class="selbox" id="pm_cat" onchange="renderProdMaster()">
         <option value="">전체 설비</option><option value="공통">공통</option><option value="래들">LD</option><option value="턴디쉬">CC</option><option value="전기로">EAF</option>
       </select>
@@ -1062,6 +1067,33 @@
       <tbody id="prodBody"></tbody>
     </table></div>
     <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ 래들·턴디쉬·전기로 모든 내화물 제품을 여기서 한 번에 등록·관리합니다. 단중·단가·배합을 고치면 모든 축조물량표와 원가계산에 자동 반영됩니다. 수정 후 <b>💾 저장</b>을 눌러주세요.</div>
+    </div>
+    <!-- 2026-09-28: 기존 "포스코입찰 > 품목마스터" 탭에서 이관. 2026-09-29: 별도 사이드바 폴더 대신
+         이 화면(내화물 품목마스터) 안의 "포스코" 탭으로 재통합. -->
+    <div id="v-poscobase" class="hidden">
+      <div class="toolrow">
+        <input class="search" id="pb_search" placeholder="품목코드·규격·Q코드 검색" oninput="renderPoscoBase()">
+        <button class="btn" onclick="downloadPoscoBase()">📥 엑셀</button>
+        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="pb_count"></span>
+      </div>
+      <div class="toolrow" style="margin-top:6px;background:#f1f5f9;border-radius:8px;padding:7px 10px">
+        <span style="font-size:12px;font-weight:700;color:#334155">단가 시점</span>
+        <select class="selbox" id="pb_period" onchange="setPoscoPricePeriod(this.value)"></select>
+        <span class="spacer"></span>
+        <span style="font-size:12px;color:var(--muted)">분기 확정 →</span>
+        <select class="selbox" id="pb_qtr" style="width:110px"></select>
+        <button class="btn primary" onclick="poscoNewPricePoint()" title="선택한 분기를 새 단가 시점으로 만들고, 그 시점의 단가를 바로 수정할 수 있게 전환합니다(현재 라이브 단가는 그대로 유지)">🆕 신규 시점</button>
+        <button class="btn" onclick="poscoConfirmQuarterBtn()" title="현재(라이브) 단가를 선택 분기에 그대로 덮어써 저장">📌 현재값으로 확정</button>
+        <button class="btn danger del-rec" onclick="poscoDelSnap()" title="현재 조회중인 확정분기 삭제">확정 삭제</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="pb_periodHint"></div>
+      <div class="subhead">포스코 품목단가 <span class="hint">품목코드(예: A-19)마다 규격·Q코드·단중·단가를 등록합니다 — 규격이 여러 개면 [＋]로 행을 추가하세요. 단중을 넣으면 단가(KG) 입력 시 단가(EA)가 자동 계산됩니다. 입력 즉시 자동저장됩니다. "포스코 입찰 › 범용B 입찰현황" 탭에서 품목코드를 클릭하면 여기서 해당 품목만 볼 수 있습니다.</span></div>
+      <div id="poscoBaseFocusBar" style="margin-bottom:8px;font-size:12px;color:var(--muted)"></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:900px">
+        <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:130px">Q코드</th><th style="min-width:160px">규격</th><th style="min-width:90px">단중(kg)</th><th style="min-width:110px">단가(KG)</th><th style="min-width:110px">단가(EA)</th><th style="min-width:112px">제철소</th><th style="min-width:70px"></th></tr></thead>
+        <tbody id="poscoBaseBody"></tbody>
+      </table></div>
+    </div>
   </section>
 
   <!-- ===== 내화물 축조물량표 (설비 공용) ===== -->
@@ -1362,7 +1394,7 @@
     </div>
     <div class="toolrow" id="ap_dateChips" style="flex-wrap:wrap;gap:6px"></div>
     <div class="tablewrap"><table>
-      <thead><tr><th style="width:30px"><input type="checkbox" id="ap_all" onchange="toggleApprSelAll(this.checked)" title="결재 가능한 건 전체 선택"></th><th>구분</th><th>상신일</th><th>신청자</th><th>소속</th><th>내용</th><th class="n">일수/시간</th><th>사유</th><th>진행 단계</th><th style="width:230px">결재</th></tr></thead>
+      <thead><tr><th style="width:30px"><input type="checkbox" id="ap_all" onchange="toggleApprSelAll(this.checked)" title="결재 가능한 건 전체 선택"></th><th>구분</th><th>상신일</th><th>신청자</th><th>소속</th><th>내용</th><th class="n">일수/시간</th><th style="width:160px">사유</th><th>진행 단계</th><th style="width:230px">결재</th></tr></thead>
       <tbody id="apprBody"></tbody>
     </table></div>
     <div style="font-size:11.5px;color:var(--accent);margin-top:10px">※ 승인하면 직원관리에 등록된 <b>본인 사인이 결재란에 자동으로 날인</b>됩니다. 사인이 없으면 이름으로 표시됩니다.</div>
@@ -2145,21 +2177,8 @@ service cloud.firestore {
       </table></div>
     </div>
   </section>
-  <!-- 2026-09-28: 기존 "포스코입찰 > 품목마스터" 탭을 사이드바 재편으로 [내화물 기준정보 · 포스코] 폴더로 이동.
-       기존 poscoMaster 데이터(품목코드별 규격·Q코드)는 그대로 이어받고 '단가' 컬럼만 새로 추가함. -->
-  <section id="v-poscobase" class="hidden">
-    <div class="toolrow">
-      <input class="search" id="pb_search" placeholder="품목코드·규격·Q코드 검색" oninput="renderPoscoBase()">
-      <button class="btn" onclick="downloadPoscoBase()">📥 엑셀</button>
-      <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="pb_count"></span>
-    </div>
-    <div class="subhead">포스코 품목단가 <span class="hint">품목코드(예: A-19)마다 규격·Q코드·단가를 등록합니다 — 규격이 여러 개면 [＋]로 행을 추가하세요. 입력 즉시 자동저장됩니다. "포스코 입찰 › 범용B 입찰현황" 탭에서 품목코드를 클릭하면 여기서 해당 품목만 볼 수 있습니다.</span></div>
-    <div id="poscoBaseFocusBar" style="margin-bottom:8px;font-size:12px;color:var(--muted)"></div>
-    <div class="tablewrap"><table class="bomtbl" style="min-width:760px">
-      <thead><tr><th style="min-width:110px">품목코드</th><th style="min-width:140px">Q코드</th><th style="min-width:180px">규격</th><th style="min-width:112px">단가(원)</th><th style="min-width:112px">제철소</th><th style="min-width:70px"></th></tr></thead>
-      <tbody id="poscoBaseBody"></tbody>
-    </table></div>
-  </section>
+  <!-- 2026-09-29: 포스코 품목단가 화면은 [내화물 품목마스터] 화면 안의 탭으로 이동함(위 v-prodm 참조).
+       이 위치의 독립 섹션은 제거함(중복 id 방지) -- 아래 입찰용(미납품 품목)은 그대로 유지. -->
   <!-- 2026-09-28 신설: 현재 납품하지 않는 포스코 품목(향후 입찰 대비) 정보를 접수되는 대로 누적 등록 -->
   <section id="v-poscononsup" class="hidden">
     <div class="toolrow">
@@ -3806,8 +3825,10 @@ function custNameOptions(sel,cat){
   return h;
 }
 function renderProdMaster(){
+  autoFillQcodeOnce();
   syncPeriodSelectors();
   const q=(document.getElementById('pm_search').value||'').toLowerCase();
+  {const cb=document.getElementById('pm_clearSearch');if(cb)cb.style.display=q?'inline-flex':'none';}
   const cf=(document.getElementById('pm_cat')||{}).value||'';
   const gf=(document.getElementById('pm_gubun')||{}).value||'';
   const uf=(document.getElementById('pm_use')||{}).value||'';
@@ -3847,7 +3868,9 @@ function renderProdMaster(){
      <td>${gubunSel(i,prodGubun(p))}</td>
      <td><input value="${esc(p.name||'')}" style="width:100%;min-width:150px" oninput="editProd(${i},'name',this.value)"></td>
      <td><select onchange="editProdCustName(${i},this.value)" style="width:100%;min-width:130px;font-size:11px">${custNameOptions(p.custName||'',p.cat)}</select></td>
-     <td><input value="${esc(p.qcode||'')}" style="width:100%;min-width:86px;font-size:11px" placeholder="고객사 자재코드" title="고객사가 관리하는 자재코드 — 배합·규격이 달라도 고객사 자재코드가 같으면 같은 품목으로 봅니다. 같은 고객사 제품명을 가진 규격들은 이 코드를 공유합니다" oninput="editProdQcode(${i},this.value)">${qcodeBadge(p)}</td>
+     <td><input value="${esc(p.qcode||'')}" style="width:100%;min-width:86px;font-size:11px" placeholder="고객사 자재코드" title="고객사가 관리하는 자재코드 — 배합·규격이 달라도 고객사 자재코드가 같으면 같은 품목으로 봅니다. 같은 고객사 제품명을 가진 규격들은 이 코드를 공유합니다" oninput="editProdQcode(${i},this.value)">
+       <button type="button" class="btn sm" style="margin-top:2px;font-size:10px;padding:1px 5px;white-space:nowrap" onclick="fetchQcodeForRow(${i})" title="이 행의 고객사 제품명에 해당하는 자재코드를 [내화물 원단위] 목록에서 다시 불러옵니다(새 품목을 하나씩 추가할 때 사용)">🔄 불러오기</button>
+       ${qcodeBadge(p)}</td>
      <td><input value="${esc(p.mix||'')}" style="width:100%;min-width:140px" placeholder="배합·재질" oninput="editProd(${i},'mix',this.value)"></td>
      <td><input value="${esc(p.spec||'')}" style="width:100%;min-width:160px" oninput="editProd(${i},'spec',this.value)"></td>
      <td class="n"><input type="number" value="${p.uw||''}" style="width:64px;text-align:right" oninput="editProd(${i},'uw',this.value)"></td>
@@ -3901,6 +3924,20 @@ function editProdCustName(i,v){
   }
   renderProdMaster();
 }
+// 2026-09-29: "일괄채우기 말고, 하나씩 추가할 때 그 자리에서 바로 불러오고 싶다"는 요청 —
+// 행 하나만 대상으로 즉시 재조회하는 개별용 버튼(자동채움이 이미 됐어도 다시 눌러 최신 코드로 갱신 가능).
+function fetchQcodeForRow(i){
+  const p=prodData[i];if(!p)return;
+  if(!p.custName){toast('먼저 고객사 제품명을 선택하세요');return;}
+  const ic=invCodeForCustName(p.custName);
+  if(ic){p.qcode=ic;prodDirty=true;prodAutoSave();renderProdMaster();toast('자재코드를 불러왔습니다: '+ic);}
+  else toast('[내화물 원단위]에서 일치하는 품명을 찾지 못했습니다');
+}
+// 2026-09-29: "모아보기" 이후 검색창에 자재코드가 남아 전체 목록으로 못 돌아가는 문제 — 검색을 지우는 버튼.
+function clearProdSearch(){
+  const el=document.getElementById('pm_search');if(!el)return;
+  el.value='';renderProdMaster();
+}
 // 2026-09-28: 이미 고객사 제품명은 선택돼 있지만 자재코드가 비어있는 기존 품목들을
 // [내화물 원단위] 코드 기준으로 한 번에 채워주는 일괄 백필 버튼용 함수.
 function bulkFillQcodeFromInv(){
@@ -3913,6 +3950,26 @@ function bulkFillQcodeFromInv(){
   });
   if(n){prodDirty=true;saveProd();renderProdMaster();toast(n+'건에 자재코드를 자동으로 채웠습니다([내화물 원단위] 코드 기준)');}
   else toast('채울 수 있는 품목이 없습니다(이미 채워져 있거나, 고객사 제품명과 일치하는 원단위 코드가 없습니다)');
+}
+// 2026-09-28(추가): "고객사 제품명을 선택해도 자재코드가 안 따라온다"는 문의 대응 —
+// editProdCustName()의 자동채움은 드롭다운에서 값을 "새로 바꿀 때"만 실행되므로, 이미 예전부터
+// 고객사 제품명이 채워져 있던 기존 품목(예: 최초 데이터 구축 시점)은 값이 그대로라 change 이벤트가
+// 한 번도 발생하지 않아 자재코드가 비어있는 채로 남아있었다. 매번 버튼을 직접 눌러야 하는 불편을
+// 없애기 위해, 내화물 품목마스터 화면을 열 때 위와 동일한 로직을 1회만 자동 실행한다.
+// (사용자가 자재코드를 일부러 비워둔 경우까지 계속 덮어쓰지 않도록 최초 1회로 제한)
+function autoFillQcodeOnce(){
+  if(localStorage.getItem('dgrns_qcode_automigrated'))return;
+  try{
+    let n=0;
+    prodData.forEach(p=>{
+      if(p.custName&&!p.qcode){
+        const ic=invCodeForCustName(p.custName);
+        if(ic){p.qcode=ic;n++;}
+      }
+    });
+    if(n){prodDirty=true;saveProd();}
+  }catch(e){}
+  try{localStorage.setItem('dgrns_qcode_automigrated','1');}catch(e){}
 }
 function editProdQcode(i,v){
   const cust=prodData[i].custName||'';
@@ -5406,10 +5463,11 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   report:['보고서 자동생성','일일·월간 현황을 종합해 PPT 보고자료를 자동으로 만듭니다 (관리직 이상)'],
   stocksd:['재고관리(신동내화)','신동내화 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)'],
   stockvs:['재고관리(베수비우스)','베수비우스(Slide Gate) 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)'],
-  poscobase:['포스코 품목단가','품목코드별 규격 · Q코드 · 단가 (내화물 기준정보 · 포스코)'],
   poscononsup:['입찰용(미납품 품목)','현재 납품하지 않는 포스코 품목 정보를 향후 입찰 대비로 누적 등록']};
 let quoteInit=false, curView='home';
-const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','planperf','handover','report','stocksd','stockvs','poscobase','poscononsup'];
+// 2026-09-29: 'poscobase'(포스코 품목단가)는 더 이상 독립된 사이드바 화면이 아니라 'prodm'(내화물 품목마스터)
+// 화면 안의 탭으로 통합됨 — ALL_VIEWS/네비게이션 대상에서 제외하고, prodmTab()이 그 표시를 담당함.
+const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','planperf','handover','report','stocksd','stockvs','poscononsup'];
 /* ============ 상단 작업 탭(여러 화면 동시에 열어두고 전환) ============
    2026-09-28: "폴더(화면)를 바꾸면 처음부터 다시 시작해야 해서 불편하다"는 의견 반영 —
    최근/현재 열어본 화면들을 상단에 탭으로 남겨두고 클릭 한번에 다시 전환할 수 있게 하고,
@@ -5465,7 +5523,7 @@ function nav(v){
   openViewTab(v);renderViewTabs();
   // 2026-09-26: 표 너비가 기본 컨텐츠 폭(1180px)보다 넓어 열이 가로 스크롤 없이는 잘려 보이는 화면들
   // (품목마스터의 등록/사용/물량 등)을 wide 컨텐츠(1560px)로 전환해 한 화면에 다 보이게 함.
-  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','posco','stocksd','stockvs','poscobase','poscononsup'].includes(v));
+  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','posco','stocksd','stockvs','poscononsup'].includes(v));
   ALL_VIEWS.forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
   document.querySelectorAll('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
   document.getElementById('viewTitle').textContent=VIEWS[v][0];
@@ -5480,7 +5538,7 @@ function nav(v){
   if(v==='perf')initPerf();
   if(v==='news')initNews();
   if(v==='fieldwork')initField();
-  if(v==='prodm')renderProdMaster();
+  if(v==='prodm')prodmTab('dk'); // 사이드바에서 다시 들어오면 항상 기본(동국제강) 탭부터 보여줌 — 포스코 탭 진입은 poscoGotoMaster()가 이어서 전환
   if(v==='bom')initBomView();
   if(v==='sync')initSyncView();
   if(v==='attend')initAttend();
@@ -5492,7 +5550,6 @@ function nav(v){
   if(v==='report')initReport();
   if(v==='stocksd')initStock('신동내화');
   if(v==='stockvs')initStock('베수비우스');
-  if(v==='poscobase')renderPoscoBase();
   if(v==='poscononsup')renderPoscoNonSupply();
   updateRoleChip();applyRoleLock();
 }
@@ -8359,47 +8416,140 @@ function loadPoscoMaster(){try{return JSON.parse(localStorage.getItem('dgrns_pos
 function savePoscoMaster(){try{localStorage.setItem('dgrns_posco_master',JSON.stringify(poscoMaster));}catch(e){}}
 let poscoMaster=loadPoscoMaster();
 let poscoBaseFocus=null;
-function poscoGotoMaster(item){poscoBaseFocus=item;nav('poscobase');}
+// 2026-09-29: "내화물 품목마스터" 화면 안의 탭(동국제강/포스코)으로 통합 — 기본은 동국제강.
+let prodmSub='dk';
+function prodmTab(sub){
+  prodmSub=sub;
+  const dk=document.getElementById('prodm-dk'),pb=document.getElementById('v-poscobase');
+  if(dk)dk.classList.toggle('hidden',sub!=='dk');
+  if(pb)pb.classList.toggle('hidden',sub!=='posco');
+  document.querySelectorAll('#prodmToggle .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sub===sub));
+  if(sub==='posco')renderPoscoBase();else renderProdMaster();
+}
+function poscoGotoMaster(item){poscoBaseFocus=item;nav('prodm');prodmTab('posco');}
 function poscoBaseClearFocus(){poscoBaseFocus=null;renderPoscoBase();}
-function poscoMasterRows(item){const r=poscoMaster[item];return (Array.isArray(r)&&r.length)?r:[{spec:'',qcode:'',price:''}];}
+function poscoMasterRows(item){const r=poscoMaster[item];return (Array.isArray(r)&&r.length)?r:[{spec:'',qcode:'',price:'',priceEA:'',uw:''}];}
 function poscoMasterPersist(item,rows){
-  const cleaned=rows.filter(r=>(r.spec||'').trim()||(r.qcode||'').trim()||(r.price||'').toString().trim());
+  const cleaned=rows.filter(r=>(r.spec||'').trim()||(r.qcode||'').trim()||(r.price||'').toString().trim()||(r.priceEA||'').toString().trim()||(r.uw||'').toString().trim());
   if(cleaned.length)poscoMaster[item]=cleaned;else delete poscoMaster[item];
   savePoscoMaster();
 }
+// 2026-09-29: 단가(KG)/단가(EA) 2종 + 단중(kg) 신설 — "대표 KG단가를 넣으면 EA단가도 자동 계산되게" 요청 반영.
+// 단중이 있는 상태에서 단가(KG) 또는 단중을 고치면, 단가(EA)=단가(KG)×단중으로 자동 갱신된다.
+// (단가(EA)는 그 이후에도 직접 고칠 수 있음 — 자동계산은 KG→EA 한 방향으로만 따라간다)
 function setPoscoMasterRow(item,idx,key,v){
   const rows=poscoMasterRows(item).map(r=>({...r}));
   rows[idx][key]=v;
+  if(key==='price'||key==='uw'){
+    const kg=+rows[idx].price||0,uw=+rows[idx].uw||0;
+    if(kg&&uw)rows[idx].priceEA=String(Math.round(kg*uw));
+  }
   poscoMasterPersist(item,rows);
 }
 function addPoscoMasterRow(item){
   const rows=poscoMasterRows(item).map(r=>({...r}));
-  rows.push({spec:'',qcode:'',price:''});
+  rows.push({spec:'',qcode:'',price:'',priceEA:'',uw:''});
   poscoMaster[item]=rows;savePoscoMaster();renderPoscoBase();
 }
 function removePoscoMasterRow(item,idx){
   const rows=poscoMasterRows(item).map(r=>({...r}));
   rows.splice(idx,1);
-  poscoMasterPersist(item,rows.length?rows:[{spec:'',qcode:'',price:''}]);
+  poscoMasterPersist(item,rows.length?rows:[{spec:'',qcode:'',price:'',priceEA:'',uw:''}]);
   renderPoscoBase();
+}
+/* ===== 포스코 품목단가 · 분기별 단가 시점(조회) — [내화물 품목마스터]의 단가시점 기능과 같은 방식이되
+   별도 저장소(dgrns_posco_pricesnaps)를 써서 동국제강 쪽 원가계산(priceSnaps)에는 전혀 영향을 주지 않는다. */
+function loadPoscoSnaps(){try{const s=JSON.parse(localStorage.getItem('dgrns_posco_pricesnaps'));if(s&&typeof s==='object')return s;}catch(e){}return {};}
+let poscoPriceSnaps=loadPoscoSnaps();
+function savePoscoSnaps(){try{localStorage.setItem('dgrns_posco_pricesnaps',JSON.stringify(poscoPriceSnaps));}catch(e){}}
+let poscoPricePeriod=(function(){try{return localStorage.getItem('dgrns_posco_priceperiod')||'';}catch(e){return '';}})();
+function poscoSnapPeriods(){return Object.keys(poscoPriceSnaps).sort();}
+function poscoPeriodLabel(pk){return pk?(poscoPriceSnaps[pk]&&poscoPriceSnaps[pk].label)||pk:'현재(편집중)';}
+function poscoRowKey(item,idx){return item+'#'+idx;}
+function poscoPriceKgAt(item,idx,period){
+  if(!period)return +((poscoMasterRows(item)[idx]||{}).price||0);
+  const s=poscoPriceSnaps[period],k=poscoRowKey(item,idx);
+  if(s&&s.prices&&s.prices[k]!=null)return +s.prices[k]||0;
+  return +((poscoMasterRows(item)[idx]||{}).price||0);
+}
+function poscoPriceEaAt(item,idx,period){
+  if(!period)return +((poscoMasterRows(item)[idx]||{}).priceEA||0);
+  const s=poscoPriceSnaps[period],k=poscoRowKey(item,idx);
+  if(s&&s.pricesEA&&s.pricesEA[k]!=null)return +s.pricesEA[k]||0;
+  return +((poscoMasterRows(item)[idx]||{}).priceEA||0);
+}
+function poscoSetPricePeriod(v){
+  poscoPricePeriod=v||'';try{localStorage.setItem('dgrns_posco_priceperiod',poscoPricePeriod);}catch(e){}
+  renderPoscoBase();
+}
+function setPoscoPricePeriod(v){poscoSetPricePeriod(v);}
+function poscoConfirmQuarter(period,label){
+  const prices={},pricesEA={};
+  POSCO_SEED.forEach(r=>{poscoMasterRows(r.item).forEach((row,idx)=>{const k=poscoRowKey(r.item,idx);prices[k]=+row.price||0;pricesEA[k]=+row.priceEA||0;});});
+  poscoPriceSnaps[period]={date:todayStr(),label:label||period,prices,pricesEA};savePoscoSnaps();
+}
+function poscoNewPricePoint(){
+  const key=(document.getElementById('pb_qtr')||{}).value||currentQuarterKey();const label=quarterLabel(key);
+  const exists=!!poscoPriceSnaps[key];
+  if(!exists){
+    const prices={},pricesEA={};
+    POSCO_SEED.forEach(r=>{poscoMasterRows(r.item).forEach((row,idx)=>{const k=poscoRowKey(r.item,idx);prices[k]=poscoPriceKgAt(r.item,idx,poscoPricePeriod);pricesEA[k]=poscoPriceEaAt(r.item,idx,poscoPricePeriod);});});
+    poscoPriceSnaps[key]={date:todayStr(),label,prices,pricesEA};savePoscoSnaps();
+  }
+  poscoSetPricePeriod(key);
+  toast(exists?`[${label}] 시점 편집모드로 전환했습니다`:`[${label}] 시점이 생성되었습니다 · 바뀐 단가만 수정하세요`);
+}
+function poscoConfirmQuarterBtn(){
+  const key=(document.getElementById('pb_qtr')||{}).value||currentQuarterKey();const label=quarterLabel(key);
+  const exists=!!poscoPriceSnaps[key];
+  if(!confirm(`현재 포스코 품목단가를 [${label}] 확정단가로 저장할까요?`+(exists?`\n(이미 저장된 분기 — 덮어씁니다)`:'')))return;
+  poscoConfirmQuarter(key,label);toast(label+' 단가 확정 저장');syncPoscoPeriodSelectors();renderPoscoBase();
+}
+function poscoDelSnap(){
+  const pk=poscoPricePeriod;if(!pk){toast('삭제할 확정분기를 먼저 선택하세요');return;}
+  if(!confirm(`[${poscoPeriodLabel(pk)}] 확정단가를 삭제할까요?`))return;
+  delete poscoPriceSnaps[pk];savePoscoSnaps();poscoSetPricePeriod('');syncPoscoPeriodSelectors();renderPoscoBase();toast('삭제되었습니다');
+}
+function poscoPeriodOptions(sel){let h=`<option value=""${sel===''?' selected':''}>현재(편집중)</option>`;
+  poscoSnapPeriods().forEach(pk=>{h+=`<option value="${pk}"${pk===sel?' selected':''}>${esc(poscoPeriodLabel(pk))}</option>`;});return h;}
+function syncPoscoPeriodSelectors(){
+  if(poscoPricePeriod&&!poscoPriceSnaps[poscoPricePeriod]){poscoPricePeriod='';try{localStorage.setItem('dgrns_posco_priceperiod','');}catch(e){}}
+  const el=document.getElementById('pb_period');if(el)el.innerHTML=poscoPeriodOptions(poscoPricePeriod);
+  const q=document.getElementById('pb_qtr');if(q&&!q.options.length)q.innerHTML=QUARTER_PRESETS.map(x=>`<option value="${x.key}"${x.key===currentQuarterKey()?' selected':''}>${x.label}</option>`).join('');
+}
+let _poscoSnapAutoSaveT=null;
+function editPoscoSnapPrice(kind,item,idx,v){
+  const period=poscoPricePeriod;if(!period)return;
+  const s=poscoPriceSnaps[period]=poscoPriceSnaps[period]||{date:todayStr(),label:quarterLabel(period),prices:{},pricesEA:{}};
+  s.prices=s.prices||{};s.pricesEA=s.pricesEA||{};
+  const k=poscoRowKey(item,idx);
+  if(kind==='kg')s.prices[k]=+v||0;else s.pricesEA[k]=+v||0;
+  clearTimeout(_poscoSnapAutoSaveT);_poscoSnapAutoSaveT=setTimeout(savePoscoSnaps,500);
 }
 function poscoBaseItemHtml(r){
   const rows=poscoMasterRows(r.item);
   const n=rows.length;
+  const viewLive=(poscoPricePeriod==='');
   return rows.map((row,idx)=>{
     const specCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.spec)}" placeholder="규격 입력" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'spec',this.value)">`;
     const qCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.qcode)}" placeholder="Q코드" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'qcode',this.value)">`;
-    const priceCell=`<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${esc(row.price||'')}" placeholder="단가" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'price',this.value)">`;
+    const uwCell=`<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${esc(row.uw||'')}" placeholder="단중" title="1EA(개)당 중량(kg) — 넣어두면 단가(KG) 입력 시 단가(EA)가 자동 계산됩니다" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'uw',this.value)">`;
+    const kgCell=viewLive
+      ? `<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${esc(row.price||'')}" placeholder="단가(KG)" title="대표 단가(KG 기준) — 단중이 있으면 단가(EA)가 자동으로 계산됩니다" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'price',this.value)">`
+      : `<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right;background:#fffbeb;border-color:#f59e0b" value="${esc(poscoPriceKgAt(r.item,idx,poscoPricePeriod)||'')}" title="[${esc(poscoPeriodLabel(poscoPricePeriod))}] 시점 단가(KG) — 이 시점에만 반영됩니다" onchange="editPoscoSnapPrice('kg','${esc(r.item)}',${idx},this.value)">`;
+    const eaCell=viewLive
+      ? `<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${esc(row.priceEA||'')}" placeholder="단가(EA)" title="단중이 있으면 단가(KG) 입력 시 자동 계산되며, 필요하면 직접 고칠 수도 있습니다" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'priceEA',this.value)">`
+      : `<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right;background:#fffbeb;border-color:#f59e0b" value="${esc(poscoPriceEaAt(r.item,idx,poscoPricePeriod)||'')}" title="[${esc(poscoPeriodLabel(poscoPricePeriod))}] 시점 단가(EA)" onchange="editPoscoSnapPrice('ea','${esc(r.item)}',${idx},this.value)">`;
     const actions=(idx===n-1?`<button class="btn sm" onclick="addPoscoMasterRow('${esc(r.item)}')" title="이 품목에 규격 행 추가">＋</button>`:'')
       +(n>1?`<button class="btn sm danger" onclick="removePoscoMasterRow('${esc(r.item)}',${idx})" title="이 규격 행 삭제">×</button>`:'');
     if(idx===0){
       return `<tr>
         <td rowspan="${n}" style="white-space:nowrap;vertical-align:top;cursor:pointer" onclick="poscoGotoMaster('${esc(r.item)}')" title="클릭하면 이 품목만 보기"><b>${esc(r.item)}</b></td>
-        <td>${qCell}</td><td>${specCell}</td><td>${priceCell}</td>
+        <td>${qCell}</td><td>${specCell}</td><td>${uwCell}</td><td>${kgCell}</td><td>${eaCell}</td>
         <td rowspan="${n}" style="vertical-align:top">${poscoSiteSel(r.item)}</td>
         <td style="white-space:nowrap">${actions}</td></tr>`;
     }
-    return `<tr><td>${qCell}</td><td>${specCell}</td><td>${priceCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+    return `<tr><td>${qCell}</td><td>${specCell}</td><td>${uwCell}</td><td>${kgCell}</td><td>${eaCell}</td><td style="white-space:nowrap">${actions}</td></tr>`;
   }).join('');
 }
 function poscoBaseRows(){
@@ -8411,19 +8561,24 @@ function poscoBaseRows(){
   });
 }
 function renderPoscoBase(){
+  syncPoscoPeriodSelectors();
   const box=document.getElementById('poscoBaseBody');if(!box)return;
   const focusBox=document.getElementById('poscoBaseFocusBar');
   if(focusBox)focusBox.innerHTML=poscoBaseFocus?`🔎 <b>${esc(poscoBaseFocus)}</b> 품목만 표시 중 <button class="btn sm" onclick="poscoBaseClearFocus()">전체보기</button>`:'';
   const rows=poscoBaseFocus?POSCO_SEED.filter(r=>r.item===poscoBaseFocus):poscoBaseRows();
   box.innerHTML=rows.map(poscoBaseItemHtml).join('')
-    ||`<tr><td colspan="6"><div class="empty">해당 조건의 품목이 없습니다.</div></td></tr>`;
-  const cnt=document.getElementById('pb_count');if(cnt)cnt.textContent=rows.length+'개 품목';
+    ||`<tr><td colspan="8"><div class="empty">해당 조건의 품목이 없습니다.</div></td></tr>`;
+  const cnt=document.getElementById('pb_count');if(cnt)cnt.textContent=rows.length+'개 품목 · 단가시점 ['+poscoPeriodLabel(poscoPricePeriod)+']';
+  const phEl=document.getElementById('pb_periodHint');
+  if(phEl)phEl.textContent=(poscoPricePeriod==='')
+    ?'※ "현재(편집중)"에서 단가를 고치면 라이브 단가가 즉시 바뀝니다. 특정 시점부터 적용될 단가를 미리 준비하려면 분기를 고르고 🆕 신규 시점을 눌러 그 시점만 편집하세요.'
+    :`※ 지금은 [${esc(poscoPeriodLabel(poscoPricePeriod))}] 시점 단가를 편집 중입니다(노란 칸) — 이 시점에만 저장되고 라이브 단가는 바뀌지 않습니다.`;
 }
 function downloadPoscoBase(){
   const rows=poscoBaseFocus?POSCO_SEED.filter(r=>r.item===poscoBaseFocus):poscoBaseRows();
-  let t=`<table><tr><th>품목코드</th><th>Q코드</th><th>규격</th><th>단가</th><th>제철소</th></tr>`;
+  let t=`<table><tr><th>품목코드</th><th>Q코드</th><th>규격</th><th>단중(kg)</th><th>단가(KG)</th><th>단가(EA)</th><th>제철소</th></tr>`;
   rows.forEach(r=>{poscoMasterRows(r.item).forEach(row=>{
-    t+=`<tr><td>${esc(r.item)}</td><td>${esc(row.qcode)}</td><td>${esc(row.spec)}</td><td>${esc(row.price||'')}</td><td>${esc(poscoSite(r.item))}</td></tr>`;
+    t+=`<tr><td>${esc(r.item)}</td><td>${esc(row.qcode)}</td><td>${esc(row.spec)}</td><td>${esc(row.uw||'')}</td><td>${esc(row.price||'')}</td><td>${esc(row.priceEA||'')}</td><td>${esc(poscoSite(r.item))}</td></tr>`;
   });});
   t+=`</table>`;downloadXls('포스코_품목단가',t);
 }
@@ -11255,7 +11410,7 @@ function renderApprove(){
     <td style="white-space:nowrap">${esc(d.at||'')}</td><td style="white-space:nowrap"><b>${esc(d.name)}</b></td><td style="white-space:nowrap">${esc(d.dept||'')}</td>
     <td style="white-space:nowrap">${k==='leave'?esc(d.type)+' / '+esc(d.start)+(d.end&&d.end!==d.start?'~'+esc(d.end):'')+' '+d.days+'일':esc(d.date)+' / '+esc(d.st)+'~'+esc(d.et)+' '+d.hours+'h'}</td>
     <td class="n">${k==='leave'?d.days+'일':d.hours+'h'}</td>
-    <td style="font-size:11.5px">${esc(d.reason||'')}</td>
+    <td style="font-size:11.5px;min-width:160px;max-width:260px;word-break:keep-all;white-space:normal">${esc(d.reason||'')}</td>
     <td style="white-space:nowrap">${stStr(d)}<div style="margin-top:3px;white-space:nowrap">${stepBar(d)}</div></td>
     <td><div class="acts">
       <button class="btn sm" onclick="openAttDoc('${k}','${d.id}')">문서</button>
