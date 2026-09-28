@@ -53,6 +53,20 @@
   .topbar .sub{font-size:12px;color:var(--muted)}
   .savechip{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-left:auto}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+  /* 상단 작업 탭(창) 바 — 여러 화면을 동시에 열어두고 클릭 한번으로 전환, ✕로 개별 닫기 */
+  .viewtabs{position:sticky;top:0;z-index:19;display:flex;align-items:stretch;gap:2px;overflow-x:auto;
+    background:var(--head);border-bottom:1px solid var(--line);padding:0 10px;scrollbar-width:thin}
+  .viewtabs:empty{display:none}
+  .vtab{display:flex;align-items:center;gap:7px;padding:8px 8px 8px 13px;font-size:12.5px;color:var(--muted);
+    background:transparent;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;
+    cursor:pointer;white-space:nowrap;max-width:220px;flex:0 0 auto;margin-top:5px}
+  .vtab:hover{background:var(--accent-soft)}
+  .vtab.active{background:#fff;border-color:var(--line);color:var(--ink);font-weight:700}
+  .vtab-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vtab-x{border:none;background:transparent;color:inherit;opacity:.55;font-size:12px;line-height:1;
+    padding:3px 4px;border-radius:5px;cursor:pointer;font-family:inherit}
+  .vtab-x:hover{opacity:1;background:var(--danger-soft);color:var(--danger)}
+  html[data-theme="dark"] .vtab.active{background:var(--panel)}
   .content{padding:20px 22px 60px;max-width:1180px}
   .content.wide{max-width:1560px}
   .btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;border-radius:8px;
@@ -789,6 +803,7 @@
     <button class="btn" id="toMobileBtn" onclick="mvSet('mobile')" title="모바일 간편 화면으로 전환">📱 모바일</button>
     <button class="btn" onclick="window.print()">인쇄</button>
   </div>
+  <div class="viewtabs" id="viewTabs"></div>
   <div class="content">
 
   <!-- ===== 홈 · 일정 ===== -->
@@ -1967,8 +1982,8 @@ service cloud.firestore {
         <button class="btn danger del-rec" onclick="delInvPricePoint()" title="현재 조회중인 시점의 단가 이력 전체 삭제">시점 삭제</button>
       </div>
       <div style="font-size:11px;color:var(--muted);margin:2px 2px 6px" id="invm_periodHint"></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:960px">
-        <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:180px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:210px" title="이 원단위 품목을 [내화물 기본정보]에 등록된 상품과 연결하는 기능 · 연동하면 단가를 그쪽에서 자동으로 가져와 여기서 따로 입력할 필요가 없습니다">내화물 기본정보 연동</th><th style="min-width:120px">원가보고서 분류</th><th style="min-width:100px">관리</th></tr></thead>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:1120px">
+        <thead><tr><th style="min-width:64px">설비</th><th>코드</th><th style="min-width:280px">품명</th><th>단위</th><th class="n">단가(원)</th><th>분류</th><th style="min-width:210px" title="이 원단위 품목을 [내화물 기본정보]에 등록된 상품과 연결하는 기능 · 연동하면 단가를 그쪽에서 자동으로 가져와 여기서 따로 입력할 필요가 없습니다">내화물 기본정보 연동</th><th style="min-width:120px">원가보고서 분류</th><th style="min-width:100px">관리</th></tr></thead>
         <tbody id="invMasterBody"></tbody>
       </table></div>
       <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ "현재(직접수정)"에서 단가를 고치면 즉시 라이브 단가로 적용되어 월별 원단위·입고금액 등 모든 계산에 오늘부터 반영됩니다. 특정 월(또는 분기)부터 적용될 단가를 미리 준비하려면 🆕 신규 시점을 눌러 그 시점만 따로 편집하세요 — 과거 달의 원단위·비교 화면은 그 달 시점에 유효했던 단가로 자동 계산됩니다.</div>
@@ -5234,12 +5249,47 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   stockvs:['재고관리(베수비우스)','베수비우스(Slide Gate) 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)']};
 let quoteInit=false, curView='home';
 const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','handover','report','stocksd','stockvs'];
+/* ============ 상단 작업 탭(여러 화면 동시에 열어두고 전환) ============
+   2026-09-28: "폴더(화면)를 바꾸면 처음부터 다시 시작해야 해서 불편하다"는 의견 반영 —
+   최근/현재 열어본 화면들을 상단에 탭으로 남겨두고 클릭 한번에 다시 전환할 수 있게 하고,
+   다 본 화면은 ✕로 직접 닫을 수 있게 함. 목록은 localStorage에 저장해 새로고침해도 유지됨
+   (각 화면 자체는 이미 DOM에 항상 존재 → hidden 토글 방식이라 탭 전환시 입력 중이던 내용 등
+   화면 상태는 그대로 보존됨). */
+function loadOpenTabs(){
+  try{
+    const raw=JSON.parse(localStorage.getItem('dgrns_opentabs')||'null');
+    if(Array.isArray(raw)){const f=raw.filter(v=>ALL_VIEWS.includes(v));if(f.length)return f;}
+  }catch(e){}
+  return [];
+}
+let openTabs=loadOpenTabs();
+function saveOpenTabs(){try{localStorage.setItem('dgrns_opentabs',JSON.stringify(openTabs));}catch(e){}}
+function openViewTab(v){if(!openTabs.includes(v)){openTabs.push(v);saveOpenTabs();}}
+function renderViewTabs(){
+  const el=document.getElementById('viewTabs');if(!el)return;
+  const list=openTabs.filter(v=>viewAllowed(v)&&VIEWS[v]);
+  el.innerHTML=list.map(v=>`<div class="vtab${v===curView?' active':''}" onclick="nav('${v}')" title="${esc(VIEWS[v][1]||'')}">
+      <span class="vtab-lbl">${esc(VIEWS[v][0])}</span>
+      <button type="button" class="vtab-x" onclick="event.stopPropagation();closeViewTab('${v}')" title="탭 닫기">✕</button>
+    </div>`).join('');
+}
+function closeViewTab(v){
+  const list=openTabs.filter(v=>viewAllowed(v)&&VIEWS[v]);
+  if(list.length<=1){toast('마지막 남은 탭은 닫을 수 없습니다');return;}
+  const idx=openTabs.indexOf(v);
+  if(idx>=0){openTabs.splice(idx,1);saveOpenTabs();}
+  if(curView===v){
+    const remain=openTabs.filter(x=>viewAllowed(x)&&VIEWS[x]);
+    nav(remain[Math.min(idx,remain.length-1)]||defaultView());
+  }else renderViewTabs();
+}
 function togglePcMenu(){document.body.classList.toggle('pc-menu-open');}
 function closePcMenu(){document.body.classList.remove('pc-menu-open');}
 function nav(v){
   closePcMenu();
   if(!viewAllowed(v)){toast('이 화면에 접근할 권한이 없습니다');v=defaultView();}
   curView=v;
+  openViewTab(v);renderViewTabs();
   // 2026-09-26: 표 너비가 기본 컨텐츠 폭(1180px)보다 넓어 열이 가로 스크롤 없이는 잘려 보이는 화면들
   // (품목마스터의 등록/사용/물량 등)을 wide 컨텐츠(1560px)로 전환해 한 화면에 다 보이게 함.
   document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','handover','vac','prodm','attend','emp','posco','stocksd','stockvs'].includes(v));
@@ -7028,7 +7078,7 @@ function renderInvMaster(){
         :`<input type="number" class="iinp" value="${it.p}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{p:+this.value});saveInvMOv();renderInvMonth()">`;
     const linkLabel=linked&&it.linkedProd?invLinkLabel(it.linkedProd):'';
     return `<tr><td style="font-size:11px;color:var(--muted)"><input class="iinp" style="width:56px;text-align:center;font-size:11px" value="${esc(m.g)}" onchange="setInvMasterField('${m.c}','g',this.value)"></td><td style="font-size:10.5px">${esc(m.c)}</td>
-      <td><input class="iinp" style="min-width:170px;text-align:left" value="${esc(m.n)}" title="${esc(m.n)}" onchange="setInvMasterField('${m.c}','n',this.value)"></td>
+      <td><input class="iinp" style="width:100%;min-width:260px;text-align:left" value="${esc(m.n)}" title="${esc(m.n)}" onchange="setInvMasterField('${m.c}','n',this.value)"></td>
       <td><input class="iinp" style="width:52px;text-align:center" value="${esc(it.u)}" onchange="invMOv['${m.c}']=Object.assign(invMOv['${m.c}']||{},{u:this.value});saveInvMOv();renderInvMonth()"></td>
       <td class="n">${priceCell}</td>
       <td style="font-size:11px">${esc(m.cl||'')}</td>
@@ -11862,7 +11912,7 @@ function renderModePanel(){
 function canDelete(){return appRole()==='admin';}   // 삭제는 관리자만 (관리직은 삭제 불가)
 function updateRoleChip(){const c=document.getElementById('roleChip');if(!c)return;const r=appRole();c.textContent='👤 '+ROLE_LABEL[r];c.className='rolechip r-'+r;}
 function setRole(r){try{localStorage.setItem('dgrns_role',r);}catch(e){}updateRoleChip();applyRoleLock();applyRoleNav();
-  if(!viewAllowed(curView))nav(defaultView());}
+  if(!viewAllowed(curView))nav(defaultView());else renderViewTabs();}
 function viewAllowed(v){const a=ROLE_VIEWS[appRole()];return !a||a.indexOf(v)>=0;}
 function defaultView(){
   if(viewAllowed('home'))return 'home';
