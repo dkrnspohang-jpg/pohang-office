@@ -79,6 +79,13 @@
   .btn.danger:hover{background:var(--danger-soft)}
   .pc-menu-btn{display:none;align-items:center;gap:5px;font-weight:800}
   .pc-menu-dim{display:none}
+  /* 2026-09-28: 데스크탑 와이드 화면(1201px 이상)에서 좌측 사이드바를 완전히 숨기는 토글.
+     1200px 이하에서는 기존 서랍형 메뉴(pc-menu-btn)가 이미 사이드바를 담당하므로 이 버튼은 숨김. */
+  #sideCollapseBtn{display:none;align-items:center;gap:5px}
+  @media(min-width:1201px){
+    #sideCollapseBtn{display:inline-flex}
+    body.side-collapsed .sidebar{display:none}
+  }
   /* Cards */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:14px}
   .card{border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:#fff}
@@ -712,6 +719,12 @@
     if(r==='pohang')document.body.classList.add('start');
   }catch(e){document.body.classList.add('start');}
 })();
+/* 2026-09-28: 좌측 메뉴 숨김 설정을 첫 렌더링 전에 미리 적용해 깜빡임 방지 (이 PC/브라우저에 저장됨) */
+(function(){
+  try{
+    if(localStorage.getItem('dgrns_side_collapsed')==='1')document.body.classList.add('side-collapsed');
+  }catch(e){}
+})();
 </script>
 <!-- ===== 사이드바 ===== -->
 <nav class="sidebar">
@@ -786,6 +799,7 @@
 <div class="main">
   <div class="topbar">
     <button class="btn pc-menu-btn" type="button" onclick="togglePcMenu()">☰ 전체 메뉴</button>
+    <button class="btn" id="sideCollapseBtn" type="button" onclick="toggleSidebarCollapse()" title="좌측 메뉴를 숨기거나 다시 표시합니다 (이 PC에 저장됨)"></button>
     <div>
       <h2 id="viewTitle">래들 수명관리</h2>
       <div class="sub" id="viewSub">신축~해체 수명 · 일일/누적 · 대수리·영구장 누적</div>
@@ -5432,6 +5446,18 @@ function closeViewTab(v){
 }
 function togglePcMenu(){document.body.classList.toggle('pc-menu-open');}
 function closePcMenu(){document.body.classList.remove('pc-menu-open');}
+/* 2026-09-28: 와이드 데스크탑 화면에서 좌측 메뉴 숨기기/보이기 토글. 설정은 이 PC(브라우저)의
+   localStorage에 저장되어 새로고침·재접속 후에도 유지됨(다른 PC·계정에는 영향 없음). */
+function syncSideCollapseBtn(){
+  const on=document.body.classList.contains('side-collapsed');
+  const b=document.getElementById('sideCollapseBtn');
+  if(b)b.textContent=on?'▶ 메뉴 보이기':'◀ 메뉴 숨기기';
+}
+function toggleSidebarCollapse(){
+  const on=document.body.classList.toggle('side-collapsed');
+  try{localStorage.setItem('dgrns_side_collapsed',on?'1':'0');}catch(e){}
+  syncSideCollapseBtn();
+}
 function nav(v){
   closePcMenu();
   if(!viewAllowed(v)){toast('이 화면에 접근할 권한이 없습니다');v=defaultView();}
@@ -12305,7 +12331,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
   refreshLadle();refreshTundish();
   document.getElementById('sch_date').value=todayStr();
   fillSLpatOptions('SL_P1');onLadleTypeChange();
-  applySkin();updateRoleChip();updateMeChip();syncChip();
+  applySkin();updateRoleChip();updateMeChip();syncChip();syncSideCollapseBtn();
   {const v=document.getElementById('appVer');if(v)v.textContent='버전 '+APP_VERSION;const b=document.getElementById('boardVer');if(b)b.textContent=APP_VERSION;}applyRoleNav();applyRoleLock();updateApprBadge();
   nav(defaultView()); // 첫 화면: 일정(현장 권한은 작업현황판)
   renderModePanel();  // 포항사업소 첫 화면: 파트 선택 패널 표시
