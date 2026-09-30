@@ -187,6 +187,16 @@
   .iss-txt{font-size:12.5px;line-height:1.5}
   .grp-row td{background:#eef2f6;font-weight:700;color:#2b3742}
   .costgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+  /* 2026-09-30: 축조물량표 - 부위별 소계를 우측 고정 사이드바로 배치(물량표 상세와 나란히 보기) */
+  .bomlayout{display:flex;gap:16px;align-items:flex-start;margin-top:10px}
+  .bomleft{flex:1 1 auto;min-width:0}
+  .bomright{flex:0 0 336px;width:336px}
+  .bomright .costgrid{grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+  .bomright .costbox{padding:10px 12px}
+  .bomright .costbox .cb-val{font-size:17px}
+  .bombutbl{font-size:11.5px;min-width:0}
+  .bombutbl th,.bombutbl td{padding:6px 6px;white-space:nowrap}
+  @media(max-width:1180px){.bomlayout{flex-direction:column}.bomright{width:100%;flex:1 1 auto}.bomright .costgrid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
   .costbox{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff}
   .costbox .cb-lab{font-size:12px;color:var(--muted);margin-bottom:6px}
   .costbox .cb-val{font-size:22px;font-weight:800;color:var(--ink)}
@@ -1153,19 +1163,25 @@
       <select class="selbox" id="bomPeriod" onchange="setPricePeriod(this.value)"></select>
       <span style="font-size:11.5px;color:var(--accent)">※ 제품은 <b>제품 마스터</b>에서 관리 · 단가시점(확정분기)에 따라 물량표 단가·금액이 바뀝니다.</span>
     </div>
-    <div class="subhead" style="margin-top:8px">부위별 소계 <span class="hint">현재 물량표 기준 · 단가시점 반영 · 부위별 중량·금액·비중</span></div>
-    <div class="costgrid" id="bomBuCards"></div>
-    <div class="tablewrap"><table class="bomtbl">
-      <thead><tr><th>부위</th><th class="n">품목수</th><th class="n">중량(kg)</th><th class="n">금액(원)</th><th class="n">비중</th></tr></thead>
-      <tbody id="bomBuBody"></tbody>
-    </table></div>
-    <div class="subhead" style="margin-top:14px">물량표 상세 <span class="hint">부위별 품목·배합·규격·단중·수량·단가 입력</span></div>
-    <div class="tablewrap"><table class="bomtbl" id="ladleBomTbl">
-      <thead><tr><th style="width:118px">부위</th><th style="width:150px">제품(마스터)</th><th style="width:96px">배합</th><th style="width:82px">규격</th><th class="n" style="width:70px">단중(kg)</th><th class="n" style="width:66px">수량</th><th class="n" style="width:80px">중량(kg)</th><th class="n" style="width:80px">단가(원)</th><th class="n" style="width:100px">금액(원)</th><th style="width:34px"></th></tr></thead>
-      <tbody id="ladleBomBody"></tbody>
-      <tfoot id="ladleBomFoot"></tfoot>
-    </table></div>
-    <div style="font-size:11.5px;color:var(--muted);margin-top:8px" id="bomEquipNote"></div>
+    <div class="bomlayout">
+      <div class="bomleft">
+        <div class="subhead">물량표 상세 <span class="hint">부위별 품목·배합·규격·단중·수량·단가 입력</span></div>
+        <div class="tablewrap"><table class="bomtbl" id="ladleBomTbl">
+          <thead><tr><th style="width:118px">부위</th><th style="width:190px">제품(마스터)</th><th style="width:96px">배합</th><th style="width:82px">규격</th><th class="n" style="width:70px">단중(kg)</th><th class="n" style="width:66px">수량</th><th class="n" style="width:80px">중량(kg)</th><th class="n" style="width:80px">단가(원)</th><th class="n" style="width:100px">금액(원)</th><th style="width:34px"></th></tr></thead>
+          <tbody id="ladleBomBody"></tbody>
+          <tfoot id="ladleBomFoot"></tfoot>
+        </table></div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:8px" id="bomEquipNote"></div>
+      </div>
+      <div class="bomright">
+        <div class="subhead">부위별 소계 <span class="hint">단가시점 반영</span></div>
+        <div class="costgrid" id="bomBuCards"></div>
+        <div class="tablewrap"><table class="bomtbl bombutbl">
+          <thead><tr><th>부위</th><th class="n">품목수</th><th class="n">중량(kg)</th><th class="n">금액(원)</th><th class="n">비중</th></tr></thead>
+          <tbody id="bomBuBody"></tbody>
+        </table></div>
+      </div>
+    </div>
   </section>
 
   <!-- ===== 재고관리(신동내화 · 베수비우스) ===== -->
@@ -4259,8 +4275,8 @@ function prodOptions(sel){
   const pool=prodData.filter(p=>(p.use==null?1:p.use)!==0||p.id===sel);
   const inscope=pool.filter(p=>(p.cat||'공통')===lab||(p.cat||'공통')==='공통');
   const others=pool.filter(p=>!((p.cat||'공통')===lab||(p.cat||'공통')==='공통'));
-  // 2026-09-22: 옆 칸에 규격이 별도로 표시되므로 여기 드롭다운은 제품명만 표시(요청 반영)
-  const opt=p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.name)}</option>`;
+  // 2026-09-30: 동일 제품명이 여러 규격으로 등록돼 있어 매칭이 어렵다는 요청으로 규격을 다시 표시
+  const opt=p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.name)}${p.spec?' ('+esc(p.spec)+')':''}</option>`;
   const sort=a=>a.slice().sort((x,y)=>x.name.localeCompare(y.name)||x.spec.localeCompare(y.spec));
   let h=sort(inscope).map(opt).join('');
   if(others.length)h+=`<optgroup label="기타 설비">`+sort(others).map(opt).join('')+`</optgroup>`;
@@ -4271,7 +4287,7 @@ function drawBomRows(){
   tb.innerHTML=bomDraft.map((r,i)=>{const uw=rowUw(r),pr=rowPrice(r);const w=uw*(+r.qty||0);const c=rowCost(r);const linked=!!r.pcode;const ea=rowUnit(r)==='ea';
     return `<tr${r._new?' style="background:#fffbeb"':''}>
      <td><input value="${esc(r.bu||'')}" style="width:108px" oninput="editBom(${i},'bu',this.value)"></td>
-     <td><select style="width:100%;min-width:130px;font-size:11.5px${(!linked&&r.nm)?';color:#c81e1e':''}" onchange="editBom(${i},'pcode',this.value)">
+     <td><select style="width:100%;min-width:175px;font-size:11.5px${(!linked&&r.nm)?';color:#c81e1e':''}" onchange="editBom(${i},'pcode',this.value)">
         <option value=""${linked?'':' selected'}>${linked?'— 직접입력 —':(r.nm?'⚠ '+esc(r.nm)+' (미등록)':'제품 선택…')}</option>${prodOptions(r.pcode)}</select></td>
      <td style="font-size:11px;color:var(--muted)" id="bomMix${i}">${esc(rowMix(r)||'-')}</td>
      <td style="font-size:11.5px" id="bomSpec${i}"><input value="${esc(rowSpec(r))}" style="width:78px" oninput="editBom(${i},'spec',this.value)" title="제품 선택 시 마스터 규격이 자동으로 채워지며, 필요하면 직접 수정할 수 있습니다"></td>
@@ -5610,7 +5626,7 @@ function nav(v){
   openViewTab(v);renderViewTabs();
   // 2026-09-26: 표 너비가 기본 컨텐츠 폭(1180px)보다 넓어 열이 가로 스크롤 없이는 잘려 보이는 화면들
   // (품목마스터의 등록/사용/물량 등)을 wide 컨텐츠(1560px)로 전환해 한 화면에 다 보이게 함.
-  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','shift4','posco','stocksd','stockvs','poscononsup'].includes(v));
+  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','shift4','posco','stocksd','stockvs','poscononsup','bom'].includes(v));
   ALL_VIEWS.forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
   document.querySelectorAll('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
   document.getElementById('viewTitle').textContent=VIEWS[v][0];
