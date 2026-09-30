@@ -10504,24 +10504,18 @@ function shouldShowApproveButton(d){
   // 본인 문서는 절대 불가
   if(me.id===d.empId)return false;
 
-  // 지정 결재자가 있으면 그 사람만 가능
+  // 지정 결재자가 있으면 그 사람만 가능(단, admin은 결재선 전체를 대결 가능)
   const named=(d.who||{})[st];
   if(named){
     if(appRole()==='admin')return true;  // admin은 override 가능
     return myEmpId()===named;
   }
 
-  // Admin/사업소장 역할 확인
-  if(appRole()==='admin'){
-    const lv=rankLv(me);
-    const need=STEP_RANKLV[st];
-    // 높은 직급이 낮은 단계를 결재하려 하면 차단 (예: 기성이 주임 단계)
-    if(lv>need){
-      console.warn(`[결재UI 차단] ${meName()}(lv${lv}) 가 단계 ${st}(need${need}) 결재 시도`);
-      return false;
-    }
-    return true;
-  }
+  // 2026-09-30: "관리자는 모든 단계 대결 가능"(근태관리_및_권한체계.md 결재 흐름 명시 규칙) —
+  // 이전엔 직급 순서 차단(lv>need)이 admin에도 적용돼, 사업소장이 본인 단계(예: 최종)보다
+  // 앞선 단계(주임·계장·기성)에 걸린 건은 승인 버튼·체크박스가 아예 안 뜨는 문제가 있었음.
+  // admin 역할은 순서 차단 없이 항상 결재 가능하도록 복원.
+  if(appRole()==='admin')return true;
 
   // canApprove()로 최종 확인
   return canApprove(d);
@@ -10531,12 +10525,19 @@ function canApprove(d){
   const me=meEmp();if(!me)return false;
   if(me.id===d.empId)return false;                          // 본인 문서는 결재 불가
 
+  // 2026-09-30: admin(사업소장)은 결재선 순서와 무관하게 모든 단계 대결 가능
+  // (문서화된 정책 "관리자는 모든 단계 대결 가능" 복원 — 아래 lv>need 순서차단은 admin 외 역할에만 적용)
+  if(appRole()==='admin'){
+    console.log(`✅ [Admin전결] ${meName()} → 단계${st} 결재 가능(직급 순서 무관)`);
+    return true;
+  }
+
   // ★ 핵심: 직급 레벨을 먼저 계산 (모든 체크 전)
   const lv=rankLv(me), need=STEP_RANKLV[st]||0;
   console.log(`[순서확인] ${d.name} · 단계=${st}(필요${need}) · 본인=${lv} · admin=${appRole()==='admin'}`);
 
   // ★ 핵심 1: 상위 직급이 하위 단계를 결재하는 것을 절대 차단! (이것이 가장 먼저)
-  // 예: 사업소장(7)이 기성(6), 계장(4), 주임(2) 단계 절대 불가
+  // 예: 계장이 주임 단계를 결재하려는 경우 등 (admin 제외 — 위에서 이미 처리)
   if(lv>need){
     console.error(`🚫 [결재차단] ${meName()}(직급lv=${lv})가 단계${st}(필요${need}) 결재 시도 → 상위직급은 하위단계 결재 불가!`);
     return false;
@@ -10546,18 +10547,12 @@ function canApprove(d){
   const named=(d.who||{})[st];
   if(named){
     console.log(`[지정결재자 확인] ${named} 대 본인 ${myEmpId()}`);
-    if(appRole()==='admin')return true;
     return myEmpId()===named;
   }
 
   if(lv<need){
     console.warn(`[직급미달] ${meName()}(lv=${lv}) < 필요(${need})`);
     return false;
-  }
-
-  if(appRole()==='admin'){
-    console.log(`✅ [Admin전결] ${meName()} → 결재 가능`);
-    return true;
   }
 
   const md=normDept(me.dept), td=normDept(d.dept);
