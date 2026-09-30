@@ -218,16 +218,34 @@
   .prodbox .pb-v small{font-size:12px;font-weight:600;opacity:.8}
   .bcol{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
   .bcol-h{padding:16px 20px;font-weight:800;font-size:18px;color:#fff}
-  .btbl{width:100%;border-collapse:collapse;font-size:14.5px}
-  .btbl th{background:#f4f6f8;padding:9px 10px;font-weight:700;color:#516170;border-bottom:1px solid var(--line);text-align:left}
+  .btbl{width:100%;border-collapse:collapse;font-size:15.5px}
+  .btbl th{background:#f4f6f8;padding:11px 12px;font-weight:700;color:#516170;border-bottom:1px solid var(--line);text-align:left}
   .btbl th.n{text-align:center}
-  .btbl td{padding:10px 10px;border-bottom:1px solid #eef1f4;vertical-align:middle}
+  .btbl td{padding:13px 12px;border-bottom:1px solid #eef1f4;vertical-align:middle}
   .btbl td.n{text-align:center;font-variant-numeric:tabular-nums}
-  .btbl .bno{font-weight:800;font-size:16.5px}
-  .bstat{display:inline-block;font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:20px}
-  .bsel{font-size:13.5px;font-weight:700;padding:4px 6px;border:none;border-radius:6px;cursor:pointer;width:100%;min-width:0}
+  .btbl .bno{font-weight:800;font-size:18.5px}
+  .bstat{display:inline-block;font-size:13.5px;font-weight:700;padding:3px 10px;border-radius:20px}
+  .bsel{font-size:14.5px;font-weight:700;padding:5px 6px;border:none;border-radius:6px;cursor:pointer;width:100%;min-width:0}
   .btbl td .binp{width:100%;box-sizing:border-box;min-width:0}
   .btbl td{overflow:hidden}
+  /* 2026-09-30: 래들 작업현황판이 화면 폭보다 넓어질 때 잘리지 않고 가로 스크롤되도록(내용 크기 확대 대응) */
+  #boardLadle .bcol{overflow:visible}
+  #boardLadle .bcol-scroll{overflow-x:auto;border-radius:10px}
+  #boardLadle .binp,#boardLadle input.binp{font-size:15px}
+  /* 2026-09-30: 4조 3교대 근무표(shift4) — 사용자 제공 2026년 실제 근무일정표 사진의 배색을 그대로 재현
+     (조=회색, 주=옅은 하늘색, 야=분홍, 휴=검정 바탕 흰 글씨) */
+  #s4Tbl{border-collapse:collapse;min-width:100%}
+  #s4Tbl th,#s4Tbl td{border:1px solid var(--line);text-align:center;padding:6px 4px;font-size:12.5px;white-space:nowrap}
+  #s4Tbl th{background:var(--head);font-weight:700}
+  #s4Tbl td.s4team{background:var(--head);font-weight:800;text-align:center}
+  #s4Tbl td.s4-jo{background:#dfe3e8;color:#333}
+  #s4Tbl td.s4-ju{background:#dbe7f3;color:#1d3a5f}
+  #s4Tbl td.s4-ya{background:#f6d4de;color:#7a1f3d;font-weight:700}
+  #s4Tbl td.s4-hu{background:#2b2f36;color:#fff}
+  #s4Tbl th.s4today,#s4Tbl td.s4today{box-shadow:inset 0 0 0 2px var(--accent)}
+  #s4Tbl tr.s4myteam td.s4team{background:var(--accent);color:#fff}
+  .s4legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:8px 2px;color:var(--muted)}
+  .s4legend span.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
   .bsel:focus{outline:1px solid var(--accent)}
   .binp{width:100%;border:1px solid transparent;background:transparent;font-size:13.5px;padding:4px 6px;border-radius:4px}
   .binp:hover{border-color:var(--line)}.binp:focus{border-color:var(--accent);background:#fff;outline:none}
@@ -747,6 +765,7 @@
     <div class="side-item" data-view="attend" onclick="nav('attend')"><span class="ic">🏖️</span>휴가 · 잔업 신청</div>
     <div class="side-item" data-view="approve" onclick="nav('approve')"><span class="ic">✍️</span>결재함 <span id="apprBadge" class="apbadge" hidden>0</span></div>
     <div class="side-item" data-view="emp" onclick="nav('emp')"><span class="ic">👥</span>직원 관리</div>
+    <div class="side-item" data-view="shift4" onclick="nav('shift4')"><span class="ic">🔄</span>4조 3교대 근무표</div>
   </div>
   <!-- 2026-09-29: "다른 사람이 보기엔 항목이 너무 많다"는 요청으로 동국제강/포스코 폴더를 다시 하나로 합침.
        대신 [내화물 품목마스터] 화면 상단에 동국제강/포스코 전환 탭을 두어 같은 화면 안에서 오간다(아래 v-prodm 참조). -->
@@ -1404,7 +1423,7 @@
     </div>
     <div class="toolrow" id="ap_dateChips" style="flex-wrap:wrap;gap:6px"></div>
     <div class="tablewrap"><table id="apprTbl">
-      <thead><tr><th style="width:30px"><input type="checkbox" id="ap_all" onchange="toggleApprSelAll(this.checked)" title="결재 가능한 건 전체 선택"></th><th>구분</th><th>상신일</th><th>신청자</th><th>소속</th><th>내용</th><th class="n">일수/시간</th><th style="width:160px">사유</th><th>진행 단계</th><th style="width:230px">결재</th></tr></thead>
+      <thead><tr><th style="width:30px"><input type="checkbox" id="ap_all" onchange="toggleApprSelAll(this.checked)" title="결재 가능한 건 전체 선택"></th><th>구분</th><th>상신일</th><th>신청자</th><th>소속</th><th id="ap_th_content">내용</th><th class="n">일수/시간</th><th style="width:160px">사유</th><th>진행 단계</th><th style="width:230px">결재</th></tr></thead>
       <tbody id="apprBody"></tbody>
     </table></div>
     <div style="font-size:11.5px;color:var(--accent);margin-top:10px">※ 승인하면 직원관리에 등록된 <b>본인 사인이 결재란에 자동으로 날인</b>됩니다. 사인이 없으면 이름으로 표시됩니다.</div>
@@ -1471,6 +1490,31 @@
     </table></div>
   </section>
 
+  <!-- ===== 4조 3교대 근무표 (2026-09-30 신규) ===== -->
+  <section id="v-shift4" class="hidden">
+    <div class="toolrow">
+      <span style="font-size:12px;color:var(--muted)">연도</span>
+      <select class="selbox" id="s4_year" onchange="renderShift4()"></select>
+      <span style="font-size:12px;color:var(--muted)">월</span>
+      <select class="selbox" id="s4_month" onchange="renderShift4()"></select>
+      <button class="btn" onclick="s4GotoToday()">오늘</button>
+      <button class="btn" onclick="downloadShift4Xls()">📥 엑셀</button>
+      <span class="spacer"></span>
+      <span id="s4MyToday" style="font-size:12.5px;font-weight:700;color:var(--accent)"></span>
+    </div>
+    <div class="subhead">SN반 4조 3교대 근무표 <span class="hint">사용자 제공 2026년 근무일정표 기준 · A~D반이 5일 단위로 조(오전)→야간→주간을 순환하며 5일씩 맞물려 돌아갑니다</span></div>
+    <div class="tablewrap"><table id="s4Tbl"></table></div>
+    <div class="s4legend">
+      <span><span class="sw" style="background:#dfe3e8"></span>조 (오전)</span>
+      <span><span class="sw" style="background:#dbe7f3"></span>주 (주간)</span>
+      <span><span class="sw" style="background:#f6d4de"></span>야 (야간)</span>
+      <span><span class="sw" style="background:#2b2f36"></span>휴 (휴무)</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">
+      ※ 2026-01-01(A반=조 시작)을 기준으로 <b>20일 주기</b>(조5일→휴1일→야5일→휴2일→주5일→휴2일)가 A→D→C→B 순으로 5일씩 밀려 반복되도록 계산됩니다.
+      사용자가 제공한 2026년 1·2·9·10월 근무일정표 원본과 전수 대조해 검증했습니다. 축로반(A·B 2개조)은 이 표와 순환 방식이 다를 수 있어 별도 확인 전까지는 포함하지 않았습니다.
+    </div>
+  </section>
 
   <!-- ===== 교대반 인수인계 (SN반) ===== -->
   <section id="v-handover" class="hidden">
@@ -1511,17 +1555,38 @@
 
   <!-- ===== 보고서 자동생성 (PPT) ===== -->
   <section id="v-report" class="hidden">
-    <div class="subhead" style="margin-top:0">📅 월간 보고서 자동생성 <span class="hint">내화물 실적자료 양식</span></div>
-    <div class="toolrow">
-      <select class="selbox" id="rpt_year" onchange="renderReportPreview()"></select>
-      <select class="selbox" id="rpt_month" onchange="renderReportPreview()"></select>
-      <span class="spacer"></span>
-      <button class="btn primary" onclick="generateReportPpt()">📊 PPT 생성</button>
+    <div class="subtabs" id="reportSubtabs">
+      <button class="subtab active" data-rp="usage" onclick="reportTab('usage')">🧱 월간 내화물 사용 보고서(동국제강)</button>
+      <button class="subtab" data-rp="sales" onclick="reportTab('sales')">💰 매출 실적관리(동국R&S 포항사업소)</button>
     </div>
-    <div style="font-size:11.5px;color:var(--muted);margin:0 2px 12px">선택한 월의 원단위·생산량·래들·턴디쉬·전기로 실적을 자동으로 모아 [내화물 실적자료] PPT 양식 그대로 슬라이드를 만듭니다. 생성된 파일은 파워포인트(.pptx)로 다운로드되며, 편집·발표 자료로 바로 사용할 수 있습니다. (이 화면·기능은 계속 보완해 나갈 예정입니다)</div>
-    <div class="cards" id="reportCards"></div>
-    <div class="subhead">생성될 슬라이드 미리보기 <span class="hint">PPT 생성 버튼을 누르면 아래 구성대로 슬라이드가 만들어집니다</span></div>
-    <div id="reportSlidePreview"></div>
+    <!-- 월간 내화물 사용 보고서(동국제강) -->
+    <div class="subpanel active" id="rsp-usage">
+      <div class="subhead" style="margin-top:0">📅 월간 내화물 사용 보고서(동국제강) <span class="hint">내화물 실적자료 양식</span></div>
+      <div class="toolrow">
+        <select class="selbox" id="rpt_year" onchange="renderReportPreview()"></select>
+        <select class="selbox" id="rpt_month" onchange="renderReportPreview()"></select>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="generateReportPpt()">📊 PPT 생성</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin:0 2px 12px">선택한 월의 원단위·생산량·래들·턴디쉬·전기로 실적을 자동으로 모아 [내화물 실적자료] PPT 양식 그대로 슬라이드를 만듭니다. 생성된 파일은 파워포인트(.pptx)로 다운로드되며, 편집·발표 자료로 바로 사용할 수 있습니다. (이 화면·기능은 계속 보완해 나갈 예정입니다)</div>
+      <div class="cards" id="reportCards"></div>
+      <div class="subhead">생성될 슬라이드 미리보기 <span class="hint">PPT 생성 버튼을 누르면 아래 구성대로 슬라이드가 만들어집니다</span></div>
+      <div id="reportSlidePreview"></div>
+    </div>
+    <!-- 매출 실적관리(동국R&S 포항사업소) -->
+    <div class="subpanel" id="rsp-sales">
+      <div class="subhead" style="margin-top:0">💰 매출 실적관리(동국R&S 포항사업소) <span class="hint">사업계획 대비 판매실적 양식</span></div>
+      <div class="toolrow">
+        <select class="selbox" id="rptsl_year" onchange="renderSalesReportPreview()"></select>
+        <select class="selbox" id="rptsl_month" onchange="renderSalesReportPreview()"></select>
+        <span class="spacer"></span>
+        <button class="btn primary" onclick="generateSalesReportPpt()">📊 PPT 생성</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin:0 2px 12px">[실적관리(사업계획대비)] 화면에 입력된 월별 매출·계획 데이터를 자동으로 모아 매출 실적관리 PPT를 만듭니다. 파워포인트(.pptx)로 다운로드됩니다.</div>
+      <div class="cards" id="reportSalesCards"></div>
+      <div class="subhead">생성될 슬라이드 미리보기 <span class="hint">PPT 생성 버튼을 누르면 아래 구성대로 슬라이드가 만들어집니다</span></div>
+      <div id="reportSalesSlidePreview"></div>
+    </div>
   </section>
 
   <!-- ===== 월별 실적관리 ===== -->
@@ -1569,6 +1634,16 @@
     <div class="subhead">월별 판매(사용금액·중량) 계획 대비 실적 <span class="hint">동국제강+포스코/외부 합계 기준 · 실적 = 원단위 총 사용금액/중량(판매량 근사치)</span></div>
     <div class="tablewrap"><table class="bomtbl" id="ppSalesTbl" style="min-width:auto"></table></div>
     <div style="font-size:11px;color:var(--muted);margin:4px 2px 14px">※ 계획은 사업계획 엑셀의 동국제강·포스코/외부 구분을 그대로 담고 있으나, 실적은 현재 앱에 "고객사별 판매실적"이 별도로 없어 <b>합계 기준으로만 달성율을 계산</b>합니다(원단위 총 사용금액·중량을 판매실적 근사치로 사용). 고객사별 실적을 분리하려면 별도 데이터가 필요합니다.</div>
+    <div class="subhead" style="margin-top:16px">매출 실적(구분별) · <span id="ppCatYmLabel" style="color:#1d4ed8"></span> <span class="hint">포항영업소 실적자료 엑셀과 동일한 구분 · 계획·실적을 구분별로 직접 입력하면 달성율·합계·누적실적이 자동 계산됩니다</span></div>
+    <div class="toolrow"><button class="btn" onclick="downloadPlanActualXls()">📥 엑셀(구분별 실적)</button></div>
+    <div class="tablewrap"><table class="bomtbl" id="ppCatTbl" style="min-width:auto"></table></div>
+    <div style="font-size:11px;color:var(--muted);margin:4px 2px 14px">※ 금액 단위: 백만원 · 중량 단위: 톤. <b>익월예상</b>은 다음 달 전망을 미리 입력해두는 칸입니다. <b>누적실적</b>은 그 해 1월부터 선택월까지 입력된 실적금액·중량을 자동 합산합니다.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+      <div style="flex:1;min-width:220px"><div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">COMMENT</div><textarea id="pp_comment" style="width:100%;min-height:56px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px" onchange="setPlanActualText((document.getElementById('pp_ym')||{}).value,'comment',this.value)"></textarea></div>
+      <div style="flex:1;min-width:220px"><div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">증가요인</div><textarea id="pp_inc" style="width:100%;min-height:56px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px" onchange="setPlanActualText((document.getElementById('pp_ym')||{}).value,'inc',this.value)"></textarea></div>
+      <div style="flex:1;min-width:220px"><div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">감소요인</div><textarea id="pp_dec" style="width:100%;min-height:56px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px" onchange="setPlanActualText((document.getElementById('pp_ym')||{}).value,'dec',this.value)"></textarea></div>
+    </div>
+    <div style="margin-top:8px"><div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">주요 ISSUE 사항</div><textarea id="pp_issue" style="width:100%;min-height:72px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px" onchange="setPlanActualText((document.getElementById('pp_ym')||{}).value,'issue',this.value)"></textarea></div>
     <div class="subhead">전기로(EAF) 로저전극·발코니 보수 계획 대비 실적 <span class="hint">A로·B로 · 계획=사업계획 엑셀 월별 예정 건수 · 실적=전기로 수명관리에 등록된 교체건수</span></div>
     <div class="tablewrap"><table class="bomtbl" id="ppEafTbl" style="min-width:auto"></table></div>
     <div class="subhead" style="margin-top:16px">래들·턴디쉬 월별 보수 실적 <span class="hint">참고용(계획치 미입력) · 래들/턴디쉬 수명관리에 등록된 이벤트 건수 자동 집계</span></div>
@@ -2510,8 +2585,8 @@ var PptxGenJS=function(){"use strict";function T(e){return e&&"object"==typeof e
 // PWA 기능 비활성화 (모바일 캐시 문제 해결)
 // function setupPWA(){...} 제거됨 - 항상 최신 파일 사용
 /* ============ 저장소 (IndexedDB) ============ */
-const DB_NAME='dgrns_life_mgmt', DB_VER=11;
-let db=null, ladleData=[], tundishData=[], scheduleData=[], bomData=[], eafData=[], invData=[], invInData=[], stockData=[];
+const DB_NAME='dgrns_life_mgmt', DB_VER=12;
+let db=null, ladleData=[], tundishData=[], scheduleData=[], bomData=[], eafData=[], invData=[], invInData=[], stockData=[], planActualData=[];
 let editId={ladle:null,tundish:null};
 const RESET_CAMP=['신축','대수리(영구장)','철피신규'];
 const END_EVT=['해체','폐기'];
@@ -2532,7 +2607,8 @@ function openDB(){return new Promise((res,rej)=>{const rq=indexedDB.open(DB_NAME
     if(!d.objectStoreNames.contains('leave'))d.createObjectStore('leave',{keyPath:'id'});
     if(!d.objectStoreNames.contains('ot'))d.createObjectStore('ot',{keyPath:'id'});
     if(!d.objectStoreNames.contains('handover'))d.createObjectStore('handover',{keyPath:'id'});
-    if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'});};
+    if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'});
+    if(!d.objectStoreNames.contains('planactual'))d.createObjectStore('planactual',{keyPath:'id'});};
   rq.onsuccess=e=>res(e.target.result);rq.onerror=e=>rej(e.target.error);});}
 function txAll(s){return new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).getAll();
   r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});}
@@ -2697,7 +2773,7 @@ async function submitLadle(){
   const no=document.getElementById('l_no').value.trim(), date=document.getElementById('l_date').value;
   if(!date){toast('일자를 입력하세요');return;} if(!no){toast('래들번호를 입력하세요');return;}
   const type=document.getElementById('l_type').value;
-  const rec={id:editId.ladle||uid(),date,no,vendor:document.getElementById('l_vendor').value.trim(),type,
+  const rec={id:editId.ladle||uid(),date,no,vendor:normVendor(document.getElementById('l_vendor').value.trim()),type,
     slPat:(type==='SL보수')?((document.getElementById('l_slpat')||{}).value||'SL_P1'):'',
     daily:num(document.getElementById('l_daily').value)||0,note:document.getElementById('l_note').value.trim(),seq:Date.now(),
     src:(editId.ladle&&(ladleData.find(x=>x.id===editId.ladle)||{}).src)||'manual'};
@@ -5467,6 +5543,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   attend:['휴가 · 잔업 신청','상신 → 주임 → 계장 → 기성 → 사업소장 결재 · 관리직 확인(회사 시스템 입력)'],
   approve:['결재함','내 결재 대기 문서 · 승인/반려 처리 (사인 자동 날인)'],
   emp:['직원 관리','현장·관리직 직원 등록 · 근무형태(상주/교대 4조3교대) · 개인 사인 등록'],
+  shift4:['4조 3교대 근무표','SN반 A~D반 교대 근무표 자동계산 (2026년 근무일정표 기준)'],
   mperf:['월별 실적관리','전기로·래들·턴디쉬 월별 사용실적 (2026년 내화물 사용현황 양식 기준 자동 집계)'],
   planperf:['실적관리(사업계획대비)','2026년 사업계획(월판매계획·설비별 보수계획) 대비 실적 자동 비교 · 품목별 판매량 변동 순위'],
   handover:['교대반 인수인계','SN반 교대 근무 인수인계사항 · 조업 특이사항 · 턴디쉬 사용현황'],
@@ -5477,7 +5554,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
 let quoteInit=false, curView='home';
 // 2026-09-29: 'poscobase'(포스코 품목단가)는 더 이상 독립된 사이드바 화면이 아니라 'prodm'(내화물 품목마스터)
 // 화면 안의 탭으로 통합됨 — ALL_VIEWS/네비게이션 대상에서 제외하고, prodmTab()이 그 표시를 담당함.
-const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','mperf','planperf','handover','report','stocksd','stockvs','poscononsup'];
+const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup'];
 /* ============ 상단 작업 탭(여러 화면 동시에 열어두고 전환) ============
    2026-09-28: "폴더(화면)를 바꾸면 처음부터 다시 시작해야 해서 불편하다"는 의견 반영 —
    최근/현재 열어본 화면들을 상단에 탭으로 남겨두고 클릭 한번에 다시 전환할 수 있게 하고,
@@ -5533,7 +5610,7 @@ function nav(v){
   openViewTab(v);renderViewTabs();
   // 2026-09-26: 표 너비가 기본 컨텐츠 폭(1180px)보다 넓어 열이 가로 스크롤 없이는 잘려 보이는 화면들
   // (품목마스터의 등록/사용/물량 등)을 wide 컨텐츠(1560px)로 전환해 한 화면에 다 보이게 함.
-  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','posco','stocksd','stockvs','poscononsup'].includes(v));
+  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','shift4','posco','stocksd','stockvs','poscononsup'].includes(v));
   ALL_VIEWS.forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
   document.querySelectorAll('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
   document.getElementById('viewTitle').textContent=VIEWS[v][0];
@@ -5554,6 +5631,7 @@ function nav(v){
   if(v==='attend')initAttend();
   if(v==='approve')initApprove();
   if(v==='emp')initEmpView();
+  if(v==='shift4')initShift4();
   if(v==='mperf')initMperf();
   if(v==='planperf')initPlanPerf();
   if(v==='handover')initHandover();
@@ -5645,9 +5723,9 @@ function boardLadle(){
       <td style="font-size:14.5px;font-weight:700">${last._campStart?esc(fmtYMD(last._campStart)):'-'}</td>
       <td style="font-size:14.5px;font-weight:700;color:#a16207">${pd?esc(fmtYMD(pd)):'-'}</td>
       <td><input class="binp" value="${esc(memo)}" placeholder="특이사항" onchange="setBoardMemo('${key}',this.value)"></td></tr>`;}).join('');
-  return `<div class="bcol"><table class="btbl">
+  return `<div class="bcol"><div class="bcol-scroll"><table class="btbl" style="min-width:980px">
     <thead><tr><th>No</th><th class="n">현재수명(CH)<br><span style="font-weight:400;font-size:9.5px;color:var(--muted)">오늘 사용 입력</span></th><th class="n">콘 수명(CH)<br><span style="font-weight:400;font-size:9.5px;color:var(--muted)">콘보수 시 입력</span></th><th class="n">S/L 수명(CH)<br><span style="font-weight:400;font-size:9.5px;color:var(--muted)">SL보수 시 입력</span></th><th class="n">영구장누적</th><th>현황</th><th>신축일자</th><th>영구장일자</th><th>특이사항</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="9" style="color:#98a2ad;padding:12px">-</td></tr>'}</tbody></table></div>`;
+    <tbody>${rows||'<tr><td colspan="9" style="color:#98a2ad;padding:12px">-</td></tr>'}</tbody></table></div></div>`;
 }
 /* 2026-09-20: 작업현황판 래들 입력 → 래들 수명관리 자동 반영
    현재수명(CH)/콘 수명(CH)/S/L 수명(CH) 입력칸에 값을 넣고 저장하면 각각
@@ -6089,6 +6167,88 @@ function initReport(){
   const mSel=document.getElementById('rpt_month');
   if(mSel&&!mSel.options.length)mSel.innerHTML=MP_MON.map(m=>`<option value="${m}"${m===(new Date().getMonth()+1)?' selected':''}>${m}월</option>`).join('');
   renderReportPreview();
+  initReportSales();
+}
+// 2026-09-30: 보고서 자동생성 화면에 "월간 내화물 사용 보고서(동국제강)" / "매출 실적관리(동국R&S 포항사업소)" 두 탭 추가
+function reportTab(tab){
+  document.querySelectorAll('#reportSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.rp===tab));
+  document.getElementById('rsp-usage').classList.toggle('active',tab==='usage');
+  document.getElementById('rsp-sales').classList.toggle('active',tab==='sales');
+  if(tab==='sales'){initReportSales();renderSalesReportPreview();}
+}
+function initReportSales(){
+  const ySel=document.getElementById('rptsl_year');
+  if(ySel&&!ySel.options.length)ySel.innerHTML=`<option value="2026">2026년</option>`;
+  const mSel=document.getElementById('rptsl_month');
+  if(mSel&&!mSel.options.length)mSel.innerHTML=MP_MON.map(m=>`<option value="${m}"${m===(new Date().getMonth()+1)?' selected':''}>${m}월</option>`).join('');
+  renderSalesReportPreview();
+}
+function renderSalesReportPreview(){
+  const cardsEl=document.getElementById('reportSalesCards'),prevEl=document.getElementById('reportSalesSlidePreview');
+  if(!cardsEl||!prevEl)return;
+  const y=(document.getElementById('rptsl_year')||{}).value||'2026';
+  const m=+((document.getElementById('rptsl_month')||{}).value||(new Date().getMonth()+1));
+  const ym=y+'-'+String(m).padStart(2,'0');
+  const r=planSalesRow(ym);
+  const planW=r[5],planA=r[6];
+  const actW=invTotWeightTon(ym),actA=invTotAmt(ym)/1e6;
+  const hasAct=invMonths().includes(ym)||ym<=todayStr().slice(0,7);
+  cardsEl.innerHTML=card('보고 대상월',y+'년 '+m+'월','')
+    +card('계획 대비 실적 금액',hasAct?pctStr(actA,planA):'-','')
+    +card('계획 대비 실적 중량',hasAct?pctStr(actW,planW):'-','')
+    +card('실적 금액',hasAct?actA.toFixed(1):'-','백만원');
+  const slideList=['① 표지','② 월별 판매 계획 대비 실적(중량·금액·달성율)','③ EAF 로저전극·발코니 보수 계획 대비 실적','④ '+y+'년 '+m+'월 요약'];
+  prevEl.innerHTML='<div class="tablewrap"><table class="mini"><tbody>'
+    +slideList.map(s=>`<tr><td style="padding:8px 12px">${esc(s)}</td></tr>`).join('')+'</tbody></table></div>';
+}
+function buildSalesReportSlides(pptx,y,m){
+  const ym=y+'-'+String(m).padStart(2,'0');
+  rptTitleSlide(pptx,'매출 실적관리','동국R&S 포항사업소',y+'년 '+m+'월');
+  // 월별 판매 계획 대비 실적(전체 12개월)
+  const salesRows=planYmList().map(mm=>{
+    const rr=planSalesRow(mm);const pW=rr[5],pA=rr[6];
+    const aW=invTotWeightTon(mm),aA=invTotAmt(mm)/1e6;
+    const has=invMonths().includes(mm)||mm<=todayStr().slice(0,7);
+    return [invMonthLabel(mm),pW,has?aW.toFixed(1):'-',has?pctStr(aW,pW):'-',pA,has?aA.toFixed(1):'-',has?pctStr(aA,pA):'-'];
+  });
+  rptTableSlide(pptx,'월별 판매 계획 대비 실적',
+    ['월','계획 중량(톤)','실적 중량(톤)','달성율','계획 금액(백만원)','실적 금액(백만원)','달성율'],
+    salesRows,{note:'※ [실적관리(사업계획대비)] 화면의 원단위 총 사용금액·중량을 판매실적 근사치로 사용합니다.'});
+  // EAF 보수 계획 대비 실적
+  const eafRows=planYmList().map(mm=>{
+    const rr=planEafRow(mm);
+    const planSum=rr[1]+rr[2]+rr[3]+rr[4];
+    const actSum=eafActualCount('A','rojeo',mm)+eafActualCount('A','balcony',mm)+eafActualCount('B','rojeo',mm)+eafActualCount('B','balcony',mm);
+    return [invMonthLabel(mm),rr[1],rr[2],rr[3],rr[4],planSum+'/'+actSum];
+  });
+  rptTableSlide(pptx,'EAF 로저전극·발코니 보수 계획 대비 실적',
+    ['월','A로 로저전극(계획)','A로 발코니(계획)','B로 로저전극(계획)','B로 발코니(계획)','합계(계획/실적)'],
+    eafRows,{note:'※ 계획은 사업계획 엑셀의 월별 예정 건수, 실적은 전기로 수명관리에 등록된 교체건수입니다.'});
+  // 선택월 요약 카드
+  const r=planSalesRow(ym);const planW=r[5],planA=r[6];
+  const actW=invTotWeightTon(ym),actA=invTotAmt(ym)/1e6;
+  rptCardsSlide(pptx,y+'년 '+m+'월 요약',[
+    {label:'계획 중량',value:planW.toLocaleString(),unit:'톤'},
+    {label:'실적 중량',value:actW.toFixed(1),unit:'톤'},
+    {label:'계획 금액',value:planA.toLocaleString(),unit:'백만원'},
+    {label:'실적 금액',value:actA.toFixed(1),unit:'백만원'}
+  ]);
+}
+async function generateSalesReportPpt(){
+  if(typeof PptxGenJS==='undefined'){alert('PPT 생성 모듈을 불러오지 못했습니다. 페이지를 새로고침 후 다시 시도해주세요.');return;}
+  try{
+    const pptx=new PptxGenJS();
+    pptx.defineLayout({name:'DK4X3S',width:RPT_W,height:RPT_H});
+    pptx.layout='DK4X3S';
+    pptx.author='동국알앤에스 포항사업소';
+    pptx.company='동국알앤에스';
+    const y=(document.getElementById('rptsl_year')||{}).value||'2026';
+    const m=+((document.getElementById('rptsl_month')||{}).value||(new Date().getMonth()+1));
+    buildSalesReportSlides(pptx,y,m);
+    const fname=`동국R&S_포항사업소_매출실적관리_${y}년${String(m).padStart(2,'0')}월.pptx`;
+    await pptx.writeFile({fileName:fname});
+    toast('매출 실적관리 PPT 파일이 생성되었습니다');
+  }catch(e){console.error(e);alert('PPT 생성 중 오류가 발생했습니다: '+e.message);}
 }
 function renderReportPreview(){
   const cardsEl=document.getElementById('reportCards'),prevEl=document.getElementById('reportSlidePreview');
@@ -7503,6 +7663,93 @@ function renderPlanPerf(){
     planYmList().forEach(m=>{td+=`<tr><td>${invMonthLabel(m)}</td>${tTypes.map(ty=>`<td class="n">${tundishActualCount(ty,m)}</td>`).join('')}</tr>`;});
     document.getElementById('ppTdTbl').innerHTML=td;
   }else{document.getElementById('ppTdTbl').innerHTML='';}
+  renderPlanActualCat();
+}
+/* ============ 매출 실적(구분별) — 포항영업소(9월).xlsx 양식 반영 ============
+   2026-09-30: 엑셀의 "구분"(동국제강 제강/포스코-기존/포스코-신규/시중/축로)별 계획·실적은
+   현재 앱 데이터에 고객사별로 분리되어 있지 않아 자동집계가 불가능 — 사용자 요청에 따라
+   구분별로 직접 입력하는 칸을 추가한다(합계·달성율·누적실적은 자동 계산). */
+const PLAN_CATS=[{k:'dg',l:'동국제강 제강'},{k:'po1',l:'포스코-기존'},{k:'po2',l:'포스코-신규'},{k:'rt',l:'시중'},{k:'rf',l:'축로'}];
+async function loadPlanActual(){try{planActualData=await txAll('planactual');}catch(e){planActualData=[];}}
+function planActualRow(ym){
+  let r=planActualData.find(x=>x.id===ym);
+  if(!r)return Object.assign({id:ym,comment:'',inc:'',dec:'',issue:''},
+    Object.fromEntries(PLAN_CATS.map(c=>[c.k,{pa:0,aa:0,pw:0,aw:0,fa:0,fw:0}])));
+  PLAN_CATS.forEach(c=>{if(!r[c.k])r[c.k]={pa:0,aa:0,pw:0,aw:0,fa:0,fw:0};});
+  return r;
+}
+async function setPlanActualField(ym,cat,field,val){
+  let r=planActualData.find(x=>x.id===ym);
+  if(!r){r=planActualRow(ym);planActualData.push(r);}
+  if(!r[cat])r[cat]={pa:0,aa:0,pw:0,aw:0,fa:0,fw:0};
+  r[cat][field]=+val||0;
+  await putRec('planactual',r);flashSave();
+  renderPlanActualCat();
+}
+async function setPlanActualText(ym,field,val){
+  let r=planActualData.find(x=>x.id===ym);
+  if(!r){r=planActualRow(ym);planActualData.push(r);}
+  r[field]=val;
+  await putRec('planactual',r);flashSave();
+}
+function planActualCumUntil(ym,cat,field){
+  const year=ym.slice(0,4),mon=+ym.slice(5,7);let sum=0;
+  for(let mm=1;mm<=mon;mm++){
+    const r=planActualData.find(x=>x.id===year+'-'+String(mm).padStart(2,'0'));
+    if(r&&r[cat])sum+=(+r[cat][field]||0);
+  }
+  return sum;
+}
+function renderPlanActualCat(){
+  const tbl=document.getElementById('ppCatTbl');if(!tbl)return;
+  const ym=(document.getElementById('pp_ym')||{}).value||todayStr().slice(0,7);
+  const lbl=document.getElementById('ppCatYmLabel');if(lbl)lbl.textContent=invMonthLabel(ym);
+  const r=planActualRow(ym);
+  let t=`<tr><th>구분</th><th class="n">계획금액(백만원)</th><th class="n">실적금액</th><th class="n">달성율</th><th class="n">익월예상금액</th><th class="n">누적실적금액</th>`
+    +`<th class="n">계획중량(톤)</th><th class="n">실적중량</th><th class="n">달성율</th><th class="n">익월예상중량</th><th class="n">누적실적중량</th></tr>`;
+  const sums={pa:0,aa:0,pw:0,aw:0,fa:0,fw:0};
+  PLAN_CATS.forEach(c=>{
+    const v=r[c.k];Object.keys(sums).forEach(k=>sums[k]+=(+v[k]||0));
+    const cumA=planActualCumUntil(ym,c.k,'aa'),cumW=planActualCumUntil(ym,c.k,'aw');
+    t+=`<tr><td>${esc(c.l)}</td>
+      <td class="n"><input type="number" class="iinp" value="${v.pa||0}" onchange="setPlanActualField('${ym}','${c.k}','pa',this.value)"></td>
+      <td class="n"><input type="number" class="iinp" style="font-weight:700;color:#c2410c" value="${v.aa||0}" onchange="setPlanActualField('${ym}','${c.k}','aa',this.value)"></td>
+      <td class="n">${v.pa?pctStr(v.aa,v.pa):'-'}</td>
+      <td class="n"><input type="number" class="iinp" value="${v.fa||0}" onchange="setPlanActualField('${ym}','${c.k}','fa',this.value)"></td>
+      <td class="n" style="color:#1d4ed8;font-weight:700">${iN(cumA)}</td>
+      <td class="n"><input type="number" class="iinp" value="${v.pw||0}" onchange="setPlanActualField('${ym}','${c.k}','pw',this.value)"></td>
+      <td class="n"><input type="number" class="iinp" style="font-weight:700;color:#c2410c" value="${v.aw||0}" onchange="setPlanActualField('${ym}','${c.k}','aw',this.value)"></td>
+      <td class="n">${v.pw?pctStr(v.aw,v.pw):'-'}</td>
+      <td class="n"><input type="number" class="iinp" value="${v.fw||0}" onchange="setPlanActualField('${ym}','${c.k}','fw',this.value)"></td>
+      <td class="n" style="color:#1d4ed8;font-weight:700">${iN(cumW)}</td></tr>`;
+  });
+  const cumASum=PLAN_CATS.reduce((s,c)=>s+planActualCumUntil(ym,c.k,'aa'),0);
+  const cumWSum=PLAN_CATS.reduce((s,c)=>s+planActualCumUntil(ym,c.k,'aw'),0);
+  t+=`<tr style="background:#eef2f6;font-weight:800"><td>합계</td>
+    <td class="n">${iN(sums.pa)}</td><td class="n">${iN(sums.aa)}</td><td class="n">${sums.pa?pctStr(sums.aa,sums.pa):'-'}</td>
+    <td class="n">${iN(sums.fa)}</td><td class="n">${iN(cumASum)}</td>
+    <td class="n">${iN(sums.pw)}</td><td class="n">${iN(sums.aw)}</td><td class="n">${sums.pw?pctStr(sums.aw,sums.pw):'-'}</td>
+    <td class="n">${iN(sums.fw)}</td><td class="n">${iN(cumWSum)}</td></tr>`;
+  tbl.innerHTML=t;
+  const setv=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  setv('pp_comment',r.comment);setv('pp_inc',r.inc);setv('pp_dec',r.dec);setv('pp_issue',r.issue);
+}
+function downloadPlanActualXls(){
+  const ym=(document.getElementById('pp_ym')||{}).value||todayStr().slice(0,7);
+  const r=planActualRow(ym);
+  let t=`<table><tr><th>구분</th><th>계획금액(백만원)</th><th>실적금액</th><th>달성율</th><th>익월예상금액</th><th>누적실적금액</th><th>계획중량(톤)</th><th>실적중량</th><th>달성율</th><th>익월예상중량</th><th>누적실적중량</th></tr>`;
+  const sums={pa:0,aa:0,pw:0,aw:0,fa:0,fw:0};
+  PLAN_CATS.forEach(c=>{
+    const v=r[c.k];Object.keys(sums).forEach(k=>sums[k]+=(+v[k]||0));
+    const cumA=planActualCumUntil(ym,c.k,'aa'),cumW=planActualCumUntil(ym,c.k,'aw');
+    t+=`<tr><td>${esc(c.l)}</td><td>${v.pa||0}</td><td>${v.aa||0}</td><td>${v.pa?pctStr(v.aa,v.pa):''}</td><td>${v.fa||0}</td><td>${cumA}</td><td>${v.pw||0}</td><td>${v.aw||0}</td><td>${v.pw?pctStr(v.aw,v.pw):''}</td><td>${v.fw||0}</td><td>${cumW}</td></tr>`;
+  });
+  t+=`<tr><td>합계</td><td>${sums.pa}</td><td>${sums.aa}</td><td>${sums.pa?pctStr(sums.aa,sums.pa):''}</td><td>${sums.fa}</td><td></td><td>${sums.pw}</td><td>${sums.aw}</td><td>${sums.pw?pctStr(sums.aw,sums.pw):''}</td><td>${sums.fw}</td><td></td></tr>`;
+  t+=`</table><br><table><tr><th>COMMENT</th></tr><tr><td>${esc(r.comment||'')}</td></tr>`
+    +`<tr><th>증가요인</th></tr><tr><td>${esc(r.inc||'')}</td></tr>`
+    +`<tr><th>감소요인</th></tr><tr><td>${esc(r.dec||'')}</td></tr>`
+    +`<tr><th>주요 ISSUE 사항</th></tr><tr><td>${esc(r.issue||'')}</td></tr></table>`;
+  downloadXls('매출실적_구분별_'+ym,t);
 }
 function renderPlanPerfRank(){
   const A=(document.getElementById('pp_a')||{}).value,B=(document.getElementById('pp_b')||{}).value;
@@ -9004,8 +9251,8 @@ const LADLE2026_SEED=[
 {no:"6",date:"2026-07-11",type:"SL보수",vendor:"",daily:141,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:6호 래들 해체일지 , 슬라그라인 보수)"},
 {no:"6",date:"2026-06-11",type:"SL보수",vendor:"",daily:52,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:6호 래들 해체일지 , 슬라그라인 보수)"},
 {no:"8",date:"2026-07-01",type:"SL보수",vendor:"KR",daily:143,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:8호 래들 해체일지 , 슬라그라인 보수(KR))"},
-{no:"3",date:"2026-06-25",type:"SL보수",vendor:"동국R&S",daily:162,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:3호 래들 해체일지 , 슬라그라인 보수(동국R&S))"},
-{no:"3",date:"2026-06-03",type:"SL보수",vendor:"동국R&S",daily:36,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:3호 래들 해체일지 , 슬라그라인 보수(동국R&S))"},
+{no:"3",date:"2026-06-25",type:"SL보수",vendor:"DK",daily:162,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:3호 래들 해체일지 , 슬라그라인 보수(동국R&S))"},
+{no:"3",date:"2026-06-03",type:"SL보수",vendor:"DK",daily:36,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:3호 래들 해체일지 , 슬라그라인 보수(동국R&S))"},
 {no:"13",date:"2026-06-30",type:"해체",vendor:"",daily:106,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:13호 래들 해체일지)"},
 {no:"13",date:"2026-05-30",type:"신축",vendor:"",daily:0,note:"엑셀 해체일지 원본 반영(정확한 신축완료일) · 엑셀 반영(해체일지 7월, 시트:13호 래들 해체일지)"},
 {no:"9",date:"2026-06-25",type:"SL보수",vendor:"",daily:95,note:"엑셀 해체일지 원본 반영(정확한 시공일) · 엑셀 반영(해체일지 7월, 시트:9호 래들 슬라그라인 해체)"},
@@ -9590,19 +9837,25 @@ async function reloadSeed(){
 
 /* ============ 마이그레이션: 비고의 업체값 → 업체 필드 ============ */
 const VENDOR_TOKENS=['DK','KR','원진'];
+// 2026-09-30: "동국R&S"는 "DK"와 동일 업체(요청 반영) — 같은 업체가 서로 다른 이름으로 쌓여
+// [업체별 현황]에서 별도 행으로 나뉘어 보이는 문제를 막기 위해 표준 이름(DK)으로 통일한다.
+const VENDOR_ALIASES={'동국R&S':'DK','동국알앤에스':'DK','동국 R&S':'DK','(주)동국R&S':'DK','주식회사 동국R&S':'DK'};
+function normVendor(v){v=(v||'').trim();return VENDOR_ALIASES[v]||v;}
 async function migrateVendor(){
   let changed=false;
   const fix=async(arr,store)=>{for(const r of arr){
     if(r.vendor===undefined&&VENDOR_TOKENS.includes((r.note||'').trim())){
       r.vendor=r.note.trim();r.note='';await putRec(store,r);changed=true;}
     else if(r.vendor===undefined){r.vendor='';}
+    if(r.vendor&&VENDOR_ALIASES[r.vendor.trim()]){
+      r.vendor=VENDOR_ALIASES[r.vendor.trim()];await putRec(store,r);changed=true;}
   }};
   await fix(ladleData,'ladle');await fix(tundishData,'tundish');
   return changed;
 }
 
 /* ============ 팀 공유(Firebase 실시간 동기화) ============ */
-const FB_STORES=['ladle','tundish','quotes','schedule','bomstd','eaf','inv','invin','stock','emp','leave','ot','handover'];
+const FB_STORES=['ladle','tundish','quotes','schedule','bomstd','eaf','inv','invin','stock','emp','leave','ot','handover','planactual'];
 /* 전 직원 공통 Firebase 자동 연결: 휴대폰별 JSON/팀코드 입력 불필요 */
 const FIREBASE_AUTO_CONFIG={
   apiKey:'AIzaSyDlGT0-edy1sqAFxSojyVsKKTcLLnQm-y0',
@@ -9743,6 +9996,7 @@ async function fbReloadStore(store){
   else if(store==='leave'){leaveData=await txAll('leave');}
   else if(store==='ot'){otData=await txAll('ot');}
   else if(store==='handover'){hoData=await txAll('handover');}
+  else if(store==='planactual'){planActualData=await txAll('planactual');}
   fbRerender();
   if(store==='leave'||store==='ot')setTimeout(()=>{try{notifyPendingApprovals();}catch(e){}},50);
 }
@@ -9777,6 +10031,7 @@ function fbRerender(){try{
   else if(curView==='emp')renderEmp();
   else if(curView==='handover')renderHo();
   else if(curView==='mperf')initMperf();
+  else if(curView==='planperf')renderPlanPerf();
 }catch(e){}
   try{updateMeChip();updateApprBadge();syncChip();
     if(document.body.classList.contains('mv'))mvHome();}catch(e){}}
@@ -10087,6 +10342,90 @@ const FIELD_DEPTS=['축로반','SN반','기성'];
 /* 소속별 반 편성 : 축로반 A·B / SN반 A~D */
 const DEPT_TEAMS={'축로반':['A반','B반'],'SN반':['A반','B반','C반','D반']};
 function teamsOf(d){return DEPT_TEAMS[normDept(d)]||[];}
+
+/* ============ 4조 3교대 근무표 (SN반, 2026-09-30 신규) ============
+   사용자가 제공한 "2026년 근무일정표(4조 3교대)" 사진을 1·2·9·10월 4개 달치 전수 대조하여
+   검증한 20일 순환주기 공식. A반을 기준(2026-01-01=조 시작)으로 D→C→B 순서로 5일씩 밀려 돌아감.
+   조(오전) 5일 → 휴 1일 → 야간 5일 → 휴 2일 → 주간 5일 → 휴 2일 → (반복, 총 20일) */
+const SHIFT4_CYC=['조','조','조','조','조','휴','야','야','야','야','야','휴','휴','주','주','주','주','주','휴','휴'];
+const SHIFT4_OFFSET={'A반':0,'D반':5,'C반':10,'B반':15};
+const SHIFT4_TEAMS=['A반','B반','C반','D반'];
+const SHIFT4_EPOCH=new Date(2026,0,1); // 2026-01-01 = 기준일(로컬 자정)
+const SHIFT4_LABEL={'조':'조(오전)','주':'주간','야':'야간','휴':'휴무'};
+function shift4Code(dateObj,team){
+  const d=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate());
+  const diffDays=Math.round((d-SHIFT4_EPOCH)/86400000);
+  const off=SHIFT4_OFFSET[team]||0;
+  const pos=((diffDays+off)%20+20)%20;
+  return SHIFT4_CYC[pos];
+}
+function initShift4(){
+  const ySel=document.getElementById('s4_year'),mSel=document.getElementById('s4_month');
+  if(ySel&&!ySel.options.length){
+    const yNow=new Date().getFullYear();
+    ySel.innerHTML=[yNow-1,yNow,yNow+1,yNow+2].map(y=>`<option value="${y}"${y===yNow?' selected':''}>${y}년</option>`).join('');
+  }
+  if(mSel&&!mSel.options.length){
+    const mNow=new Date().getMonth()+1;
+    mSel.innerHTML=MP_MON.map(m=>`<option value="${m}"${m===mNow?' selected':''}>${m}월</option>`).join('');
+  }
+  renderShift4();
+}
+function s4GotoToday(){
+  const t=new Date();
+  const ySel=document.getElementById('s4_year'),mSel=document.getElementById('s4_month');
+  if(ySel)ySel.value=t.getFullYear();
+  if(mSel)mSel.value=t.getMonth()+1;
+  renderShift4();
+}
+function s4MyTeam(){
+  const me=meEmp();
+  if(!me||normDept(me.dept)!=='SN반'||!me.team)return '';
+  return me.team;
+}
+function renderShift4(){
+  const tbl=document.getElementById('s4Tbl');if(!tbl)return;
+  const y=+((document.getElementById('s4_year')||{}).value||new Date().getFullYear());
+  const m=+((document.getElementById('s4_month')||{}).value||(new Date().getMonth()+1));
+  const nDays=new Date(y,m,0).getDate();
+  const todayS=todayStr();
+  const myTeam=s4MyTeam();
+  const dow=['일','월','화','수','목','금','토'];
+  let th1='<tr><th style="min-width:60px">반</th>', th2='<tr><th></th>';
+  const rows={};SHIFT4_TEAMS.forEach(t=>rows[t]='<tr class="'+(t===myTeam?'s4myteam':'')+'"><td class="s4team">'+t+'</td>');
+  for(let day=1;day<=nDays;day++){
+    const dt=new Date(y,m-1,day);
+    const ds=y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const isToday=ds===todayS;
+    th1+=`<th class="${isToday?'s4today':''}">${day}</th>`;
+    th2+=`<th class="${isToday?'s4today':''}" style="color:${dt.getDay()===0?'#c0392b':dt.getDay()===6?'#1d4ed8':'inherit'}">${dow[dt.getDay()]}</th>`;
+    SHIFT4_TEAMS.forEach(t=>{
+      const code=shift4Code(dt,t);
+      rows[t]+=`<td class="s4-${code==='조'?'jo':code==='주'?'ju':code==='야'?'ya':'hu'}${isToday?' s4today':''}" title="${SHIFT4_LABEL[code]}">${code}</td>`;
+    });
+  }
+  th1+='</tr>';th2+='</tr>';
+  SHIFT4_TEAMS.forEach(t=>rows[t]+='</tr>');
+  tbl.innerHTML='<thead>'+th1+th2+'</thead><tbody>'+SHIFT4_TEAMS.map(t=>rows[t]).join('')+'</tbody>';
+  const myEl=document.getElementById('s4MyToday');
+  if(myEl){
+    if(myTeam){const code=shift4Code(new Date(),myTeam);myEl.textContent=`오늘 내 근무(${myTeam}) : ${SHIFT4_LABEL[code]}`;}
+    else myEl.textContent='';
+  }
+}
+function downloadShift4Xls(){
+  const y=+((document.getElementById('s4_year')||{}).value||new Date().getFullYear());
+  const m=+((document.getElementById('s4_month')||{}).value||(new Date().getMonth()+1));
+  const nDays=new Date(y,m,0).getDate();
+  const dow=['일','월','화','수','목','금','토'];
+  let t='<table><tr class="hd"><td>반</td>'+Array.from({length:nDays},(_,i)=>`<td>${i+1}</td>`).join('')+'</tr>';
+  t+='<tr class="hd"><td></td>'+Array.from({length:nDays},(_,i)=>`<td>${dow[new Date(y,m-1,i+1).getDay()]}</td>`).join('')+'</tr>';
+  SHIFT4_TEAMS.forEach(team=>{
+    t+=`<tr><td class="hd">${team}</td>`+Array.from({length:nDays},(_,i)=>`<td>${shift4Code(new Date(y,m-1,i+1),team)}</td>`).join('')+'</tr>';
+  });
+  t+='</table>';
+  downloadXls(`4조3교대_근무표_${y}년${String(m).padStart(2,'0')}월`,t);
+}
 const YEAR_LEAVE_TYPE='연중휴가';
 const YEAR_LEAVE_DEFAULT=5;          // 연중휴가 기본 5일
 const SEMI_LEAVE_TYPE='약정연차';    // 약정연차 : 반기(상/하) 4일씩 부여
@@ -11268,8 +11607,8 @@ function renderOt(){
   if(!rows.length){b.innerHTML='<tr><td colspan="11"><div class="empty">잔업신청이 없습니다.</div></td></tr>';return;}
   b.innerHTML=rows.map(r=>`<tr>
     <td style="white-space:nowrap">${esc(r.at||'')}</td><td style="white-space:nowrap"><b>${esc(r.name)}</b></td><td>${esc(r.dept||'')}</td>
-    <td style="white-space:nowrap">${esc(r.date)}</td><td style="white-space:nowrap">${esc(r.st)}~${esc(r.et)}</td>
-    <td class="n">${r.gross||r.hours}</td><td class="n" style="color:var(--muted)">${r.rest||0}</td><td class="n"><b>${r.hours}</b></td>
+    <td style="white-space:nowrap">${esc(r.date)}</td><td style="white-space:nowrap;color:#dc2626;font-weight:800">${esc(r.st)}~${esc(r.et)}</td>
+    <td class="n">${r.gross||r.hours}</td><td class="n" style="color:var(--muted)">${r.rest||0}</td><td class="n" style="color:#dc2626"><b>${r.hours}</b></td>
     <td style="font-size:11.5px">${r.type==='holiday'?'<span style="background:#fef3c7;padding:2px 6px;border-radius:3px;font-weight:600;color:#92400e">휴일근로</span>':'<span style="background:#dbeafe;padding:2px 6px;border-radius:3px;font-weight:600;color:#1e40af">일반 잔업</span>'}</td>
     <td style="font-size:11.5px">${esc(r.reason||'')}</td>
     <td>${stStr(r)}<div style="margin-top:3px">${stepBar(r)}</div>${r.status==='rej'&&r.rej?`<div style="font-size:10.5px;color:#c81e1e;margin-top:2px">${esc(r.rej.reason||'')}</div>`:''}</td>
@@ -11533,6 +11872,10 @@ function renderApprove(){
   if(unconfWrap)unconfWrap.style.display=(scopeNow==='done')?'flex':'none';
   if(scopeNow!=='done'){const cb=document.getElementById('ap_unconf');if(cb)cb.checked=false;}
   renderApprDateChips();
+  // 2026-09-30: "내용" 컬럼이 잔업신청만 볼 때는 실제로 근무시간을 보여주므로 필터에 맞춰 헤더명을 바꿔줌
+  const apKindNow=(document.getElementById('ap_kind')||{}).value||'';
+  const thContent=document.getElementById('ap_th_content');
+  if(thContent)thContent.textContent=apKindNow==='ot'?'근무시간':apKindNow==='leave'?'휴가기간':'내용';
   const rows=apprVisibleRows();
   document.getElementById('ap_count').textContent=rows.length+'건'+(apprDateFilter?' (📅 '+apprDateFilter+' 필터중 — 전체 칩을 누르면 해제)':'');
   const wait=[...leaveData,...otData].filter(d=>canApprove(d));
@@ -11566,7 +11909,7 @@ function renderApprove(){
     <td style="text-align:center">${apprBulkEligible(d)?`<input type="checkbox" ${apprSel.has(d.id)?'checked':''} onchange="toggleApprSel('${d.id}',this.checked)">`:''}</td>
     <td><span class="tag" style="background:${k==='leave'?'#dbeafe':'#ede9fe'};color:${k==='leave'?'#1d4ed8':'#7c3aed'}">${k==='leave'?'휴가원':'잔업'}</span></td>
     <td style="white-space:nowrap">${esc(d.at||'')}</td><td style="white-space:nowrap"><b>${esc(d.name)}</b></td><td style="white-space:nowrap">${esc(d.dept||'')}</td>
-    <td style="white-space:nowrap">${k==='leave'?esc(d.type)+' / '+esc(d.start)+(d.end&&d.end!==d.start?'~'+esc(d.end):'')+' '+d.days+'일':esc(d.date)+' / '+esc(d.st)+'~'+esc(d.et)+' '+d.hours+'h'}</td>
+    <td style="white-space:nowrap">${k==='leave'?esc(d.type)+' / '+esc(d.start)+(d.end&&d.end!==d.start?'~'+esc(d.end):'')+' '+d.days+'일':esc(d.date)+' / <span style="color:#dc2626;font-weight:800">'+esc(d.st)+'~'+esc(d.et)+' ('+d.hours+'h)</span>'}</td>
     <td class="n">${k==='leave'?d.days+'일':d.hours+'h'}</td>
     <td style="font-size:11.5px;min-width:160px;max-width:260px;word-break:keep-all;white-space:normal">${esc(d.reason||'')}</td>
     <td style="white-space:nowrap">${stStr(d)}<div style="margin-top:3px;white-space:nowrap">${stepBar(d)}</div></td>
@@ -12462,10 +12805,11 @@ const ROLE_VIEWS={
   office:null,                                                  // 관리직 : 전체 · 삭제만 제한
   // 2026-09-21: 현장직원(현장기성·SN반·축로반·안전관리담당자)은 근태관리(휴가·잔업 신청)만 접근,
   // 그 외 화면은 전부 숨김 처리 — 사업소장·관리직만 기존처럼 전체 권한 유지
-  foreman:['attend'],
-  sn:['attend'],
-  furnace:['attend'],
-  safety:['attend']
+  // 2026-09-30: 4조 3교대 근무표(shift4)는 본인 근무일정 조회용이라 현장 역할도 열람 가능하도록 함께 허용
+  foreman:['attend','shift4'],
+  sn:['attend','shift4'],
+  furnace:['attend','shift4'],
+  safety:['attend','shift4']
 };
 const FIELD_ROLES=['foreman','sn','furnace','pohang'];
 const FIELD_VIEWS=['board','attend','ladle','tundish','eaf','handover'];
@@ -12643,7 +12987,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
     await migrateVendor();await loadSchedule();await loadBom();await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
     try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();}catch(e){stockData=[];}
-    await loadAttend();await loadHo();
+    await loadAttend();await loadHo();await loadPlanActual();
   }catch(err){document.getElementById('saveTxt').textContent='저장소 사용불가(미리보기)';document.getElementById('saveDot').style.background='#c2410c';}
   refreshLadle();refreshTundish();
   document.getElementById('sch_date').value=todayStr();
