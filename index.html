@@ -753,11 +753,16 @@
     if(r==='pohang')document.body.classList.add('start');
   }catch(e){document.body.classList.add('start');}
 })();
-/* 2026-09-28: 좌측 메뉴 숨김 설정을 첫 렌더링 전에 미리 적용해 깜빡임 방지 (이 PC/브라우저에 저장됨) */
+/* 2026-09-28: 좌측 메뉴 숨김 설정을 첫 렌더링 전에 미리 적용해 깜빡임 방지 (이 PC/브라우저에 저장됨)
+   2026-10-01: "사이트 접속시 사이드바가 항상 보인다"는 요청으로 기본값을 "숨김"으로 변경 —
+   한 번도 선택한 적 없는 PC(저장된 값이 아예 없음)는 처음부터 메뉴가 접힌 채로 시작하고,
+   이후 "메뉴 보이기"를 눌러 직접 펼친 적이 있으면(값 '0') 그 선택을 그대로 존중해 계속 펼친 채로 유지됨. */
 (function(){
   try{
-    if(localStorage.getItem('dgrns_side_collapsed')==='1')document.body.classList.add('side-collapsed');
-  }catch(e){}
+    var v=localStorage.getItem('dgrns_side_collapsed');
+    if(v===null){v='1';try{localStorage.setItem('dgrns_side_collapsed','1');}catch(e2){}}
+    if(v==='1')document.body.classList.add('side-collapsed');
+  }catch(e){document.body.classList.add('side-collapsed');}
 })();
 </script>
 <!-- ===== 사이드바 ===== -->
@@ -13333,6 +13338,12 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
   fillSLpatOptions('SL_P1');onLadleTypeChange();
   applySkin();updateRoleChip();updateMeChip();syncChip();syncSideCollapseBtn();
   {const v=document.getElementById('appVer');if(v)v.textContent='버전 '+APP_VERSION;const b=document.getElementById('boardVer');if(b)b.textContent=APP_VERSION;}applyRoleNav();applyRoleLock();updateApprBadge();
+  // 2026-10-01: "접속(로그인)하면 상단 탭이 예전에 봤던 화면까지 다 열려있다"는 요청 —
+  // 탭 목록은 그 자리에서 본 화면을 다시 찾아가기 위한 "이번 접속" 용도이지, 날짜를 넘겨 계속
+  // 쌓이는 이력이 아니므로, 매번 새로 접속(페이지 로드)할 때는 깨끗하게 비우고 시작한다.
+  // 이후 같은 접속(같은 브라우저 탭)에서 화면을 옮겨다니는 동안에는 기존처럼 탭이 쌓이고
+  // 새로고침 없이 유지된다 — 바뀐 것은 "접속 시점의 초기화"뿐, 탭 자체의 동작은 그대로.
+  openTabs=[];saveOpenTabs();
   nav(defaultView()); // 첫 화면: 일정(현장 권한은 작업현황판)
   renderModePanel();  // 포항사업소 첫 화면: 파트 선택 패널 표시
   applySetupHash();   // 모바일 설정 링크(#s=)로 들어온 경우 팀 공유 자동 설정
