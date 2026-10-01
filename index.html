@@ -771,20 +771,15 @@
     <div class="co">동국R&amp;S</div>
     <div class="ti">포항사업소</div>
   </div>
-  <!-- 2026-10-01(3차): 사이드바 재정리 요청 — 일정스케줄(최상단) → 근태관리 → 작업현황판 →
-       내화물 기준정보 → 제강 원가 관리 → 상품재고관리 → 포스코·영업관리(통합) → 데이터 → 안전(최하단).
-       근태관리·데이터는 사용자가 순번을 지정하지 않아 일정스케줄 바로 아래/안전 바로 위에 배치했고,
-       포스코·영업 관리는 사용자가 "포스코.영업관리"로 함께 지칭해 한 그룹으로 통합함. -->
+  <!-- 2026-10-01(8차): 사이드바 재정리 요청 — 일정스케줄(최상단) → 작업현황판 →
+       내화물 기준정보 → 제강 원가 관리 → 상품재고관리 → 포스코·영업관리(통합) →
+       근태관리 → 안전 → 데이터(최하단).
+       "데이터가 제일하단, 그위에 안전보호구, 그위에 근태관리"라는 명시적 지시에 따라
+       근태관리·안전·데이터 3개 그룹을 맨 아래쪽에 이 순서로 재배치함(이전 라운드에서는
+       근태관리가 최상단 바로 아래, 데이터가 안전 위였음). -->
   <div class="side-group">
     <div class="gh">포항사업소</div>
     <div class="side-item active" data-view="home" onclick="nav('home')"><span class="ic">🗓️</span>일정 · 스케줄</div>
-  </div>
-  <div class="side-group">
-    <div class="gh">근태 관리</div>
-    <div class="side-item" data-view="attend" onclick="nav('attend')"><span class="ic">🏖️</span>휴가 · 잔업 신청</div>
-    <div class="side-item" data-view="approve" onclick="nav('approve')"><span class="ic">✍️</span>결재함 <span id="apprBadge" class="apbadge" hidden>0</span></div>
-    <div class="side-item" data-view="emp" onclick="nav('emp')"><span class="ic">👥</span>직원 관리</div>
-    <div class="side-item" data-view="shift4" onclick="nav('shift4')"><span class="ic">🔄</span>4조 3교대 근무표</div>
   </div>
   <div class="side-group">
     <div class="gh">작업현황판</div>
@@ -822,20 +817,26 @@
     <div class="side-item" data-view="fieldwork" onclick="nav('fieldwork')"><span class="ic">🚗</span>외근업무</div>
   </div>
   <div class="side-group">
+    <div class="gh">근태 관리</div>
+    <div class="side-item" data-view="attend" onclick="nav('attend')"><span class="ic">🏖️</span>휴가 · 잔업 신청</div>
+    <div class="side-item" data-view="approve" onclick="nav('approve')"><span class="ic">✍️</span>결재함 <span id="apprBadge" class="apbadge" hidden>0</span></div>
+    <div class="side-item" data-view="emp" onclick="nav('emp')"><span class="ic">👥</span>직원 관리</div>
+    <div class="side-item" data-view="shift4" onclick="nav('shift4')"><span class="ic">🔄</span>4조 3교대 근무표</div>
+  </div>
+  <!-- 2026-10-01: "사이드바에 안전 파트를 만들어달라"는 요청으로 신설 —
+       10. 안전보호구 폴더의 실제 발주 이력(조은산업)을 기준단가로 가져오고,
+       26년 3월 거래처 변경(→대명공구백화점) 이후 단가는 확인된 자료가 없어 입력란으로 비워둠. -->
+  <div class="side-group">
+    <div class="gh">안전</div>
+    <div class="side-item" data-view="safetygear" onclick="nav('safetygear')"><span class="ic">🦺</span>안전보호구 발주 관리</div>
+  </div>
+  <div class="side-group">
     <div class="gh">데이터</div>
     <div class="side-item" data-view="sync" onclick="nav('sync')"><span class="ic">☁️</span>팀 공유(실시간)</div>
     <div class="side-item" data-act="export" onclick="exportJSON()"><span class="ic">⬇️</span>전체 데이터 내보내기</div>
     <div class="side-item" data-act="import" onclick="document.getElementById('importFile').click()"><span class="ic">⬆️</span>전체 데이터 불러오기</div>
     <div class="side-item" data-act="reload" onclick="reloadSeed()"><span class="ic">♻️</span>엑셀 최신 반영</div>
     <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importJSON(event)">
-  </div>
-  <!-- 2026-10-01: "사이드바에 안전 파트를 만들어달라"는 요청으로 신설 —
-       10. 안전보호구 폴더의 실제 발주 이력(조은산업)을 기준단가로 가져오고,
-       26년 3월 거래처 변경(→대명공구백화점) 이후 단가는 확인된 자료가 없어 입력란으로 비워둠.
-       2026-10-01(3차): "제일 하단에 안전으로 만들어달라"는 요청으로 최하단 배치. -->
-  <div class="side-group">
-    <div class="gh">안전</div>
-    <div class="side-item" data-view="safetygear" onclick="nav('safetygear')"><span class="ic">🦺</span>안전보호구 발주 관리</div>
   </div>
   <div class="side-foot">데이터는 Firebase에 자동 저장됩니다. 정기적으로 [전체 데이터 내보내기]로 파일 백업을 권장합니다.<br><span id="appVer" style="opacity:.75"></span> · <a href="javascript:appReload()" style="color:inherit">최신 버전 받기</a></div>
 </nav>
@@ -964,7 +965,7 @@
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="l_count"></span>
     </div>
     <div class="tablewrap"><table>
-      <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>신축일자</th><th>사용기간</th><th>구분</th><th>현재수명</th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:96px">관리</th></tr></thead>
+      <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th>현재수명</th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:96px">관리</th></tr></thead>
       <tbody id="ladleBody"></tbody>
     </table></div>
     <div class="subhead">래들번호별 현황 <span class="hint">영구장 교체 이후 누적수명·신축횟수</span></div>
@@ -3055,7 +3056,7 @@ function renderLadle(){
   rows=mergeConeSLRows(rows);
   document.getElementById('l_count').textContent=`${rows.length}건`;
   const b=document.getElementById('ladleBody');
-  if(!rows.length){b.innerHTML=`<tr><td colspan="12"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
+  if(!rows.length){b.innerHTML=`<tr><td colspan="11"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
   b.innerHTML=rows.map(r=>{
     let typeCell=r._mergedCone
       ? `<span class="tag ${ltClass('콘보수')}">콘보수</span> <span class="tag ${ltClass('SL보수')}">SL보수</span>`
@@ -3071,7 +3072,6 @@ function renderLadle(){
     return `<tr${ex?' style="opacity:.5;background:#fbfbfc"':''}>
     <td style="white-space:nowrap">${esc(r.date)}</td><td><strong>${esc(noLabel(r.no))}</strong></td>
     <td>${vendorTag(r.vendor)}</td>
-    <td style="white-space:nowrap">${r._campStart?esc(r._campStart):'<span style="color:#c5ccd3">-</span>'}</td>
     <td style="white-space:nowrap">${period}</td>
     <td>${typeCell}${ex?' <span class="tag" style="background:#e2e8f0;color:#475569;font-size:9.5px">제외</span>':''}</td>
     <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}${END_EVT.includes(r.type)?' title="콘/SL = 콘보수·SL보수 시점의 부위별 수명(래들 전체 수명과 별도 관리 · 서로 더하는 값 아님) · 해체 = 이번 캠페인 최종 해체수명"':''}>${esc(String(ladleLifeChain(r)))}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
@@ -5938,12 +5938,12 @@ function downloadLadleExcel(){ /* 비고 포함 */
   if(fv)rows=rows.filter(r=>(r.vendor||'')===fv);
   if(q)rows=rows.filter(r=>(r.no+' '+(r.vendor||'')+' '+(r.note||'')).toLowerCase().includes(q));
   if(!rows.length){toast('내보낼 데이터가 없습니다');return;}
-  const head=`<tr>${['일자','래들번호','업체','신축일자','사용시작','사용종료','사용일수','구분','패턴','현재수명','누적수명','영구장누적수명','비고'].map(h=>`<td class="hd">${h}</td>`).join('')}</tr>`;
+  const head=`<tr>${['일자','래들번호','업체','사용시작','사용종료','사용일수','구분','패턴','현재수명','누적수명','영구장누적수명','비고'].map(h=>`<td class="hd">${h}</td>`).join('')}</tr>`;
   const body=rows.map(r=>{const end=END_EVT.includes(r.type)?r.date:(r.type==='사용'?r.date:'');
     const per=((END_EVT.includes(r.type)||r.type==='사용')&&r._campStart)?daysBetween(r._campStart,r.date):null;
     const pat=END_EVT.includes(r.type)?(r._campSL?'SL보수':'무보수'):'';
     return `<tr><td>${esc(r.date)}</td><td>${esc(r.no)}</td><td>${esc(r.vendor||'')}</td>
-      <td>${esc(r._campStart||'')}</td><td>${esc(r._campStart||'')}</td><td>${esc(end)}</td>
+      <td>${esc(r._campStart||'')}</td><td>${esc(end)}</td>
       <td style="${XL_AMT}">${per!=null?per:''}</td><td>${esc(r.type)}</td><td>${pat}</td>
       <td style="${XL_AMT}">${r.daily||''}</td><td style="${XL_AMT}">${r._camp!=null?r._camp:''}</td>
       <td style="${XL_AMT}">${r._shell!=null?r._shell:''}</td><td>${esc(r.note||'')}</td></tr>`;}).join('');
