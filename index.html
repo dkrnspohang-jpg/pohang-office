@@ -946,6 +946,7 @@
       <select class="selbox" id="l_filterType" onchange="renderLadle();renderLadleVendorSummary();renderLadleCards()"></select>
       <select class="selbox" id="l_filterVendor" onchange="renderLadle()"><option value="">전체 업체</option></select>
       <button class="btn" onclick="downloadLadleExcel()">📥 엑셀</button>
+      <button class="btn danger adm-only" onclick="cleanBareLadleNos()" title="래들번호가 '5호'처럼 호가 붙지 않고 숫자만 입력된 중복 기록을 찾아 삭제합니다">🧹 번호 정리</button>
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="l_count"></span>
     </div>
     <div class="tablewrap"><table>
@@ -2813,6 +2814,20 @@ function editLadle(id){const r=ladleData.find(x=>x.id===id);if(!r)return;editId.
   document.getElementById('lFormTitle').textContent='✎ 래들 기록 수정';document.querySelector('.main').scrollTo({top:0,behavior:'smooth'});}
 async function removeLadle(id){if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}if(!confirm('이 기록을 삭제할까요?'))return;
   await delRec('ladle',id);ladleData=ladleData.filter(x=>x.id!==id);flashSave();toast('삭제되었습니다');refreshLadle();}
+/* 2026-10-01: 래들번호 필터에 '5','5호'처럼 호(呼)가 붙지 않은 채 숫자만 입력된 중복 기록이
+   쌓여 드롭다운이 지저분하다는 신고 → 숫자만 입력된 래들번호 기록을 찾아 일괄 삭제하는 관리자 전용 정리 기능.
+   'NO.3'처럼 접두어가 붙은 값은 건드리지 않고, 순수 숫자(공백 제거 후 digit만)만 대상으로 함 */
+async function cleanBareLadleNos(){
+  if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}
+  const bad=ladleData.filter(r=>/^\d+$/.test(String(r.no||'').trim()));
+  if(!bad.length){toast('정리할 항목이 없습니다 (숫자만 입력된 래들번호 없음)');return;}
+  const nums=[...new Set(bad.map(r=>r.no))].sort(cmpNo);
+  if(!confirm(`래들번호가 '호' 없이 숫자만 입력된 기록이 ${bad.length}건 있습니다 (번호: ${nums.join(', ')}).\n\n이 기록들을 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.`))return;
+  for(const r of bad){try{await delRec('ladle',r.id);}catch(e){}}
+  const ids=new Set(bad.map(r=>r.id));
+  ladleData=ladleData.filter(x=>!ids.has(x.id));
+  flashSave();toast(bad.length+'건 삭제되었습니다');refreshLadle();
+}
 function refreshLadle(){annotate();syncNoOptions();renderLadle();renderLadleVendorSummary();renderLadleSummary();renderLadleCards();if(curView==='board')renderBoard();}
 
 function renderLadle(){
@@ -4710,12 +4725,25 @@ function diaSetPhoto(i,id){diaCur.photos=diaCur.photos||[null,null];
   const old=diaCur.photos[i];diaCur.photos[i]=id;if(old)removePhotoBlob(old);
   renderLadleDia();}
 function diaRemovePhoto(i){diaCur.photos=diaCur.photos||[null,null];const id=diaCur.photos[i];if(id)removePhotoBlob(id);diaCur.photos[i]=null;renderLadleDia();}
+// 2026-10-01: 해체 모식도 단수별 잔존 등 숫자 입력칸에서 ↑↓ 화살표가 숫자를 증감시키는 대신
+// 같은 열의 위/아래 칸으로 포커스를 이동하도록(엑셀처럼) 변경
+function diaNumKey(e,el){
+  if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+  const td=el.closest('td');const tr=td&&td.closest('tr');if(!td||!tr)return;
+  const idx=Array.prototype.indexOf.call(tr.children,td);
+  const nextTr=e.key==='ArrowDown'?tr.nextElementSibling:tr.previousElementSibling;
+  if(!nextTr)return;
+  const nextTd=nextTr.children[idx];if(!nextTd)return;
+  const nextInput=nextTd.querySelector('input.dnum');if(!nextInput)return;
+  e.preventDefault();
+  nextInput.focus();nextInput.select();
+}
 function renderLadleDia(){
   if(!diaCur){loadDiaRecord();return;}
   if(!diaCur.photos)diaCur.photos=[null,null];
   const ch=+document.getElementById('l_diaCH').value||0;diaCur.ch=ch;
   const dv=ch||1, L=diaLimits();
-  const ni=(v,on)=>`<input type="number" value="${v}" class="dnum" onchange="${on};renderLadleDia()">`;
+  const ni=(v,on)=>`<input type="number" value="${v}" class="dnum" onchange="${on};renderLadleDia()" onkeydown="diaNumKey(event,this)">`;
   const rr=(spec,rem)=>{const wear=Math.max(0,(+spec||0)-(+rem||0));return {wear,rate:wear/dv};};
   const warn=[];
   const tdRec=ladleData.find(r=>r.no===diaCur.no&&r.date===diaCur.date&&DIA_EVT.includes(r.type));
@@ -4825,7 +4853,9 @@ function delDia(){
   (rec.photos||[]).forEach(pid=>{if(pid)removePhotoBlob(pid);});
   delete diaStore[diaKey(no,date)];saveDiaStore(diaStore);initDiaTeardowns();toast('삭제되었습니다');
 }
-// 현재 화면에 표시된 해체 모식도 상태를 그대로 엑셀로 내보내기
+// 2026-10-01: 기존에는 PP-CONE·단수별잔존·점검정보를 세로로 쭉 이어붙여 여러 화면을 내려야 했음
+// → 화면의 1페이지 레이아웃(①PP-CONE+②점검정보 | ③단수별잔존 | ④래들단면)을 그대로 따라
+// 가로 3단으로 배치한 표 하나로 내보내도록 재구성(엑셀에서도 한 화면에 다 보이게)
 function exportDiaXls(){
   if(!diaCur){toast('내보낼 모식도가 없습니다');return;}
   const ch=+((document.getElementById('l_diaCH')||{}).value)||diaCur.ch||0;
@@ -4833,30 +4863,61 @@ function exportDiaXls(){
   const tdRec=ladleData.find(r=>r.no===diaCur.no&&r.date===diaCur.date&&DIA_EVT.includes(r.type));
   const isEnd=!tdRec||END_EVT.includes(tdRec.type);
   const kindLab=isEnd?'해체일지':((tdRec&&tdRec.type||'')+' 점검일지');
-  let t=`<table><tr><td class="hd" colspan="7">동국알앤에스 · 포항사업소 래들 ${xlEsc(kindLab)}</td></tr>
-    <tr><td class="nob">래들번호</td><td class="nob">${xlEsc(diaCur.no||'')}</td><td class="nob">구분</td><td class="nob">${xlEsc(diaCur.ev||'')}</td><td class="nob">총사용수명(CH)</td><td class="nob" colspan="2">${ch}</td></tr>
-    <tr><td class="hd">단</td><td class="hd">구간</td><td class="hd">규격(mm)</td><td class="hd">#1 잔존(mm)</td><td class="hd">#1 용손율</td><td class="hd">#2 잔존(mm)</td><td class="hd">#2 용손율</td></tr>`;
-  diaCur.courses.forEach(c=>{
-    const sl=c.n>=SL_COURSE_MIN;
-    const r1=Math.max(0,(+c.spec||0)-(+c.r1||0))/dv, r2=Math.max(0,(+c.spec||0)-(+c.r2||0))/dv;
-    t+=`<tr><td>${c.n}</td><td>${sl?'S/L':'M/L'}</td><td>${c.spec}</td><td>${c.r1}</td><td>${r1.toFixed(2)}</td><td>${c.r2}</td><td>${r2.toFixed(2)}</td></tr>`;
-  });
-  const bb=Math.max(0,(+diaCur.bottom.spec||0)-(+diaCur.bottom.rem||0))/dv;
-  t+=`<tr><td colspan="2">바닥</td><td>${diaCur.bottom.spec}</td><td colspan="2">${diaCur.bottom.rem}</td><td colspan="2">${bb.toFixed(2)}</td></tr></table>`;
-  let t2=`<table><tr><td class="hd" colspan="6">PP-CONE 구간별 용손</td></tr>
-    <tr><td class="hd">구분</td><td class="hd">기간</td><td class="hd">CH</td><td class="hd">#1 잔존</td><td class="hd">#2 잔존</td><td class="hd">용손율(#1/#2)</td></tr>`;
+  const dateLab=isEnd?'해체':'점검';
+  const L=diaLimits();
+  const warn=[];
+  diaCur.courses.forEach(c=>{const mn=Math.min(+c.r1||0,+c.r2||0);if(mn<diaLimit(c.n))warn.push(c.n+'단('+mn+')');});
+
+  // ① PP-CONE 구간별 용손
+  let ppTbl=`<table><tr><td class="hd" colspan="6">① PP-CONE (${PP_SPEC}-잔존)÷구간CH</td></tr>
+    <tr><td class="hd">구분</td><td class="hd">기간</td><td class="hd">CH</td><td class="hd">#1</td><td class="hd">#2</td><td class="hd">용손율</td></tr>`;
   diaCur.segs.forEach(g=>{
     const d=(+g.ch||1), r1=Math.max(0,PP_SPEC-(+g.p1||0))/d, r2=Math.max(0,PP_SPEC-(+g.p2||0))/d;
-    t2+=`<tr><td>${xlEsc(g.lab)}</td><td>${xlEsc(g.pd||'')}</td><td>${g.ch||0}</td><td>${g.p1}</td><td>${g.p2}</td><td>${r1.toFixed(2)}/${r2.toFixed(2)}</td></tr>`;
+    ppTbl+=`<tr><td>${xlEsc(g.lab)}</td><td>${xlEsc(g.pd||'')}</td><td>${g.ch||0}</td><td>${g.p1}</td><td>${g.p2}</td><td>${r1.toFixed(2)}/${r2.toFixed(2)}</td></tr>`;
   });
-  t2+='</table>';
-  const t3=`<table><tr><td class="hd" colspan="2">점검 정보</td></tr>
+  ppTbl+='</table>';
+
+  // ② 해체(보수) 점검 정보
+  const insTbl=`<table><tr><td class="hd" colspan="2">② ${isEnd?'해체 점검':'보수 점검'}</td></tr>
     <tr><td class="nob">점검일</td><td class="nob">${xlEsc(fmtYMD(diaCur.insDate||diaCur.date||''))}</td></tr>
     <tr><td class="nob">점검자</td><td class="nob">${xlEsc(diaCur.insBy||'')}</td></tr>
     <tr><td class="nob">입회자</td><td class="nob">${xlEsc(diaCur.insWith||'')}</td></tr>
     <tr><td class="nob">업체</td><td class="nob">${xlEsc(diaCur.vendor||'')}</td></tr>
     <tr><td class="nob">Remark</td><td class="nob">${xlEsc(diaCur.remark||'')}</td></tr></table>`;
-  downloadXls(`래들해체모식도_${diaCur.no||''}_${diaCur.date||todayStr()}`,t+t2+t3);
+
+  // ③ 단수별 잔존 (화면과 동일 : 단·규격·#1·율·#2·율·최소)
+  let courseTbl=`<table><tr><td class="hd" colspan="7">③ 단수별 잔존 (용손율=(규격-잔존)÷${ch}CH)</td></tr>
+    <tr><td class="hd">단</td><td class="hd">규격</td><td class="hd">#1</td><td class="hd">율</td><td class="hd">#2</td><td class="hd">율</td><td class="hd">최소</td></tr>`;
+  diaCur.courses.forEach(c=>{
+    const r1=Math.max(0,(+c.spec||0)-(+c.r1||0))/dv, r2=Math.max(0,(+c.spec||0)-(+c.r2||0))/dv;
+    const mn=Math.min(+c.r1||0,+c.r2||0);
+    courseTbl+=`<tr><td>${c.n}</td><td>${c.spec}</td><td>${c.r1}</td><td>${r1.toFixed(2)}</td><td>${c.r2}</td><td>${r2.toFixed(2)}</td><td>${mn}</td></tr>`;
+  });
+  const bb=Math.max(0,(+diaCur.bottom.spec||0)-(+diaCur.bottom.rem||0))/dv;
+  courseTbl+=`<tr><td class="nob">바닥</td><td>${diaCur.bottom.spec}</td><td colspan="2">${diaCur.bottom.rem}</td><td colspan="3">${bb.toFixed(2)} mm/CH</td></tr></table>`;
+
+  // ④ 래들 단면(해체) — 화면 단면도의 #1 PP·#2 PP 수치를 그대로 표로 표현
+  let crossTbl=`<table><tr><td class="hd" colspan="3">④ 래들 단면 (${xlEsc(isEnd?'해체':(tdRec&&tdRec.type||'점검'))})</td></tr>
+    <tr><td class="hd">단</td><td class="hd">#1 PP</td><td class="hd">#2 PP</td></tr>`;
+  diaCur.courses.forEach(c=>{crossTbl+=`<tr><td>${c.n}</td><td>${c.r1}</td><td>${c.r2}</td></tr>`;});
+  crossTbl+=`<tr><td class="nob">바닥</td><td colspan="2">${diaCur.bottom.rem} / ${diaCur.bottom.rem}</td></tr>
+    <tr><td class="hd" colspan="3">안전 기준잔존</td></tr>
+    <tr><td class="nob">S/L</td><td class="nob" colspan="2">${L.sl}</td></tr>
+    <tr><td class="nob">M/L</td><td class="nob" colspan="2">${L.ml}</td></tr></table>`;
+
+  const main=`<table>
+    <tr><td class="hd" colspan="12">동국알앤에스 · 포항사업소 래들 ${xlEsc(kindLab)}</td></tr>
+    <tr><td class="nob">래들번호</td><td class="nob">${xlEsc(diaCur.no||'')}</td><td class="nob">구분</td><td class="nob">${xlEsc(diaCur.ev||'')}</td>
+        <td class="nob">총사용수명(CH)</td><td class="nob">${ch}</td><td class="nob" colspan="6">${dateLab} ${xlEsc(fmtYMD(diaCur.date||''))}</td></tr>
+    <tr>
+      <td class="nob" colspan="4" style="vertical-align:top">${ppTbl}${insTbl}</td>
+      <td class="nob" colspan="4" style="vertical-align:top">${courseTbl}</td>
+      <td class="nob" colspan="4" style="vertical-align:top">${crossTbl}</td>
+    </tr>
+    ${warn.length?`<tr><td class="nob" colspan="12" style="color:#dc2626;font-weight:bold">⚠ 기준잔존 미달 : ${xlEsc(warn.join(', '))}</td></tr>`:''}
+    <tr><td class="nob" colspan="12">점검자 ${xlEsc(diaCur.insBy||'')} / 입회 ${xlEsc(diaCur.insWith||'')} / 점검일 ${xlEsc(fmtYMD(diaCur.insDate||diaCur.date||''))}</td></tr>
+  </table>`;
+  downloadXls(`래들해체모식도_${diaCur.no||''}_${diaCur.date||todayStr()}`,main);
 }
 /* ---- 잔존·용손율 요약(부위별 최소잔존·용손율 · 업체별) ---- */
 function diaZoneStats(rec){
@@ -10917,12 +10978,12 @@ function canApprove(d){
     return false;
   }
 
+  // 2026-09-30: "잔업신청은 주임 이상이 여러 반원을 대표로 한번에 상신할 수 있다"(2026-09-26 반영)는
+  // 정책과 어긋나게, 결재 단계에서는 '같은 반'까지 정확히 일치해야 승인 가능해서 다른 반원 몫으로 대리
+  // 상신한 건은 그 반 소속 주임이 따로 없으면 영영 결재가 올라가지 않는 오류가 있었음(정봉화 주임 신고 건).
+  // 대리 상신 정책과 맞추어 '주임' 단계도 같은 소속(부서)이면 반 구분 없이 결재 가능하도록 완화.
   const md=normDept(me.dept), td=normDept(d.dept);
-  if(st==='jun'){                                           // 주임 : 같은 소속 · 같은 반
-    if(td!==md)return false;
-    const ap=empData.find(e=>e.id===d.empId)||{};
-    return (ap.team||'')===(me.team||'');
-  }
+  if(st==='jun')return td===md;                             // 주임 : 같은 소속(반 무관, 2026-09-30 완화)
   if(st==='gye')return td===md;                             // 계장 : 같은 소속만
   return true;                                              // 기성 · 사업소장
 }
