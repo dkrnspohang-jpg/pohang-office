@@ -2831,18 +2831,28 @@ async function cleanBareLadleNos(){
 // 2026-10-01: 위 cleanBareLadleNos()는 관리자가 버튼을 눌러야만 동작하는데, 아무도 누르지 않으면
 // 래들번호 필터·작업현황판(boardLadle, 래들 수를 ladleData의 distinct(no)로 뽑음) 양쪽에 '1호'와
 // '1'이 서로 다른 번호로 계속 따로 보이는 문제가 그대로 남는다는 재신고 → migrateVendor()처럼
-// 앱 시작 시 1회 자동으로(확인창 없이) 정리하는 마이그레이션을 추가. 'NO.3'처럼 접두어가 붙은
-// 값은 그대로 두고, 순수 숫자로만 저장된 기록만 대상으로 함. 평생 1회만 실행(플래그로 제한),
-// 이후 새로 들어오는 숫자만 데이터는 관리자가 위 수동 버튼으로 다시 정리하면 됨.
+// 앱 시작 시 자동으로(확인창 없이) 정리하는 마이그레이션을 추가. 'NO.3'처럼 접두어가 붙은
+// 값은 그대로 두고, 순수 숫자로만 저장된 기록만 대상으로 함.
+// 2026-10-01 (2차 수정): 1회성 플래그 방식은 "삭제해도 다시 돌아온다"는 재신고로 폐기.
+// 원인: 이 함수가 앱 시작 직후(Firebase 연결 전, fbOn=false) 실행되므로 delRec()가 남기는
+// 삭제기록(fbTomb)이 fbOnWrite에서 바로 무시되어 팀 저장소(클라우드) 쪽 문서는 전혀 정리되지
+// 않는다. 그 뒤 fbAutoConnect()가 연결되면, 클라우드엔 더러운(숫자만 있는) 옛 데이터가 그대로
+// 남아있고 fbGuardApply의 안전장치(팀 자료가 이 PC의 50% 미만일 때만 보류)는 "팀 자료가 더 많은"
+// 이 경우엔 걸리지 않으므로, 실시간 동기화(onSnapshot)가 올 때마다 fbApplyStore가 그 더러운
+// 데이터로 로컬을 그대로 덮어써 버린다 — 그래서 지워도 지워도 되돌아오는 것처럼 보였다.
+// 해결: (1) 1회성 플래그를 없애고 ladle 데이터가 적재될 때마다 매번 다시 정리(멱등적이라 지울
+// 게 없으면 그냥 끝남), (2) fbReloadStore('ladle') 직후에도 걸어서 팀 동기화로 더러운 데이터가
+// 들어올 때마다 즉시 재정리되게 하고, (3) 그 정리 시점을 fbApplying이 false로 돌아온 뒤로 지연시켜
+// (emp 서명 보정과 동일한 패턴) delRec()의 fbOnWrite가 실제로 팀 저장소에도 삭제를 업로드하게
+// 함으로써 클라우드 쪽 문서 자체를 깨끗하게 수렴시킨다(모든 PC가 같은 결과로 정리됨).
 async function autoCleanBareLadleNos(){
-  if(localStorage.getItem('dgrns_ladle_barenos_cleaned_v1'))return;
   try{
     const bad=ladleData.filter(r=>/^\d+$/.test(String(r.no||'').trim()));
+    if(!bad.length)return;
     for(const r of bad){try{await delRec('ladle',r.id);}catch(e){}}
     const ids=new Set(bad.map(r=>r.id));
     ladleData=ladleData.filter(x=>!ids.has(x.id));
   }catch(e){}
-  try{localStorage.setItem('dgrns_ladle_barenos_cleaned_v1','1');}catch(e){}
 }
 function refreshLadle(){annotate();syncNoOptions();renderLadle();renderLadleVendorSummary();renderLadleSummary();renderLadleCards();if(curView==='board')renderBoard();}
 
@@ -4642,6 +4652,45 @@ function initDiaTeardowns(){
   tsel.innerHTML=opts.length?opts.join(''):`<option value="${todayStr()}">${fmtYMD(todayStr())} · ${noLab} · (신규)</option>`;
   loadDiaRecord();
 }
+// 2026-10-01: 같은 캠페인(_campStart) 안에서 이번 기록보다 앞선 날짜의 '저장된' 모식도 기록을
+// 찾는다 (예: 8호 67회 S/L보수 → 69회 콘보수(모식도 대상 아님) → 153회 최종해체인 경우,
+// 153회 해체 입력 시 67회 S/L보수의 단수별 잔존·PP-CONE 구간을 기본값으로 가져오기 위함).
+// 내림차순(ladleTeardowns 반환 순서)이라 prior[0]이 가장 최근(직전) 기록.
+function diaCampPriorSaved(no,campStart,beforeDate){
+  if(!campStart)return [];
+  return ladleTeardowns(no).filter(r=>r._campStart===campStart&&r.date<beforeDate&&diaStore[diaKey(no,r.date)]);
+}
+// prevKey(dia:no:date)의 저장된 측정값(단수별 #1/#2 잔존, 바닥 잔존, PP-CONE 구간)을 현재
+// diaCur로 복사한다. 단(n) 번호 기준으로 맞추므로 구분(무보수/S/L보수)이 달라 규격이 달라도
+// 실측값 자체는 그대로 이어받는다 — 구간(segs)은 이전 구간들을 그대로 이어붙이고 이번 기록용
+// 새 구간 하나만 추가해, PP-CONE 누적 이력이 끊기지 않게 한다. 렌더링/저장은 호출부에서 처리.
+function diaApplyCarry(prevKey){
+  if(!diaCur||!diaStore[prevKey])return false;
+  const prev=diaMigrate(JSON.parse(JSON.stringify(diaStore[prevKey])));
+  (diaCur.courses||[]).forEach(c=>{
+    const pc=(prev.courses||[]).find(x=>x.n===c.n);
+    if(pc){c.r1=pc.r1;c.r2=pc.r2;}
+  });
+  if(prev.bottom&&diaCur.bottom)diaCur.bottom.rem=prev.bottom.rem;
+  if(Array.isArray(prev.segs)&&prev.segs.length){
+    const tail=diaCur.segs[diaCur.segs.length-1]||{lab:diaCur.ev==='S/L보수'?'S/L보수':'해체',pd:'',ch:0,p1:PP_SPEC,p2:PP_SPEC};
+    diaCur.segs=prev.segs.map(s=>Object.assign({},s)).concat([Object.assign({},tail)]);
+  }
+  diaCur._carriedFrom=prevKey;
+  return true;
+}
+function diaCarryForwardManual(prevKey){
+  if(!diaCur||!prevKey)return;
+  if(!confirm('선택한 이전 기록의 단수별 잔존값·PP-CONE 구간을 가져와 지금 입력값을 덮어씁니다.\n계속할까요?'))return;
+  if(diaApplyCarry(prevKey)){renderLadleDia();toast('이전 기록 값을 가져왔습니다 · 바뀐 부분만 수정하세요');}
+}
+function diaCarryReset(){
+  if(!diaCur)return;
+  if(!confirm('가져온 값을 지우고 기본 규격으로 초기화할까요?'))return;
+  const ev=diaCur.ev,ch=diaCur.ch,no=diaCur.no,date=diaCur.date;
+  diaCur=Object.assign(diaBlank(ev,ch),{no,date});
+  renderLadleDia();
+}
 function loadDiaRecord(){
   const no=document.getElementById('l_diaNo').value, date=document.getElementById('l_diaTd').value;
   if(!date){document.getElementById('ladleDia').innerHTML='<div class="empty">해체 기록이 없습니다.</div>';return;}
@@ -4649,7 +4698,15 @@ function loadDiaRecord(){
   const evAuto=(td&&(td.type==='SL보수'||td._campSL))?'S/L보수':'무보수';
   const key=diaKey(no,date);
   if(diaStore[key]){diaCur=diaMigrate(JSON.parse(JSON.stringify(diaStore[key])));}
-  else{diaCur=diaBlank(evAuto,(td?td.daily:0)||0);}
+  else{
+    diaCur=diaBlank(evAuto,(td?td.daily:0)||0);
+    // 새 기록(아직 저장 전)일 때만 — 같은 캠페인의 직전 저장 기록이 있으면 자동으로 값을 가져온다.
+    // 예: 슬라그라인보수 측정값을 그대로 들고 와서 해체 시엔 바뀐 단만 고치면 되게.
+    try{
+      const prior=diaCampPriorSaved(no,td&&td._campStart,date);
+      if(prior.length)diaApplyCarry(diaKey(no,prior[0].date));
+    }catch(e){}
+  }
   document.getElementById('l_diaEvent').value=diaCur.ev;
   document.getElementById('l_diaCH').value=diaCur.ch||(td?td.daily:0)||0;
   diaCur.no=no;diaCur.date=date;
@@ -4814,23 +4871,35 @@ function diaSetPhoto(i,id){diaCur.photos=diaCur.photos||[null,null];
 function diaRemovePhoto(i){diaCur.photos=diaCur.photos||[null,null];const id=diaCur.photos[i];if(id)removePhotoBlob(id);diaCur.photos[i]=null;renderLadleDia();}
 // 2026-10-01: 해체 모식도 단수별 잔존 등 숫자 입력칸에서 ↑↓ 화살표가 숫자를 증감시키는 대신
 // 같은 열의 위/아래 칸으로 포커스를 이동하도록(엑셀처럼) 변경
+// 2026-10-01(수정): 처음 버전은 <td>/<tr> DOM 위치로 다음 칸을 찾았는데, 값을 실제로 "수정한 뒤"
+// 화살표를 누르면 엉뚱한 방향으로 넘어가는 문제가 있었음 — 원인은 포커스를 옮기려고 다음 칸에
+// focus()를 호출하는 순간, 지금 칸에서 blur가 발생하면서 onchange(값이 바뀐 경우)가 동기적으로
+// renderLadleDia()를 호출해 표 전체를 다시 그려버리고, 그 통에 이미 찾아둔 "다음 칸" DOM이
+// 통째로 교체되어 버려 포커스가 엉뚱한 곳(또는 교체돼 사라진 옛 노드)으로 가던 것.
+// → 각 입력칸에 표 종류·행·열을 data-tbl/data-row/data-col로 표시해두고, 화살표를 누르면
+// (1) 먼저 el.blur()로 변경사항을 동기적으로 커밋시켜 재렌더가 끝나길 기다린 뒤
+// (2) 새로 그려진 DOM에서 같은 표·같은 열의 다음 행을 data 속성으로 다시 찾아 포커스한다.
 function diaNumKey(e,el){
   if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
-  const td=el.closest('td');const tr=td&&td.closest('tr');if(!td||!tr)return;
-  const idx=Array.prototype.indexOf.call(tr.children,td);
-  const nextTr=e.key==='ArrowDown'?tr.nextElementSibling:tr.previousElementSibling;
-  if(!nextTr)return;
-  const nextTd=nextTr.children[idx];if(!nextTd)return;
-  const nextInput=nextTd.querySelector('input.dnum');if(!nextInput)return;
+  const tbl=el.dataset.tbl;if(!tbl)return;
+  const row=+el.dataset.row, col=el.dataset.col;
+  const dir=e.key==='ArrowDown'?1:-1;
   e.preventDefault();
-  nextInput.focus();nextInput.select();
+  el.blur();   // 값이 바뀐 경우 여기서 onchange→renderLadleDia()가 먼저 동기적으로 끝난다
+  const cols=(col==='r1'||col==='r2')?[col,'rem']:[col]; // 단수별 잔존 마지막 단→바닥 이동 시 폴백
+  let target=null;
+  for(const c of cols){
+    target=document.querySelector(`#ladleDia input.dnum[data-tbl="${tbl}"][data-row="${row+dir}"][data-col="${c}"]`);
+    if(target)break;
+  }
+  if(target){target.focus();target.select();}
 }
 function renderLadleDia(){
   if(!diaCur){loadDiaRecord();return;}
   if(!diaCur.photos)diaCur.photos=[null,null];
   const ch=+document.getElementById('l_diaCH').value||0;diaCur.ch=ch;
   const dv=ch||1, L=diaLimits();
-  const ni=(v,on)=>`<input type="number" value="${v}" class="dnum" onchange="${on};renderLadleDia()" onkeydown="diaNumKey(event,this)">`;
+  const ni=(v,on,tbl,row,col)=>`<input type="number" value="${v}" class="dnum"${tbl!=null?` data-tbl="${tbl}" data-row="${row}" data-col="${col}"`:''} onchange="${on};renderLadleDia()" onkeydown="diaNumKey(event,this)">`;
   const rr=(spec,rem)=>{const wear=Math.max(0,(+spec||0)-(+rem||0));return {wear,rate:wear/dv};};
   const warn=[];
   const tdRec=ladleData.find(r=>r.no===diaCur.no&&r.date===diaCur.date&&DIA_EVT.includes(r.type));
@@ -4857,9 +4926,9 @@ function renderLadleDia(){
     const d=(+g.ch||1), r1=Math.max(0,PP_SPEC-(+g.p1||0))/d, r2=Math.max(0,PP_SPEC-(+g.p2||0))/d;
     col2+=`<tr><td><input class="dtxt" value="${esc(g.lab)}" onchange="diaCur.segs[${i}].lab=this.value"></td>
       <td><input class="dtxt" value="${esc(g.pd||'')}" placeholder="07.16~25" onchange="diaCur.segs[${i}].pd=this.value"></td>
-      <td>${ni(+g.ch||0,`diaCur.segs[${i}].ch=+this.value`)}</td>
-      <td>${ni(g.p1,`diaCur.segs[${i}].p1=+this.value`)}</td>
-      <td>${ni(g.p2,`diaCur.segs[${i}].p2=+this.value`)}</td>
+      <td>${ni(+g.ch||0,`diaCur.segs[${i}].ch=+this.value`,'pp',i,'ch')}</td>
+      <td>${ni(g.p1,`diaCur.segs[${i}].p1=+this.value`,'pp',i,'p1')}</td>
+      <td>${ni(g.p2,`diaCur.segs[${i}].p2=+this.value`,'pp',i,'p2')}</td>
       <td style="white-space:nowrap;font-size:9.5px"><b style="color:${eroColor(r1)}">${r1.toFixed(2)}</b>/<b style="color:${eroColor(r2)}">${r2.toFixed(2)}</b>${diaCur.segs.length>2?` <button class="btn sm danger no-print" style="padding:0 4px" onclick="diaDelSeg(${i})">×</button>`:''}</td>
       </tr>`;});
   col2+=`</tbody></table>
@@ -4884,16 +4953,16 @@ function renderLadleDia(){
     if(bad)warn.push(c.n+'단('+mn+')');
     col3+=`<tr style="background:${sl?'#fff7ed':'#f0f7ff'}">
       <td style="font-weight:700;color:${sl?'#dc2626':'#1d4ed8'}">${c.n}</td>
-      <td>${ni(c.spec,`diaCur.courses[${i}].spec=+this.value`)}</td>
-      <td>${ni(c.r1,`diaCur.courses[${i}].r1=+this.value`)}</td>
+      <td>${ni(c.spec,`diaCur.courses[${i}].spec=+this.value`,'course',i,'spec')}</td>
+      <td>${ni(c.r1,`diaCur.courses[${i}].r1=+this.value`,'course',i,'r1')}</td>
       <td style="color:${eroColor(a.rate)};font-weight:700;font-size:10px">${a.rate.toFixed(2)}</td>
-      <td>${ni(c.r2,`diaCur.courses[${i}].r2=+this.value`)}</td>
+      <td>${ni(c.r2,`diaCur.courses[${i}].r2=+this.value`,'course',i,'r2')}</td>
       <td style="color:${eroColor(b.rate)};font-weight:700;font-size:10px">${b.rate.toFixed(2)}</td>
       <td style="font-weight:800;color:${bad?'#dc2626':remColor(mn/(+c.spec||210)*100)}">${mn}${bad?'⚠':''}</td></tr>`;});
   const bb=rr(diaCur.bottom.spec,diaCur.bottom.rem);
   col3+=`<tr style="background:#f8fafc"><td style="font-weight:700">바닥</td>
-      <td>${ni(diaCur.bottom.spec,'diaCur.bottom.spec=+this.value')}</td>
-      <td colspan="2">${ni(diaCur.bottom.rem,'diaCur.bottom.rem=+this.value')}</td>
+      <td>${ni(diaCur.bottom.spec,'diaCur.bottom.spec=+this.value','course',diaCur.courses.length,'spec')}</td>
+      <td colspan="2">${ni(diaCur.bottom.rem,'diaCur.bottom.rem=+this.value','course',diaCur.courses.length,'rem')}</td>
       <td colspan="3" style="color:${eroColor(bb.rate)};font-weight:700;font-size:10px">${bb.rate.toFixed(2)} mm/CH</td></tr>
     </tbody></table>`;
 
@@ -4903,8 +4972,32 @@ function renderLadleDia(){
     </div>`;
   const warnBar=warn.length?`<div class="dia-warn">⚠ 기준잔존 미달 : ${esc(warn.join(', '))}</div>`:'';
 
+  // 2026-10-01: 같은 캠페인의 이전 보수/해체 기록이 저장돼 있으면 안내 + 가져오기 UI 표시
+  let carryBar='';
+  try{
+    const campStart=(ladleData.find(r=>r.no===diaCur.no&&r.date===diaCur.date&&DIA_EVT.includes(r.type))||{})._campStart;
+    const prior=diaCampPriorSaved(diaCur.no,campStart,diaCur.date);
+    if(prior.length||diaCur._carriedFrom){
+      const opts=prior.map(p=>{
+        const isEndP=END_EVT.includes(p.type);
+        const lab=(p.daily||0)+'CH · '+(isEndP?(p._campSL?'S/L보수 해체':'무보수 해체'):(p.type+' 점검'))+' · '+fmtYMD(p.date);
+        const k=diaKey(diaCur.no,p.date);
+        return `<option value="${esc(k)}"${diaCur._carriedFrom===k?' selected':''}>${esc(lab)}</option>`;
+      }).join('');
+      let fromLab='';
+      if(diaCur._carriedFrom){const pp=diaCur._carriedFrom.split(':');fromLab=fmtYMD(pp.slice(2).join(':'));}
+      carryBar=`<div class="dia-warn no-print" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>${diaCur._carriedFrom?('◀ <b>'+esc(fromLab)+'</b> 기록의 값을 가져왔습니다. 바뀐 부분만 수정하세요.'):'⬅ 같은 래들의 이전 보수·해체 기록이 있습니다.'}</span>
+        ${opts?`<select class="selbox sm" id="l_diaCarrySel" style="font-size:11px">${opts}</select>
+        <button class="btn sm no-print" onclick="diaCarryForwardManual(document.getElementById('l_diaCarrySel').value)">⤵ 값 가져오기</button>`:''}
+        ${diaCur._carriedFrom?'<button class="btn sm no-print" onclick="diaCarryReset()">기본 규격으로 초기화</button>':''}
+      </div>`;
+    }
+  }catch(e){}
+
   document.getElementById('ladleDia').innerHTML=
     `<div id="diaPrintArea" class="dia-sheet">${head}
+       ${carryBar}
        <div class="dia-grid"><div>${col2}</div><div>${col3}</div><div>${col1}</div></div>
        ${warnBar}
        <div class="dia-foot">점검자 ${esc(diaCur.insBy||'')} &nbsp;/&nbsp; 입회 ${esc(diaCur.insWith||'')} &nbsp;/&nbsp; 점검일 ${esc(fmtYMD(diaCur.insDate||diaCur.date||''))}</div>
@@ -10147,7 +10240,12 @@ async function fbApplyStore(store,items){fbApplying=true;
     await fbReloadStore(store);syncLog('↓ '+store+' ('+(items||[]).length+')');}catch(e){syncLog('수신 오류 '+store+': '+e.message);}
   fbApplying=false;}
 async function fbReloadStore(store){
-  if(store==='ladle'){ladleData=await txAll('ladle');}
+  if(store==='ladle'){ladleData=await txAll('ladle');
+    // 2026-10-01: 팀 동기화로 ladle 자료가 (재)적재될 때마다 숫자만 있는 래들번호를 다시 정리.
+    // fbApplyStore가 아직 fbApplying=true인 상태에서 이 함수를 호출하므로, emp 서명 보정과
+    // 동일하게 fbApplying이 false로 돌아온 뒤 실행되게 짧게 지연시켜 delRec()의 삭제가
+    // fbOnWrite를 통해 실제로 팀 저장소(클라우드)에도 업로드되게 한다.
+    setTimeout(()=>{autoCleanBareLadleNos().then(()=>{try{fbRerender();}catch(e){}}).catch(()=>{});},50);}
   else if(store==='tundish'){tundishData=await txAll('tundish');}
   else if(store==='schedule'){scheduleData=await txAll('schedule');}
   else if(store==='bomstd'){bomData=await txAll('bomstd');}
