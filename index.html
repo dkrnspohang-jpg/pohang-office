@@ -798,6 +798,13 @@
     <div class="side-item" data-view="eaf" onclick="nav('eaf')"><span class="ic">🔥</span>전기로</div>
     <div class="side-item" data-view="handover" onclick="nav('handover')"><span class="ic">🔁</span>교대반 인수인계</div>
   </div>
+  <!-- 2026-10-01: "사이드바에 안전 파트를 만들어달라"는 요청으로 신설 —
+       10. 안전보호구 폴더의 실제 발주 이력(조은산업)을 기준단가로 가져오고,
+       26년 3월 거래처 변경(→대명공구백화점) 이후 단가는 확인된 자료가 없어 입력란으로 비워둠. -->
+  <div class="side-group">
+    <div class="gh">안전</div>
+    <div class="side-item" data-view="safetygear" onclick="nav('safetygear')"><span class="ic">🦺</span>안전보호구 발주 관리</div>
+  </div>
   <div class="side-group">
     <div class="gh">제강 원가 관리</div>
     <div class="side-item" data-view="inv" onclick="nav('inv')"><span class="ic">📦</span>내화물 원단위</div>
@@ -1020,6 +1027,7 @@
         <button class="btn" onclick="printDia()" title="A4 가로 1페이지로 인쇄합니다">🖨️ A4 가로 인쇄</button>
         <button class="btn" onclick="exportDiaXls()" title="현재 화면에 표시된 모식도 내용을 엑셀로 내보냅니다">📊 엑셀로 내보내기</button>
         <button class="btn sm danger del-rec" onclick="delDia()">삭제</button>
+        <button class="btn danger adm-only" onclick="clearAllDia()" title="저장된 모든 해체 모식도를 한 번에 삭제합니다(엑셀 자동반영분 포함)">🗑️ 모식도 전체 삭제</button>
         <span class="spacer"></span>
         <span style="font-size:11.5px;color:var(--muted)">#1·#2 PP측 잔존(mm) 입력 → 단면도·용손율 자동</span>
       </div>
@@ -2301,6 +2309,64 @@ service cloud.firestore {
       <tbody id="poscoNonSupplyBody"></tbody>
     </table></div>
   </section>
+
+  <!-- ===== 안전보호구 발주 관리 (2026-10-01 신설) ===== -->
+  <section id="v-safetygear" class="hidden">
+    <div class="subtabs" id="sgToggle">
+      <button class="subtab active" data-sub="price" onclick="sgTab('price')">📋 품목·단가 현황</button>
+      <button class="subtab" data-sub="save" onclick="sgTab('save')">💰 거래처 변경 원가절감</button>
+      <button class="subtab" data-sub="size" onclick="sgTab('size')">👕 개인별 보호구 사이즈(예시)</button>
+    </div>
+
+    <!-- 품목·단가 현황 -->
+    <div id="sg-price">
+      <div class="toolrow">
+        <input class="search" id="sg_search" placeholder="품목명 검색" oninput="renderSgPrice()">
+        <button class="btn primary" onclick="addSgItem()">＋ 품목 추가</button>
+        <button class="btn" onclick="downloadSgPrice()">📥 엑셀</button>
+        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_count"></span>
+      </div>
+      <div class="subhead">품목·단가 현황 <span class="hint">'10. 안전보호구' 폴더의 실제 발주대장(2024년~2026년 1월, 조은산업)에서 가져온 최근 확인 수량·단가입니다. 26년 3월부터 거래처가 대명공구백화점으로 바뀌었는데, 그 이후 실제 세금계산서·거래명세서 단가는 아직 폴더에 없어 '대명공구백화점 단가' 칸을 비워뒀습니다 — 실제 전표를 받으면 그 칸에 입력하세요(바로 옆 [거래처 변경 원가절감] 탭에 자동 반영됩니다).</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:1180px">
+        <thead><tr>
+          <th style="min-width:150px">품목명</th><th style="min-width:70px">단위</th>
+          <th style="min-width:90px">기준수량<br><span style="font-weight:400;font-size:9.5px">(월 발주량)</span></th>
+          <th style="min-width:100px">조은산업 단가<br><span style="font-weight:400;font-size:9.5px">확인시점</span></th>
+          <th style="min-width:100px">대명공구백화점 단가<br><span style="font-weight:400;font-size:9.5px">(실제 전표 입력)</span></th>
+          <th style="min-width:160px">지급 주기 · 비고</th><th style="min-width:60px"></th>
+        </tr></thead>
+        <tbody id="sgPriceBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- 거래처 변경 원가절감 요약 -->
+    <div id="sg-save" style="display:none">
+      <div class="subhead">거래처 변경 원가절감 <span class="hint">26년 3월 조은산업 → 대명공구백화점 전환에 따른 품목별 단가 변동을 계산합니다. [품목·단가 현황] 탭에 대명공구백화점 실제 단가를 입력한 품목만 집계되며, 입력 전까지는 절감액이 "-"로 표시됩니다(추정치를 만들어 보여주지 않습니다).</span></div>
+      <div class="cards" id="sgSaveCards"></div>
+      <div class="tablewrap" style="margin-top:12px"><table class="bomtbl" style="min-width:980px">
+        <thead><tr><th>품목</th><th>조은산업 단가</th><th>대명공구백화점 단가</th><th>개당 절감액</th><th>절감률</th><th>월 기준수량</th><th>월 절감액</th></tr></thead>
+        <tbody id="sgSaveBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- 개인별 보호구 사이즈 (예시 구현) -->
+    <div id="sg-size" style="display:none">
+      <div class="toolrow">
+        <button class="btn primary" onclick="addSgSize()">＋ 인원 추가</button>
+        <button class="btn" onclick="downloadSgSize()">📥 엑셀</button>
+        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_sizeCount"></span>
+      </div>
+      <div class="subhead">개인별 보호구 사이즈 <span class="hint">향후 인원별로 작업복·방염복·안전화 사이즈를 개인마다 세팅하는 기능의 예시 구현입니다. 안전화 모델·사이즈는 실제 구매대장에 적혀 있던 값을 그대로 불러왔고, 작업복·방염복 사이즈는 아직 확인된 자료가 없어 빈 칸으로 두었습니다 — 담당자가 확인되는 대로 입력하면 됩니다.</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:860px">
+        <thead><tr>
+          <th style="min-width:100px">성명</th><th style="min-width:110px">작업복 사이즈</th><th style="min-width:110px">방염복 사이즈</th>
+          <th style="min-width:120px">안전화 모델</th><th style="min-width:90px">안전화 사이즈</th><th style="min-width:140px">비고</th><th style="min-width:60px"></th>
+        </tr></thead>
+        <tbody id="sgSizeBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
   <section id="v-quote" class="hidden">
     <div class="formbar">
       <h3>견적 기본정보</h3>
@@ -2772,6 +2838,18 @@ function annotate(){
     Object.values(g).forEach(withCum);};
   groups(ladleData); groups(tundishData);
 }
+// 2026-10-01: "해체 수명만 봐서는 중간에 콘보수·SL보수한 시점의 수명을 알 수 없다"는 요청 —
+// 같은 래들·같은 캠페인(_campStart) 안에서 이 해체(또는 폐기) 기록보다 앞선 콘보수/SL보수(NON_ACCUM)
+// 기록들의 수명(daily)을 오래된 순으로 모아 해체 수명 앞에 '/'로 이어붙여(예: "70/96/129") 추이를
+// 한눈에 보여준다. 해체/폐기가 아닌 기록은 그대로 자기 수명 값만 반환.
+function ladleLifeChain(r){
+  if(!END_EVT.includes(r.type))return r.daily||0;
+  const prev=ladleData.filter(x=>x.no===r.no&&x._campStart===r._campStart&&NON_ACCUM.includes(x.type)
+      &&(x.date<r.date||(x.date===r.date&&(x.seq||0)<(r.seq||0))))
+    .sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0))
+    .map(x=>x.daily||0);
+  return [...prev,r.daily||0].join('/');
+}
 
 /* ============ 래들 ============ */
 /* ---- S/L 보수 패턴: 현장에서 기록 등록 시 3가지 중 선택 ---- */
@@ -2909,7 +2987,7 @@ function renderLadle(){
     <td style="white-space:nowrap">${r._campStart?esc(r._campStart):'<span style="color:#c5ccd3">-</span>'}</td>
     <td style="white-space:nowrap">${period}</td>
     <td>${typeCell}${ex?' <span class="tag" style="background:#e2e8f0;color:#475569;font-size:9.5px">제외</span>':''}</td>
-    <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}>${r.daily}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
+    <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}${END_EVT.includes(r.type)?' title="콘보수·SL보수 수명 → 해체 수명"':''}>${esc(String(ladleLifeChain(r)))}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
     <td><span class="ch-shell">${r._shell??'-'}</span></td>
     <td style="font-size:11.5px;white-space:pre-wrap">${r.note?esc(r.note):'<span style="color:#c5ccd3">-</span>'}</td>
     <td style="text-align:center">${END_EVT.includes(r.type)?`<input type="checkbox" ${isExcl(r)?'checked':''} title="돌발 등으로 정상수명 미달 → 평균·집계에서 제외" onchange="toggleExcl('${esc(r.no)}','${r.date}','${r.type}',${r.daily||0},this.checked)">${isExcl(r)?`<input class="binp" style="width:100%;margin-top:3px;font-size:11px" placeholder="제외 사유(예: 돌발 냉각)" value="${esc(exclMemo(r))}" onchange="setExclMemo('${esc(r.no)}','${r.date}','${r.type}',${r.daily||0},this.value)">`:''}`:'<span style="color:#c5ccd3">-</span>'}</td>
@@ -5080,9 +5158,25 @@ function delDia(){
   (rec.photos||[]).forEach(pid=>{if(pid)removePhotoBlob(pid);});
   delete diaStore[diaKey(no,date)];saveDiaStore(diaStore);initDiaTeardowns();toast('삭제되었습니다');
 }
+// 2026-10-01: "해체 모식도에 삭제 기능이 따로 없는 것 같다"는 요청 — 건별 삭제(delDia)는 있었지만
+// 엑셀에서 자동반영된 것까지 포함해 전체를 한 번에 비우는 기능이 없었음 → 관리자 전용 전체 삭제 추가.
+async function clearAllDia(){
+  if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}
+  const n=Object.keys(diaStore).length;
+  if(!n){toast('삭제할 모식도가 없습니다');return;}
+  if(!confirm(`저장된 해체 모식도 ${n}건을 모두 삭제할까요? 이 작업은 되돌릴 수 없고, 팀 공유 중인 다른 PC에도 반영됩니다.`))return;
+  Object.values(diaStore).forEach(rec=>{(rec.photos||[]).forEach(pid=>{if(pid)removePhotoBlob(pid);});});
+  diaStore={};saveDiaStore(diaStore);diaCur=null;initDiaTeardowns();toast(n+'건 모두 삭제되었습니다');
+}
 // 2026-10-01: 기존에는 PP-CONE·단수별잔존·점검정보를 세로로 쭉 이어붙여 여러 화면을 내려야 했음
 // → 화면의 1페이지 레이아웃(①PP-CONE+②점검정보 | ③단수별잔존 | ④래들단면)을 그대로 따라
 // 가로 3단으로 배치한 표 하나로 내보내도록 재구성(엑셀에서도 한 화면에 다 보이게)
+// 2026-10-01(2차): "엑셀로 내보내면 화면이랑 다르다, 색깔도 다 포함해서 화면 구성이랑 똑같이
+// 만들어달라"는 재요청 — 지금까지는 숫자만 흑백으로 들어가 화면(renderLadleDia)의 용손율
+// 경고색(eroColor)·SL/ML 구간 배경색·기준잔존 미달 빨간색·섹션 제목 파란 강조색이 전혀 반영되지
+// 않았음. downloadXls()가 만드는 .xls는 실제로는 HTML 문서(엑셀이 HTML을 열어서 보여주는 방식)라
+// <td style="color:...;background:..."> 인라인 스타일이 그대로 적용되므로, 화면 렌더링과 동일한
+// 색상 계산(eroColor/remColor/diaLimit)을 그대로 재사용해 각 셀에 입혀 화면과 똑같이 보이게 한다.
 function exportDiaXls(){
   if(!diaCur){toast('내보낼 모식도가 없습니다');return;}
   const ch=+((document.getElementById('l_diaCH')||{}).value)||diaCur.ch||0;
@@ -5094,34 +5188,45 @@ function exportDiaXls(){
   const L=diaLimits();
   const warn=[];
   diaCur.courses.forEach(c=>{const mn=Math.min(+c.r1||0,+c.r2||0);if(mn<diaLimit(c.n))warn.push(c.n+'단('+mn+')');});
+  // 화면의 ".dia-h"(파란 글자 + 좌측 파란 보더, 좌측정렬)와 동일한 섹션 제목 행
+  const secHd=(label,span)=>`<tr><td colspan="${span}" style="color:#1d4ed8;font-weight:800;border-left:3px solid #1d4ed8;text-align:left;padding-left:6px">${xlEsc(label)}</td></tr>`;
 
-  // ① PP-CONE 구간별 용손
-  let ppTbl=`<table><tr><td class="hd" colspan="6">① PP-CONE (${PP_SPEC}-잔존)÷구간CH</td></tr>
+  // ① PP-CONE 구간별 용손 — 화면과 동일하게 용손율(#1/#2)을 eroColor로 색칠
+  let ppTbl=`<table>${secHd('① PP-CONE ('+PP_SPEC+'-잔존)÷구간CH',6)}
     <tr><td class="hd">구분</td><td class="hd">기간</td><td class="hd">CH</td><td class="hd">#1</td><td class="hd">#2</td><td class="hd">용손율</td></tr>`;
   diaCur.segs.forEach(g=>{
     const d=(+g.ch||1), r1=Math.max(0,PP_SPEC-(+g.p1||0))/d, r2=Math.max(0,PP_SPEC-(+g.p2||0))/d;
-    ppTbl+=`<tr><td>${xlEsc(g.lab)}</td><td>${xlEsc(g.pd||'')}</td><td>${g.ch||0}</td><td>${g.p1}</td><td>${g.p2}</td><td>${r1.toFixed(2)}/${r2.toFixed(2)}</td></tr>`;
+    ppTbl+=`<tr><td>${xlEsc(g.lab)}</td><td>${xlEsc(g.pd||'')}</td><td>${g.ch||0}</td><td>${g.p1}</td><td>${g.p2}</td>
+      <td style="font-weight:bold"><span style="color:${eroColor(r1)}">${r1.toFixed(2)}</span>/<span style="color:${eroColor(r2)}">${r2.toFixed(2)}</span></td></tr>`;
   });
   ppTbl+='</table>';
 
   // ② 해체(보수) 점검 정보
-  const insTbl=`<table><tr><td class="hd" colspan="2">② ${isEnd?'해체 점검':'보수 점검'}</td></tr>
+  const insTbl=`<table>${secHd(isEnd?'② 해체 점검':'② 보수 점검',2)}
     <tr><td class="nob">점검일</td><td class="nob">${xlEsc(fmtYMD(diaCur.insDate||diaCur.date||''))}</td></tr>
     <tr><td class="nob">점검자</td><td class="nob">${xlEsc(diaCur.insBy||'')}</td></tr>
     <tr><td class="nob">입회자</td><td class="nob">${xlEsc(diaCur.insWith||'')}</td></tr>
     <tr><td class="nob">업체</td><td class="nob">${xlEsc(diaCur.vendor||'')}</td></tr>
     <tr><td class="nob">Remark</td><td class="nob">${xlEsc(diaCur.remark||'')}</td></tr></table>`;
 
-  // ③ 단수별 잔존 (화면과 동일 : 단·규격·#1·율·#2·율·최소)
-  let courseTbl=`<table><tr><td class="hd" colspan="7">③ 단수별 잔존 (용손율=(규격-잔존)÷${ch}CH)</td></tr>
-    <tr><td class="hd">단</td><td class="hd">규격</td><td class="hd">#1</td><td class="hd">율</td><td class="hd">#2</td><td class="hd">율</td><td class="hd">최소</td></tr>`;
+  // ③ 단수별 잔존 — 화면과 동일하게 SL/ML 행 배경색·단 번호색·용손율색·기준미달 빨간 경고를 반영
+  let courseTbl=`<table>${secHd('③ 단수별 잔존 (용손율=(규격-잔존)÷'+ch+'CH)',7)}
+    <tr><td class="hd">단</td><td class="hd">규격</td><td class="hd" style="background:#eff6ff">#1</td><td class="hd" style="background:#eff6ff">율</td><td class="hd" style="background:#f5f3ff">#2</td><td class="hd" style="background:#f5f3ff">율</td><td class="hd">최소</td></tr>`;
   diaCur.courses.forEach(c=>{
     const r1=Math.max(0,(+c.spec||0)-(+c.r1||0))/dv, r2=Math.max(0,(+c.spec||0)-(+c.r2||0))/dv;
     const mn=Math.min(+c.r1||0,+c.r2||0);
-    courseTbl+=`<tr><td>${c.n}</td><td>${c.spec}</td><td>${c.r1}</td><td>${r1.toFixed(2)}</td><td>${c.r2}</td><td>${r2.toFixed(2)}</td><td>${mn}</td></tr>`;
+    const sl=c.n>=SL_COURSE_MIN, lim=diaLimit(c.n), bad=mn<lim;
+    const mnColor=bad?'#dc2626':remColor(mn/(+c.spec||210)*100);
+    courseTbl+=`<tr style="background:${sl?'#fff7ed':'#f0f7ff'}">
+      <td style="font-weight:bold;color:${sl?'#dc2626':'#1d4ed8'}">${c.n}</td>
+      <td>${c.spec}</td><td>${c.r1}</td>
+      <td style="color:${eroColor(r1)};font-weight:bold">${r1.toFixed(2)}</td>
+      <td>${c.r2}</td>
+      <td style="color:${eroColor(r2)};font-weight:bold">${r2.toFixed(2)}</td>
+      <td style="font-weight:800;color:${mnColor}">${mn}${bad?'⚠':''}</td></tr>`;
   });
   const bb=Math.max(0,(+diaCur.bottom.spec||0)-(+diaCur.bottom.rem||0))/dv;
-  courseTbl+=`<tr><td class="nob">바닥</td><td>${diaCur.bottom.spec}</td><td colspan="2">${diaCur.bottom.rem}</td><td colspan="3">${bb.toFixed(2)} mm/CH</td></tr></table>`;
+  courseTbl+=`<tr style="background:#f8fafc"><td class="nob" style="font-weight:bold">바닥</td><td>${diaCur.bottom.spec}</td><td colspan="2">${diaCur.bottom.rem}</td><td colspan="3" style="color:${eroColor(bb)};font-weight:bold">${bb.toFixed(2)} mm/CH</td></tr></table>`;
 
   // ④ 래들 단면 — 2026-10-01: 텍스트 표 대신 화면(diaSVG)과 완전히 같은 색상의 단면도 이미지를
   // 그대로 삽입(diaCrossCanvasDataURL, Canvas로 재현한 PNG). 엑셀(.xls)은 HTML 저장이라
@@ -5129,25 +5234,25 @@ function exportDiaXls(){
   // 이미지 아래에 작은 숫자 표도 함께 남겨둠.
   let crossImgTag='';
   try{crossImgTag=`<img src="${diaCrossCanvasDataURL()}" width="340" style="display:block;margin:0 auto">`;}catch(e){crossImgTag='';}
-  let crossTbl=`<table><tr><td class="hd" colspan="3">④ 래들 단면 (${xlEsc(isEnd?'해체':(tdRec&&tdRec.type||'점검'))})</td></tr>
+  let crossTbl=`<table>${secHd('④ 래들 단면 ('+(isEnd?'해체':(tdRec&&tdRec.type||'점검'))+')',3)}
     <tr><td class="nob" colspan="3" style="text-align:center">${crossImgTag}</td></tr>
     <tr><td class="hd">단</td><td class="hd">#1 PP</td><td class="hd">#2 PP</td></tr>`;
   diaCur.courses.forEach(c=>{crossTbl+=`<tr><td>${c.n}</td><td>${c.r1}</td><td>${c.r2}</td></tr>`;});
   crossTbl+=`<tr><td class="nob">바닥</td><td colspan="2">${diaCur.bottom.rem} / ${diaCur.bottom.rem}</td></tr>
     <tr><td class="hd" colspan="3">안전 기준잔존</td></tr>
-    <tr><td class="nob">S/L</td><td class="nob" colspan="2">${L.sl}</td></tr>
-    <tr><td class="nob">M/L</td><td class="nob" colspan="2">${L.ml}</td></tr></table>`;
+    <tr><td class="nob" style="color:#c2410c">S/L</td><td class="nob" colspan="2">${L.sl}</td></tr>
+    <tr><td class="nob" style="color:#1d4ed8">M/L</td><td class="nob" colspan="2">${L.ml}</td></tr></table>`;
 
   const main=`<table>
-    <tr><td class="hd" colspan="12">동국알앤에스 · 포항사업소 래들 ${xlEsc(kindLab)}</td></tr>
-    <tr><td class="nob">래들번호</td><td class="nob">${xlEsc(diaCur.no||'')}</td><td class="nob">구분</td><td class="nob">${xlEsc(diaCur.ev||'')}</td>
-        <td class="nob">총사용수명(CH)</td><td class="nob">${ch}</td><td class="nob" colspan="6">${dateLab} ${xlEsc(fmtYMD(diaCur.date||''))}</td></tr>
+    <tr><td class="hd" colspan="12" style="font-size:12pt">동국알앤에스 · 포항사업소 래들 ${xlEsc(kindLab)}</td></tr>
+    <tr><td class="nob">래들번호</td><td class="nob" style="font-weight:bold">${xlEsc(diaCur.no||'')}</td><td class="nob">구분</td><td class="nob" style="font-weight:bold">${xlEsc(diaCur.ev||'')}</td>
+        <td class="nob">총사용수명(CH)</td><td class="nob" style="font-weight:bold">${ch}</td><td class="nob" colspan="6">${dateLab} ${xlEsc(fmtYMD(diaCur.date||''))}</td></tr>
     <tr>
       <td class="nob" colspan="4" style="vertical-align:top">${ppTbl}${insTbl}</td>
       <td class="nob" colspan="4" style="vertical-align:top">${courseTbl}</td>
       <td class="nob" colspan="4" style="vertical-align:top">${crossTbl}</td>
     </tr>
-    ${warn.length?`<tr><td class="nob" colspan="12" style="color:#dc2626;font-weight:bold">⚠ 기준잔존 미달 : ${xlEsc(warn.join(', '))}</td></tr>`:''}
+    ${warn.length?`<tr><td class="nob" colspan="12" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-weight:bold;padding:6px 7px">⚠ 기준잔존 미달 : ${xlEsc(warn.join(', '))}</td></tr>`:''}
     <tr><td class="nob" colspan="12">점검자 ${xlEsc(diaCur.insBy||'')} / 입회 ${xlEsc(diaCur.insWith||'')} / 점검일 ${xlEsc(fmtYMD(diaCur.insDate||diaCur.date||''))}</td></tr>
   </table>`;
   downloadXls(`래들해체모식도_${diaCur.no||''}_${diaCur.date||todayStr()}`,main);
@@ -5860,11 +5965,12 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   report:['보고서 자동생성','일일·월간 현황을 종합해 PPT 보고자료를 자동으로 만듭니다 (관리직 이상)'],
   stocksd:['재고관리(신동내화)','신동내화 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)'],
   stockvs:['재고관리(베수비우스)','베수비우스(Slide Gate) 발주 재고관리 (적정재고 · 현재고 · 기발주 · 예상사용량 · 가용가능일 · 발주량)'],
-  poscononsup:['입찰용(미납품 품목)','현재 납품하지 않는 포스코 품목 정보를 향후 입찰 대비로 누적 등록']};
+  poscononsup:['입찰용(미납품 품목)','현재 납품하지 않는 포스코 품목 정보를 향후 입찰 대비로 누적 등록'],
+  safetygear:['안전보호구 발주 관리','품목·단가 현황 · 거래처 변경(조은산업→대명공구백화점) 원가절감 · 개인별 보호구 사이즈(예시)']};
 let quoteInit=false, curView='home';
 // 2026-09-29: 'poscobase'(포스코 품목단가)는 더 이상 독립된 사이드바 화면이 아니라 'prodm'(내화물 품목마스터)
 // 화면 안의 탭으로 통합됨 — ALL_VIEWS/네비게이션 대상에서 제외하고, prodmTab()이 그 표시를 담당함.
-const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup'];
+const ALL_VIEWS=['home','board','ladle','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup','safetygear'];
 /* ============ 상단 작업 탭(여러 화면 동시에 열어두고 전환) ============
    2026-09-28: "폴더(화면)를 바꾸면 처음부터 다시 시작해야 해서 불편하다"는 의견 반영 —
    최근/현재 열어본 화면들을 상단에 탭으로 남겨두고 클릭 한번에 다시 전환할 수 있게 하고,
@@ -5920,7 +6026,7 @@ function nav(v){
   openViewTab(v);renderViewTabs();
   // 2026-09-26: 표 너비가 기본 컨텐츠 폭(1180px)보다 넓어 열이 가로 스크롤 없이는 잘려 보이는 화면들
   // (품목마스터의 등록/사용/물량 등)을 wide 컨텐츠(1560px)로 전환해 한 화면에 다 보이게 함.
-  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','shift4','posco','stocksd','stockvs','poscononsup','bom'].includes(v));
+  document.querySelector('.content').classList.toggle('wide',['board','home','ladle','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','shift4','posco','stocksd','stockvs','poscononsup','bom','safetygear'].includes(v));
   ALL_VIEWS.forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
   document.querySelectorAll('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
   document.getElementById('viewTitle').textContent=VIEWS[v][0];
@@ -5949,6 +6055,7 @@ function nav(v){
   if(v==='stocksd')initStock('신동내화');
   if(v==='stockvs')initStock('베수비우스');
   if(v==='poscononsup')renderPoscoNonSupply();
+  if(v==='safetygear')initSafety();
   updateRoleChip();applyRoleLock();
 }
 
@@ -9200,6 +9307,160 @@ function downloadPoscoNonSupply(){
   t+=`</table>`;downloadXls('포스코_입찰용_미납품품목',t);
 }
 
+/* ============ 안전보호구 발주 관리 (2026-10-01 신설) ============
+   "10. 안전보호구" 폴더 실제 발주대장(포항영업소 안전보호구 구매 (1월).xlsx, 2024~2026년 시트)에서
+   확인되는 가장 최근 데이터인 2026년 1월분 품목·수량·단가(거래처: 조은산업)를 최초 1회 기본값으로
+   불러온다. 26년 3월부터 거래처가 대명공구백화점으로 바뀌었다는 것은 사용자가 알려준 사실이지만,
+   폴더 안 어느 파일에도 그 이후 실제 단가(세금계산서·거래명세서)는 아직 없어(가장 최근 파일도
+   25년 12월 작성 · 26년 1월 발주 기준까지만 기록됨) '대명공구백화점 단가'는 빈 칸으로 시작한다 —
+   실제 전표가 들어오는 대로 사용자가 입력하면 절감액이 자동 계산된다(단가변동 자료는 추정이 아니라
+   실제 확인된 값만 반영한다는 원칙 — 참고 26.항과 동일).
+   개인별 사이즈는 "향후 인원별로 세팅할 기능의 예시 구현"이라는 요청에 따라, 실제 구매대장에 적혀
+   있던 안전화 모델·사이즈만 실제값으로 채우고 작업복·방염복 사이즈는 확인된 자료가 없어 빈 칸으로 둔다. */
+const SG_PRICE_SEED=[
+  {item:'방염복',unit:'EA',qty:24,oldPrice:86000,oldAsOf:'2026-01',note:'1벌/분기 지급 → 혹서기 추가 지급'},
+  {item:'방염두건',unit:'EA',qty:24,oldPrice:12000,oldAsOf:'2026-01',note:''},
+  {item:'안전화',unit:'EA',qty:2,oldPrice:49000,oldAsOf:'2026-01',note:'4종 관리(다이얼·일반6인치·k2찍찍이·단화) · 1EA/반기 지급'},
+  {item:'내열안전화',unit:'EA',qty:2,oldPrice:53000,oldAsOf:'2026-01',note:'년간 1회 지급'},
+  {item:'안전장화',unit:'EA',qty:2,oldPrice:31000,oldAsOf:'2026-01',note:''},
+  {item:'피수갑',unit:'SET',qty:135,oldPrice:2600,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'방진마스크 650V',unit:'BOX',qty:50,oldPrice:17500,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'방진마스크 850V',unit:'BOX',qty:10,oldPrice:29500,oldAsOf:'2026-01',note:'S/N반 사원급 지급'},
+  {item:'귀마개',unit:'BOX',qty:2,oldPrice:37000,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'분진복',unit:'BOX',qty:2,oldPrice:76800,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'코팅장갑(황/녹)',unit:'SET',qty:280,oldPrice:630,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'면장갑',unit:'SET',qty:460,oldPrice:250,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'청각반',unit:'SET',qty:48,oldPrice:1800,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'면토시',unit:'SET',qty:42,oldPrice:300,oldAsOf:'2026-01',note:'매월 지급'},
+  {item:'보안면',unit:'EA',qty:24,oldPrice:7500,oldAsOf:'2026-01',note:''},
+  {item:'안전모(덮개 빨간색 신호수)',unit:'EA',qty:10,oldPrice:4300,oldAsOf:'2026-01',note:''}
+].map(r=>({id:uid(),oldVendor:'조은산업',newVendor:'대명공구백화점',newPrice:'',newAsOf:'',...r}));
+const SG_SIZE_SEED=[
+  ['서승수','다이얼',260],['강경묵','다이얼',265],
+  ['신충일','일반6인치',245],['최윤섭','일반6인치',250],['김진현','일반6인치',260],['김수민','일반6인치',260],
+  ['김봉주','일반6인치',265],['정봉화','일반6인치',270],['박명일','일반6인치',275],['오종진','일반6인치',280],
+  ['한석근','k2찍찍이',255],['소준호','k2찍찍이',255],['변종력','k2찍찍이',260],['오성수','k2찍찍이',260],
+  ['김성규','k2찍찍이',260],['서병권','k2찍찍이',260],['정성호','k2찍찍이',265],['서용제','k2찍찍이',265],
+  ['이화훈','k2찍찍이',265],['정윤용','k2찍찍이',265],['박경철','k2찍찍이',270],['송창엽','k2찍찍이',275],
+  ['정연우','k2찍찍이',275],['박동훈','k2찍찍이',280],['전재광','단화',250]
+].map(([name,shoeModel,shoeSize])=>({id:uid(),name,uniformSize:'',flameSuitSize:'',shoeModel,shoeSize,note:''}));
+function loadSgPrice(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_price')||'null');return Array.isArray(v)&&v.length?v:SG_PRICE_SEED;}catch(e){return SG_PRICE_SEED;}}
+function loadSgSize(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_size')||'null');return Array.isArray(v)&&v.length?v:SG_SIZE_SEED;}catch(e){return SG_SIZE_SEED;}}
+function saveSgPrice(){try{localStorage.setItem('dgrns_sg_price',JSON.stringify(sgPrice));}catch(e){}}
+function saveSgSize(){try{localStorage.setItem('dgrns_sg_size',JSON.stringify(sgSize));}catch(e){}}
+let sgPrice=loadSgPrice(), sgSize=loadSgSize(), sgCurTab='price';
+function initSafety(){sgTab(sgCurTab||'price');}
+function sgTab(t){
+  sgCurTab=t;
+  document.querySelectorAll('#sgToggle .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sub===t));
+  document.getElementById('sg-price').style.display=t==='price'?'':'none';
+  document.getElementById('sg-save').style.display=t==='save'?'':'none';
+  document.getElementById('sg-size').style.display=t==='size'?'':'none';
+  if(t==='price')renderSgPrice();
+  if(t==='save')renderSgSave();
+  if(t==='size')renderSgSize();
+}
+function addSgItem(){
+  sgPrice.unshift({id:uid(),item:'',unit:'EA',qty:'',oldPrice:'',oldVendor:'조은산업',oldAsOf:todayStr().slice(0,7),newPrice:'',newVendor:'대명공구백화점',newAsOf:'',note:''});
+  saveSgPrice();renderSgPrice();
+}
+function editSgItem(id,key,v){
+  const r=sgPrice.find(x=>x.id===id);if(!r)return;
+  r[key]=['qty','oldPrice','newPrice'].includes(key)?(v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0)):v;
+  saveSgPrice();
+}
+function delSgItem(id){
+  if(!canDelete()){alert('삭제는 관리자·관리직만 가능합니다.');return;}
+  if(!confirm('이 품목을 삭제할까요?'))return;
+  sgPrice=sgPrice.filter(x=>x.id!==id);saveSgPrice();renderSgPrice();
+}
+function sgPriceRowHtml(r){
+  return `<tr>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.item)}" placeholder="품목명" oninput="editSgItem('${r.id}','item',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.unit||'')}" oninput="editSgItem('${r.id}','unit',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.qty===''?'':r.qty}" placeholder="수량" oninput="editSgItem('${r.id}','qty',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.oldPrice===''?'':Number(r.oldPrice).toLocaleString()}" placeholder="조은산업 단가" oninput="editSgItem('${r.id}','oldPrice',this.value)">
+      <div style="font-size:9.5px;color:var(--muted);text-align:right">${esc(r.oldAsOf||'')} 확인</div></td>
+    <td><input class="binp" style="width:100%;border:1px solid #f59e0b;background:#fffbeb;text-align:right" value="${r.newPrice===''?'':Number(r.newPrice).toLocaleString()}" placeholder="실제 전표 입력" oninput="editSgItem('${r.id}','newPrice',this.value)">
+      <input type="date" style="width:100%;font-size:10px;margin-top:2px;border:1px solid var(--line)" value="${esc(r.newAsOf||'')}" onchange="editSgItem('${r.id}','newAsOf',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.note||'')}" oninput="editSgItem('${r.id}','note',this.value)"></td>
+    <td><button class="btn sm danger del-rec" onclick="delSgItem('${r.id}')">삭제</button></td>
+  </tr>`;
+}
+function renderSgPrice(){
+  const box=document.getElementById('sgPriceBody');if(!box)return;
+  const q=(document.getElementById('sg_search')?.value||'').toLowerCase();
+  const rows=sgPrice.filter(r=>!q||(r.item||'').toLowerCase().includes(q));
+  box.innerHTML=rows.map(sgPriceRowHtml).join('')||`<tr><td colspan="7"><div class="empty">등록된 품목이 없습니다. [＋ 품목 추가]로 등록하세요.</div></td></tr>`;
+  const cnt=document.getElementById('sg_count');if(cnt)cnt.textContent=rows.length+'건';
+}
+function downloadSgPrice(){
+  let t=`<table><tr><th>품목명</th><th>단위</th><th>기준수량</th><th>조은산업 단가</th><th>확인시점</th><th>대명공구백화점 단가</th><th>확인시점</th><th>비고</th></tr>`;
+  sgPrice.forEach(r=>{t+=`<tr><td>${esc(r.item)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.qty||'')}</td><td>${esc(r.oldPrice||'')}</td><td>${esc(r.oldAsOf||'')}</td><td>${esc(r.newPrice||'')}</td><td>${esc(r.newAsOf||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
+  t+=`</table>`;downloadXls('안전보호구_품목단가현황',t);
+}
+function renderSgSave(){
+  const box=document.getElementById('sgSaveBody');if(!box)return;
+  let totalOldMonthly=0, totalNewMonthly=0, totalSaveMonthly=0, cnt=0;
+  box.innerHTML=sgPrice.map(r=>{
+    const has=r.newPrice!==''&&r.newPrice!=null&&+r.oldPrice>0;
+    const d=has?(+r.oldPrice-+r.newPrice):null;
+    const pct=has&&+r.oldPrice?(d/+r.oldPrice*100):null;
+    const qty=+r.qty||0;
+    const monthly=has?d*qty:null;
+    if(has){totalOldMonthly+=(+r.oldPrice)*qty;totalNewMonthly+=(+r.newPrice)*qty;totalSaveMonthly+=monthly;cnt++;}
+    const col=has?(d>0?'#15803d':d<0?'#c81e1e':'#64748b'):'#c5ccd3';
+    return `<tr>
+      <td>${esc(r.item)}</td>
+      <td class="n">${r.oldPrice?wON(+r.oldPrice):'-'}</td>
+      <td class="n">${has?wON(+r.newPrice):'<span style="color:#c5ccd3">입력 전</span>'}</td>
+      <td class="n" style="color:${col};font-weight:700">${has?(d>0?'▼':d<0?'▲':'–')+wON(Math.abs(d)):'-'}</td>
+      <td class="n" style="color:${col}">${pct!=null?pct.toFixed(1)+'%':'-'}</td>
+      <td class="n">${qty||'-'}</td>
+      <td class="n" style="color:${col};font-weight:700">${monthly!=null?wON(monthly):'-'}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="7"><div class="empty">등록된 품목이 없습니다.</div></td></tr>`;
+  document.getElementById('sgSaveCards').innerHTML=
+    card('단가 확인 완료 품목',cnt,'/ '+sgPrice.length+'개')
+    +card('월 기준 조은산업 금액(확인분)',wON(totalOldMonthly),'원')
+    +card('월 기준 대명공구백화점 금액',wON(totalNewMonthly),'원')
+    +`<div class="card"><div class="lbl">월 절감액(확인분 합계)</div><div class="val" style="color:${totalSaveMonthly>0?'#15803d':totalSaveMonthly<0?'#c81e1e':'inherit'}">${wON(totalSaveMonthly)}<small> 원</small></div></div>`;
+}
+function addSgSize(){
+  sgSize.unshift({id:uid(),name:'',uniformSize:'',flameSuitSize:'',shoeModel:'',shoeSize:'',note:''});
+  saveSgSize();renderSgSize();
+}
+function editSgSize(id,key,v){
+  const r=sgSize.find(x=>x.id===id);if(!r)return;
+  r[key]=v;saveSgSize();
+}
+function delSgSize(id){
+  if(!canDelete()){alert('삭제는 관리자·관리직만 가능합니다.');return;}
+  if(!confirm('이 인원을 삭제할까요?'))return;
+  sgSize=sgSize.filter(x=>x.id!==id);saveSgSize();renderSgSize();
+}
+function sgSizeRowHtml(r){
+  return `<tr>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.name)}" placeholder="성명" oninput="editSgSize('${r.id}','name',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.uniformSize||'')}" placeholder="예: 100" oninput="editSgSize('${r.id}','uniformSize',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.flameSuitSize||'')}" placeholder="예: 105" oninput="editSgSize('${r.id}','flameSuitSize',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.shoeModel||'')}" placeholder="다이얼/일반6인치/k2찍찍이/단화" oninput="editSgSize('${r.id}','shoeModel',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.shoeSize||'')}" placeholder="mm" oninput="editSgSize('${r.id}','shoeSize',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.note||'')}" oninput="editSgSize('${r.id}','note',this.value)"></td>
+    <td><button class="btn sm danger del-rec" onclick="delSgSize('${r.id}')">삭제</button></td>
+  </tr>`;
+}
+function renderSgSize(){
+  const box=document.getElementById('sgSizeBody');if(!box)return;
+  box.innerHTML=sgSize.map(sgSizeRowHtml).join('')||`<tr><td colspan="7"><div class="empty">등록된 인원이 없습니다.</div></td></tr>`;
+  const cnt=document.getElementById('sg_sizeCount');if(cnt)cnt.textContent=sgSize.length+'명';
+}
+function downloadSgSize(){
+  let t=`<table><tr><th>성명</th><th>작업복 사이즈</th><th>방염복 사이즈</th><th>안전화 모델</th><th>안전화 사이즈</th><th>비고</th></tr>`;
+  sgSize.forEach(r=>{t+=`<tr><td>${esc(r.name)}</td><td>${esc(r.uniformSize||'')}</td><td>${esc(r.flameSuitSize||'')}</td><td>${esc(r.shoeModel||'')}</td><td>${esc(r.shoeSize||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
+  t+=`</table>`;downloadXls('개인별_보호구_사이즈',t);
+}
+
 /* ============ 전체 데이터 백업 ============
    v2는 일정·직원·휴가·잔업을 포함한 모든 IndexedDB 저장소와 공용 설정을 저장한다.
    기존 v1(래들·턴디쉬 전용) 백업 파일도 계속 불러올 수 있다. */
@@ -9713,6 +9974,21 @@ function ensureDia2026Import(){
   }
   if(changed)saveDiaStore(diaStore);
   setMeta('dia2026ImportVersion',DIA2026_IMPORT_VERSION);
+}
+// 2026-10-01: "모식도에 들어있는 데이터를 전부 삭제해달라, 앞으로는 직접 입력하겠다"는 요청 —
+// 위 ensureDia2026Import()가 넣어둔 엑셀 자동반영분(82건)을 포함해 저장된 모식도(diaStore)를
+// 전부 비운다. autoCleanBareLadleNos()와 같은 자동 마이그레이션 패턴: init()에서
+// ensureDia2026Import() 호출을 이 함수로 교체해, 이 업데이트를 받은 PC가 처음 열릴 때 한 번만
+// 조용히 비우고(버전 플래그로 멱등 처리), saveDiaStore()를 통해 팀 공유(Firebase)에도 빈 상태가
+// 그대로 반영되어 다른 PC도 따라서 비워진다. 이후로는 자동 반영 없이 사용자가 직접 입력한
+// 모식도만 쌓이며, 같은 기능이 필요하면 화면의 '🗑️ 모식도 전체 삭제' 버튼(관리자 전용)을 쓰면 된다.
+const DIA_CLEAR_VERSION='2026-10-01-clearall1';
+function clearAllDiaOnce(){
+  try{
+    if(getMeta('diaClearVersion')===DIA_CLEAR_VERSION)return;
+    diaStore={};saveDiaStore(diaStore);
+    setMeta('diaClearVersion',DIA_CLEAR_VERSION);
+  }catch(e){}
 }
 
 function stockProd(r){return r.prodId?prodById(r.prodId):null;}
@@ -10350,6 +10626,8 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     try{boardMemo=loadBoardMemo();}catch(e){}
     try{bStat=loadBStat();}catch(e){}
     try{fieldIssueSt=loadFieldIssue();}catch(e){}
+    try{sgPrice=loadSgPrice();}catch(e){}
+    try{sgSize=loadSgSize();}catch(e){}
     syncLog('↓ 설정/마스터');
   }catch(e){syncLog('수신 오류 kv: '+e.message);}
   fbApplying=false;fbRerender();}
@@ -10370,6 +10648,7 @@ function fbRerender(){try{
   else if(curView==='handover')renderHo();
   else if(curView==='mperf')initMperf();
   else if(curView==='planperf')renderPlanPerf();
+  else if(curView==='safetygear')sgTab(sgCurTab||'price');
 }catch(e){}
   try{updateMeChip();updateApprBadge();syncChip();
     if(document.body.classList.contains('mv'))mvHome();}catch(e){}}
@@ -12860,7 +13139,7 @@ function mvHome(){
       `<div class="mv-card"><div class="mv-h">업무 파트 선택</div>
         <div class="mv-sub">본인 파트를 고른 뒤 이름과 개인 비밀번호로 로그인하세요.</div>
         <div class="mv-menu">`
-      +MODE_LIST.map(m=>mvB('mv-'+({admin:'m4',office:'m5',foreman:'m3',sn:'m1',furnace:'m2',safety:'m6'}[m[0]]||'m5'),m[4]+' '+m[1],m[2],`pickMode('${m[0]}')`)).join('')
+      +MODE_LIST.map(m=>mvB('mv-'+({admin:'m4',office:'m5',foreman:'m3',sn:'m1',furnace:'m2',safety:'m6'}[m[0]]||'m5'),m[4]+' '+m[1],'',`pickMode('${m[0]}')`)).join('')
       +`</div></div>`;
     return;
   }
@@ -13150,7 +13429,8 @@ const ROLE_VIEWS={
   foreman:['attend','shift4'],
   sn:['attend','shift4'],
   furnace:['attend','shift4'],
-  safety:['attend','shift4']
+  // 2026-10-01: 안전관리담당자는 근태 화면 외에 신설된 '안전보호구 발주 관리' 화면도 열람·입력 가능
+  safety:['attend','shift4','safetygear']
 };
 const FIELD_ROLES=['foreman','sn','furnace','pohang'];
 const FIELD_VIEWS=['board','attend','ladle','tundish','eaf','handover'];
@@ -13239,8 +13519,11 @@ function renderModePanel(){
   document.body.classList.toggle('start',cur==='pohang');   // 첫 화면 : 메뉴 숨김
   if(cur==='pohang'){
     p.hidden=false;b.hidden=true;
+    // 2026-10-01: "처음 개인 로그인시 카드 아래 설명(모든 권한/전체 업무·삭제 불가 등)은 없어도 된다"는
+    // 요청 — 역할명만 크게 보이도록 부제(<small>) 출력을 제거. MODE_LIST 자체의 순서(사업소장→관리직→
+    // 기성→SN반→축로반→안전담당자)는 기존 그대로 유지(요청한 순서와 이미 일치).
     p.innerHTML='<div class="mp-grid">'+MODE_LIST.map(m=>
-        `<button class="mp-btn ${m[3]}" onclick="pickMode('${m[0]}')">${m[4]} ${esc(m[1])}<small>${esc(m[2])}</small></button>`).join('')+'</div>';
+        `<button class="mp-btn ${m[3]}" onclick="pickMode('${m[0]}')">${m[4]} ${esc(m[1])}</button>`).join('')+'</div>';
   }else{
     p.hidden=true;b.hidden=false;
     b.innerHTML=`현재 모드 : ${esc(ROLE_LABEL[cur]||'')}${meEmp()?' · '+esc(meEmp().name):''}
@@ -13326,7 +13609,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
     if(ladleData.length===0&&tundishData.length===0){await loadSeedInto();setMeta('seedVersion',SEED_VERSION);}
     else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
     try{await ensureLadle2026Import();}catch(e){}
-    try{ensureDia2026Import();}catch(e){}
+    try{clearAllDiaOnce();}catch(e){}
     try{await autoCleanBareLadleNos();}catch(e){}
     await migrateVendor();await loadSchedule();await loadBom();await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
