@@ -2828,6 +2828,22 @@ async function cleanBareLadleNos(){
   ladleData=ladleData.filter(x=>!ids.has(x.id));
   flashSave();toast(bad.length+'건 삭제되었습니다');refreshLadle();
 }
+// 2026-10-01: 위 cleanBareLadleNos()는 관리자가 버튼을 눌러야만 동작하는데, 아무도 누르지 않으면
+// 래들번호 필터·작업현황판(boardLadle, 래들 수를 ladleData의 distinct(no)로 뽑음) 양쪽에 '1호'와
+// '1'이 서로 다른 번호로 계속 따로 보이는 문제가 그대로 남는다는 재신고 → migrateVendor()처럼
+// 앱 시작 시 1회 자동으로(확인창 없이) 정리하는 마이그레이션을 추가. 'NO.3'처럼 접두어가 붙은
+// 값은 그대로 두고, 순수 숫자로만 저장된 기록만 대상으로 함. 평생 1회만 실행(플래그로 제한),
+// 이후 새로 들어오는 숫자만 데이터는 관리자가 위 수동 버튼으로 다시 정리하면 됨.
+async function autoCleanBareLadleNos(){
+  if(localStorage.getItem('dgrns_ladle_barenos_cleaned_v1'))return;
+  try{
+    const bad=ladleData.filter(r=>/^\d+$/.test(String(r.no||'').trim()));
+    for(const r of bad){try{await delRec('ladle',r.id);}catch(e){}}
+    const ids=new Set(bad.map(r=>r.id));
+    ladleData=ladleData.filter(x=>!ids.has(x.id));
+  }catch(e){}
+  try{localStorage.setItem('dgrns_ladle_barenos_cleaned_v1','1');}catch(e){}
+}
 function refreshLadle(){annotate();syncNoOptions();renderLadle();renderLadleVendorSummary();renderLadleSummary();renderLadleCards();if(curView==='board')renderBoard();}
 
 function renderLadle(){
@@ -4613,14 +4629,17 @@ function initLadleDia(){
 function initDiaTeardowns(){
   const no=document.getElementById('l_diaNo').value;const tsel=document.getElementById('l_diaTd');
   const tds=ladleTeardowns(no);
+  // 2026-10-01: 해체건 목록이 길어 스크롤하면 위쪽의 "래들 NO.X" 선택칸이 화면에서 벗어나
+  // 지금 보고 있는 게 어느 래들 기록인지 헷갈린다는 요청 → 각 옵션에 래들 호수를 날짜 옆에 함께 표시
+  const noLab=esc(noLabel(no));
   const opts=tds.map(td=>{
     const isEnd=END_EVT.includes(td.type);
     const pat=isEnd?(td._campSL?'S/L보수 해체':'무보수 해체'):(td.type+' 점검');
     const saved=diaStore[diaKey(no,td.date)]?' ✓':'';
-    return `<option value="${td.date}">${fmtYMD(td.date)} · ${td.daily||0}CH · ${pat}${saved}</option>`;});
+    return `<option value="${td.date}">${fmtYMD(td.date)} · ${noLab} · ${td.daily||0}CH · ${pat}${saved}</option>`;});
   Object.keys(diaStore).forEach(k=>{const p=k.split(':');if(p[0]!=='dia'||p[1]!==no)return;const d=p.slice(2).join(':');
-    if(!tds.some(td=>td.date===d)&&/^\d{4}-\d/.test(d))opts.push(`<option value="${d}">${fmtYMD(d)} · (수동)${diaStore[k]?' ✓':''}</option>`);});
-  tsel.innerHTML=opts.length?opts.join(''):`<option value="${todayStr()}">${fmtYMD(todayStr())} · (신규)</option>`;
+    if(!tds.some(td=>td.date===d)&&/^\d{4}-\d/.test(d))opts.push(`<option value="${d}">${fmtYMD(d)} · ${noLab} · (수동)${diaStore[k]?' ✓':''}</option>`);});
+  tsel.innerHTML=opts.length?opts.join(''):`<option value="${todayStr()}">${fmtYMD(todayStr())} · ${noLab} · (신규)</option>`;
   loadDiaRecord();
 }
 function loadDiaRecord(){
@@ -4706,6 +4725,74 @@ function diaSVG(){
   g+=`<text x="${XR-T/2}" y="${TOP-19}" font-size="11.5" text-anchor="middle" fill="#7c3aed" font-weight="800">#2 PP</text>`;
   g+=`<text x="${(XL+XR)/2}" y="${TOP+bodyH*0.5}" font-size="12.5" text-anchor="middle" fill="#dbe3ec">용 강 부</text>`;
   return `<svg viewBox="0 0 ${W} ${hh}" style="width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:8px">${g}</svg>`;
+}
+// 2026-10-01: 엑셀 내보내기(exportDiaXls)에 ④ 래들 단면도를 화면과 동일한 색상 그대로 넣기 위해
+// diaSVG()와 완전히 같은 좌표·색상 로직을 Canvas 2D로 재현해 PNG(data URL)로 뽑아내는 함수.
+// 엑셀(.xls)은 HTML로 저장되므로 <img src="data:image/png;base64,...">를 그대로 넣으면 표시됨.
+function diaCrossCanvasDataURL(){
+  const cs=diaCur.courses, H=20, TOP=34, T=62, XL=58, XR=372, W=430;
+  const HB=26, bodyH=cs.length*H, L=diaLimits();
+  const hh=TOP+bodyH+HB+22;
+  const scale=2;
+  const cvs=document.createElement('canvas');
+  cvs.width=Math.ceil(W*scale);cvs.height=Math.ceil(hh*scale);
+  const ctx=cvs.getContext('2d');ctx.scale(scale,scale);
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,hh);
+  const slN=cs.filter(c=>c.n>=SL_COURSE_MIN).length;
+  ctx.fillStyle='#fff7ed';ctx.fillRect(XL-26,TOP-6,XR-XL+52,slN*H+4);
+  ctx.fillStyle='#f0f7ff';ctx.fillRect(XL-26,TOP+slN*H-2,XR-XL+52,(cs.length-slN)*H+HB+8);
+  ctx.fillStyle='#94a3b8';
+  ctx.fillRect(XL-11,TOP-6,11,bodyH+HB+6);
+  ctx.fillRect(XR,TOP-6,11,bodyH+HB+6);
+  ctx.fillRect(XL-11,TOP+bodyH+HB,XR-XL+22,9);
+  cs.forEach((c,i)=>{
+    const y=TOP+i*H, sp=+c.spec||210, lim=diaLimit(c.n), sl=c.n>=SL_COURSE_MIN;
+    const v1=+c.r1||0, v2=+c.r2||0;
+    const w1=T*Math.max(0,Math.min(1,v1/sp)), w2=T*Math.max(0,Math.min(1,v2/sp));
+    const lw=T*Math.min(1,lim/sp), b1=v1<lim, b2=v2<lim;
+    const zc=sl?'#dc2626':'#1d4ed8';
+    ctx.strokeStyle='#cbd5e1';ctx.lineWidth=.6;
+    ctx.fillStyle='#fff';ctx.fillRect(XL,y,T,H-2);ctx.strokeRect(XL,y,T,H-2);
+    ctx.globalAlpha=.85;ctx.fillStyle=zc;ctx.fillRect(XL,y,w1,H-2);ctx.globalAlpha=1;
+    ctx.fillStyle='#fff';ctx.fillRect(XR-T,y,T,H-2);ctx.strokeRect(XR-T,y,T,H-2);
+    ctx.globalAlpha=.85;ctx.fillStyle=zc;ctx.fillRect(XR-w2,y,w2,H-2);ctx.globalAlpha=1;
+    ctx.strokeStyle='#dc2626';ctx.lineWidth=1.1;ctx.setLineDash([2.5,2]);
+    ctx.beginPath();ctx.moveTo(XL+lw,y);ctx.lineTo(XL+lw,y+H-2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(XR-lw,y);ctx.lineTo(XR-lw,y+H-2);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='800 11.5px sans-serif';ctx.fillStyle=zc;ctx.textAlign='right';
+    ctx.fillText(String(c.n),XL-15,y+14);
+    ctx.font='10px sans-serif';ctx.fillStyle='#94a3b8';ctx.textAlign='left';
+    ctx.fillText(String(sp),XR+15,y+14);
+    ctx.font=(b1?'800':'600')+' 11.5px sans-serif';ctx.fillStyle=b1?'#dc2626':'#334155';ctx.textAlign='left';
+    ctx.fillText(v1+(b1?' ⚠':''),XL+T+5,y+14);
+    ctx.font=(b2?'800':'600')+' 11.5px sans-serif';ctx.fillStyle=b2?'#dc2626':'#334155';ctx.textAlign='right';
+    ctx.fillText((b2?'⚠ ':'')+v2,XR-T-5,y+14);
+  });
+  const yS=TOP+slN*H-2;
+  ctx.strokeStyle='#c2410c';ctx.lineWidth=1.1;ctx.setLineDash([5,3]);
+  ctx.beginPath();ctx.moveTo(XL-26,yS);ctx.lineTo(XR+26,yS);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font='800 10.5px sans-serif';ctx.fillStyle='#c2410c';ctx.textAlign='center';
+  ctx.fillText(`S/L 기준 ${L.sl}mm`,(XL+XR)/2,TOP-19);
+  ctx.fillStyle='#1d4ed8';
+  ctx.fillText(`M/L 기준 ${L.ml}mm`,(XL+XR)/2,yS+13);
+  const by=TOP+bodyH, bsp=+diaCur.bottom.spec||BOTTOM_SPEC;
+  const bp=Math.max(0,Math.min(100,(+diaCur.bottom.rem||0)/bsp*100)), bh=HB*bp/100;
+  ctx.strokeStyle='#cbd5e1';ctx.lineWidth=.6;
+  ctx.fillStyle='#fff';ctx.fillRect(XL,by,XR-XL,HB);ctx.strokeRect(XL,by,XR-XL,HB);
+  ctx.globalAlpha=.88;ctx.fillStyle=remColor(bp);ctx.fillRect(XL,by+HB-bh,XR-XL,bh);ctx.globalAlpha=1;
+  ctx.font='700 11.5px sans-serif';ctx.fillStyle='#475569';ctx.textAlign='right';
+  ctx.fillText('바닥',XL-15,by+17);
+  ctx.font='800 11.5px sans-serif';ctx.fillStyle='#0f172a';ctx.textAlign='center';
+  ctx.fillText(`${+diaCur.bottom.rem||0} / ${bsp}`,(XL+XR)/2,by+17);
+  ctx.font='800 11.5px sans-serif';ctx.fillStyle='#1d4ed8';
+  ctx.fillText('#1 PP',XL+T/2,TOP-19);
+  ctx.fillStyle='#7c3aed';
+  ctx.fillText('#2 PP',XR-T/2,TOP-19);
+  ctx.font='12.5px sans-serif';ctx.fillStyle='#dbe3ec';ctx.textAlign='center';
+  ctx.fillText('용 강 부',(XL+XR)/2,TOP+bodyH*0.5);
+  return cvs.toDataURL('image/png');
 }
 const DIA_PHOTO_LABEL=['좌측 (#1 PP측)','우측 (#2 PP측)'];
 function diaPhotoSlotHtml(i){
@@ -4896,8 +4983,14 @@ function exportDiaXls(){
   const bb=Math.max(0,(+diaCur.bottom.spec||0)-(+diaCur.bottom.rem||0))/dv;
   courseTbl+=`<tr><td class="nob">바닥</td><td>${diaCur.bottom.spec}</td><td colspan="2">${diaCur.bottom.rem}</td><td colspan="3">${bb.toFixed(2)} mm/CH</td></tr></table>`;
 
-  // ④ 래들 단면(해체) — 화면 단면도의 #1 PP·#2 PP 수치를 그대로 표로 표현
+  // ④ 래들 단면 — 2026-10-01: 텍스트 표 대신 화면(diaSVG)과 완전히 같은 색상의 단면도 이미지를
+  // 그대로 삽입(diaCrossCanvasDataURL, Canvas로 재현한 PNG). 엑셀(.xls)은 HTML 저장이라
+  // <img src="data:image/png;base64,...">가 그대로 표시됨. 숫자만 따로 보고 싶을 때를 위해
+  // 이미지 아래에 작은 숫자 표도 함께 남겨둠.
+  let crossImgTag='';
+  try{crossImgTag=`<img src="${diaCrossCanvasDataURL()}" width="340" style="display:block;margin:0 auto">`;}catch(e){crossImgTag='';}
   let crossTbl=`<table><tr><td class="hd" colspan="3">④ 래들 단면 (${xlEsc(isEnd?'해체':(tdRec&&tdRec.type||'점검'))})</td></tr>
+    <tr><td class="nob" colspan="3" style="text-align:center">${crossImgTag}</td></tr>
     <tr><td class="hd">단</td><td class="hd">#1 PP</td><td class="hd">#2 PP</td></tr>`;
   diaCur.courses.forEach(c=>{crossTbl+=`<tr><td>${c.n}</td><td>${c.r1}</td><td>${c.r2}</td></tr>`;});
   crossTbl+=`<tr><td class="nob">바닥</td><td colspan="2">${diaCur.bottom.rem} / ${diaCur.bottom.rem}</td></tr>
@@ -13061,6 +13154,7 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
     else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
     try{await ensureLadle2026Import();}catch(e){}
     try{ensureDia2026Import();}catch(e){}
+    try{await autoCleanBareLadleNos();}catch(e){}
     await migrateVendor();await loadSchedule();await loadBom();await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
     try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();}catch(e){stockData=[];}
