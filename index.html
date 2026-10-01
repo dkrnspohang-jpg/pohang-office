@@ -2326,25 +2326,24 @@ service cloud.firestore {
         <button class="btn" onclick="downloadSgPrice()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_count"></span>
       </div>
-      <div class="subhead">품목·단가 현황 <span class="hint">'10. 안전보호구' 폴더의 실제 발주대장(2024년~2026년 1월, 조은산업)에서 가져온 최근 확인 수량·단가입니다. 26년 3월부터 거래처가 대명공구백화점으로 바뀌었는데, 그 이후 실제 세금계산서·거래명세서 단가는 아직 폴더에 없어 '대명공구백화점 단가' 칸을 비워뒀습니다 — 실제 전표를 받으면 그 칸에 입력하세요(바로 옆 [거래처 변경 원가절감] 탭에 자동 반영됩니다).</span></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:1180px">
+      <div class="subhead">품목·단가 현황 <span class="hint">'10. 안전보호구' 폴더의 발주검토 자료(Sheet1: 기존업체 조은산업 ↔ 신규업체 대명공구백화점 단가 비교, 26년 3월 거래처 변경분)에서 가져온 전품목 실제 확인 단가입니다. 발주 시 참고용이며, 단가가 바뀌면 바로 수정하세요(입력 즉시 자동저장·팀 공유).</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:820px">
         <thead><tr>
-          <th style="min-width:150px">품목명</th><th style="min-width:70px">단위</th>
-          <th style="min-width:90px">기준수량<br><span style="font-weight:400;font-size:9.5px">(월 발주량)</span></th>
-          <th style="min-width:100px">조은산업 단가<br><span style="font-weight:400;font-size:9.5px">확인시점</span></th>
-          <th style="min-width:100px">대명공구백화점 단가<br><span style="font-weight:400;font-size:9.5px">(실제 전표 입력)</span></th>
-          <th style="min-width:160px">지급 주기 · 비고</th><th style="min-width:60px"></th>
+          <th style="min-width:150px">품목명</th><th style="min-width:90px">단위</th>
+          <th style="min-width:110px">조은산업 단가<br><span style="font-weight:400;font-size:9.5px">(~26년 2월)</span></th>
+          <th style="min-width:110px">대명공구백화점 단가<br><span style="font-weight:400;font-size:9.5px">(26년 3월~)</span></th>
+          <th style="min-width:160px">비고</th><th style="min-width:60px"></th>
         </tr></thead>
         <tbody id="sgPriceBody"></tbody>
       </table></div>
     </div>
 
-    <!-- 거래처 변경 원가절감 요약 -->
+    <!-- 거래처 변경 원가절감 요약 (참고용 · 2026년 실적 보고용 단일 요약) -->
     <div id="sg-save" style="display:none">
-      <div class="subhead">거래처 변경 원가절감 <span class="hint">26년 3월 조은산업 → 대명공구백화점 전환에 따른 품목별 단가 변동을 계산합니다. [품목·단가 현황] 탭에 대명공구백화점 실제 단가를 입력한 품목만 집계되며, 입력 전까지는 절감액이 "-"로 표시됩니다(추정치를 만들어 보여주지 않습니다).</span></div>
+      <div class="subhead">거래처 변경 원가절감 <span class="hint">26년 3월 조은산업 → 대명공구백화점 전환 이후 실제 발주대장(26년 3월~10월, 8개월)을 기준으로 계산한 절감 실적입니다. 단가 비교는 참고용이고, 핵심은 아래 "12월까지 연간 추정 절감액" — 올해 실적 보고에 바로 쓸 수 있는 숫자입니다.</span></div>
       <div class="cards" id="sgSaveCards"></div>
-      <div class="tablewrap" style="margin-top:12px"><table class="bomtbl" style="min-width:980px">
-        <thead><tr><th>품목</th><th>조은산업 단가</th><th>대명공구백화점 단가</th><th>개당 절감액</th><th>절감률</th><th>월 기준수량</th><th>월 절감액</th></tr></thead>
+      <div class="tablewrap" style="margin-top:12px"><table class="bomtbl" style="min-width:700px">
+        <thead><tr><th>품목</th><th>기존단가 기준 금액</th><th>실제 발주 금액</th><th>절감액</th></tr></thead>
         <tbody id="sgSaveBody"></tbody>
       </table></div>
     </div>
@@ -2356,11 +2355,16 @@ service cloud.firestore {
         <button class="btn" onclick="downloadSgSize()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_sizeCount"></span>
       </div>
-      <div class="subhead">개인별 보호구 사이즈 <span class="hint">향후 인원별로 작업복·방염복·안전화 사이즈를 개인마다 세팅하는 기능의 예시 구현입니다. 안전화 모델·사이즈는 실제 구매대장에 적혀 있던 값을 그대로 불러왔고, 작업복·방염복 사이즈는 아직 확인된 자료가 없어 빈 칸으로 두었습니다 — 담당자가 확인되는 대로 입력하면 됩니다.</span></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:860px">
+      <div class="subhead">개인별 보호구 사이즈 <span class="hint">향후 인원별로 지급 보호구 사이즈를 개인마다 세팅하는 기능의 예시 구현입니다. 안전화 모델·사이즈와 방염복 사이즈는 실제 구매대장·지급 명단을 그대로 불러왔고, 작업복(상·하의)·티셔츠(반팔·긴팔)·내열안전화·동잠바·조끼·혹서기조끼는 아직 확인된 자료가 없어 빈 칸으로 두었습니다 — 담당자가 확인되는 대로 입력하면 됩니다.</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:1560px">
         <thead><tr>
-          <th style="min-width:100px">성명</th><th style="min-width:110px">작업복 사이즈</th><th style="min-width:110px">방염복 사이즈</th>
-          <th style="min-width:120px">안전화 모델</th><th style="min-width:90px">안전화 사이즈</th><th style="min-width:140px">비고</th><th style="min-width:60px"></th>
+          <th style="min-width:90px">성명</th>
+          <th style="min-width:95px">작업복<br>(상의)</th><th style="min-width:95px">작업복<br>(하의)</th>
+          <th style="min-width:95px">티셔츠<br>(반팔)</th><th style="min-width:95px">티셔츠<br>(긴팔)</th>
+          <th style="min-width:90px">방염복</th>
+          <th style="min-width:110px">안전화 모델</th><th style="min-width:80px">안전화</th><th style="min-width:90px">내열안전화</th>
+          <th style="min-width:85px">동잠바</th><th style="min-width:75px">조끼</th><th style="min-width:95px">혹서기<br>조끼</th>
+          <th style="min-width:130px">비고</th><th style="min-width:60px"></th>
         </tr></thead>
         <tbody id="sgSizeBody"></tbody>
       </table></div>
@@ -9317,33 +9321,83 @@ function downloadPoscoNonSupply(){
    실제 확인된 값만 반영한다는 원칙 — 참고 26.항과 동일).
    개인별 사이즈는 "향후 인원별로 세팅할 기능의 예시 구현"이라는 요청에 따라, 실제 구매대장에 적혀
    있던 안전화 모델·사이즈만 실제값으로 채우고 작업복·방염복 사이즈는 확인된 자료가 없어 빈 칸으로 둔다. */
+// 2026-10-01(재구현): '10. 안전보호구/포항영업소 안전보호구 구매.xlsx'의 Sheet1(기존업체 조은산업 vs
+// 신규업체 대명공구백화점 단가 비교, 23개 전품목 실측치)을 그대로 반영. 더 이상 빈 칸(미확인)이 아님.
 const SG_PRICE_SEED=[
-  {item:'방염복',unit:'EA',qty:24,oldPrice:86000,oldAsOf:'2026-01',note:'1벌/분기 지급 → 혹서기 추가 지급'},
-  {item:'방염두건',unit:'EA',qty:24,oldPrice:12000,oldAsOf:'2026-01',note:''},
-  {item:'안전화',unit:'EA',qty:2,oldPrice:49000,oldAsOf:'2026-01',note:'4종 관리(다이얼·일반6인치·k2찍찍이·단화) · 1EA/반기 지급'},
-  {item:'내열안전화',unit:'EA',qty:2,oldPrice:53000,oldAsOf:'2026-01',note:'년간 1회 지급'},
-  {item:'안전장화',unit:'EA',qty:2,oldPrice:31000,oldAsOf:'2026-01',note:''},
-  {item:'피수갑',unit:'SET',qty:135,oldPrice:2600,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'방진마스크 650V',unit:'BOX',qty:50,oldPrice:17500,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'방진마스크 850V',unit:'BOX',qty:10,oldPrice:29500,oldAsOf:'2026-01',note:'S/N반 사원급 지급'},
-  {item:'귀마개',unit:'BOX',qty:2,oldPrice:37000,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'분진복',unit:'BOX',qty:2,oldPrice:76800,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'코팅장갑(황/녹)',unit:'SET',qty:280,oldPrice:630,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'면장갑',unit:'SET',qty:460,oldPrice:250,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'청각반',unit:'SET',qty:48,oldPrice:1800,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'면토시',unit:'SET',qty:42,oldPrice:300,oldAsOf:'2026-01',note:'매월 지급'},
-  {item:'보안면',unit:'EA',qty:24,oldPrice:7500,oldAsOf:'2026-01',note:''},
-  {item:'안전모(덮개 빨간색 신호수)',unit:'EA',qty:10,oldPrice:4300,oldAsOf:'2026-01',note:''}
-].map(r=>({id:uid(),oldVendor:'조은산업',newVendor:'대명공구백화점',newPrice:'',newAsOf:'',...r}));
+  {item:'방염복',unit:'EA',oldPrice:86000,newPrice:84000,note:'1벌/분기 지급 → 혹서기 추가 지급'},
+  {item:'방염두건',unit:'EA',oldPrice:12000,newPrice:12000,note:''},
+  {item:'안전화',unit:'EA',oldPrice:49000,newPrice:46000,note:'4종 관리(다이얼·일반6인치·k2찍찍이·단화) · 1EA/반기 지급'},
+  {item:'내열안전화',unit:'EA',oldPrice:53000,newPrice:52000,note:'년간 1회 지급'},
+  {item:'안전장화',unit:'EA',oldPrice:31000,newPrice:26000,note:''},
+  {item:'피수갑',unit:'SET',oldPrice:2600,newPrice:2600,note:'매월 지급'},
+  {item:'방진마스크 650V',unit:'BOX(10EA)',oldPrice:17500,newPrice:17000,note:'매월 지급'},
+  {item:'방진마스크 850V',unit:'BOX(10EA)',oldPrice:29500,newPrice:26000,note:'S/N반 사원급 지급'},
+  {item:'귀마개',unit:'BOX(200EA)',oldPrice:37000,newPrice:36000,note:'매월 지급'},
+  {item:'분진복',unit:'BOX(24EA)',oldPrice:76800,newPrice:72000,note:'매월 지급'},
+  {item:'코팅장갑(황/녹)',unit:'SET',oldPrice:630,newPrice:600,note:'매월 지급'},
+  {item:'면장갑',unit:'SET',oldPrice:250,newPrice:200,note:'매월 지급'},
+  {item:'청각반',unit:'SET',oldPrice:1800,newPrice:2000,note:'매월 지급 · 단가 인상 품목'},
+  {item:'면토시',unit:'SET',oldPrice:300,newPrice:250,note:'매월 지급'},
+  {item:'보안면',unit:'EA',oldPrice:7500,newPrice:8000,note:'단가 인상 품목'},
+  {item:'보안경(B-621A)',unit:'EA',oldPrice:5400,newPrice:5000,note:'현장 비산먼지 지급'},
+  {item:'안전모(덮개 빨간색 신호수)',unit:'EA',oldPrice:4300,newPrice:4000,note:''},
+  {item:'안전모(동국 미색)',unit:'EA',oldPrice:6000,newPrice:6000,note:''},
+  {item:'안전모(동국 적색)',unit:'EA',oldPrice:5500,newPrice:5500,note:''},
+  {item:'안전모(이름 라벨)',unit:'EA',oldPrice:700,newPrice:'',note:'대명공구백화점 단가 추후 협의'},
+  {item:'안전모 내피',unit:'EA',oldPrice:3500,newPrice:3000,note:''},
+  {item:'안전모 턱끈',unit:'EA',oldPrice:1000,newPrice:1000,note:''},
+  {item:'각반밴드',unit:'EA',oldPrice:500,newPrice:500,note:''}
+].map(r=>({id:uid(),oldVendor:'조은산업',newVendor:'대명공구백화점',oldAsOf:'2026-01',newAsOf:'2026-03',...r}));
+
+// 26년 3월~10월(8개월) 실제 발주대장('2026년' 시트의 월별 실주문 수량·금액)을 '조은산업' 시트의 환산 전
+// 단가와 직접 대조해 계산한 실적치 — 가정이 아니라 실제 발주 수량 기준 절감액입니다.
+const SG_SAVINGS_SUMMARY={
+  periodLabel:'2026년 3월~10월 (8개월, 실제 발주 기준)',
+  asOf:'2026-10',
+  oldCostTotal:36010400,
+  newCostTotal:34007500,
+  savedTotal:2002900,
+  monthlyAvg:250363,
+  projectedFullYear:2503625
+};
+const SG_SAVINGS_ITEMS=[
+  {item:'방진마스크 850V',oldCost:5280500,newCost:4654000,saved:626500},
+  {item:'안전화',oldCost:3248000,newCost:2668000,saved:580000},
+  {item:'방염복',oldCost:11094000,newCost:10836000,saved:258000},
+  {item:'면장갑',oldCost:1132500,newCost:906000,saved:226500},
+  {item:'방진마스크 650V',oldCost:5600000,newCost:5440000,saved:160000},
+  {item:'분진복',oldCost:1228800,newCost:1152000,saved:76800},
+  {item:'코팅장갑(황/녹)',oldCost:1234800,newCost:1176000,saved:58800},
+  {item:'안전모 내피',oldCost:175000,newCost:150000,saved:25000},
+  {item:'면토시',oldCost:113400,newCost:94500,saved:18900},
+  {item:'귀마개',oldCost:592000,newCost:576000,saved:16000},
+  {item:'안전장화',oldCost:62000,newCost:52000,saved:10000},
+  {item:'내열안전화',oldCost:371000,newCost:364000,saved:7000},
+  {item:'안전모(덮개 빨간색 신호수)',oldCost:86000,newCost:80000,saved:6000},
+  {item:'방염두건',oldCost:1704000,newCost:1704000,saved:0},
+  {item:'피수갑',oldCost:2847000,newCost:2847000,saved:0},
+  {item:'안전모(동국 미색)',oldCost:300000,newCost:300000,saved:0},
+  {item:'청각반',oldCost:86400,newCost:96000,saved:-9600},
+  {item:'보안면',oldCost:855000,newCost:912000,saved:-57000}
+];
+
+// 2026-10-01(재구현): '1월' 시트의 방염복 사이즈 그룹(L/XL/2XL/3XL별 지급 인원 명단)에서 개인별 방염복
+// 사이즈를 역매핑. 작업복 상/하의·티셔츠(반팔/긴팔)·내열안전화·동잠바·조끼·혹서기조끼는 아직 확인된
+// 자료가 없어 향후 개인별 세팅 예시로 빈 칸으로 둠.
 const SG_SIZE_SEED=[
-  ['서승수','다이얼',260],['강경묵','다이얼',265],
-  ['신충일','일반6인치',245],['최윤섭','일반6인치',250],['김진현','일반6인치',260],['김수민','일반6인치',260],
-  ['김봉주','일반6인치',265],['정봉화','일반6인치',270],['박명일','일반6인치',275],['오종진','일반6인치',280],
-  ['한석근','k2찍찍이',255],['소준호','k2찍찍이',255],['변종력','k2찍찍이',260],['오성수','k2찍찍이',260],
-  ['김성규','k2찍찍이',260],['서병권','k2찍찍이',260],['정성호','k2찍찍이',265],['서용제','k2찍찍이',265],
-  ['이화훈','k2찍찍이',265],['정윤용','k2찍찍이',265],['박경철','k2찍찍이',270],['송창엽','k2찍찍이',275],
-  ['정연우','k2찍찍이',275],['박동훈','k2찍찍이',280],['전재광','단화',250]
-].map(([name,shoeModel,shoeSize])=>({id:uid(),name,uniformSize:'',flameSuitSize:'',shoeModel,shoeSize,note:''}));
+  ['서승수','다이얼',260,''],['강경묵','다이얼',265,''],
+  ['신충일','일반6인치',245,'L'],['최윤섭','일반6인치',250,'L'],['김진현','일반6인치',260,'2XL'],['김수민','일반6인치',260,''],
+  ['김봉주','일반6인치',265,'L'],['정봉화','일반6인치',270,'2XL'],['박명일','일반6인치',275,''],['오종진','일반6인치',280,'3XL'],
+  ['한석근','k2찍찍이',255,'XL'],['소준호','k2찍찍이',255,'L'],['변종력','k2찍찍이',260,'XL'],['오성수','k2찍찍이',260,'XL'],
+  ['김성규','k2찍찍이',260,'2XL'],['서병권','k2찍찍이',260,'2XL'],['정성호','k2찍찍이',265,'2XL'],['서용제','k2찍찍이',265,'2XL'],
+  ['이화훈','k2찍찍이',265,''],['정윤용','k2찍찍이',265,'XL'],['박경철','k2찍찍이',270,'2XL'],['송창엽','k2찍찍이',275,'XL'],
+  ['정연우','k2찍찍이',275,'2XL'],['박동훈','k2찍찍이',280,'3XL'],['전재광','단화',250,'L']
+].map(([name,shoeModel,shoeSize,flameSuitSize])=>({
+  id:uid(),name,
+  workTop:'',workBottom:'',tshirtShort:'',tshirtLong:'',
+  flameSuitSize,shoeModel,shoeSize,heatShoeSize:'',
+  winterJacket:'',vest:'',summerVest:'',note:''
+}));
 function loadSgPrice(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_price')||'null');return Array.isArray(v)&&v.length?v:SG_PRICE_SEED;}catch(e){return SG_PRICE_SEED;}}
 function loadSgSize(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_size')||'null');return Array.isArray(v)&&v.length?v:SG_SIZE_SEED;}catch(e){return SG_SIZE_SEED;}}
 function saveSgPrice(){try{localStorage.setItem('dgrns_sg_price',JSON.stringify(sgPrice));}catch(e){}}
@@ -9361,12 +9415,12 @@ function sgTab(t){
   if(t==='size')renderSgSize();
 }
 function addSgItem(){
-  sgPrice.unshift({id:uid(),item:'',unit:'EA',qty:'',oldPrice:'',oldVendor:'조은산업',oldAsOf:todayStr().slice(0,7),newPrice:'',newVendor:'대명공구백화점',newAsOf:'',note:''});
+  sgPrice.unshift({id:uid(),item:'',unit:'EA',oldPrice:'',oldVendor:'조은산업',oldAsOf:todayStr().slice(0,7),newPrice:'',newVendor:'대명공구백화점',newAsOf:'',note:''});
   saveSgPrice();renderSgPrice();
 }
 function editSgItem(id,key,v){
   const r=sgPrice.find(x=>x.id===id);if(!r)return;
-  r[key]=['qty','oldPrice','newPrice'].includes(key)?(v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0)):v;
+  r[key]=['oldPrice','newPrice'].includes(key)?(v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0)):v;
   saveSgPrice();
 }
 function delSgItem(id){
@@ -9378,11 +9432,10 @@ function sgPriceRowHtml(r){
   return `<tr>
     <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.item)}" placeholder="품목명" oninput="editSgItem('${r.id}','item',this.value)"></td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.unit||'')}" oninput="editSgItem('${r.id}','unit',this.value)"></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.qty===''?'':r.qty}" placeholder="수량" oninput="editSgItem('${r.id}','qty',this.value)"></td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.oldPrice===''?'':Number(r.oldPrice).toLocaleString()}" placeholder="조은산업 단가" oninput="editSgItem('${r.id}','oldPrice',this.value)">
-      <div style="font-size:9.5px;color:var(--muted);text-align:right">${esc(r.oldAsOf||'')} 확인</div></td>
-    <td><input class="binp" style="width:100%;border:1px solid #f59e0b;background:#fffbeb;text-align:right" value="${r.newPrice===''?'':Number(r.newPrice).toLocaleString()}" placeholder="실제 전표 입력" oninput="editSgItem('${r.id}','newPrice',this.value)">
-      <input type="date" style="width:100%;font-size:10px;margin-top:2px;border:1px solid var(--line)" value="${esc(r.newAsOf||'')}" onchange="editSgItem('${r.id}','newAsOf',this.value)"></td>
+      <div style="font-size:9.5px;color:var(--muted);text-align:right">${esc(r.oldAsOf||'')} 기준</div></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.newPrice===''?'':Number(r.newPrice).toLocaleString()}" placeholder="대명공구백화점 단가" oninput="editSgItem('${r.id}','newPrice',this.value)">
+      <div style="font-size:9.5px;color:var(--muted);text-align:right">${esc(r.newAsOf||'')} 기준</div></td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.note||'')}" oninput="editSgItem('${r.id}','note',this.value)"></td>
     <td><button class="btn sm danger del-rec" onclick="delSgItem('${r.id}')">삭제</button></td>
   </tr>`;
@@ -9391,43 +9444,37 @@ function renderSgPrice(){
   const box=document.getElementById('sgPriceBody');if(!box)return;
   const q=(document.getElementById('sg_search')?.value||'').toLowerCase();
   const rows=sgPrice.filter(r=>!q||(r.item||'').toLowerCase().includes(q));
-  box.innerHTML=rows.map(sgPriceRowHtml).join('')||`<tr><td colspan="7"><div class="empty">등록된 품목이 없습니다. [＋ 품목 추가]로 등록하세요.</div></td></tr>`;
+  box.innerHTML=rows.map(sgPriceRowHtml).join('')||`<tr><td colspan="6"><div class="empty">등록된 품목이 없습니다. [＋ 품목 추가]로 등록하세요.</div></td></tr>`;
   const cnt=document.getElementById('sg_count');if(cnt)cnt.textContent=rows.length+'건';
 }
 function downloadSgPrice(){
-  let t=`<table><tr><th>품목명</th><th>단위</th><th>기준수량</th><th>조은산업 단가</th><th>확인시점</th><th>대명공구백화점 단가</th><th>확인시점</th><th>비고</th></tr>`;
-  sgPrice.forEach(r=>{t+=`<tr><td>${esc(r.item)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.qty||'')}</td><td>${esc(r.oldPrice||'')}</td><td>${esc(r.oldAsOf||'')}</td><td>${esc(r.newPrice||'')}</td><td>${esc(r.newAsOf||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
+  let t=`<table><tr><th>품목명</th><th>단위</th><th>조은산업 단가</th><th>대명공구백화점 단가</th><th>비고</th></tr>`;
+  sgPrice.forEach(r=>{t+=`<tr><td>${esc(r.item)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.oldPrice||'')}</td><td>${esc(r.newPrice||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
   t+=`</table>`;downloadXls('안전보호구_품목단가현황',t);
 }
 function renderSgSave(){
   const box=document.getElementById('sgSaveBody');if(!box)return;
-  let totalOldMonthly=0, totalNewMonthly=0, totalSaveMonthly=0, cnt=0;
-  box.innerHTML=sgPrice.map(r=>{
-    const has=r.newPrice!==''&&r.newPrice!=null&&+r.oldPrice>0;
-    const d=has?(+r.oldPrice-+r.newPrice):null;
-    const pct=has&&+r.oldPrice?(d/+r.oldPrice*100):null;
-    const qty=+r.qty||0;
-    const monthly=has?d*qty:null;
-    if(has){totalOldMonthly+=(+r.oldPrice)*qty;totalNewMonthly+=(+r.newPrice)*qty;totalSaveMonthly+=monthly;cnt++;}
-    const col=has?(d>0?'#15803d':d<0?'#c81e1e':'#64748b'):'#c5ccd3';
+  const s=SG_SAVINGS_SUMMARY;
+  box.innerHTML=SG_SAVINGS_ITEMS.map(r=>{
+    const col=r.saved>0?'#15803d':r.saved<0?'#c81e1e':'#64748b';
     return `<tr>
       <td>${esc(r.item)}</td>
-      <td class="n">${r.oldPrice?wON(+r.oldPrice):'-'}</td>
-      <td class="n">${has?wON(+r.newPrice):'<span style="color:#c5ccd3">입력 전</span>'}</td>
-      <td class="n" style="color:${col};font-weight:700">${has?(d>0?'▼':d<0?'▲':'–')+wON(Math.abs(d)):'-'}</td>
-      <td class="n" style="color:${col}">${pct!=null?pct.toFixed(1)+'%':'-'}</td>
-      <td class="n">${qty||'-'}</td>
-      <td class="n" style="color:${col};font-weight:700">${monthly!=null?wON(monthly):'-'}</td>
+      <td class="n">${wON(r.oldCost)}</td>
+      <td class="n">${wON(r.newCost)}</td>
+      <td class="n" style="color:${col};font-weight:700">${r.saved>0?'▼':r.saved<0?'▲':'–'} ${wON(Math.abs(r.saved))}</td>
     </tr>`;
-  }).join('')||`<tr><td colspan="7"><div class="empty">등록된 품목이 없습니다.</div></td></tr>`;
+  }).join('')||`<tr><td colspan="4"><div class="empty">데이터가 없습니다.</div></td></tr>`;
+  const pct=(s.savedTotal/s.oldCostTotal*100).toFixed(1);
   document.getElementById('sgSaveCards').innerHTML=
-    card('단가 확인 완료 품목',cnt,'/ '+sgPrice.length+'개')
-    +card('월 기준 조은산업 금액(확인분)',wON(totalOldMonthly),'원')
-    +card('월 기준 대명공구백화점 금액',wON(totalNewMonthly),'원')
-    +`<div class="card"><div class="lbl">월 절감액(확인분 합계)</div><div class="val" style="color:${totalSaveMonthly>0?'#15803d':totalSaveMonthly<0?'#c81e1e':'inherit'}">${wON(totalSaveMonthly)}<small> 원</small></div></div>`;
+    card('집계 기간',s.periodLabel,'')
+    +card('기존단가(조은산업) 기준 총액',wON(s.oldCostTotal),'원')
+    +card('실제 발주 총액(대명공구백화점)',wON(s.newCostTotal),'원')
+    +`<div class="card"><div class="lbl">실현 절감액 (${pct}%)</div><div class="val" style="color:#15803d">${wON(s.savedTotal)}<small> 원</small></div></div>`
+    +card('월평균 절감액',wON(s.monthlyAvg),'원')
+    +`<div class="card"><div class="lbl">12월까지 연간 추정 절감액</div><div class="val" style="color:#15803d">${wON(s.projectedFullYear)}<small> 원</small></div><div style="font-size:9.5px;color:var(--muted);margin-top:2px">${s.asOf} 실적 + 11·12월 평균 반영 추정</div></div>`;
 }
 function addSgSize(){
-  sgSize.unshift({id:uid(),name:'',uniformSize:'',flameSuitSize:'',shoeModel:'',shoeSize:'',note:''});
+  sgSize.unshift({id:uid(),name:'',workTop:'',workBottom:'',tshirtShort:'',tshirtLong:'',flameSuitSize:'',shoeModel:'',shoeSize:'',heatShoeSize:'',winterJacket:'',vest:'',summerVest:'',note:''});
   saveSgSize();renderSgSize();
 }
 function editSgSize(id,key,v){
@@ -9439,25 +9486,35 @@ function delSgSize(id){
   if(!confirm('이 인원을 삭제할까요?'))return;
   sgSize=sgSize.filter(x=>x.id!==id);saveSgSize();renderSgSize();
 }
+function sgSizeField(r,key,ph){
+  return `<input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r[key]||'')}" placeholder="${ph||''}" oninput="editSgSize('${r.id}','${key}',this.value)">`;
+}
 function sgSizeRowHtml(r){
   return `<tr>
     <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.name)}" placeholder="성명" oninput="editSgSize('${r.id}','name',this.value)"></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.uniformSize||'')}" placeholder="예: 100" oninput="editSgSize('${r.id}','uniformSize',this.value)"></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.flameSuitSize||'')}" placeholder="예: 105" oninput="editSgSize('${r.id}','flameSuitSize',this.value)"></td>
+    <td>${sgSizeField(r,'workTop','예: 100')}</td>
+    <td>${sgSizeField(r,'workBottom','예: 32')}</td>
+    <td>${sgSizeField(r,'tshirtShort','예: L')}</td>
+    <td>${sgSizeField(r,'tshirtLong','예: L')}</td>
+    <td>${sgSizeField(r,'flameSuitSize','예: 2XL')}</td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.shoeModel||'')}" placeholder="다이얼/일반6인치/k2찍찍이/단화" oninput="editSgSize('${r.id}','shoeModel',this.value)"></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.shoeSize||'')}" placeholder="mm" oninput="editSgSize('${r.id}','shoeSize',this.value)"></td>
+    <td>${sgSizeField(r,'shoeSize','mm')}</td>
+    <td>${sgSizeField(r,'heatShoeSize','mm')}</td>
+    <td>${sgSizeField(r,'winterJacket','예: 100')}</td>
+    <td>${sgSizeField(r,'vest','예: L')}</td>
+    <td>${sgSizeField(r,'summerVest','예: L')}</td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.note||'')}" oninput="editSgSize('${r.id}','note',this.value)"></td>
     <td><button class="btn sm danger del-rec" onclick="delSgSize('${r.id}')">삭제</button></td>
   </tr>`;
 }
 function renderSgSize(){
   const box=document.getElementById('sgSizeBody');if(!box)return;
-  box.innerHTML=sgSize.map(sgSizeRowHtml).join('')||`<tr><td colspan="7"><div class="empty">등록된 인원이 없습니다.</div></td></tr>`;
+  box.innerHTML=sgSize.map(sgSizeRowHtml).join('')||`<tr><td colspan="14"><div class="empty">등록된 인원이 없습니다.</div></td></tr>`;
   const cnt=document.getElementById('sg_sizeCount');if(cnt)cnt.textContent=sgSize.length+'명';
 }
 function downloadSgSize(){
-  let t=`<table><tr><th>성명</th><th>작업복 사이즈</th><th>방염복 사이즈</th><th>안전화 모델</th><th>안전화 사이즈</th><th>비고</th></tr>`;
-  sgSize.forEach(r=>{t+=`<tr><td>${esc(r.name)}</td><td>${esc(r.uniformSize||'')}</td><td>${esc(r.flameSuitSize||'')}</td><td>${esc(r.shoeModel||'')}</td><td>${esc(r.shoeSize||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
+  let t=`<table><tr><th>성명</th><th>작업복(상의)</th><th>작업복(하의)</th><th>티셔츠(반팔)</th><th>티셔츠(긴팔)</th><th>방염복</th><th>안전화 모델</th><th>안전화</th><th>내열안전화</th><th>동잠바</th><th>조끼</th><th>혹서기조끼</th><th>비고</th></tr>`;
+  sgSize.forEach(r=>{t+=`<tr><td>${esc(r.name)}</td><td>${esc(r.workTop||'')}</td><td>${esc(r.workBottom||'')}</td><td>${esc(r.tshirtShort||'')}</td><td>${esc(r.tshirtLong||'')}</td><td>${esc(r.flameSuitSize||'')}</td><td>${esc(r.shoeModel||'')}</td><td>${esc(r.shoeSize||'')}</td><td>${esc(r.heatShoeSize||'')}</td><td>${esc(r.winterJacket||'')}</td><td>${esc(r.vest||'')}</td><td>${esc(r.summerVest||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
   t+=`</table>`;downloadXls('개인별_보호구_사이즈',t);
 }
 
