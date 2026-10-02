@@ -145,6 +145,8 @@
   .ch-num{font-weight:700;font-variant-numeric:tabular-nums}
   .ch-cum{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
   .ch-shell{color:#6b3fa0;font-variant-numeric:tabular-nums}
+  .ch-chain-seg{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;padding:0 1px;border-radius:3px}
+  .ch-chain-seg:hover{background:#fff3cd;text-decoration-color:var(--accent)}
   .acts{display:flex;gap:5px;white-space:nowrap}
   .empty{text-align:center;color:var(--muted);padding:34px 10px;font-size:13.5px}
   .subtabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
@@ -972,7 +974,7 @@
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="l_count"></span>
     </div>
     <div class="tablewrap"><table>
-      <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th>현재수명</th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:96px">관리</th></tr></thead>
+      <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th>현재수명</th><th style="min-width:120px">누적수명<br><span style="font-weight:400;font-size:9.5px">구간별 증가분</span></th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:96px">관리</th></tr></thead>
       <tbody id="ladleBody"></tbody>
     </table></div>
     <div class="subhead">래들번호별 현황 <span class="hint">영구장 교체 이후 누적수명·신축횟수</span></div>
@@ -2325,15 +2327,37 @@ service cloud.firestore {
     <!-- 2026-10-01(3차): "품목단가 시트가 그렇게 중요하지 않다 · 시트 낭비" 피드백으로 품목·단가 현황과
          거래처 변경 원가절감을 한 탭(sg-price)으로 통합. 핵심인 원가절감 요약을 위에, 참고용인
          품목·단가 표를 아래에 배치. 대신 그 자리에 새 "발주물량 검토" 탭(sg-order)을 신설 — 엑셀처럼
-         연도별로 품목별 월별 발주수량을 입력·조회. -->
+         연도별로 품목별 월별 발주수량을 입력·조회.
+         2026-10-02: "순서는 발주물량 검토(수량+금액)가 앞, 품목단가 현황은 뒤로" 요청 → 탭 순서와
+         기본 진입 화면을 바꿈. 발주물량 검토가 핵심 업무 화면이라 먼저 보이게 하고, 품목단가·원가절감은
+         그 뒤에서 참고하는 흐름으로 변경. -->
     <div class="subtabs" id="sgToggle">
-      <button class="subtab active" data-sub="price" onclick="sgTab('price')">💰 품목단가·원가절감</button>
-      <button class="subtab" data-sub="order" onclick="sgTab('order')">🗓️ 발주물량 검토</button>
+      <button class="subtab active" data-sub="order" onclick="sgTab('order')">🗓️ 발주물량 검토</button>
+      <button class="subtab" data-sub="price" onclick="sgTab('price')">💰 품목단가·원가절감</button>
       <button class="subtab" data-sub="size" onclick="sgTab('size')">👕 개인별 보호구 사이즈(예시)</button>
     </div>
 
+    <!-- 발주물량 검토 (2026-10-02: 수량+금액 구조로 개편, 첫 화면으로 이동) -->
+    <div id="sg-order">
+      <div class="toolrow">
+        <div class="field"><label>연도</label><select id="sg_orderYear" onchange="sgOrderYearChange()" style="width:100px"></select></div>
+        <button class="btn" onclick="downloadSgOrder()">📥 엑셀</button>
+        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_orderCount"></span>
+      </div>
+      <div class="subhead">발주물량 검토 <span class="hint">엑셀 발주검토 자료처럼 품목별로 연도를 선택해 1~12월 발주 수량·단가·금액을 입력·조회합니다('10. 안전보호구' 폴더 발주대장의 실제 이력을 최초 1회 반영). 칸마다 위=수량(입력) · 가운데=단가(비우면 품목단가 표 기준으로 자동 계산) · 아래=금액(계산값). 품목 목록은 [품목단가·원가절감] 탭의 품목을 그대로 사용합니다.</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:1240px">
+        <thead><tr><th style="min-width:150px">품목</th><th style="min-width:50px">단위</th>
+          <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th>
+          <th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+          <th style="min-width:90px">연간 수량·금액</th>
+        </tr></thead>
+        <tbody id="sgOrderBody"></tbody>
+        <tfoot><tr id="sgOrderFoot" style="font-weight:700;background:#f6f8fa"></tr></tfoot>
+      </table></div>
+    </div>
+
     <!-- 품목·단가 현황 + 거래처 변경 원가절감 (통합) -->
-    <div id="sg-price">
+    <div id="sg-price" style="display:none">
       <div class="subhead">거래처 변경 원가절감 <span class="hint">26년 3월 조은산업 → 대명공구백화점 전환 이후 실제 발주대장(26년 3월~10월, 8개월)을 기준으로 계산한 절감 실적입니다. 핵심은 아래 "12월까지 연간 추정 절감액" — 올해 실적 보고에 바로 쓸 수 있는 숫자입니다.</span></div>
       <div class="cards" id="sgSaveCards"></div>
       <div class="tablewrap" style="margin-top:12px"><table class="bomtbl" style="min-width:700px">
@@ -2347,34 +2371,16 @@ service cloud.firestore {
         <button class="btn" onclick="downloadSgPrice()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_count"></span>
       </div>
-      <div class="subhead">품목·단가 현황 <span class="hint">참고용 품목별 단가 목록입니다('10. 안전보호구' 폴더 발주검토 자료 Sheet1 기준). 단가가 바뀌면 바로 수정하세요(입력 즉시 자동저장·팀 공유).</span></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:820px">
+      <div class="subhead">품목·단가 현황 <span class="hint">참고용 품목별 단가 목록입니다('10. 안전보호구' 폴더 발주검토 자료 Sheet1 기준). 단가가 바뀌면 바로 수정하세요(입력 즉시 자동저장·팀 공유). "단가확정"을 끄면 아직 확인되지 않은 단가라는 뜻으로 행이 주황색으로 표시됩니다 — 나중에 업체·단가가 바뀌어도 바로 눈에 띕니다.</span></div>
+      <div class="tablewrap"><table class="bomtbl" style="min-width:860px">
         <thead><tr>
-          <th style="min-width:150px">품목명</th><th style="min-width:90px">단위</th>
-          <th style="min-width:110px">조은산업 단가<br><span style="font-weight:400;font-size:9.5px">(~26년 2월)</span></th>
-          <th style="min-width:110px">대명공구백화점 단가<br><span style="font-weight:400;font-size:9.5px">(26년 3월~)</span></th>
-          <th style="min-width:160px">비고</th><th style="min-width:60px"></th>
+          <th style="min-width:150px">품목명</th><th style="min-width:80px">단위</th>
+          <th style="min-width:100px">조은산업 단가<br><span style="font-weight:400;font-size:9.5px">(~26년 2월)</span></th>
+          <th style="min-width:100px">대명공구백화점 단가<br><span style="font-weight:400;font-size:9.5px">(26년 3월~)</span></th>
+          <th style="min-width:70px">단가확정</th>
+          <th style="min-width:150px">비고</th><th style="min-width:50px"></th>
         </tr></thead>
         <tbody id="sgPriceBody"></tbody>
-      </table></div>
-    </div>
-
-    <!-- 발주물량 검토 (신규) -->
-    <div id="sg-order" style="display:none">
-      <div class="toolrow">
-        <div class="field"><label>연도</label><select id="sg_orderYear" onchange="sgOrderYearChange()" style="width:100px"></select></div>
-        <button class="btn" onclick="downloadSgOrder()">📥 엑셀</button>
-        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_orderCount"></span>
-      </div>
-      <div class="subhead">발주물량 검토 <span class="hint">엑셀 발주검토 자료처럼 품목별로 연도를 선택해 1~12월 발주수량을 입력·조회합니다. 품목 목록은 [품목단가·원가절감] 탭의 품목을 그대로 사용합니다.</span></div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:1240px">
-        <thead><tr><th style="min-width:150px">품목</th><th style="min-width:60px">단위</th>
-          <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th>
-          <th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
-          <th style="min-width:90px">연간 합계</th>
-        </tr></thead>
-        <tbody id="sgOrderBody"></tbody>
-        <tfoot><tr id="sgOrderFoot" style="font-weight:700;background:#f6f8fa"></tr></tfoot>
       </table></div>
     </div>
 
@@ -3000,8 +3006,16 @@ function annotate(){
 // 해체수명(래들 전체 수명)과 더해서 합계를 맞추는 값이 아니라 "콘/SL을 몇 회 썼다가 보수했는지"의
 // 이력을 나열한 것뿐이다. 숫자만 슬래시로 이어붙이면 마치 합산되어야 할 것처럼 보여 혼동을 주므로,
 // 각 숫자 앞에 콘/SL/해체 라벨을 붙여 "다른 종류의 값"이라는 걸 바로 알 수 있게 한다.
-function ladleLifeChain(r){
-  if(!END_EVT.includes(r.type))return r.daily||0;
+// 2026-10-02: "콘62/콘51/SL62/SL71/콘44/콘31/해체146처럼 체인에 잘못된 값이 섞여 있는데
+// 수정하려니 안 된다"는 신고 — 원인은 이 칸(현재수명)이 여러 건(콘보수·SL보수·해체)의 수명을
+// '/'로 이어붙인 "계산된 문자열"이라서, 해체 행의 [수정] 버튼을 눌러도 해체 자신의 수명(146)만
+// 고칠 수 있을 뿐 체인 속 콘62·SL62 같은 개별 기록은 전혀 다른 행(구분=콘보수/SL보수로 필터해야
+// 보이는 행)에 있었기 때문. ladleLifeChain()은 이제 원본 기록 id를 포함한 배열(parts)을 반환하고,
+// 화면에는 ladleLifeChainHtml()로 각 구간(콘62, SL71 등)을 개별적으로 클릭 가능하게 렌더링해
+// 클릭한 구간의 원본 기록을 바로 editLadle()로 열 수 있게 한다 — 더 이상 필터를 바꿔가며 숨은
+// 행을 찾을 필요 없이, 틀린 숫자를 눈으로 보면서 바로 그 자리에서 수정 가능.
+function ladleLifeChainParts(r){
+  if(!END_EVT.includes(r.type))return null;
   const prev=ladleData.filter(x=>x.no===r.no&&x._campStart===r._campStart&&NON_ACCUM.includes(x.type)
       &&(x.date<r.date||(x.date===r.date&&(x.seq||0)<(r.seq||0))))
     .sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0));
@@ -3010,16 +3024,43 @@ function ladleLifeChain(r){
     const k=x.date+'|'+(x.daily||0);
     if(seen.has(k)){ // 같은 날짜·같은 수명의 짝(콘보수+SL보수)이면 라벨만 보강하고 건너뜀
       const last=chain.find(c=>c.date===x.date&&c.val===(x.daily||0));
-      if(last&&x.type==='SL보수'&&!last.lab.includes('SL'))last.lab=last.lab+'+SL';
+      if(last&&x.type==='SL보수'&&!last.lab.includes('SL')){last.lab=last.lab+'+SL';last.ids.push(x.id);}
       return;
     }
     seen.add(k);
-    chain.push({date:x.date,val:x.daily||0,lab:x.type==='SL보수'?'SL':'콘'});
+    chain.push({date:x.date,val:x.daily||0,lab:x.type==='SL보수'?'SL':'콘',ids:[x.id]});
   });
   const endLab=r.type==='폐기'?'폐기':'해체';
-  const segs=chain.map(c=>`${c.lab}${c.val}`);
-  segs.push(`${endLab}${r.daily||0}`);
-  return segs.join('/');
+  chain.push({date:r.date,val:r.daily||0,lab:endLab,ids:[r.id]});
+  return chain;
+}
+function ladleLifeChain(r){
+  const parts=ladleLifeChainParts(r);
+  if(!parts)return r.daily||0;
+  return parts.map(c=>`${c.lab}${c.val}`).join('/');
+}
+// 체인 구간별로 클릭하면 그 구간의 원본 기록(콘보수/SL보수/해체)을 바로 수정폼에 띄운다.
+function ladleLifeChainHtml(r){
+  const parts=ladleLifeChainParts(r);
+  if(!parts)return esc(String(r.daily||0));
+  return parts.map(c=>`<span class="ch-chain-seg" title="클릭하여 이 기록만 수정" onclick="event.stopPropagation();editLadle('${esc(c.ids[0])}')">${esc(c.lab)}${c.val}</span>`)
+    .join('<span style="color:#c5ccd3">/</span>');
+}
+// 2026-10-02: "현재수명(SL66/해체128)만 보면 해체가 128인지, SL보수 이후 추가로 몇 CH를 더 썼는지
+// 직접 빼봐야 안다"는 요청 — 같은 체인을 '누적값'이 아니라 '구간별 증가분(델타)'으로 다시 계산해
+// 옆 칸(누적수명)에 나란히 보여준다. 예: SL66/해체128 → SL +66 → 해체 +62 (128-66=62를 자동 계산).
+function ladleLifeChainDeltas(r){
+  const parts=ladleLifeChainParts(r);
+  if(!parts)return null;
+  let prev=0;
+  return parts.map(c=>{const delta=c.val-prev;prev=c.val;return {...c,delta};});
+}
+function ladleLifeDeltaHtml(r){
+  const parts=ladleLifeChainDeltas(r);
+  if(!parts)return '<span style="color:#c5ccd3">-</span>';
+  if(parts.length<2)return '<span style="color:#c5ccd3">-</span>'; // 중간 콘/SL보수가 없으면 구간 구분 의미 없음
+  return parts.map(c=>`<span class="ch-chain-seg" title="클릭하여 이 기록만 수정 · ${esc(c.lab)}까지 누적 ${c.val}CH" onclick="event.stopPropagation();editLadle('${esc(c.ids[0])}')">${esc(c.lab)} +${c.delta}</span>`)
+    .join('<span style="color:#c5ccd3"> → </span>');
 }
 
 /* ============ 래들 ============ */
@@ -3142,7 +3183,7 @@ function renderLadle(){
   rows=mergeConeSLRows(rows);
   document.getElementById('l_count').textContent=`${rows.length}건`;
   const b=document.getElementById('ladleBody');
-  if(!rows.length){b.innerHTML=`<tr><td colspan="11"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
+  if(!rows.length){b.innerHTML=`<tr><td colspan="12"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
   b.innerHTML=rows.map(r=>{
     let typeCell=r._mergedCone
       ? `<span class="tag ${ltClass('콘보수')}">콘보수</span> <span class="tag ${ltClass('SL보수')}">SL보수</span>`
@@ -3160,7 +3201,8 @@ function renderLadle(){
     <td>${vendorTag(r.vendor)}</td>
     <td style="white-space:nowrap">${period}</td>
     <td>${typeCell}${ex?' <span class="tag" style="background:#e2e8f0;color:#475569;font-size:9.5px">제외</span>':''}</td>
-    <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}${END_EVT.includes(r.type)?' title="콘/SL = 콘보수·SL보수 시점의 부위별 수명(래들 전체 수명과 별도 관리 · 서로 더하는 값 아님) · 해체 = 이번 캠페인 최종 해체수명"':''}>${esc(String(ladleLifeChain(r)))}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
+    <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}${END_EVT.includes(r.type)?' title="콘/SL = 콘보수·SL보수 시점의 부위별 수명(래들 전체 수명과 별도 관리 · 서로 더하는 값 아님) · 해체 = 이번 캠페인 최종 해체수명 · 숫자를 클릭하면 그 기록만 바로 수정할 수 있습니다"':''}>${ladleLifeChainHtml(r)}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
+    <td style="font-size:12px">${r.daily?ladleLifeDeltaHtml(r):'<span style="color:#c5ccd3">-</span>'}</td>
     <td><span class="ch-shell">${r._shell??'-'}</span></td>
     <td style="font-size:11.5px;white-space:pre-wrap">${r.note?esc(r.note):'<span style="color:#c5ccd3">-</span>'}</td>
     <td style="text-align:center">${END_EVT.includes(r.type)?`<input type="checkbox" ${isExcl(r)?'checked':''} title="돌발 등으로 정상수명 미달 → 평균·집계에서 제외" onchange="toggleExcl('${esc(r.no)}','${r.date}','${r.type}',${r.daily||0},this.checked)">${isExcl(r)?`<input class="binp" style="width:100%;margin-top:3px;font-size:11px" placeholder="제외 사유(예: 돌발 냉각)" value="${esc(exclMemo(r))}" onchange="setExclMemo('${esc(r.no)}','${r.date}','${r.type}',${r.daily||0},this.value)">`:''}`:'<span style="color:#c5ccd3">-</span>'}</td>
@@ -9524,31 +9566,121 @@ function downloadPoscoNonSupply(){
    있던 안전화 모델·사이즈만 실제값으로 채우고 작업복·방염복 사이즈는 확인된 자료가 없어 빈 칸으로 둔다. */
 // 2026-10-01(재구현): '10. 안전보호구/포항영업소 안전보호구 구매.xlsx'의 Sheet1(기존업체 조은산업 vs
 // 신규업체 대명공구백화점 단가 비교, 23개 전품목 실측치)을 그대로 반영. 더 이상 빈 칸(미확인)이 아님.
+// 2026-10-02: "업체·단가가 나중에 바뀔 수 있으니 단가 확정 체크를 만들어달라"는 요청 → 품목별로
+// priceConfirmed(단가확정) 플래그 추가. 실제 거래명세표·세금계산서로 확인된 단가는 true, 아직
+// 협의 중이거나(예: 안전모(이름 라벨)) '포항영업소 안전보호구 구매.xlsx'에 단가가 1회만 등장해
+// 확정 여부가 불확실한 신규 품목(안전대 2종·보안경(A-642B)·진동/충격방지 장갑)은 false로 시작.
+// 체크를 해제하면 화면에서 주황색으로 표시되어 "확인 필요" 상태를 바로 알 수 있다.
 const SG_PRICE_SEED=[
-  {item:'방염복',unit:'EA',oldPrice:86000,newPrice:84000,note:'1벌/분기 지급 → 혹서기 추가 지급'},
-  {item:'방염두건',unit:'EA',oldPrice:12000,newPrice:12000,note:''},
-  {item:'안전화',unit:'EA',oldPrice:49000,newPrice:46000,note:'4종 관리(다이얼·일반6인치·k2찍찍이·단화) · 1EA/반기 지급'},
-  {item:'내열안전화',unit:'EA',oldPrice:53000,newPrice:52000,note:'년간 1회 지급'},
-  {item:'안전장화',unit:'EA',oldPrice:31000,newPrice:26000,note:''},
-  {item:'피수갑',unit:'SET',oldPrice:2600,newPrice:2600,note:'매월 지급'},
-  {item:'방진마스크 650V',unit:'BOX(10EA)',oldPrice:17500,newPrice:17000,note:'매월 지급'},
-  {item:'방진마스크 850V',unit:'BOX(10EA)',oldPrice:29500,newPrice:26000,note:'S/N반 사원급 지급'},
-  {item:'귀마개',unit:'BOX(200EA)',oldPrice:37000,newPrice:36000,note:'매월 지급'},
-  {item:'분진복',unit:'BOX(24EA)',oldPrice:76800,newPrice:72000,note:'매월 지급'},
-  {item:'코팅장갑(황/녹)',unit:'SET',oldPrice:630,newPrice:600,note:'매월 지급'},
-  {item:'면장갑',unit:'SET',oldPrice:250,newPrice:200,note:'매월 지급'},
-  {item:'청각반',unit:'SET',oldPrice:1800,newPrice:2000,note:'매월 지급 · 단가 인상 품목'},
-  {item:'면토시',unit:'SET',oldPrice:300,newPrice:250,note:'매월 지급'},
-  {item:'보안면',unit:'EA',oldPrice:7500,newPrice:8000,note:'단가 인상 품목'},
-  {item:'보안경(B-621A)',unit:'EA',oldPrice:5400,newPrice:5000,note:'현장 비산먼지 지급'},
-  {item:'안전모(덮개 빨간색 신호수)',unit:'EA',oldPrice:4300,newPrice:4000,note:''},
-  {item:'안전모(동국 미색)',unit:'EA',oldPrice:6000,newPrice:6000,note:''},
-  {item:'안전모(동국 적색)',unit:'EA',oldPrice:5500,newPrice:5500,note:''},
-  {item:'안전모(이름 라벨)',unit:'EA',oldPrice:700,newPrice:'',note:'대명공구백화점 단가 추후 협의'},
-  {item:'안전모 내피',unit:'EA',oldPrice:3500,newPrice:3000,note:''},
-  {item:'안전모 턱끈',unit:'EA',oldPrice:1000,newPrice:1000,note:''},
-  {item:'각반밴드',unit:'EA',oldPrice:500,newPrice:500,note:''}
+  {item:'방염복',unit:'EA',oldPrice:86000,newPrice:84000,note:'1벌/분기 지급 → 혹서기 추가 지급',priceConfirmed:true},
+  {item:'방염두건',unit:'EA',oldPrice:12000,newPrice:12000,note:'',priceConfirmed:true},
+  {item:'안전화',unit:'EA',oldPrice:49000,newPrice:46000,note:'4종 관리(다이얼·일반6인치·k2찍찍이·단화) · 1EA/반기 지급',priceConfirmed:true},
+  {item:'내열안전화',unit:'EA',oldPrice:53000,newPrice:52000,note:'년간 1회 지급',priceConfirmed:true},
+  {item:'안전장화',unit:'EA',oldPrice:31000,newPrice:26000,note:'',priceConfirmed:true},
+  {item:'피수갑',unit:'SET',oldPrice:2600,newPrice:2600,note:'매월 지급',priceConfirmed:true},
+  {item:'방진마스크 650V',unit:'BOX(10EA)',oldPrice:17500,newPrice:17000,note:'매월 지급',priceConfirmed:true},
+  {item:'방진마스크 850V',unit:'BOX(10EA)',oldPrice:29500,newPrice:26000,note:'S/N반 사원급 지급',priceConfirmed:true},
+  {item:'귀마개',unit:'BOX(200EA)',oldPrice:37000,newPrice:36000,note:'매월 지급',priceConfirmed:true},
+  {item:'분진복',unit:'BOX(24EA)',oldPrice:76800,newPrice:72000,note:'매월 지급',priceConfirmed:true},
+  {item:'코팅장갑(황/녹)',unit:'SET',oldPrice:630,newPrice:600,note:'매월 지급',priceConfirmed:true},
+  {item:'면장갑',unit:'SET',oldPrice:250,newPrice:200,note:'매월 지급',priceConfirmed:true},
+  {item:'청각반',unit:'SET',oldPrice:1800,newPrice:2000,note:'매월 지급 · 단가 인상 품목',priceConfirmed:true},
+  {item:'면토시',unit:'SET',oldPrice:300,newPrice:250,note:'매월 지급',priceConfirmed:true},
+  {item:'보안면',unit:'EA',oldPrice:7500,newPrice:8000,note:'단가 인상 품목',priceConfirmed:true},
+  {item:'보안경(B-621A)',unit:'EA',oldPrice:5400,newPrice:5000,note:'현장 비산먼지 지급',priceConfirmed:true},
+  {item:'안전모(덮개 빨간색 신호수)',unit:'EA',oldPrice:4300,newPrice:4000,note:'',priceConfirmed:true},
+  {item:'안전모(동국 미색)',unit:'EA',oldPrice:6000,newPrice:6000,note:'',priceConfirmed:true},
+  {item:'안전모(동국 적색)',unit:'EA',oldPrice:5500,newPrice:5500,note:'',priceConfirmed:true},
+  {item:'안전모(이름 라벨)',unit:'EA',oldPrice:700,newPrice:'',note:'대명공구백화점 단가 추후 협의',priceConfirmed:false},
+  {item:'안전모 내피',unit:'EA',oldPrice:3500,newPrice:3000,note:'',priceConfirmed:true},
+  {item:'안전모 턱끈',unit:'EA',oldPrice:1000,newPrice:1000,note:'',priceConfirmed:true},
+  {item:'각반밴드',unit:'EA',oldPrice:500,newPrice:500,note:'',priceConfirmed:true},
+  {item:'안전대(그네식)',unit:'EA',oldPrice:'',newPrice:'',note:'2024~26년 발주대장에 실제 발주 이력 없음(단가 미확인)',priceConfirmed:false},
+  {item:'안전대(전체식)',unit:'EA',oldPrice:'',newPrice:35000,note:'26년 5월 발주대장 1회 등장(5EA) — 대명공구 전환 후 품목, 조은산업 단가 없음',priceConfirmed:false},
+  {item:'보안경(A-642B #7, 코발트)',unit:'EA',oldPrice:'',newPrice:15000,note:'26년 5월 발주대장 1회 등장(9EA) — 대명공구 전환 후 품목, 조은산업 단가 없음',priceConfirmed:false},
+  {item:'진동/충격방지 장갑',unit:'EA',oldPrice:'',newPrice:13000,note:'26년 3월 발주대장 1회 등장(8EA) — 대명공구 전환 후 품목, 조은산업 단가 없음',priceConfirmed:false}
 ].map(r=>({id:uid(),oldVendor:'조은산업',newVendor:'대명공구백화점',oldAsOf:'2026-01',newAsOf:'2026-03',...r}));
+
+// 2026-10-02: "발주물량 검토는 엑셀에 지금 있는 데이터 그대로 들고와줘"라는 요청 — '10. 안전보호구/
+// 포항영업소 안전보호구 구매.xlsx'의 연도별 시트(2024년/검토[25년]/2026년)에 실제로 기록된 월별
+// 수량(q)·단가(p)·금액(a)을 그대로 추출해 반영. a(금액)는 q×p와 다를 때가 있는데(예: 2025년
+// 방진마스크 850V 9월 10BOX×26,000인데 금액은 290,000 — 엑셀 원본의 계산이 그렇게 되어 있음) 이는
+// 원본 엑셀 수식이 그대로 들어있는 값이라 임의로 재계산하지 않고 원본 금액을 그대로 보존한다.
+// 품목명은 화면의 [품목단가·원가절감] 목록과 맞춰 정규화했다(예: "안전모 (덮개 빨간색 신호수)"→
+// "안전모(덮개 빨간색 신호수)", "안전모(이름 스티커)"→"안전모(이름 라벨)"). 엑셀에만 있고 기존
+// 품목단가 목록에 없던 4개 품목(안전대 2종·보안경(A-642B)·진동/충격방지 장갑)은 SG_PRICE_SEED에도
+// 함께 추가했다. 셀 값이 null인 달은 "그 달엔 발주 기록이 없음"을 뜻하며, 사용자가 이미 직접 입력해둔
+// 값이 있는 셀은 seedSgOrderFromHistory()에서 절대 덮어쓰지 않는다(빈 칸만 채움).
+const SG_ORDER_SEED={
+"2024":{
+"방염복":[{q:24,p:86000,a:2064000},null,null,{q:24,p:86000,a:2064000},null,null,{q:24,p:86000,a:2064000},null,null,{q:24,p:86000,a:2064000},null,null],
+"안전화":[null,{q:2,p:55000,a:110000},{q:23,p:"",a:1167000},null,null,{q:3,p:38000,a:114000},null,{q:2,p:38000,a:76000},{q:24,p:"",a:1206000},null,{q:1,p:38000,a:38000},{q:2,p:12000,a:120000}],
+"안전장화":[null,null,null,null,{q:1,p:31000,a:31000},null,null,null,null,null,{q:2,p:31000,a:62000},null],
+"피수갑":[{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:200,p:2600,a:520000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000}],
+"방진마스크 650V":[{q:60,p:17500,a:1050000},{q:60,p:17500,a:1050000},{q:60,p:17500,a:1050000},{q:50,p:17500,a:875000},{q:60,p:17500,a:1050000},{q:60,p:17500,a:1050000},{q:50,p:17500,a:875000},{q:50,p:17500,a:875000},{q:50,p:17500,a:875000},{q:50,p:17500,a:875000},{q:50,p:17500,a:875000},{q:50,p:17500,a:875000}],
+"방진마스크 850V":[null,null,null,null,null,null,{q:10,p:29500,a:295000},{q:10,p:29500,a:295000},{q:10,p:29500,a:295000},{q:10,p:29500,a:295000},{q:10,p:29500,a:295000},{q:10,p:29500,a:295000}],
+"귀마개":[{q:2,p:37000,a:74000},{q:2,p:37000,a:74000},{q:2,p:37000,a:74000},{q:1,p:37000,a:37000},{q:1,p:37000,a:37000},{q:1,p:37000,a:37000},{q:2,p:37000,a:74000},{q:3,p:37000,a:111000},{q:3,p:37000,a:111000},{q:1,p:37000,a:37000},{q:1,p:37000,a:37000},{q:1,p:37000,a:37000}],
+"분진복":[{q:3,p:76800,a:230400},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:1,p:76800,a:76800},{q:1,p:76800,a:76800},{q:1,p:76800,a:76800}],
+"코팅장갑(황/녹)":[{q:300,p:630,a:189000},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:630,a:176400}],
+"면장갑":[{q:720,p:250,a:180000},{q:720,p:250,a:180000},{q:720,p:250,a:180000},{q:720,p:250,a:180000},{q:720,p:250,a:180000},{q:460,p:250,a:115000},{q:460,p:250,a:115000},{q:720,p:250,a:180000},{q:460,p:250,a:115000},{q:720,p:250,a:180000},{q:460,p:250,a:115000},{q:460,p:250,a:115000}],
+"청각반":[{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:24,p:1800,a:43200},{q:48,p:1800,a:86400},{q:48,p:1800,a:86400},{q:48,p:1800,a:86400}],
+"면토시":[{q:54,p:300,a:16200},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:300,a:12600}],
+"보안면":[null,null,null,{q:8,p:7500,a:60000},{q:4,p:7500,a:30000},{q:4,p:7500,a:30000},{q:4,p:7500,a:30000},{q:4,p:7500,a:30000},{q:4,p:7500,a:30000},{q:4,p:7500,a:30000},{q:30,p:7500,a:225000},{q:24,p:7500,a:180000}],
+"보안경(B-621A)":[null,null,null,null,null,null,{q:8,p:5400,a:43200},null,null,null,null,null],
+"안전모(덮개 빨간색 신호수)":[null,{q:10,p:4300,a:43000},null,null,null,null,null,{q:10,p:4300,a:43000},null,null,null,null],
+"안전모(동국 미색)":[{q:31,p:6000,a:186000},null,null,null,{q:30,p:6000,a:180000},null,null,null,null,null,null,null],
+"안전모(동국 적색)":[{q:6,p:5500,a:33000},null,null,null,null,null,null,null,null,null,null,null],
+"안전모 내피":[null,null,null,null,null,null,null,null,null,null,{q:50,p:3500,a:175000},null],
+"안전모 턱끈":[null,null,null,null,null,null,null,null,null,null,{q:50,p:1000,a:50000},null],
+"각반밴드":[null,null,null,null,null,null,null,null,null,{q:100,p:500,a:50000},null,null],
+},
+"2025":{
+"방염복":[{q:24,p:84000,a:2064000},null,null,{q:24,p:84000,a:2064000},null,{q:2,p:84000,a:168000},{q:24,p:84000,a:2064000},null,{q:24,p:84000,a:2016000},{q:24,p:84000,a:2016000},null,null],
+"방염두건":[null,null,null,{q:9,p:12000,a:108000},{q:18,p:12000,a:216000},{q:24,p:12000,a:288000},{q:18,p:12000,a:216000},{q:24,p:12000,a:288000},{q:24,p:12000,a:288000},{q:15,p:12000,a:180000},{q:15,p:12000,a:180000},{q:24,p:12000,a:288000}],
+"안전화":[{q:1,p:56000,a:56000},{q:4,p:"",a:188000},{q:27,p:"",a:1237000},null,null,{q:4,p:"",a:174000},null,{q:26,p:46000,a:1196000},{q:3,p:46000,a:138000},{q:1,p:46000,a:46000},{q:2,p:46000,a:92000},{q:1,p:46000,a:46000}],
+"내열안전화":[null,null,{q:14,p:52000,a:728000},null,{q:1,p:52000,a:52000},null,null,null,{q:3,p:52000,a:156000},{q:1,p:52000,a:52000},{q:2,p:52000,a:104000},{q:2,p:52000,a:104000}],
+"안전장화":[null,null,null,{q:1,p:26000,a:26000},null,null,null,null,null,null,null,null],
+"피수갑":[{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:""},{q:135,p:2600,a:351000},{q:250,p:2600,a:650000},{q:250,p:2600,a:650000},{q:250,p:2600,a:650000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000}],
+"방진마스크 650V":[{q:50,p:17000,a:850000},{q:50,p:17000,a:850000},{q:50,p:17000,a:850000},{q:50,p:17000,a:850000},{q:50,p:17000,a:850000},{q:32,p:17000,a:544000},{q:32,p:17000,a:544000},{q:32,p:17000,a:544000},{q:32,p:17000,a:544000},{q:32,p:17000,a:544000},{q:32,p:17000,a:544000},{q:32,p:17000,a:560000}],
+"방진마스크 850V":[{q:10,p:26000,a:290000},{q:10,p:26000,a:290000},{q:10,p:26000,a:290000},{q:10,p:26000,a:290000},{q:10,p:26000,a:290000},{q:16,p:26000,a:464000},{q:16,p:26000,a:464000},{q:16,p:26000,a:464000},{q:16,p:26000,a:464000},{q:16,p:26000,a:464000},{q:16,p:26000,a:464000},{q:16,p:26000,a:472000}],
+"귀마개":[{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000},{q:2,p:18000,a:36000}],
+"분진복":[{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000}],
+"코팅장갑(황/녹)":[{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000}],
+"면장갑":[{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:920,p:200,a:184000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:920,p:200,a:92000},{q:920,p:200,a:92000},{q:460,p:200,a:92000}],
+"청각반":[{q:48,p:2000,a:96000},{q:48,p:2000,a:96000},{q:84,p:2000,a:168000},{q:84,p:2000,a:168000},{q:84,p:2000,a:168000},null,{q:48,p:2000,a:96000},{q:48,p:2000,a:96000},null,null,null,null],
+"면토시":[{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:84,p:250,a:10500},{q:84,p:250,a:10500},{q:84,p:250,a:10500},{q:42,p:250,a:10500}],
+"보안면":[{q:24,p:8000,a:192000},{q:24,p:8000,a:192000},{q:24,p:8000,a:192000},{q:14,p:8000,a:192000},{q:24,p:8000,a:192000},{q:8,p:8000,a:192000},{q:16,p:8000,a:192000},{q:8,p:8000,a:192000},{q:8,p:8000,a:192000},null,{q:8,p:8000,a:192000},{q:24,p:8000,a:192000}],
+"안전모(덮개 빨간색 신호수)":[null,null,null,null,null,null,{q:10,p:4000,a:40000},null,null,null,null,null],
+"안전모(동국 미색)":[null,{q:40,p:6000,a:240000},null,null,null,null,null,null,null,null,null,{q:"",p:6000,a:""}],
+"안전모(이름 라벨)":[null,null,null,null,null,null,null,null,null,null,null,{q:"",p:5500,a:""}],
+"안전모 내피":[null,null,null,null,null,null,null,null,{q:50,p:3000,a:150000},null,null,{q:"",p:3500,a:""}],
+"안전모 턱끈":[null,null,null,null,null,null,null,null,null,null,null,{q:"",p:1000,a:""}],
+"각반밴드":[null,null,null,null,null,null,null,null,null,null,null,{q:"",p:500,a:""}],
+},
+"2026":{
+"방염복":[{q:24,p:86000,a:2064000},null,null,{q:25,p:84000,a:2100000},null,{q:15,p:84000,a:1260000},{q:25,p:84000,a:2100000},{q:25,p:84000,a:2100000},{q:25,p:84000,a:2100000},{q:25,p:84000,a:2100000},null,null],
+"방염두건":[{q:24,p:12000,a:288000},{q:15,p:12000,a:180000},{q:15,p:12000,a:180000},{q:15,p:12000,a:180000},{q:24,p:12000,a:288000},{q:15,p:12000,a:180000},{q:24,p:12000,a:288000},{q:24,p:12000,a:288000},{q:9,p:12000,a:108000},{q:15,p:12000,a:180000},null,null],
+"안전화":[{q:2,p:49000,a:98000},{q:1,p:49000,a:49000},{q:27,p:46000,a:1242000},{q:1,p:46000,a:46000},null,null,{q:2,p:46000,a:92000},null,{q:28,p:46000,a:1288000},null,null,null],
+"내열안전화":[{q:2,p:53000,a:106000},null,{q:2,p:52000,a:104000},null,{q:2,p:52000,a:104000},null,{q:1,p:52000,a:52000},{q:1,p:52000,a:52000},null,null,null,null],
+"안전장화":[{q:2,p:31000,a:62000},null,{q:2,p:26000,a:52000},null,null,null,null,null,null,null,null,null],
+"피수갑":[{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},{q:150,p:2600,a:390000},{q:135,p:2600,a:351000},{q:135,p:2600,a:351000},null,null],
+"방진마스크 650V":[{q:50,p:17500,a:875000},{q:20,p:17500,a:350000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},{q:40,p:17000,a:680000},null,null],
+"방진마스크 850V":[{q:10,p:29500,a:295000},{q:25,p:29500,a:737500},{q:18,p:26000,a:468000},{q:23,p:26000,a:598000},{q:23,p:26000,a:598000},{q:23,p:26000,a:598000},{q:23,p:26000,a:598000},{q:23,p:26000,a:598000},{q:23,p:26000,a:598000},{q:23,p:26000,a:598000},null,null],
+"귀마개":[{q:2,p:37000,a:74000},{q:2,p:37000,a:74000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},{q:2,p:36000,a:72000},null,null],
+"분진복":[{q:2,p:76800,a:153600},{q:2,p:76800,a:153600},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:4,p:72000,a:288000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:2,p:72000,a:144000},{q:0,p:72000,a:0},{q:2,p:72000,a:144000},null,null],
+"코팅장갑(황/녹)":[{q:280,p:630,a:176400},{q:280,p:630,a:176400},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},null,{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},{q:280,p:600,a:168000},null,null],
+"면장갑":[{q:460,p:250,a:115000},{q:460,p:250,a:115000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:460,p:200,a:92000},{q:1300,p:200,a:260000},{q:470,p:200,a:94000},{q:470,p:200,a:94000},{q:470,p:200,a:94000},{q:470,p:200,a:94000},null,null],
+"청각반":[{q:48,p:1800,a:86400},null,{q:48,p:2000,a:96000},null,null,null,null,null,null,null,null,null],
+"면토시":[{q:42,p:300,a:12600},{q:42,p:300,a:12600},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},{q:42,p:250,a:10500},null,null],
+"보안면":[{q:24,p:7500,a:180000},{q:15,p:7500,a:112500},null,null,{q:24,p:8000,a:192000},{q:24,p:8000,a:192000},{q:24,p:8000,a:192000},{q:24,p:8000,a:192000},{q:9,p:8000,a:72000},{q:9,p:8000,a:72000},null,null],
+"보안경(A-642B #7, 코발트)":[null,null,null,null,{q:9,p:15000,a:135000},null,null,null,null,null,null,null],
+"안전대(전체식)":[null,null,null,null,{q:5,p:35000,a:175000},null,null,null,null,null,null,null],
+"안전모(덮개 빨간색 신호수)":[{q:10,p:4300,a:43000},null,null,null,{q:20,p:4000,a:80000},null,null,null,null,null,null,null],
+"안전모(동국 미색)":[null,null,null,null,{q:50,p:6000,a:300000},null,null,null,null,null,null,null],
+"안전모 내피":[null,{q:50,p:2800,a:140000},null,null,null,null,null,null,null,{q:50,p:2800,a:140000},null,null],
+"진동/충격방지 장갑":[null,null,{q:8,p:13000,a:104000},null,null,null,null,null,null,null,null,null],
+},
+};
 
 // 26년 3월~10월(8개월) 실제 발주대장('2026년' 시트의 월별 실주문 수량·금액)을 '조은산업' 시트의 환산 전
 // 단가와 직접 대조해 계산한 실적치 — 가정이 아니라 실제 발주 수량 기준 절감액입니다.
@@ -9603,8 +9735,8 @@ function loadSgPrice(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_pri
 function loadSgSize(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_size')||'null');return Array.isArray(v)&&v.length?v:SG_SIZE_SEED;}catch(e){return SG_SIZE_SEED;}}
 function saveSgPrice(){try{localStorage.setItem('dgrns_sg_price',JSON.stringify(sgPrice));}catch(e){}}
 function saveSgSize(){try{localStorage.setItem('dgrns_sg_size',JSON.stringify(sgSize));}catch(e){}}
-let sgPrice=loadSgPrice(), sgSize=loadSgSize(), sgCurTab='price';
-function initSafety(){sgTab(sgCurTab||'price');}
+let sgPrice=loadSgPrice(), sgSize=loadSgSize(), sgCurTab='order';
+function initSafety(){sgTab(sgCurTab||'order');}
 function sgTab(t){
   sgCurTab=t;
   document.querySelectorAll('#sgToggle .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sub===t));
@@ -9616,28 +9748,37 @@ function sgTab(t){
   if(t==='size')renderSgSize();
 }
 function addSgItem(){
-  sgPrice.unshift({id:uid(),item:'',unit:'EA',oldPrice:'',oldVendor:'조은산업',oldAsOf:todayStr().slice(0,7),newPrice:'',newVendor:'대명공구백화점',newAsOf:'',note:''});
+  sgPrice.unshift({id:uid(),item:'',unit:'EA',oldPrice:'',oldVendor:'조은산업',oldAsOf:todayStr().slice(0,7),newPrice:'',newVendor:'대명공구백화점',newAsOf:'',note:'',priceConfirmed:false});
   saveSgPrice();renderSgPrice();
 }
 function editSgItem(id,key,v){
   const r=sgPrice.find(x=>x.id===id);if(!r)return;
-  r[key]=['oldPrice','newPrice'].includes(key)?(v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0)):v;
+  if(key==='priceConfirmed')r[key]=!!v;
+  else r[key]=['oldPrice','newPrice'].includes(key)?(v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0)):v;
   saveSgPrice();
+  if(key==='priceConfirmed')renderSgPrice();
 }
 function delSgItem(id){
   if(!canDelete()){alert('삭제는 관리자·관리직만 가능합니다.');return;}
   if(!confirm('이 품목을 삭제할까요?'))return;
   sgPrice=sgPrice.filter(x=>x.id!==id);saveSgPrice();renderSgPrice();
 }
+// 2026-10-02: "단가확정 체크" 요청 — priceConfirmed가 false인 행은 주황색으로 표시해 "아직 확인 안 된
+// 단가"임을 바로 알 수 있게 함. 또한 "쓸데없이 커 보인다"는 피드백으로 단가칸의 '기준월'을 별도
+// 줄(div)이 아니라 입력창과 한 줄에 나란히 배치해 행 높이를 절반 가까이 줄였다.
 function sgPriceRowHtml(r){
-  return `<tr>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.item)}" placeholder="품목명" oninput="editSgItem('${r.id}','item',this.value)"></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r.unit||'')}" oninput="editSgItem('${r.id}','unit',this.value)"></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.oldPrice===''?'':Number(r.oldPrice).toLocaleString()}" placeholder="조은산업 단가" oninput="editSgItem('${r.id}','oldPrice',this.value)">
-      <div style="font-size:9.5px;color:var(--muted);text-align:right">${esc(r.oldAsOf||'')} 기준</div></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${r.newPrice===''?'':Number(r.newPrice).toLocaleString()}" placeholder="대명공구백화점 단가" oninput="editSgItem('${r.id}','newPrice',this.value)">
-      <div style="font-size:9.5px;color:var(--muted);text-align:right">${esc(r.newAsOf||'')} 기준</div></td>
-    <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.note||'')}" oninput="editSgItem('${r.id}','note',this.value)"></td>
+  const unconfirmed=r.priceConfirmed===false;
+  return `<tr${unconfirmed?' style="background:#fff7ed"':''}>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);padding:3px 5px;font-size:12.5px" value="${esc(r.item)}" placeholder="품목명" oninput="editSgItem('${r.id}','item',this.value)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);text-align:center;padding:3px 5px;font-size:12.5px" value="${esc(r.unit||'')}" oninput="editSgItem('${r.id}','unit',this.value)"></td>
+    <td><div style="display:flex;align-items:center;gap:4px">
+      <input class="binp" style="flex:1;min-width:0;border:1px solid var(--line);text-align:right;padding:3px 5px;font-size:12.5px" value="${r.oldPrice===''?'':Number(r.oldPrice).toLocaleString()}" placeholder="조은산업 단가" oninput="editSgItem('${r.id}','oldPrice',this.value)">
+      <span style="font-size:9px;color:var(--muted);white-space:nowrap">${esc(r.oldAsOf||'')}</span></div></td>
+    <td><div style="display:flex;align-items:center;gap:4px">
+      <input class="binp" style="flex:1;min-width:0;border:1px solid var(--line);text-align:right;padding:3px 5px;font-size:12.5px" value="${r.newPrice===''?'':Number(r.newPrice).toLocaleString()}" placeholder="대명공구백화점 단가" oninput="editSgItem('${r.id}','newPrice',this.value)">
+      <span style="font-size:9px;color:var(--muted);white-space:nowrap">${esc(r.newAsOf||'')}</span></div></td>
+    <td style="text-align:center"><input type="checkbox" ${unconfirmed?'':'checked'} title="실제 거래명세표·세금계산서로 확인된 단가면 체크, 아직 협의 중이거나 1회만 확인된 단가면 해제" onchange="editSgItem('${r.id}','priceConfirmed',this.checked)"></td>
+    <td><input class="binp" style="width:100%;border:1px solid var(--line);padding:3px 5px;font-size:12px" value="${esc(r.note||'')}" oninput="editSgItem('${r.id}','note',this.value)"></td>
     <td><button class="btn sm danger del-rec" onclick="delSgItem('${r.id}')">삭제</button></td>
   </tr>`;
 }
@@ -9645,12 +9786,12 @@ function renderSgPrice(){
   const box=document.getElementById('sgPriceBody');if(!box)return;
   const q=(document.getElementById('sg_search')?.value||'').toLowerCase();
   const rows=sgPrice.filter(r=>!q||(r.item||'').toLowerCase().includes(q));
-  box.innerHTML=rows.map(sgPriceRowHtml).join('')||`<tr><td colspan="6"><div class="empty">등록된 품목이 없습니다. [＋ 품목 추가]로 등록하세요.</div></td></tr>`;
-  const cnt=document.getElementById('sg_count');if(cnt)cnt.textContent=rows.length+'건';
+  box.innerHTML=rows.map(sgPriceRowHtml).join('')||`<tr><td colspan="7"><div class="empty">등록된 품목이 없습니다. [＋ 품목 추가]로 등록하세요.</div></td></tr>`;
+  const cnt=document.getElementById('sg_count');if(cnt)cnt.textContent=rows.length+'건'+(rows.some(r=>r.priceConfirmed===false)?' · 단가확정 안 된 품목 '+rows.filter(r=>r.priceConfirmed===false).length+'건':'');
 }
 function downloadSgPrice(){
-  let t=`<table><tr><th>품목명</th><th>단위</th><th>조은산업 단가</th><th>대명공구백화점 단가</th><th>비고</th></tr>`;
-  sgPrice.forEach(r=>{t+=`<tr><td>${esc(r.item)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.oldPrice||'')}</td><td>${esc(r.newPrice||'')}</td><td>${esc(r.note||'')}</td></tr>`;});
+  let t=`<table><tr><th>품목명</th><th>단위</th><th>조은산업 단가</th><th>대명공구백화점 단가</th><th>단가확정</th><th>비고</th></tr>`;
+  sgPrice.forEach(r=>{t+=`<tr><td>${esc(r.item)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.oldPrice||'')}</td><td>${esc(r.newPrice||'')}</td><td>${r.priceConfirmed===false?'미확정':'확정'}</td><td>${esc(r.note||'')}</td></tr>`;});
   t+=`</table>`;downloadXls('안전보호구_품목단가현황',t);
 }
 function renderSgSave(){
@@ -9674,31 +9815,85 @@ function renderSgSave(){
     +card('월평균 절감액',wON(s.monthlyAvg),'원')
     +`<div class="card"><div class="lbl">12월까지 연간 추정 절감액</div><div class="val" style="color:#15803d">${wON(s.projectedFullYear)}<small> 원</small></div><div style="font-size:9.5px;color:var(--muted);margin-top:2px">${s.asOf} 실적 + 11·12월 평균 반영 추정</div></div>`;
 }
-/* ============ 발주물량 검토 (신규, 2026-10-01 3차) ============
-   엑셀 발주검토 자료처럼 품목별 × 연도별 1~12월 발주수량을 입력·조회.
-   구조: sgOrder = { [연도]: { [품목명]: [1월,2월,...,12월] } }. 품목 목록은 sgPrice를 그대로 재사용 —
-   품목단가·원가절감 탭에서 품목을 추가/삭제하면 발주물량 검토에도 바로 반영된다. */
+/* ============ 발주물량 검토 (신규, 2026-10-01 3차 / 2026-10-02 수량+금액 구조로 개편) ============
+   엑셀 발주검토 자료처럼 품목별 × 연도별 1~12월 발주수량·단가·금액을 입력·조회.
+   구조: sgOrder = { [연도]: { [품목명]: [셀×12] } }, 셀 = {q:수량, p:단가, a:금액(원본 실적 금액이 있으면
+   그 값을 그대로 보존 — q×p와 항상 같지는 않음, SG_ORDER_SEED 주석 참고)} 또는 null(그 달 기록 없음).
+   품목 목록은 sgPrice를 그대로 재사용 — 품목단가·원가절감 탭에서 품목을 추가/삭제하면 발주물량
+   검토에도 바로 반영된다. */
 function loadSgOrder(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_order')||'null');return(v&&typeof v==='object'&&!Array.isArray(v))?v:{};}catch(e){return{};}}
 function saveSgOrder(){try{localStorage.setItem('dgrns_sg_order',JSON.stringify(sgOrder));}catch(e){}}
 let sgOrder=loadSgOrder(), sgOrderYear=todayStr().slice(0,4);
+// 구형식(셀이 숫자 하나)으로 저장돼 있던 값을 신형식({q,p})으로 1회 변환 — 사용자가 이미 입력해둔
+// 값은 수량(q)으로 그대로 옮기고 단가는 비워둔다(품목단가 표의 현재 단가로 금액을 계산).
+function sgOrderNormCell(v){
+  if(v&&typeof v==='object')return {q:(v.q===undefined?'':v.q),p:(v.p===undefined?'':v.p)};
+  if(v===''||v==null)return {q:'',p:''};
+  return {q:(+v||0),p:''};
+}
+function sgOrderGet(year,item){
+  const y=sgOrder[year]=sgOrder[year]||{};
+  let arr=y[item];
+  if(!Array.isArray(arr)||arr.length!==12)arr=Array(12).fill('');
+  arr=arr.map(sgOrderNormCell);
+  y[item]=arr;
+  return arr;
+}
+// 해당 달 금액 추정에 쓸 단가: 셀에 직접 입력된 단가가 있으면 그것, 없으면 품목단가 표의
+// 대명공구백화점 단가(26년 3월 이후) 또는 조은산업 단가(그 이전)를 연도·월로 추정해 사용.
+function sgOrderPriceFor(item,year,mIdx){
+  const row=sgPrice.find(r=>r.item===item);if(!row)return '';
+  const ym=`${year}-${String(mIdx+1).padStart(2,'0')}`;
+  return ym>='2026-03'?(row.newPrice!==''?row.newPrice:row.oldPrice):row.oldPrice;
+}
+function sgOrderAmt(cell,item,year,mIdx){
+  if(cell.q==='')return '';
+  const p=cell.p!==''?cell.p:sgOrderPriceFor(item,year,mIdx);
+  if(p==='')return '';
+  return (+cell.q||0)*(+p||0);
+}
+// '10. 안전보호구' 폴더 발주대장에 실제로 기록된 과거 수량·단가를 1회만 자동 반영. 이미 사용자가
+// 입력해둔 셀(q 또는 p가 비어있지 않은 셀)은 절대 덮어쓰지 않는다 — 빈 칸만 채운다.
+function seedSgOrderFromHistory(){
+  if(localStorage.getItem('dgrns_sg_order_seeded_v1'))return;
+  Object.keys(SG_ORDER_SEED).forEach(year=>{
+    const items=SG_ORDER_SEED[year];
+    Object.keys(items).forEach(item=>{
+      const seedCells=items[item];
+      const arr=sgOrderGet(year,item);
+      seedCells.forEach((sc,i)=>{
+        if(!sc)return;
+        const cur=arr[i];
+        if(cur.q!==''||cur.p!=='')return; // 사용자가 이미 입력한 값은 보존
+        arr[i]={q:sc.q,p:sc.p};
+      });
+    });
+  });
+  saveSgOrder();
+  try{localStorage.setItem('dgrns_sg_order_seeded_v1','1');}catch(e){}
+}
 function sgOrderYears(){
   const cur=+todayStr().slice(0,4);
   const set=new Set([cur-1,cur,cur+1].map(String));
   Object.keys(sgOrder).forEach(y=>set.add(y));
+  Object.keys(SG_ORDER_SEED).forEach(y=>set.add(y));
   return[...set].sort();
 }
-function sgOrderGet(year,item){
-  const y=sgOrder[year]=sgOrder[year]||{};
-  return y[item]=y[item]||Array(12).fill('');
-}
 function sgOrderKey(item){return 'sgoTot_'+String(item).replace(/[^a-zA-Z0-9가-힣]/g,'_');}
+function sgOrderAmtCellId(item,i){return 'sgoAmt_'+String(item).replace(/[^a-zA-Z0-9가-힣]/g,'_')+'_'+i;}
 function sgOrderYearChange(){sgOrderYear=document.getElementById('sg_orderYear').value;renderSgOrder();}
-function editSgOrder(item,mIdx,v){
+function editSgOrder(item,mIdx,field,v){
   const arr=sgOrderGet(sgOrderYear,item);
-  arr[mIdx]=v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0);
+  arr[mIdx][field]=v===''?'':(+String(v).replace(/[^0-9.]/g,'')||0);
   saveSgOrder();
-  const total=arr.reduce((a,b)=>a+(+b||0),0);
-  const el=document.getElementById(sgOrderKey(item));if(el)el.textContent=total.toLocaleString();
+  const cell=arr[mIdx];
+  const amtEl=document.getElementById(sgOrderAmtCellId(item,mIdx));
+  const amt=sgOrderAmt(cell,item,sgOrderYear,mIdx);
+  if(amtEl)amtEl.textContent=amt===''?'':wON(amt);
+  const qTotal=arr.reduce((a,c)=>a+(+c.q||0),0);
+  const aTotal=arr.reduce((a,c,i)=>a+(sgOrderAmt(c,item,sgOrderYear,i)||0),0);
+  const qEl=document.getElementById(sgOrderKey(item)+'_q');if(qEl)qEl.textContent=qTotal.toLocaleString();
+  const aEl=document.getElementById(sgOrderKey(item)+'_a');if(aEl)aEl.textContent=wON(aTotal);
   renderSgOrderFoot();
 }
 function renderSgOrderYearSel(){
@@ -9709,39 +9904,55 @@ function renderSgOrderYearSel(){
 }
 function sgOrderItems(){return sgPrice.map(r=>r.item).filter(Boolean);}
 function renderSgOrder(){
+  seedSgOrderFromHistory();
   renderSgOrderYearSel();
   const items=sgOrderItems();
   const body=document.getElementById('sgOrderBody');if(!body)return;
   body.innerHTML=items.map(item=>{
     const arr=sgOrderGet(sgOrderYear,item);
     const unit=(sgPrice.find(r=>r.item===item)||{}).unit||'';
-    const total=arr.reduce((a,b)=>a+(+b||0),0);
-    const cells=arr.map((v,i)=>`<td class="n"><input class="binp" style="width:52px;text-align:right;border:1px solid var(--line)" value="${v===''?'':v}" oninput="editSgOrder('${esc(item)}',${i},this.value)"></td>`).join('');
-    return `<tr><td>${esc(item)}</td><td style="text-align:center;color:var(--muted);font-size:11px">${esc(unit)}</td>${cells}<td class="n" id="${sgOrderKey(item)}" style="font-weight:700">${total.toLocaleString()}</td></tr>`;
+    const qTotal=arr.reduce((a,c)=>a+(+c.q||0),0);
+    const aTotal=arr.reduce((a,c,i)=>a+(sgOrderAmt(c,item,sgOrderYear,i)||0),0);
+    const cells=arr.map((c,i)=>{
+      const amt=sgOrderAmt(c,item,sgOrderYear,i);
+      return `<td class="n" style="min-width:56px">
+        <input class="binp sg-qty" style="width:48px;text-align:right;border:1px solid var(--line);padding:2px 3px;font-size:12px" value="${c.q===''?'':c.q}" placeholder="수량" title="수량" oninput="editSgOrder('${esc(item)}',${i},'q',this.value)">
+        <input class="binp sg-price" style="width:48px;text-align:right;border:1px solid transparent;padding:1px 3px;font-size:9.5px;color:var(--muted);margin-top:1px" value="${c.p===''?'':c.p}" placeholder="단가" title="이 달 실제 단가(비우면 품목단가 표 기준으로 자동 계산)" oninput="editSgOrder('${esc(item)}',${i},'p',this.value)">
+        <div id="${sgOrderAmtCellId(item,i)}" style="font-size:9.5px;color:#94a3b8;text-align:right;margin-top:1px">${amt===''?'':wON(amt)}</div>
+      </td>`;
+    }).join('');
+    return `<tr><td>${esc(item)}</td><td style="text-align:center;color:var(--muted);font-size:11px">${esc(unit)}</td>${cells}<td class="n" style="font-weight:700"><span id="${sgOrderKey(item)}_q">${qTotal.toLocaleString()}</span><div style="font-size:9.5px;color:var(--muted);font-weight:400" id="${sgOrderKey(item)}_a">${wON(aTotal)}</div></td></tr>`;
   }).join('')||`<tr><td colspan="15"><div class="empty">등록된 품목이 없습니다 — [품목단가·원가절감] 탭에서 먼저 품목을 등록하세요.</div></td></tr>`;
-  const cnt=document.getElementById('sg_orderCount');if(cnt)cnt.textContent=items.length+'개 품목 · '+sgOrderYear+'년';
+  const cnt=document.getElementById('sg_orderCount');if(cnt)cnt.textContent=items.length+'개 품목 · '+sgOrderYear+'년 · 칸마다 위=수량(입력) · 가운데=단가(비우면 자동) · 아래=금액(계산)';
   renderSgOrderFoot();
 }
 function renderSgOrderFoot(){
   const foot=document.getElementById('sgOrderFoot');if(!foot)return;
   const items=sgOrderItems();
-  const monthTotals=Array(12).fill(0);let grand=0;
+  const monthQty=Array(12).fill(0), monthAmt=Array(12).fill(0);let grandQty=0,grandAmt=0;
   items.forEach(item=>{
     const arr=sgOrderGet(sgOrderYear,item);
-    arr.forEach((v,i)=>{monthTotals[i]+=(+v||0);});
-    grand+=arr.reduce((a,b)=>a+(+b||0),0);
+    arr.forEach((c,i)=>{
+      monthQty[i]+=(+c.q||0);
+      const amt=sgOrderAmt(c,item,sgOrderYear,i)||0;
+      monthAmt[i]+=amt;
+    });
+    grandQty+=arr.reduce((a,c)=>a+(+c.q||0),0);
+    grandAmt+=arr.reduce((a,c,i)=>a+(sgOrderAmt(c,item,sgOrderYear,i)||0),0);
   });
-  foot.innerHTML=`<td>월 합계</td><td></td>${monthTotals.map(v=>`<td class="n">${v.toLocaleString()}</td>`).join('')}<td class="n" style="color:var(--accent)">${grand.toLocaleString()}</td>`;
+  foot.innerHTML=`<td>월 합계</td><td></td>${monthQty.map((v,i)=>`<td class="n">${v.toLocaleString()}<div style="font-size:9.5px;color:var(--muted);font-weight:400">${wON(monthAmt[i])}</div></td>`).join('')}<td class="n" style="color:var(--accent)">${grandQty.toLocaleString()}<div style="font-size:9.5px;font-weight:400">${wON(grandAmt)}</div></td>`;
 }
 function downloadSgOrder(){
   const items=sgOrderItems();
   const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  let t=`<table><tr><th>품목</th><th>단위</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>연간 합계</th></tr>`;
+  let t=`<table><tr><th>품목</th><th>단위</th>${months.map(m=>`<th>${m} 수량</th><th>${m} 금액</th>`).join('')}<th>연간 수량</th><th>연간 금액</th></tr>`;
   items.forEach(item=>{
     const arr=sgOrderGet(sgOrderYear,item);
     const unit=(sgPrice.find(r=>r.item===item)||{}).unit||'';
-    const total=arr.reduce((a,b)=>a+(+b||0),0);
-    t+=`<tr><td>${esc(item)}</td><td>${esc(unit)}</td>${arr.map(v=>`<td>${v===''?'':v}</td>`).join('')}<td>${total}</td></tr>`;
+    const qTotal=arr.reduce((a,c)=>a+(+c.q||0),0);
+    const aTotal=arr.reduce((a,c,i)=>a+(sgOrderAmt(c,item,sgOrderYear,i)||0),0);
+    const cells=arr.map((c,i)=>{const amt=sgOrderAmt(c,item,sgOrderYear,i);return `<td>${c.q===''?'':c.q}</td><td>${amt===''?'':amt}</td>`;}).join('');
+    t+=`<tr><td>${esc(item)}</td><td>${esc(unit)}</td>${cells}<td>${qTotal}</td><td>${aTotal}</td></tr>`;
   });
   t+=`</table>`;downloadXls(`발주물량검토_${sgOrderYear}`,t);
 }
