@@ -974,7 +974,7 @@
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="l_count"></span>
     </div>
     <div class="tablewrap"><table>
-      <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th>현재수명</th><th style="min-width:120px">누적수명<br><span style="font-weight:400;font-size:9.5px">구간별 증가분</span></th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:96px">관리</th></tr></thead>
+      <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th style="min-width:120px">현재수명<br><span style="font-weight:400;font-size:9.5px">구간별 증가분</span></th><th>누적수명</th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:96px">관리</th></tr></thead>
       <tbody id="ladleBody"></tbody>
     </table></div>
     <div class="subhead">래들번호별 현황 <span class="hint">영구장 교체 이후 누적수명·신축횟수</span></div>
@@ -3057,8 +3057,11 @@ function ladleLifeChainDeltas(r){
 }
 function ladleLifeDeltaHtml(r){
   const parts=ladleLifeChainDeltas(r);
-  if(!parts)return '<span style="color:#c5ccd3">-</span>';
-  if(parts.length<2)return '<span style="color:#c5ccd3">-</span>'; // 중간 콘/SL보수가 없으면 구간 구분 의미 없음
+  // 2026-10-02(2차): "현재수명·누적수명 데이터가 바뀌어야 하지 않나" 피드백 반영 — 이 함수(구간별
+  // 증가분)가 이제 "현재수명" 칸에도 쓰이므로, 콘보수·SL보수 단독 행(해체가 아닌 일반 행)이나
+  // 중간 보수 없이 바로 해체한 단일 구간 행에서도 빈칸("-")이 아니라 값이 보이도록 ladleLifeChainHtml과
+  // 동일하게 폴백 처리한다.
+  if(!parts)return esc(String(r.daily||0));
   return parts.map(c=>`<span class="ch-chain-seg" title="클릭하여 이 기록만 수정 · ${esc(c.lab)}까지 누적 ${c.val}CH" onclick="event.stopPropagation();editLadle('${esc(c.ids[0])}')">${esc(c.lab)} +${c.delta}</span>`)
     .join('<span style="color:#c5ccd3"> → </span>');
 }
@@ -3201,8 +3204,8 @@ function renderLadle(){
     <td>${vendorTag(r.vendor)}</td>
     <td style="white-space:nowrap">${period}</td>
     <td>${typeCell}${ex?' <span class="tag" style="background:#e2e8f0;color:#475569;font-size:9.5px">제외</span>':''}</td>
+    <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}${END_EVT.includes(r.type)?' title="구간별 증가분 · 콘/SL = 콘보수·SL보수 시점까지 늘어난 CH · 숫자를 클릭하면 그 기록만 바로 수정할 수 있습니다"':''}>${ladleLifeDeltaHtml(r)}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
     <td>${r.daily?`<span class="ch-num"${ex?' style="text-decoration:line-through"':''}${END_EVT.includes(r.type)?' title="콘/SL = 콘보수·SL보수 시점의 부위별 수명(래들 전체 수명과 별도 관리 · 서로 더하는 값 아님) · 해체 = 이번 캠페인 최종 해체수명 · 숫자를 클릭하면 그 기록만 바로 수정할 수 있습니다"':''}>${ladleLifeChainHtml(r)}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
-    <td style="font-size:12px">${r.daily?ladleLifeDeltaHtml(r):'<span style="color:#c5ccd3">-</span>'}</td>
     <td><span class="ch-shell">${r._shell??'-'}</span></td>
     <td style="font-size:11.5px;white-space:pre-wrap">${r.note?esc(r.note):'<span style="color:#c5ccd3">-</span>'}</td>
     <td style="text-align:center">${END_EVT.includes(r.type)?`<input type="checkbox" ${isExcl(r)?'checked':''} title="돌발 등으로 정상수명 미달 → 평균·집계에서 제외" onchange="toggleExcl('${esc(r.no)}','${r.date}','${r.type}',${r.daily||0},this.checked)">${isExcl(r)?`<input class="binp" style="width:100%;margin-top:3px;font-size:11px" placeholder="제외 사유(예: 돌발 냉각)" value="${esc(exclMemo(r))}" onchange="setExclMemo('${esc(r.no)}','${r.date}','${r.type}',${r.daily||0},this.value)">`:''}`:'<span style="color:#c5ccd3">-</span>'}</td>
