@@ -1062,7 +1062,7 @@
       <select class="selbox" id="l_filterVendor" onchange="renderLadle()"><option value="">전체 업체</option></select>
       <button class="btn" onclick="downloadLadleExcel()">📥 엑셀</button>
       <button class="btn danger adm-only" onclick="cleanBareLadleNos()" title="래들번호가 '5호'처럼 호가 붙지 않고 숫자만 입력된 중복 기록을 찾아 삭제합니다">🧹 번호 정리</button>
-      <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="l_count"></span>
+      <span id="l_dlxBanner"></span><span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="l_count"></span>
     </div>
     <div class="tablewrap"><table>
       <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th style="min-width:170px">수명(CH)<br><span style="font-weight:400;font-size:9.5px">해체: 총수명 + 구성(<b>보수후</b>)</span></th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:130px">관리</th></tr></thead>
@@ -1968,7 +1968,7 @@ service cloud.firestore {
       <select class="selbox" id="t_filterNo" onchange="renderTundish()"><option value="">전체 호수</option></select>
       <select class="selbox" id="t_filterYear" onchange="renderTundish()"></select>
       <button class="btn" onclick="downloadTundishExcel()">📥 엑셀</button>
-      <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="t_count"></span>
+      <span id="t_dlxBanner"></span><span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="t_count"></span>
     </div>
     <div class="tablewrap"><table>
       <thead><tr><th>일자</th><th>호수</th><th>종류</th><th>구분</th><th>일일수명</th><th>누적수명</th><th>영구장누적</th><th>비고</th><th style="width:96px">관리</th></tr></thead>
@@ -2453,7 +2453,6 @@ service cloud.firestore {
     </div>
     <div class="subpanel active" id="psp-result">
       <div class="subhead" id="p_bidLabel" style="color:#1d4ed8"></div>
-      <div class="tablewrabel" style="color:#1d4ed8"></div>
       <div class="tablewrap"><table class="bomtbl" style="min-width:1180px">
         <thead><tr><th style="min-width:170px;white-space:nowrap">품명</th><th style="min-width:112px">제철소</th><th style="min-width:140px">입찰가능업체</th><th style="min-width:120px">입찰 순위업체</th><th style="min-width:120px;white-space:nowrap">기존업체</th><th class="n">기존단가</th><th class="n">낙찰가</th><th class="n">물량(kg)</th><th class="n">금액(원)</th><th>배분율</th><th>동국 순위</th><th class="n" style="min-width:130px;white-space:nowrap">동국 낙찰금액</th><th style="min-width:110px">계약업체·계약기간</th></tr></thead>
         <tbody id="poscoBody"></tbody>
@@ -18796,4 +18795,61 @@ function setAdminPin(){if(!requireAdmin())return;const p=prompt('새 관리자 P
 /* ============ 초기화 ============ */
 (async function init(){
   /* 업데이트해도 브라우저의 업무자료나 로그인 정보를 삭제하지 않는다. */
-  try{loc
+  try{localStorage.setItem('APP_VERSION_SAVED',APP_VERSION);}catch(e){}
+  document.getElementById('l_date').value=todayStr();document.getElementById('t_date').value=todayStr();
+  document.getElementById('e_date').value=todayStr();
+  {const bd=document.getElementById('board_date');if(bd)bd.value=todayStr();}
+  try{db=await openDB();await initPhotoCache();ladleData=await txAll('ladle');tundishData=await txAll('tundish');
+    if(ladleData.length===0&&tundishData.length===0){await loadSeedInto();setMeta('seedVersion',SEED_VERSION);}
+    else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
+    try{await ensureLadle2026Import();}catch(e){}
+    try{clearAllDiaOnce();}catch(e){}
+    try{await autoCleanBareLadleNos();}catch(e){}
+    await migrateVendor();try{await migrateBoardAbs();}catch(e){console.warn('migrateBoardAbs',e);}await loadSchedule();await loadBom();await loadEaf();await loadInv();
+    try{invInData=await txAll('invin');}catch(e){invInData=[];}
+    try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();}catch(e){stockData=[];}
+    await loadAttend();await loadHo();await loadPlanActual();
+  }catch(err){document.getElementById('saveTxt').textContent='저장소 사용불가(미리보기)';document.getElementById('saveDot').style.background='#c2410c';}
+  refreshLadle();refreshTundish();
+  document.getElementById('sch_date').value=todayStr();
+  fillSLpatOptions(slPatDef());onLadleTypeChange();
+  applySkin();updateRoleChip();updateMeChip();syncChip();syncSideCollapseBtn();
+  {const v=document.getElementById('appVer');if(v)v.textContent='버전 '+APP_VERSION;const b=document.getElementById('boardVer');if(b)b.textContent=APP_VERSION;}applyRoleNav();applyRoleLock();updateApprBadge();
+  // 2026-10-01: "접속(로그인)하면 상단 탭이 예전에 봤던 화면까지 다 열려있다"는 요청 —
+  // 탭 목록은 그 자리에서 본 화면을 다시 찾아가기 위한 "이번 접속" 용도이지, 날짜를 넘겨 계속
+  // 쌓이는 이력이 아니므로, 매번 새로 접속(페이지 로드)할 때는 깨끗하게 비우고 시작한다.
+  // 이후 같은 접속(같은 브라우저 탭)에서 화면을 옮겨다니는 동안에는 기존처럼 탭이 쌓이고
+  // 새로고침 없이 유지된다 — 바뀐 것은 "접속 시점의 초기화"뿐, 탭 자체의 동작은 그대로.
+  if(IS_RELOAD&&openTabs.length){            // F5 새로고침 : 열어둔 탭·화면 그대로 복원
+    let ok=false;try{ok=restoreUiState();}catch(e){}
+    if(!ok)nav(defaultView());
+  }else{openTabs=[];saveOpenTabs();nav(defaultView());} // 새 접속 : 첫 화면 = 일정(현장 권한은 작업현황판)
+  renderModePanel();  // 포항사업소 첫 화면: 파트 선택 패널 표시
+  applySetupHash();   // 모바일 설정 링크(#s=)로 들어온 경우 팀 공유 자동 설정
+  fbAutoConnect(); // 팀 공유 설정이 있으면 자동 연결
+  mvApply();       // 휴대폰이면 모바일 간편 화면
+  dayWatch();      // 자정 경과 시 '오늘' 자동 갱신
+})();
+
+/* 자정이 지나면 화면의 '오늘'을 자동으로 새 날짜로 변경 */
+function dayWatch(){
+  let cur=todayStr();
+  setInterval(()=>{
+    const t=todayStr();if(t===cur)return;
+    const prev=cur;cur=t;
+    ['l_date','t_date','e_date','board_date','sch_date'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el&&(!el.value||el.value===prev))el.value=t;});
+    try{
+      if(curView==='home'){calY=null;renderHome();}
+      else if(curView==='board')renderBoard();
+      else if(curView==='eaf')renderEaf();
+    }catch(e){}
+    try{applySkin();}catch(e){}          // 계절 스킨 자동 갱신
+    try{toast('날짜가 '+t+'로 변경되었습니다');}catch(e){}
+  },30000);
+}
+
+</script>
+</body>
+</html>
