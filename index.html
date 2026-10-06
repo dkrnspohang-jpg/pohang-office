@@ -2587,6 +2587,8 @@ service cloud.firestore {
     <div id="sg-size" style="display:none">
       <div class="toolrow">
         <button class="btn primary" onclick="addSgSize()">＋ 인원 추가</button>
+        <button class="btn primary" id="sgSizeSaveBtn" onclick="saveSgSizeNow()" title="지금까지 입력한 내용을 저장합니다 (Ctrl+S)" style="background:#15803d;border-color:#15803d">💾 저장</button>
+        <span id="sg_sizeSaved" style="font-size:12px"></span>
         <button class="btn" onclick="downloadSgSize()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="sg_sizeCount"></span>
       </div>
@@ -12806,13 +12808,28 @@ function downloadSgOrder(){
   });
   t+=`</table>`;downloadXls(`발주물량검토_${sgOrderYear}`,t);
 }
+/* 2026-10-06: 개인별 보호구 사이즈 [💾 저장] 버튼 — 입력 중 언제든 저장하고 저장 시각/미저장 상태를 표시 (Ctrl+S 지원).
+   입력값은 기존처럼 바로 이 PC에 임시 보관되며, 저장 버튼은 저장 성공 여부를 확인해 알려 준다. */
+let sgSizeDirty=false,sgSizeSavedAt='';
+function sgSizeStatus(){const el=document.getElementById('sg_sizeSaved');if(!el)return;
+  el.innerHTML=sgSizeDirty?'<span style="color:#c2410c;font-weight:700">● 수정됨 · 저장 전</span>':(sgSizeSavedAt?'<span style="color:#15803d">✔ '+sgSizeSavedAt+' 저장됨</span>':'');}
+function saveSgSizeNow(){
+  let ok=false;
+  try{const j=JSON.stringify(sgSize);localStorage.setItem('dgrns_sg_size',j);ok=localStorage.getItem('dgrns_sg_size')===j;}catch(e){}
+  if(!ok){alert('저장에 실패했습니다.\n브라우저 저장공간을 확인하시고, 우선 [📥 엑셀]로 내려받아 백업해 주세요.');return;}
+  sgSizeDirty=false;sgSizeSavedAt=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  sgSizeStatus();try{flashSave();}catch(e){}toast('저장되었습니다 ('+sgSize.length+'명)');
+}
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')&&typeof curView!=='undefined'&&curView==='safetygear'&&sgCurTab==='size'){e.preventDefault();saveSgSizeNow();}});
 function addSgSize(){
+  sgSizeDirty=true;
   sgSize.unshift({id:uid(),name:'',workTop:'',workBottom:'',tshirtShort:'',tshirtLong:'',flameSuitSize:'',shoeModel:'',shoeSize:'',heatShoeSize:'',winterJacket:'',vest:'',summerVest:'',note:''});
   saveSgSize();renderSgSize();
 }
 function editSgSize(id,key,v){
   const r=sgSize.find(x=>x.id===id);if(!r)return;
-  r[key]=v;saveSgSize();renderSgSizeSummary();
+  r[key]=v;saveSgSize();sgSizeDirty=true;sgSizeStatus();renderSgSizeSummary();
 }
 const SG_SIZE_FIELDS=[
   {key:'workTop',label:'작업복(상의)'},{key:'workBottom',label:'작업복(하의)'},
@@ -12877,7 +12894,7 @@ function downloadSgSizeSummary(){
 function delSgSize(id){
   if(!sgCanDel()){alert('삭제는 관리자·관리직·안전관리담당자만 가능합니다.');return;}
   if(!confirm('이 인원을 삭제할까요?'))return;
-  sgSize=sgSize.filter(x=>x.id!==id);saveSgSize();renderSgSize();
+  sgSize=sgSize.filter(x=>x.id!==id);sgSizeDirty=true;saveSgSize();renderSgSize();
 }
 function sgSizeField(r,key,ph){
   return `<input class="binp" style="width:100%;border:1px solid var(--line);text-align:center" value="${esc(r[key]||'')}" placeholder="${ph||''}" oninput="editSgSize('${r.id}','${key}',this.value)">`;
@@ -12904,7 +12921,7 @@ function renderSgSize(){
   const box=document.getElementById('sgSizeBody');if(!box)return;
   box.innerHTML=sgSize.map(sgSizeRowHtml).join('')||`<tr><td colspan="14"><div class="empty">등록된 인원이 없습니다.</div></td></tr>`;
   const cnt=document.getElementById('sg_sizeCount');if(cnt)cnt.textContent=sgSize.length+'명';
-  renderSgSizeSummary();
+  sgSizeStatus();renderSgSizeSummary();
 }
 function downloadSgSize(){
   let t=`<table><tr><th>성명</th><th>작업복(상의)</th><th>작업복(하의)</th><th>티셔츠(반팔)</th><th>티셔츠(긴팔)</th><th>방염복</th><th>안전화 모델</th><th>안전화</th><th>내열안전화</th><th>동잠바</th><th>조끼</th><th>혹서기조끼</th><th>비고</th></tr>`;
