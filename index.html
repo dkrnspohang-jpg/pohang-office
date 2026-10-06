@@ -1205,10 +1205,10 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <div class="subhead">구분별 부위 평균 용손율 <span class="hint">3개 업체(DK·KR·원진)를 합쳐 구분(SL 소수리 / SL 중수리 / 무보수 중수리)별로 따로 평균 · 낮을수록 내침식성 우수</span>
         <label style="font-size:12px;font-weight:400;margin-left:10px;cursor:pointer;color:var(--text)"><input type="checkbox" id="er_vexp" checked onchange="renderLadleErode()" style="vertical-align:middle"> 구분 아래에 업체별로 나눠 보기</label></div>
       <div class="tablewrap"><table class="bomtbl">
-        <thead><tr><th>구분</th><th>업체 구성</th><th class="n">건수</th><th class="n">평균 수명</th><th class="n">S/L 최소잔존</th><th class="n">S/L 용손율</th><th class="n">M/L 최소잔존</th><th class="n">M/L 용손율</th><th class="n">바닥 잔존</th><th class="n">바닥 용손율</th></tr></thead>
+        <thead><tr><th>구분</th><th>업체 구성</th><th class="n">건수</th><th class="n">평균 수명</th><th class="n">S/L 최소잔존</th><th class="n">S/L 용손율</th><th class="n">M/L 최소잔존</th><th class="n">M/L 용손율</th><th class="n">바닥 잔존</th><th class="n">바닥 용손율</th><th class="n" title="부위 용손율의 합 — S/L+M/L+바닥 (SL 중수리는 S/L 제외: M/L+바닥)">합계 용손율</th></tr></thead>
         <tbody id="erodeVendor"></tbody>
       </table></div>
-      <div class="subhead" style="margin-top:14px">업체별 비교 분석 <span class="hint">같은 구분(보수 패턴)끼리만 업체를 비교 · 낮을수록 용손율 우수 · 🏆 = 건수 3건 이상 업체 중 최저 · 건수 3건 미만은 참고용(회색)</span></div>
+      <div class="subhead" style="margin-top:14px">업체별 비교 분석 <span class="hint">같은 구분(보수 패턴)끼리만 업체를 비교 · 낮을수록 용손율 우수 · 🥇🥈🥉 = 건수 3건 이상 업체 중 1~3위 · 건수 3건 미만은 참고용(회색) · 합계 용손율 = 부위 용손율의 합</span></div>
       <div class="tablewrap"><table class="bomtbl" id="erodeVcmpTbl">
         <thead id="erodeVcmpHead"></thead>
         <tbody id="erodeVcmp"></tbody>
@@ -1728,13 +1728,12 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <span class="spacer"></span>
       <label style="font-size:12px;cursor:pointer" title="일일수명에 콘보수·SL보수·해체·수명을 쓰면 래들 수명관리에 자동 반영합니다 (이번 달·지난달)"><input type="checkbox" id="dlxAutoChk" onchange="dlxAutoSet(this.checked)" style="vertical-align:middle"> 수명관리 자동 연동</label>
       <button class="btn sm primary" onclick="dlxOpen('ladle')" title="일일 사용현황을 읽어 래들 보수 수명·턴디쉬 사용완료 호수를 수명관리와 비교하고, 승인한 건만 반영합니다">🔄 수명관리 반영</button>
-      <button class="btn sm primary" onclick="dlpOpen()" title="래들·턴디쉬 수명관리의 9/25 이후 이벤트 중 사용현황에 빠진 것과, 사용중 래들의 현재 사용수명을 사용현황으로 가져옵니다 (수명관리는 변경되지 않음)">📥 수명관리→사용현황 (9/25~)</button>
       <button class="btn sm" onclick="dlAddCol()">＋ 호수 추가</button>
       <button class="btn sm" onclick="dlCsv()">⬇ 엑셀(CSV) 저장</button>
       <button class="btn sm" onclick="dlResetMonth()">↺ 이 달 엑셀 원본으로 되돌리기</button>
       <button class="btn sm primary" onclick="dlSave(true)">💾 저장</button>
     </div>
-    <div class="dl-help"><b>참고용 기록표</b>입니다 — 공식 수명은 래들·턴디쉬 수명관리에서 입력·관리하고, 여기는 엑셀 해체일지와 같은 양식으로 매일 기록합니다(서로 자동 연동되지 않음).
+    <div class="dl-help"><b>참고용 기록표</b>입니다 — 엑셀 해체일지와 같은 양식으로 매일 기록하면 래들·턴디쉬 수명관리에 자동 반영됩니다(래들 10/4·턴디쉬 9/29 이후 입력분부터 · 기존 수명관리 기록·모식도는 바꾸지 않음 · 위 '수명관리 자동 연동'으로 끌 수 있음).
       칸에는 <b>누적</b> 또는 <b>누적/구간</b>(예: 96/39)을 적고, 보수·교체일에는 <b>신축 · 해체 · 콘보수 · SL보수</b>를 그대로 적습니다. 래들 칸에 <b>+7</b>을 입력하면 위 칸 누적에 7을 더해 줍니다. Enter/↑↓로 아래·위 칸 이동, 입력은 즉시 저장됩니다.
       <span class="dl-lg dl-new">신축</span><span class="dl-lg dl-end">해체</span><span class="dl-lg dl-cone">콘보수</span><span class="dl-lg dl-sl">SL보수</span><span class="dl-lg dl-seg">누적/구간</span></div>
     <div class="dl-wrap"><table class="dl-tbl" id="dlTbl"></table></div>
@@ -2104,6 +2103,7 @@ service cloud.firestore {
       <input type="month" id="eafMonth" class="binp" style="width:150px;border:1px solid var(--line);padding:5px 8px" onchange="eafMonthChanged()">
       <button class="btn sm" onclick="eafMonthToday()">이번 달</button>
       <span id="eafMonthRange" style="font-size:12px;color:var(--muted)"></span>
+      <span id="eafEditBar" style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></span>
     </div>
     <div class="cards" id="eafCards"></div>
     <div class="formbar">
@@ -5690,11 +5690,11 @@ function renderLadleCost(){
       <td class="n">${unit==='-'?'-':wON(unit)}</td></tr>`;}).join('');
   if(!rows.length)body=`<tr><td colspan="10"><div class="empty">해체 이력이 없습니다.</div></td></tr>`;
   document.getElementById('ladleCostBody').innerHTML=body;
-  try{const un=rows.reduce((a,r)=>a+(r.patList||[]).filter(x=>!x.set).length,0);
+  try{const yrN=todayStr().slice(0,4),un=rows.reduce((a,r)=>a+(r.patList||[]).filter(x=>!x.set&&String(x.date||'').slice(0,4)===yrN).length,0);   // 2026-10-06: 올해 기록만 안내
     let nb=document.getElementById('ladleCostPatNote');
     if(!nb){nb=document.createElement('div');nb.id='ladleCostPatNote';nb.style.cssText='font-size:12px;margin:6px 2px';const tb=document.getElementById('ladleCostBody');const tw=tb&&tb.closest('.tablewrap');if(tw)tw.parentNode.insertBefore(nb,tw);}
-    nb.innerHTML=un?`<span style="background:#fff7ed;border:1px solid #fb923c;border-radius:6px;padding:3px 9px;color:#9a3412">⚠ 수명관리에 패턴이 비어 있는 SL보수 <b>${un}건</b> — 기본 패턴(${esc(slPatShort(slPatDef()))})으로 계산 중 · 주황 태그를 누르면 수명관리 기록에서 패턴을 지정할 수 있습니다</span>`
-      :'<span style="color:#15803d">✔ SL보수 패턴을 모두 래들 수명관리 기록에서 연동 중입니다</span>';}catch(e){}
+    nb.innerHTML=un?`<span style="background:#fff7ed;border:1px solid #fb923c;border-radius:6px;padding:3px 9px;color:#9a3412">⚠ 올해 수명관리에 패턴이 비어 있는 SL보수 <b>${un}건</b> — 기본 패턴(${esc(slPatShort(slPatDef()))})으로 계산 중 · 주황 태그를 누르면 수명관리 기록에서 패턴을 지정할 수 있습니다</span>`
+      :'<span style="color:#15803d">✔ 올해 SL보수 패턴을 모두 래들 수명관리 기록에서 연동 중입니다</span>';}catch(e){}
   document.getElementById('ladleCostStd').innerHTML=ladleBoms().map(b=>{const c=bomRowsCost(b.rows),w=bomRowsWeight(b.rows);
     return `<tr><td>${esc(b.name)}</td><td class="n">${b.baseCH||'-'}</td><td class="n">${wKG(w)}</td><td class="n">${wON(c)}</td><td class="n">${b.baseCH?wON(c/b.baseCH):'-'}</td></tr>`;}).join('');
   renderLadleCostBu(ton);
@@ -7031,7 +7031,8 @@ function diaOrphanRender(){
   if(!O.length){el.innerHTML=cnt;return;}
   let h=cnt+`<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 12px;margin:0 0 8px;font-size:12.5px;color:#78350f">
     ⚠ <b>수명관리 기록과 연결이 끊긴 모식도 ${O.length}건</b> — 저장은 되어 있으나 수명관리 기록의 일자·래들번호가 바뀌어 '미작성'으로 보입니다.
-    <button class="btn sm" onclick="diaOrphOpen=!diaOrphOpen;diaOrphanRender()">${diaOrphOpen?'닫기':'확인·다시 연결'}</button></div>`;
+    <button class="btn sm" onclick="diaOrphOpen=!diaOrphOpen;diaOrphanRender()">${diaOrphOpen?'닫기':'확인·다시 연결'}</button>
+    ${O.some(o=>!o.cands.length)?`<button class="btn sm danger" onclick="diaOrphDelNoCand()" title="연결할 후보가 없는 끊긴 모식도만 삭제합니다 (삭제 전 백업 보관)">🗑 연결 후보 없는 ${O.filter(o=>!o.cands.length).length}건 삭제</button>`:''}</div>`;
   if(diaOrphOpen){
     h+=`<div class="tablewrap" style="margin-bottom:10px"><table><thead><tr><th>저장된 모식도</th><th class="n">CH</th><th>연결할 수명관리 기록</th><th></th></tr></thead><tbody>`;
     O.forEach((o,i)=>{
@@ -7042,6 +7043,13 @@ function diaOrphanRender(){
       <span style="font-size:11px;color:var(--muted)">※ 연결은 모식도의 저장 위치만 옮기며, 수명관리 기록과 모식도 입력값은 바꾸지 않습니다.</span></div>`;
   }
   el.innerHTML=h;
+}
+function diaOrphDelNoCand(){
+  const O=diaOrphans().filter(o=>!o.cands.length);if(!O.length)return;
+  if(!confirm('연결할 수명관리 기록이 없는 끊긴 모식도 '+O.length+'건을 삭제합니다.\n\n'+O.map(o=>fmtYMD(o.date)+' '+noLabel(o.no)+' ('+(o.ch||'-')+'CH)').join('\n')+'\n\n삭제 전 내용은 이 브라우저에 백업으로 보관됩니다. 진행할까요?'))return;
+  try{localStorage.setItem('dgrns_dia_deleted_backup',JSON.stringify({at:new Date().toLocaleString('ko-KR'),items:O.map(o=>({k:o.k,rec:diaStore[o.k]}))}));}catch(e){toast('백업 저장 실패 — 삭제를 중단했습니다');return;}
+  O.forEach(o=>{delete diaStore[o.k];});saveDiaStore(diaStore);toast('끊긴 모식도 '+O.length+'건을 삭제했습니다');
+  try{diaOrphanRender();}catch(e){}try{renderLadle();}catch(e){}
 }
 function _diaOrphDo(o,rid){
   const r=ladleData.find(x=>x.id===rid);if(!r||diaStore[diaKey(r.no,r.date)])return false;
@@ -7242,6 +7250,9 @@ function ppExclSet(){
   if(!on&&ppExcl[key])ppExcl[key].on=0;
   savePpExcl();flashSave();}
 /* 2026-10-05: 업체별 비교 분석 — 같은 구분(보수 패턴) 안에서 업체(DK·KR·원진·미지정)를 나란히 비교 */
+/* 2026-10-06: 합계 용손율 = 부위(S/L·M/L·바닥) 용손율의 합. SL 중수리는 S/L 보수를 동국R&S만 쓰므로 S/L 제외(M/L+바닥) */
+function erPartsOf(pt){return pt==='SLEND'?['ml','bt']:['sl','ml','bt'];}
+function erTotalRate(r){const v=erPartsOf(r.pat).map(k=>r.z[k]&&r.z[k].rate);return v.every(x=>x!=null)?v.reduce((a,b)=>a+b,0):null;}
 function erVendorCompare(rows){
   const hd=document.getElementById('erodeVcmpHead'),bd=document.getElementById('erodeVcmp'),nt=document.getElementById('erodeVcmpNote');
   if(!hd||!bd)return;
@@ -7249,38 +7260,44 @@ function erVendorCompare(rows){
   const vOrd=['DK','KR','원진','미지정'];
   const vs=[...new Set(rows.map(r=>r.vendor))].sort((x,y)=>{const i=vOrd.indexOf(x),j=vOrd.indexOf(y);return (i<0?9:i)-(j<0?9:j)||x.localeCompare(y);});
   if(!rows.length||vs.length<1){hd.innerHTML='';bd.innerHTML='<tr><td><div class="empty">비교할 모식도가 없습니다.</div></td></tr>';if(nt)nt.innerHTML='';return;}
-  hd.innerHTML='<tr><th>구분</th><th>비교 항목</th>'+vs.map(v=>`<th class="n">${esc(v)}</th>`).join('')+'<th class="n">최저 업체</th><th class="n">최고−최저</th></tr>';
+  hd.innerHTML='<tr><th>구분</th><th>비교 항목</th>'+vs.map(v=>`<th class="n">${esc(v)}</th>`).join('')+'<th class="n">순위 (1~3위)</th><th class="n">최고−최저</th></tr>';
   const METR=[
-    ['건수',a=>a.length,0,false],
-    ['평균 수명(CH)',a=>avg(a.map(r=>r.life).filter(Boolean)),0,'hi'],
-    ['S/L 용손율',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rate).filter(x=>x!=null)),2,'lo'],
-    ['S/L 최소잔존(mm)',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rem).filter(x=>x!=null)),0,'hi'],
-    ['M/L 용손율',a=>avg(a.map(r=>r.z.ml&&r.z.ml.rate).filter(x=>x!=null)),2,'lo'],
-    ['바닥 용손율',a=>avg(a.map(r=>r.z.bt&&r.z.bt.rate).filter(x=>x!=null)),2,'lo']];
+    ['건수',a=>a.length,0,false,null],
+    ['평균 수명(CH)',a=>avg(a.map(r=>r.life).filter(Boolean)),0,'hi',null],
+    ['S/L 용손율',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rate).filter(x=>x!=null)),2,'lo','sl'],
+    ['S/L 최소잔존(mm)',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rem).filter(x=>x!=null)),0,'hi','sl'],
+    ['M/L 용손율',a=>avg(a.map(r=>r.z.ml&&r.z.ml.rate).filter(x=>x!=null)),2,'lo',null],
+    ['바닥 용손율',a=>avg(a.map(r=>r.z.bt&&r.z.bt.rate).filter(x=>x!=null)),2,'lo',null],
+    ['합계 용손율',a=>avg(a.map(erTotalRate).filter(x=>x!=null)),2,'lo','tot']];
+  const MEDAL=['🥇','🥈','🥉'];
   let h='';const best={};
   ER_PAT_ORD.forEach(pt=>{const A=rows.filter(r=>r.pat===pt);if(!A.length)return;
     const by={};vs.forEach(v=>by[v]=A.filter(r=>r.vendor===v));
-    METR.forEach(([lab,fn,dg,mode],mi)=>{
+    const mets=METR.filter(m=>!(pt==='SLEND'&&m[4]==='sl'));   // SL 중수리: S/L 항목 숨김
+    mets.forEach(([lab,fn,dg,mode],mi)=>{
       const vals=vs.map(v=>by[v].length?fn(by[v]):null);
-      // 우수 업체 : 건수 3건 이상 업체 중 용손율 최저 / 수명·잔존 최고
-      let bi=-1;
-      if(mode){vals.forEach((x,i)=>{if(x==null||by[vs[i]].length<3)return;if(bi<0||(mode==='lo'?x<vals[bi]:x>vals[bi]))bi=i;});}
-      const okv=vals.filter((x,i)=>x!=null&&by[vs[i]].length>=3);
+      // 순위 : 건수 3건 이상 업체만 · 용손율은 낮은 순, 수명·잔존은 높은 순 → 1~3위 표시
+      const elig=[];vals.forEach((x,i)=>{if(mode&&x!=null&&by[vs[i]].length>=3)elig.push(i);});
+      if(mode)elig.sort((i,j)=>mode==='lo'?vals[i]-vals[j]:vals[j]-vals[i]);
+      const rankOf={};elig.forEach((i,k)=>{rankOf[i]=k;});
+      const okv=elig.map(i=>vals[i]);
       const spread=(mode&&okv.length>=2)?Math.max(...okv)-Math.min(...okv):null;
-      if(mode==='lo'&&bi>=0){best[vs[bi]]=(best[vs[bi]]||0)+1;}
-      h+=`<tr${mi===0?' style="border-top:2px solid #cbd5e1"':''}><td>${mi===0?erPatTag(pt):''}</td><td style="font-size:12px">${lab}</td>`
+      if(mode==='lo'&&elig.length){best[vs[elig[0]]]=(best[vs[elig[0]]]||0)+1;}
+      const isTot=lab==='합계 용손율';
+      h+=`<tr${mi===0?' style="border-top:2px solid #cbd5e1"':''}${isTot?' style="background:#f8fafc"':''}><td>${mi===0?erPatTag(pt):''}</td><td style="font-size:12px${isTot?';font-weight:700':''}">${lab}${isTot&&pt==='SLEND'?' <span style="font-size:10px;color:#64748b">(M/L+바닥)</span>':''}</td>`
         +vals.map((x,i)=>{
           if(x==null)return '<td class="n" style="color:#c5ccd3">-</td>';
           const few=lab!=='건수'&&by[vs[i]].length<3;
           const col=few?'#94a3b8':(mode==='lo'?eroColor(x):'inherit');
-          const star=(i===bi)?' 🏆':'';
-          return `<td class="n" style="color:${col};font-weight:${mode==='lo'&&!few?700:400}${i===bi?';background:#f0fdf4':''}">${x.toFixed(dg)}${star}${few?'<span style="font-size:10px"> (n='+by[vs[i]].length+')</span>':''}</td>`;}).join('')
-        +`<td class="n" style="font-weight:700">${bi>=0?esc(vs[bi]):'-'}</td><td class="n" style="color:#64748b">${spread!=null?spread.toFixed(dg):'-'}</td></tr>`;});
+          const k=rankOf[i],star=(k!=null&&k<3)?' '+MEDAL[k]:'';
+          return `<td class="n" style="color:${col};font-weight:${mode==='lo'&&!few?700:400}${k===0?';background:#f0fdf4':''}">${x.toFixed(dg)}${star}${few?'<span style="font-size:10px"> (n='+by[vs[i]].length+')</span>':''}</td>`;}).join('')
+        +`<td class="n" style="font-weight:700;font-size:11.5px;white-space:nowrap">${elig.length?elig.slice(0,3).map((i,k)=>(k+1)+'위 '+esc(vs[i])).join(' · '):'-'}</td><td class="n" style="color:#64748b">${spread!=null?spread.toFixed(dg):'-'}</td></tr>`;});
   });
   bd.innerHTML=h||'<tr><td colspan="9"><div class="empty">비교할 데이터가 없습니다.</div></td></tr>';
   const lead=Object.keys(best).sort((a,b)=>best[b]-best[a]);
-  if(nt)nt.innerHTML='※ 용손율 3개 항목(S/L·M/L·바닥) 중 최저(🏆) 횟수: '+(lead.length?lead.map(v=>`<b>${esc(v)}</b> ${best[v]}회`).join(' · '):'비교 가능한 업체 없음(건수 3건 이상 업체가 2곳 미만이면 순위를 매기지 않습니다)')
-    +'<br>※ 구분(SL 소수리·SL 중수리·무보수 중수리)마다 수명·보수 구성이 달라 <b>다른 구분끼리는 비교하지 않고</b> 같은 구분 안에서만 업체를 비교합니다. 건수가 적은 업체는 표본 부족으로 순위에서 제외하고 값만 회색으로 표시합니다.';
+  if(nt)nt.innerHTML='※ 용손율 항목(S/L·M/L·바닥·합계)에서 1위(🥇) 횟수: '+(lead.length?lead.map(v=>`<b>${esc(v)}</b> ${best[v]}회`).join(' · '):'비교 가능한 업체 없음(건수 3건 이상 업체가 있어야 순위가 표시됩니다)')
+    +'<br>※ 구분(SL 소수리·SL 중수리·무보수 중수리)마다 수명·보수 구성이 달라 <b>다른 구분끼리는 비교하지 않고</b> 같은 구분 안에서만 업체를 비교합니다. 건수가 3건 미만인 업체는 표본 부족으로 순위에서 제외하고 값만 회색으로 표시합니다.'
+    +'<br>※ SL 중수리는 S/L 보수를 동국R&S만 사용하므로 S/L 항목은 표시하지 않으며, 합계 용손율은 M/L+바닥으로 계산합니다.';
 }
 function renderLadleErode(){
   const rows=erodeFiltered();
@@ -7313,14 +7330,17 @@ function renderLadleErode(){
       +'</div>':'');
   const numOr=(x,d)=>x!=null?x.toFixed(d):'-';
   const sumRow=(a,lab1,lab2,sub)=>{
+    const noSL=a.length&&a[0].pat==='SLEND';   // SL 중수리: S/L 보수는 동국R&S만 사용 → S/L 칸은 표시하지 않음(바닥·M/L만)
+    const totR=avg(a.map(erTotalRate).filter(x=>x!=null));
     const life=avg(a.map(r=>r.life).filter(Boolean));
     const slR=avg(a.map(r=>r.z.sl&&r.z.sl.rate).filter(x=>x!=null)),slM=avg(a.map(r=>r.z.sl&&r.z.sl.rem).filter(x=>x!=null));
     const mlR=avg(a.map(r=>r.z.ml&&r.z.ml.rate).filter(x=>x!=null)),mlM=avg(a.map(r=>r.z.ml&&r.z.ml.rem).filter(x=>x!=null));
     const btR=avg(a.map(r=>r.z.bt&&r.z.bt.rate).filter(x=>x!=null)),btM=avg(a.map(r=>r.z.bt&&r.z.bt.rem).filter(x=>x!=null));
     return `<tr${sub?' style="background:#fafafa;color:#475569"':''}><td>${lab1}</td><td style="font-size:11.5px">${lab2}</td><td class="n">${a.length}</td><td class="n">${life!=null?Math.round(life):'-'}</td>
-      <td class="n">${slM!=null?Math.round(slM):'-'}</td><td class="n" style="color:${slR!=null?eroColor(slR):'inherit'};font-weight:700">${numOr(slR,2)}</td>
+      ${noSL?'<td class="n" style="color:#c5ccd3">–</td><td class="n" style="color:#c5ccd3">–</td>':`<td class="n">${slM!=null?Math.round(slM):'-'}</td><td class="n" style="color:${slR!=null?eroColor(slR):'inherit'};font-weight:700">${numOr(slR,2)}</td>`}
       <td class="n">${mlM!=null?Math.round(mlM):'-'}</td><td class="n" style="color:${mlR!=null?eroColor(mlR):'inherit'};font-weight:700">${numOr(mlR,2)}</td>
-      <td class="n">${btM!=null?Math.round(btM):'-'}</td><td class="n" style="color:${btR!=null?eroColor(btR):'inherit'};font-weight:700">${numOr(btR,2)}</td></tr>`;};
+      <td class="n">${btM!=null?Math.round(btM):'-'}</td><td class="n" style="color:${btR!=null?eroColor(btR):'inherit'};font-weight:700">${numOr(btR,2)}</td>
+      <td class="n" style="color:${totR!=null?eroColor(totR/(noSL?2:3)):'inherit'};font-weight:700;background:#f8fafc">${numOr(totR,2)}</td></tr>`;};
   const vexp=!!(document.getElementById('er_vexp')||{}).checked;
   const vmix=a=>{const m={};a.forEach(r=>{m[r.vendor]=(m[r.vendor]||0)+1;});
     return Object.keys(m).sort((x,y)=>m[y]-m[x]||x.localeCompare(y)).map(k=>`${esc(k)} ${m[k]}`).join(' · ');};
@@ -7332,7 +7352,7 @@ function renderLadleErode(){
       vs.forEach(v=>{vh+=sumRow(a.filter(r=>r.vendor===v),'<span style="padding-left:14px">└ <b>'+esc(v)+'</b></span>','',true);});}});
   try{erVendorCompare(rows);}catch(e){console.warn('erVendorCompare',e);}
   document.getElementById('erodeVendor').innerHTML=vh
-    ||`<tr><td colspan="10"><div class="empty">저장된 해체 모식도가 없습니다. 모식도 탭에서 단수별 잔존을 입력·저장하세요.</div></td></tr>`;
+    ||`<tr><td colspan="11"><div class="empty">저장된 해체 모식도가 없습니다. 모식도 탭에서 단수별 잔존을 입력·저장하세요.</div></td></tr>`;
   // PP-CONE : 사이즈별 / 월별 / 건별 — #1 · #2 용손율 비교만 (CHK 평균제외 건은 평균에서 빠짐)
   const ppAll=rows.filter(r=>r.z.pp2), ppRows=ppAll.filter(r=>!ppIsExcl(r));
   const sideAvg=(a,k,f)=>avg(a.map(r=>r.z.pp2[k]&&r.z.pp2[k][f]).filter(x=>x!=null));
@@ -8020,13 +8040,21 @@ function dlCarry(ym,no){
   for(let i=0;i<70;i++){
     if(dd<1){m--;if(m<1){m=12;y--;}dd=new Date(y,m,0).getDate();}
     const v=String(dlGet(dlYMstr(y,m),no,String(dd))||'').trim();
-    if(v)return {v,m,d:dd};
+    /* 2026-10-06: 한 칸에 여러 값이 붙여넣어져 있으면(예: 1호 래들 9/23 칸) 맨 마지막 값만 이월로 가져온다. 원문은 raw에 보관(마우스를 올리면 표시) */
+    if(v){const tk=v.split(/\s+/);
+      if(tk.length>1&&/^NO\./.test(no)){   // 한 칸에 여러 호수 값이 붙여넣어진 경우 → 그 래들의 수명관리 값(전월 말 기준)을 이월로 표시
+        try{const end=dlYMstr(y,m)+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');
+          const L=ladleData.filter(r=>r.no===no&&r.date<=end);
+          if(L.length){const W=withCum(L),last=W[W.length-1],dt=last.date.split('-');
+            const txt=(END_EVT.includes(last.type)||!(last._campRun>0))?String(last.type).replace('(영구장)',''):String(last._campRun);
+            return {v:txt,raw:v+'  → 수명관리 기준값을 표시합니다 (사용현황 칸에 여러 값이 붙여넣어져 있음)',m:+dt[1],d:+dt[2]};}}catch(e){}}
+      return {v:tk[tk.length-1],raw:v,m,d:dd};}
     dd--;}
   return null;}
 function dlDays(ym){const [y,m]=ym.split('-').map(Number);return new Date(y,m,0).getDate();}
 function dlAvg(ym,k,cols){const a=cols.map(no=>parseFloat(dlTopGet(ym,k,no))).filter(x=>!isNaN(x));
   return a.length?(Math.round(a.reduce((x,y)=>x+y,0)/a.length*10)/10):'';}
-function dlRender(){
+function dlRender(){if(!dlxSwept){dlxSwept=true;setTimeout(()=>{try{dlxAutoSweep();}catch(e){console.warn(e);}},1500);}
   if(!dlYM)dlYM=todayStr().slice(0,7);
   const mi=document.getElementById('dlMonth');if(mi)mi.value=dlYM;
   try{const ac=document.getElementById('dlxAutoChk');if(ac)ac.checked=dlxAutoOn();}catch(e){}
@@ -8034,8 +8062,8 @@ function dlRender(){
   let h='<thead><tr><th>구분</th>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+DL_TD.map(c=>`<th class="dl-tdh">${DL_TDNAME[c]}</th>`).join('')+'<th style="min-width:240px;text-align:left">비고(조업 특이사항)</th></tr></thead><tbody>';
   // 맨 위 : 전월 마지막 데이터(이월 · 읽기 전용)
   h+=`<tr class="dl-carry" title="지난달에 마지막으로 기록된 칸입니다(읽기 전용). 이번 달 1일 칸에서 '+7'처럼 입력하면 이 누적에 더해집니다"><td>전월 마지막<br><span style="font-weight:400;font-size:9.5px;color:#475569">(이월)</span></td>`
-    +cols.map(no=>{const c=dlCarry(dlYM,no);return c?`<td class="${dlCls(c.v)}">${esc(c.v)}<div style="font-weight:400;font-size:9.5px;color:#475569">${c.m}/${c.d}</div></td>`:'<td></td>';}).join('')
-    +`<td colspan="3"></td><td></td></tr>`;
+    +cols.concat(DL_TD).map(no=>{const c=dlCarry(dlYM,no);return c?`<td class="${dlCls(c.v)}"${c.raw!==c.v?` title="${esc(c.raw)}"`:''}>${esc(c.v)}<div style="font-weight:400;font-size:9.5px;color:#475569">${c.m}/${c.d}</div></td>`:'<td></td>';}).join('')
+    +`<td></td></tr>`;
   // 상단 요약 6행 (엑셀 : 1차콘수명 ~ 비고) — 평균은 자동 계산
   DL_TOP.forEach(([k,lb])=>{
     h+=`<tr class="dl-top"><td>${lb}</td>`;
@@ -8337,14 +8365,24 @@ function dlxLadleCompare(){
 }
 // 턴디쉬 : 사용완료 호수 = ① 'a/b[/c]' 의 앞쪽(마지막 값 제외), 수명 = ② 같은 날 같은 자리
 function dlxTundishEvents(){
-  const out=[];
+  /* 2026-10-06: '사용완료/새호수'(a/b) 표기뿐 아니라, 칸의 호수가 바뀌면(앞 호수는 자연스럽게 사용완료) 그날을 사용완료일로 본다.
+     수명(CH)은 ②칸 같은 위치 값, 단일 호수 변경일 때는 직전에 기록된 그 호수의 마지막 수명. */
+  const out=[];let cur=null;
   dlxMonths().forEach(ym=>{
     const days=new Set();['TD_1','TD_2'].forEach(c=>dlxDayKeys(ym,c).forEach(d=>days.add(d)));
     [...days].sort((a,b)=>a-b).forEach(d=>{
       const v1=String(dlGet(ym,'TD_1',d)||'').trim(),v2=String(dlGet(ym,'TD_2',d)||'').trim();
-      if(!/^\d+(\/\d+)+$/.test(v1))return;
+      if(!/^\d+(\/\d+)*$/.test(v1))return;
+      const date=ym+'-'+String(d).padStart(2,'0');
       const a=v1.split('/').map(Number),b=/^\d+(\/\d+)*$/.test(v2)?v2.split('/').map(Number):[];
-      for(let i=0;i<a.length-1;i++)out.push({date:ym+'-'+String(d).padStart(2,'0'),no:String(a[i]),life:(b.length===a.length&&b[i]>=0)?b[i]:null});
+      if(a.length>1){
+        for(let i=0;i<a.length-1;i++)out.push({date,no:String(a[i]),life:(b.length===a.length&&b[i]>=0)?b[i]:null});
+        cur={no:a[a.length-1],life:b.length===a.length?b[b.length-1]:null};
+      }else{
+        const n=a[0];
+        if(cur&&cur.no!==n)out.push({date,no:String(cur.no),life:cur.life!=null?cur.life:null});
+        cur={no:n,life:b.length?b[b.length-1]:(cur&&cur.no===n?cur.life:null)};
+      }
     });});
   return out;
 }
@@ -8499,16 +8537,36 @@ async function dlxApply(){
    수명관리에 ① 없는 기록은 추가 ② 수명(CH)이나 일자가 다른 기록은 일일수명 값으로 수정한다.
    · 반영 때문에 해체의 보수 구성이 틀어질 수 있으면(합계가 해체수명 초과 등) 자동 반영을 보류하고 알린다.
    · 모식도는 수명관리 일자가 바뀌면 함께 따라간다. · 반영분은 [🔄 일일수명 반영 > 마지막 반영 되돌리기]로 되돌릴 수 있다. */
-function dlxAutoOn(){return false;}  // 2026-10-06: 래들 수명관리 고정 — 사용현황 입력이 수명관리를 바꾸지 않도록 자동 연동 차단
-function dlxAutoSet(on){const ac=document.getElementById('dlxAutoChk');if(ac)ac.checked=false;toast('수명관리는 고정되어 있어 자동 연동을 사용하지 않습니다 (수명관리 → 사용현황 방향 가져오기만 가능)');}
+function dlxAutoOn(){try{return localStorage.getItem('dgrns_dlxAuto')!=='0';}catch(e){return true;}}
+function dlxAutoSet(on){try{localStorage.setItem('dgrns_dlxAuto',on?'1':'0');}catch(e){}toast(on?'수명관리 자동 연동을 켰습니다':'수명관리 자동 연동을 껐습니다 (🔄 수명관리 반영에서 수동 반영)');}
 let dlxAutoTimer=null,dlxAutoBusy=false;
+/* 2026-10-06: 자동 연동 기준일 — 이 날짜 이후 일일수명 입력분부터 수명관리에 반영한다. 그 이전(기존) 수명관리 기록은 수정하지 않으며,
+   모식도가 작성된 해체·SL보수 기록은 날짜·수명을 절대 바꾸지 않는다. */
+const DLX_SYNC_FROM='2026-10-04';   // 래들
+const DLX_SYNC_FROM_T='2026-09-29'; // 턴디쉬(수명관리 마지막 기록 9/28 다음 날부터 — 모식도 없음)
+let dlxPend=new Set(),dlxSwept=false;
 function dlxAutoQueue(ym,no){
-  if(!DLX_ON||!dlxAutoOn()||!/^NO\.\d+$/.test(no||''))return;
-  clearTimeout(dlxAutoTimer);dlxAutoTimer=setTimeout(()=>{dlxAutoSync(ym,no);},700);
+  if(!DLX_ON||!dlxAutoOn())return;
+  const isL=/^NO\.\d+$/.test(no||''),isT=/^TD_/.test(no||'');if(!isL&&!isT)return;
+  dlxPend.add(isL?ym+'|'+no:ym+'|TD');
+  clearTimeout(dlxAutoTimer);dlxAutoTimer=setTimeout(dlxAutoFlush,700);
+}
+async function dlxAutoFlush(){
+  if(dlxAutoBusy){clearTimeout(dlxAutoTimer);dlxAutoTimer=setTimeout(dlxAutoFlush,700);return;}
+  const keys=[...dlxPend];dlxPend.clear();
+  for(const k of keys){const [ym,no]=k.split('|');if(no==='TD')await dlxAutoSyncTundish(ym);else await dlxAutoSync(ym,no);}
+}
+/* 열 때 1회: 기준일 이후 입력분 중 아직 수명관리에 없는 것을 한꺼번에 반영 */
+async function dlxAutoSweep(){
+  if(!DLX_ON||!dlxAutoOn())return;
+  const ym=todayStr().slice(0,7),nos=new Set();
+  dlxMonths().forEach(m=>{if(m>=DLX_SYNC_FROM.slice(0,7)){Object.keys(DAYLOG_SEED.cells[m]||{}).concat(Object.keys(dlStore.cells[m]||{})).forEach(n=>{if(/^NO\.\d+$/.test(n))nos.add(n);});}});
+  for(const no of [...nos].sort((x,y)=>dlNum(x)-dlNum(y)))await dlxAutoSync(ym,no,true);
+  await dlxAutoSyncTundish(ym,true);
 }
 function dlxAutoMinYm(){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 async function dlxApplyLadleRows(rows,bid){
-  let n=0,seq=Date.now();const cnt={add:0,fix:0};
+  let n=0,seq=Date.now();const cnt={add:0,fix:0},removed=[];
   for(const r of rows){const e=r.e;
     if((r.st==='diff'||r.st==='date')&&r.recs.length){
       for(const q of r.recs){q.dlPrev={daily:q.daily||0,date:q.date};q.dlBatch=bid;const od=q.date;if(r.st==='diff')q.daily=r.exp;else q.date=e.date;await putRec('ladle',q);if(od!==q.date)diaMoveKey(q.no,od,q.no,q.date);}
@@ -8516,30 +8574,102 @@ async function dlxApplyLadleRows(rows,bid){
     const type=e.type==='CONE'?'콘보수':e.type==='SL'?'SL보수':'해체';
     const rec={id:uid(),date:e.date,no:e.no,vendor:e.vendor||'DK',type,slPat:'',daily:r.exp,note:(e.type==='SL'&&e.recy)?'PP-CONE 재활용':'',seq:seq++,src:'daylog',dlBatch:bid};
     if(type==='SL보수'){rec.slPat=slPatForRec(rec,slPatDef());rec.slPatAuto=true;}
-    await putRec('ladle',rec);ladleData.push(rec);n++;cnt.add++;}
-  return {n,cnt};
+    await putRec('ladle',rec);ladleData.push(rec);n++;cnt.add++;
+    if(type==='해체'){   // 해체 수명은 총수명이므로, 일일수명이 만든 '사용' 기록은 정리(이중 합산 방지) — 되돌리기 때 복원
+      const st=ladleData.filter(q=>q.no===e.no&&q.id!==rec.id&&q.date<=e.date&&(END_EVT.includes(q.type)||q.type==='신축')).map(q=>q.date).sort().pop()||'0000-00-00';
+      ladleData.filter(q=>q.no===e.no&&q.type==='사용'&&q.src==='daylog'&&q.date>=st&&q.date<=e.date).forEach(q=>{removed.push(JSON.parse(JSON.stringify(q)));});}}
+  for(const q of removed){await delRec('ladle',q.id);const ix=ladleData.findIndex(x=>x.id===q.id);if(ix>=0)ladleData.splice(ix,1);}
+  return {n,cnt,removed};
 }
-async function dlxAutoSync(ym,no){
+/* 신축 — 일일수명 '신축/축조' 칸 → 수명관리 신축 기록(없을 때만 추가) */
+async function dlxAutoNew(no,bid){
+  const evs=dlxLadleEvents().filter(e=>e.no===no&&e.type==='NEW'&&e.date>=DLX_SYNC_FROM);let n=0,seq=Date.now();
+  for(const e of evs){
+    if(ladleData.some(r=>r.no===no&&r.type==='신축'&&Math.abs((new Date(r.date)-new Date(e.date))/86400000)<=3))continue;
+    const rec={id:uid(),date:e.date,no,vendor:e.vendor||'DK',type:'신축',slPat:'',daily:0,note:'',seq:seq++,src:'daylog',dlBatch:bid};
+    await putRec('ladle',rec);ladleData.push(rec);n++;}
+  return n;
+}
+/* 현재 사용수명 — 일일수명 최신 숫자(누적)가 수명관리 현재수명보다 크면 그 차이를 '사용' 기록으로 추가(작거나 같으면 건드리지 않음) */
+async function dlxAutoUse(no,bid){
+  const today=todayStr();
+  const list=withCum(ladleData.filter(r=>r.no===no&&r.date<=today));
+  const last=list[list.length-1];if(!last||END_EVT.includes(last.type))return 0;
+  const L=last._campRun||0;
+  const cells=[];
+  dlxMonths().forEach(ym=>dlxDayKeys(ym,no).forEach(d=>{const v=String(dlGet(ym,no,d)||'').trim();if(v)cells.push({date:ym+'-'+String(d).padStart(2,'0'),v});}));
+  cells.sort((a,b)=>a.date.localeCompare(b.date));
+  const latest=cells[cells.length-1];
+  if(!latest||latest.date<DLX_SYNC_FROM||latest.date>today)return 0;
+  const nm=dlxNums(latest.v);if(!nm)return 0;
+  /* 보수 후 칸에 '구간 수명'(41,49…)을 적는 래들은 누적 수명을 알 수 없으므로 건너뜀 — 같은 캠페인에서 앞선 누적값보다 작아지면 구간 표기로 본다 */
+  let maxPrev=0;
+  for(const c of cells){if(c===latest)break;
+    if(c.v==='신축'||c.v==='신규래들 입고'||/축조$/.test(c.v)||DLX_END_TXT.includes(c.v)||/해체$/.test(c.v)){maxPrev=0;continue;}
+    const q=dlxNums(c.v);if(q&&q[0]>maxPrev)maxPrev=q[0];}
+  const N=nm[0];if(N<maxPrev)return 0;
+  const diff=N-L;if(!diff)return 0;
+  const same=list.find(r=>r.type==='사용'&&r.src==='daylog'&&r.date===latest.date);
+  if(same){const nd=(same.daily||0)+diff;if(nd<0)return 0;same.dlPrev={daily:same.daily||0,date:same.date};same.dlBatch=bid;same.daily=nd;await putRec('ladle',same);return 1;}
+  if(diff<0)return 0;
+  const rec={id:uid(),date:latest.date,no,vendor:'',type:'사용',slPat:'',daily:diff,note:'',seq:Date.now(),src:'daylog',dlBatch:bid};
+  await putRec('ladle',rec);ladleData.push(rec);return 1;
+}
+async function dlxAutoSync(ym,no,quiet){
   if(dlxAutoBusy||!DLX_ON)return;
   if(ym<dlxAutoMinYm()){return;}            // 오래된 달 수정은 자동 반영하지 않음(노랑 표시·상세 비교로 확인)
   dlxAutoBusy=true;const keepP=dlxPeriod,keepT=dlxTab;
+  const bid='b'+Date.now()+no.replace(/\\D/g,''),at=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const st={nw:0,add:0,fix:0,use:0,rm:[]};let msg='';
   try{
     dlxPeriod='all';dlxTab='ladle';
+    st.nw=await dlxAutoNew(no,bid);
     const C=dlxLadleCompare();
-    const mine=C.rows.filter(r=>r.e.no===no&&r.e.date.slice(0,7)>=dlxAutoMinYm());
-    const apply=mine.filter(r=>((r.st==='diff'||r.st==='date')&&r.recs.length)||(r.st==='miss'&&!r.conf&&r.exp!=null));
-    const hold=mine.filter(r=>r.st==='miss'&&r.conf);
-    if(!apply.length){if(hold.length)toast('일일수명 '+hold.length+'건은 수명관리의 비슷한 기록과 겹쳐 자동 반영하지 않았습니다 (🔄 일일수명 반영에서 확인)');return;}
-    const bad=dlxSimulate(apply);
-    if(bad.length){toast('⚠ 수명관리 자동 반영 보류 — 해체 구성이 틀어질 수 있음: '+bad.slice(0,4).join(', ')+' (🔄 일일수명 반영에서 확인)');return;}
-    const bid='b'+Date.now(),at=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    const R=await dlxApplyLadleRows(apply,bid);
-    const bt=dlxBatches();bt.push({id:bid,at,n:R.n,tab:'ladle',auto:true});dlxSaveBatches(bt);
-    flashSave();dlxInvalidate();
-    toast('🔄 일일수명 → 수명관리 자동 반영: '+noLabel(no)+' '+(R.cnt.add?'추가 '+R.cnt.add+'건':'')+(R.cnt.add&&R.cnt.fix?' · ':'')+(R.cnt.fix?'수정 '+R.cnt.fix+'건':''));
-    try{refreshLadle();}catch(e){}
+    const prot=q=>q.date<DLX_SYNC_FROM||(DIA_EVT.includes(q.type)&&diaState(q.no,q.date)>0);   // 기존 기록·모식도 작성 건은 수정 금지
+    const mine=C.rows.filter(r=>r.e.no===no&&r.e.date>=DLX_SYNC_FROM);
+    const apply=mine.filter(r=>(((r.st==='diff'||r.st==='date')&&r.recs.length&&!r.recs.some(prot))||(r.st==='miss'&&!r.conf&&r.exp!=null)));
+    const hold=mine.filter(r=>(r.st==='miss'&&r.conf));
+    if(apply.length){
+      const bad=dlxSimulate(apply);
+      if(bad.length)msg='⚠ 수명관리 자동 반영 보류 — 해체 구성이 틀어질 수 있음: '+bad.slice(0,4).join(', ')+' (🔄 수명관리 반영에서 확인)';
+      else{const R=await dlxApplyLadleRows(apply,bid);st.add=R.cnt.add;st.fix=R.cnt.fix;st.rm=R.removed||[];}
+    }else if(hold.length)msg='일일수명 '+hold.length+'건은 수명관리의 비슷한 기록과 겹쳐 자동 반영하지 않았습니다 (🔄 수명관리 반영에서 확인)';
+    st.use=await dlxAutoUse(no,bid);
+    const n=st.nw+st.add+st.fix+st.use;
+    if(n){
+      const bt=dlxBatches();bt.push({id:bid,at,n,tab:'ladle',auto:true,removed:st.rm});dlxSaveBatches(bt);
+      flashSave();dlxInvalidate();
+      if(!quiet||true)toast('🔄 수명관리 자동 반영 · '+noLabel(no)+' '+[st.nw?'신축 '+st.nw+'건':'',st.add?'추가 '+st.add+'건':'',st.fix?'수정 '+st.fix+'건':'',st.use?'현재수명 갱신':''].filter(Boolean).join(' · '));
+      try{refreshLadle();}catch(e){}
+    }else if(msg&&!quiet)toast(msg);
   }catch(err){console.warn('dlxAutoSync',err);}
   finally{dlxPeriod=keepP;dlxTab=keepT;dlxAutoBusy=false;}
+}
+/* 턴디쉬 — 호수가 바뀌면(또는 '사용완료/새호수' 표기) 앞 호수는 사용완료 → 수명관리 해체 기록(종류는 직전 '턴디쉬 종류' 칸, 없으면 같은 호수의 이전 종류) */
+function dlxTundishKind(e){
+  let hit=null;
+  dlxMonths().forEach(ym=>dlxDayKeys(ym,'TD_T').forEach(d=>{const v=String(dlGet(ym,'TD_T',d)||'').trim();if(!v)return;const date=ym+'-'+String(d).padStart(2,'0');if(date<e.date&&(!hit||date>hit.date))hit={date,v};}));
+  if(hit)return hit.v;
+  const h=tundishData.filter(x=>String(x.no)===e.no&&x.kind&&x.date<=e.date).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  return h?h.kind:'';
+}
+async function dlxAutoSyncTundish(ym,quiet){
+  if(dlxAutoBusy||!DLX_ON||ym<dlxAutoMinYm())return;
+  dlxAutoBusy=true;
+  const bid='b'+Date.now()+'T',at=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  try{
+    const evs=dlxTundishEvents().filter(e=>e.date>=DLX_SYNC_FROM_T&&e.life!=null);
+    let n=0,seq=Date.now();const hold=[];
+    for(const e of evs){
+      if(tundishData.some(r=>String(r.no)===e.no&&['해체','대수리(영구장)'].includes(r.type)&&Math.abs((new Date(r.date)-new Date(e.date))/86400000)<=3))continue;
+      const kind=dlxTundishKind(e);if(!kind){hold.push(e.no+'호');continue;}
+      const rec={id:uid(),date:e.date,no:e.no,kind,type:'해체',daily:e.life,note:'',vendor:'',seq:seq++,src:'daylog',dlBatch:bid};
+      await putRec('tundish',rec);tundishData.push(rec);n++;}
+    if(n){const bt=dlxBatches();bt.push({id:bid,at,n,tab:'tundish',auto:true});dlxSaveBatches(bt);flashSave();dlxInvalidate();
+      toast('🔄 수명관리 자동 반영 · 턴디쉬 사용완료 '+n+'건'+(hold.length?' (종류 없어 보류: '+hold.join(', ')+')':''));try{refreshTundish();}catch(e){}}
+    else if(hold.length&&!quiet)toast('턴디쉬 '+hold.join(', ')+' 사용완료는 종류를 알 수 없어 자동 반영하지 않았습니다 (🔄 수명관리 반영에서 종류 선택)');
+  }catch(err){console.warn('dlxAutoSyncTundish',err);}
+  finally{dlxAutoBusy=false;}
 }
 async function dlxUndo(){
   const bt=dlxBatches(),b=bt[bt.length-1];if(!b){toast('되돌릴 반영 내역이 없습니다');return;}
@@ -8550,129 +8680,11 @@ async function dlxUndo(){
       if(r.dlPrev){const _od=r.date;r.daily=r.dlPrev.daily;if(r.dlPrev.date)r.date=r.dlPrev.date;if(store==='ladle'&&_od!==r.date)diaMoveKey(r.no,_od,r.no,r.date);delete r.dlPrev;delete r.dlBatch;await putRec(store,r);}
       else{await delRec(store,r.id);arr.splice(arr.indexOf(r),1);}
       n++;}}
+  for(const q of (b.removed||[])){if(!ladleData.some(x=>x.id===q.id)){ladleData.push(q);await putRec('ladle',q);n++;}}
   bt.pop();dlxSaveBatches(bt);flashSave();toast('↶ '+n+'건 되돌렸습니다');
   refreshLadle();refreshTundish();dlxRun();
 }
 
-
-/* ===== 2026-10-06: 수명관리 → 사용현황 가져오기 (단방향) =====
-   래들·턴디쉬 수명관리(ladleData·tundishData)는 읽기만 하고 절대 수정하지 않는다.
-   9/25 이후 사용현황에 빠진 이벤트(신축·콘보수·SL보수·해체·대수리 / 턴디쉬 사용완료)와
-   사용중 래들의 현재 사용수명을 사용현황 칸에 채운다. 비어 있는 칸만 채우고(현재수명 숫자만 수정 가능),
-   반영 전 상태를 백업해 [되돌리기]로 복구할 수 있다. */
-const DLP_FROM='2026-09-25';
-let dlpRows=[],dlpSel={};
-function dlpCell(date,no){return String(dlGet(date.slice(0,7),no,String(parseInt(date.slice(8,10),10)))||'').trim();}
-function dlpShift(date,k){const d=new Date(date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+k);return d.toISOString().slice(0,10);}
-function dlpWr(date,no,v){return {ym:date.slice(0,7),no,d:String(parseInt(date.slice(8,10),10)),v};}
-function dlpKind(v){
-  if(!v)return '';
-  if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v))return 'NEW';
-  if(DLX_END_TXT.includes(v)||/해체$/.test(v))return 'END';
-  if(v==='SL보수')return 'SL';
-  if(v==='콘보수')return 'CONE';
-  if(/대수리/.test(v))return 'BIG';
-  return '';
-}
-function dlpEv(r){ // 수명관리 기록 → {kind,text}
-  const v=String(r.vendor||'');
-  if(r.type==='해체')return {kind:'END',text:/원진/.test(v)?'원진해체':/^KR/.test(v)?'KR해체':'해체'};
-  if(r.type==='폐기')return {kind:'END',text:'폐기'};
-  if(r.type==='신축')return {kind:'NEW',text:/^KR/.test(v)?'KR축조':'신축'};
-  if(r.type==='SL보수')return {kind:'SL',text:'SL보수'};
-  if(CONE_TYPES.includes(r.type))return {kind:'CONE',text:'콘보수'};
-  if(r.type==='대수리(영구장)')return {kind:'BIG',text:'대수리'};
-  return null;
-}
-function dlpPlan(){
-  const rows=[],from=DLP_FROM,today=todayStr();let n=0;
-  const g={};ladleData.forEach(r=>{if(/^NO\.\d+$/.test(r.no||'')&&r.date<=today)(g[r.no]=g[r.no]||[]).push(r);});
-  Object.keys(g).sort(cmpNo).forEach(no=>{
-    const list=withCum(g[no].slice());
-    // ① 이벤트
-    list.forEach(r=>{
-      if(r.date<from)return;const ev=dlpEv(r);if(!ev)return;
-      let st='add',cur=dlpCell(r.date,no);
-      if(dlpKind(cur)===ev.kind)st='same';
-      else{let near=false;for(let k=-3;k<=3&&!near;k++){if(k&&dlpKind(dlpCell(dlpShift(r.date,k),no))===ev.kind)near=true;}
-        if(near)st='near';else if(cur)st='conf';}
-      rows.push({id:'P'+(n++),grp:'래들 이벤트',no,date:r.date,ref:r.type+(r.daily?' · '+r.daily+'CH':''),cur,val:ev.text,st,build:()=>[dlpWr(r.date,no,ev.text)]});
-    });
-    // ② 현재 사용수명 (사용중인 래들만)
-    const last=list[list.length-1];if(!last||END_EVT.includes(last.type))return;
-    const u=[...list].reverse().find(r=>r.type==='사용'&&r._camp!=null&&r._campStart===last._campStart);
-    if(!u||u.date<from)return;
-    const N=u._camp,cur=dlpCell(u.date,no),nm=dlxNums(cur);
-    let st='add';if(cur){if(nm&&nm[0]===N)st='same';else if(nm)st='upd';else st='conf';}
-    rows.push({id:'P'+(n++),grp:'현재 사용수명',no,date:u.date,ref:'현재수명 '+N+'CH',cur,val:String(N),st,build:()=>[dlpWr(u.date,no,String(N))]});
-  });
-  // ③ 턴디쉬 사용완료(해체·대수리)
-  const evs=dlxTundishEvents();
-  tundishData.filter(r=>r.date>=from&&r.date<=today&&(r.type==='해체'||r.type==='대수리(영구장)')).sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0)).forEach(r=>{
-    const no=String(dlNum(r.no)),life=r.daily||0;
-    let st='add';const v1=dlpCell(r.date,'TD_1'),v2=dlpCell(r.date,'TD_2');
-    if(evs.some(e=>e.no===no&&e.date===r.date))st='same';
-    else if(evs.some(e=>e.no===no&&Math.abs((new Date(e.date)-new Date(r.date))/86400000)<=2))st='near';
-    else if(v1||v2)st='conf';
-    const row={id:'P'+(n++),grp:'턴디쉬 사용완료',no:no+'호',date:r.date,ref:(r.kind||'')+' '+life+'CH',cur:[v1,v2].filter(Boolean).join(' | '),st,nxt:String(parseInt(no,10)+1)};
-    row.val=()=>no+'/'+row.nxt+'  ·  '+life+'/0';
-    row.build=()=>{const w=[dlpWr(r.date,'TD_1',no+'/'+row.nxt),dlpWr(r.date,'TD_2',life+'/0')];
-      if(r.kind&&!dlpCell(r.date,'TD_T'))w.push(dlpWr(r.date,'TD_T',r.kind));return w;};
-    rows.push(row);
-  });
-  return rows;
-}
-const DLP_ST={add:['신규','#dcfce7','#166534'],upd:['수정','#fef3c7','#92400e'],same:['이미 있음','#e2e8f0','#475569'],near:['이미 있음(±일)','#e2e8f0','#475569'],conf:['충돌·직접 확인','#fee2e2','#991b1b']};
-function dlpOpen(){
-  let m=document.getElementById('dlpModal');
-  if(!m){m=document.createElement('div');m.id='dlpModal';
-    m.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9000;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px';
-    m.addEventListener('click',e=>{if(e.target===m)dlpClose();});document.body.appendChild(m);}
-  m.style.display='flex';dlpRun();
-}
-function dlpClose(){const m=document.getElementById('dlpModal');if(m)m.style.display='none';}
-function dlpRun(){dlpRows=dlpPlan();dlpSel={};dlpRows.forEach(r=>{if(r.st==='add'||r.st==='upd')dlpSel[r.id]=true;});dlpRender();}
-function dlpToggle(id,on){dlpSel[id]=!!on;dlpRenderFoot();}
-function dlpNxt(id,v){const r=dlpRows.find(x=>x.id===id);if(r)r.nxt=String(parseInt(v,10)||'');}
-function dlpRender(){
-  const m=document.getElementById('dlpModal');if(!m)return;
-  const td='style="padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:12.5px"',th='style="padding:6px 8px;background:#f1f5f9;border-bottom:1px solid #cbd5e1;font-size:12px;text-align:left;position:sticky;top:0"';
-  const cc={};dlpRows.forEach(r=>cc[r.st]=(cc[r.st]||0)+1);
-  const chips=Object.keys(DLP_ST).filter(k=>cc[k]).map(k=>`<span style="padding:2px 9px;border-radius:12px;background:${DLP_ST[k][1]};color:${DLP_ST[k][2]};font-weight:700;font-size:12px">${DLP_ST[k][0]} ${cc[k]}</span>`).join(' ');
-  const body=dlpRows.length?dlpRows.map(r=>{
-    const can=(r.st==='add'||r.st==='upd'),S=DLP_ST[r.st];
-    const chk=can?`<input type="checkbox" ${dlpSel[r.id]?'checked':''} onchange="dlpToggle('${r.id}',this.checked)">`:'';
-    const val=(typeof r.val==='function')?`<b>${esc(r.no.replace('호',''))}/</b><input type="number" value="${esc(r.nxt)}" style="width:52px;text-align:center;border:1px solid #cbd5e1;border-radius:4px" title="새로 사용하는 다음 호수" onchange="dlpNxt('${r.id}',this.value)"> <b>· ${esc(r.val().split('·')[1].trim())}</b>`:`<b>${esc(r.val)}</b>`;
-    return `<tr><td ${td}>${chk}</td><td ${td}>${esc(r.grp)}</td><td ${td}>${esc(noLabel(r.no))}</td><td ${td}>${fmtYMD(r.date)}</td><td ${td}>${esc(r.ref)}</td><td ${td}>${r.cur?esc(r.cur):'<span style="color:#cbd5e1">비어 있음</span>'}</td><td ${td}>${can?val:''}</td><td ${td}><span style="padding:1px 7px;border-radius:10px;background:${S[1]};color:${S[2]};font-weight:700;font-size:11px">${S[0]}</span></td></tr>`;}).join('')
-    :`<tr><td colspan="8" ${td}>${DLP_FROM} 이후 가져올 수명관리 기록이 없습니다.</td></tr>`;
-  m.innerHTML=`<div style="background:#fff;border-radius:10px;padding:16px 18px;width:min(1080px,100%);box-shadow:0 10px 40px rgba(0,0,0,.3)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><b style="font-size:16px">📥 수명관리 → 사용현황 가져오기 (${DLP_FROM} 이후)</b><span style="flex:1"></span><button class="btn sm" onclick="dlpClose()">닫기</button></div>
-    <div style="font-size:12px;color:#475569;margin-bottom:8px">수명관리는 읽기만 하며 변경되지 않습니다. 사용현황의 <b>빈 칸</b>에만 채우고(현재 사용수명 숫자만 수정), 다른 값이 있는 칸은 '충돌'로 표시하고 건드리지 않습니다.</div>
-    <div style="margin-bottom:8px">${chips}</div>
-    <div style="max-height:56vh;overflow:auto"><table style="border-collapse:collapse;width:100%"><thead><tr><th ${th}>반영</th><th ${th}>구분</th><th ${th}>호수</th><th ${th}>일자</th><th ${th}>수명관리 기준</th><th ${th}>사용현황 현재값</th><th ${th}>반영할 값</th><th ${th}>상태</th></tr></thead><tbody>${body}</tbody></table></div>
-    <div id="dlpFoot" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"></div></div>`;
-  dlpRenderFoot();
-}
-function dlpRenderFoot(){
-  const f=document.getElementById('dlpFoot');if(!f)return;
-  const n=dlpRows.filter(r=>dlpSel[r.id]&&(r.st==='add'||r.st==='upd')).length,has=!!localStorage.getItem('dgrns_daylog_prebackup');
-  f.innerHTML=`<button class="btn primary" ${n?'':'disabled'} onclick="dlpApply()">✔ 선택한 ${n}건 사용현황에 반영</button><span style="flex:1"></span><button class="btn sm danger" ${has?'':'disabled'} onclick="dlpUndo()">↶ 마지막 반영 되돌리기</button>`;
-}
-function dlpApply(){
-  const rows=dlpRows.filter(r=>dlpSel[r.id]&&(r.st==='add'||r.st==='upd'));if(!rows.length)return;
-  if(!confirm(rows.length+'건을 사용현황에 반영합니다.\n(수명관리는 변경되지 않으며, 반영 전 상태는 [마지막 반영 되돌리기]로 복구할 수 있습니다) 진행할까요?'))return;
-  try{localStorage.setItem('dgrns_daylog_prebackup',JSON.stringify({at:new Date().toLocaleString('ko-KR'),store:dlStore}));}catch(e){toast('백업 저장에 실패해 반영을 중단했습니다');return;}
-  rows.forEach(r=>r.build().forEach(w=>dlSet(w.ym,w.no,w.d,w.v)));
-  dlSave(true);try{dlRender();}catch(e){}
-  dlpRun();
-}
-function dlpUndo(){
-  let b=null;try{b=JSON.parse(localStorage.getItem('dgrns_daylog_prebackup')||'null');}catch(e){}
-  if(!b||!b.store){toast('되돌릴 내역이 없습니다');return;}
-  if(!confirm('마지막 반영('+b.at+') 이전 상태로 사용현황을 되돌릴까요?'))return;
-  dlStore=b.store;dlStore.cells=dlStore.cells||{};dlStore.notes=dlStore.notes||{};dlStore.tops=dlStore.tops||{};
-  localStorage.removeItem('dgrns_daylog_prebackup');dlSave(true);try{dlRender();}catch(e){}dlpRun();
-}
 
 /* 2026-10-05: 일일수명과 다른 수명관리 기록을 노랑으로 표시(수정은 직접) */
 let dlxMarkCache=null,dlxOnlyMarked={ladle:false,tundish:false};
@@ -8686,7 +8698,8 @@ function dlxMarks(){
     const keepP=dlxPeriod;dlxPeriod='all';
     const C=dlxLadleCompare();dlxPeriod=keepP;
     const NM={CONE:'콘보수',SL:'SL보수',END:'해체'};
-    const put=(rec,msg)=>{if(!rec||L.has(rec.id))return;L.set(rec.id,msg);};
+    const yr=todayStr().slice(0,4);   // 2026-10-06: 올해 기록만 표시(이전 연도는 확인 대상에서 제외)
+    const put=(rec,msg)=>{if(!rec||L.has(rec.id)||String(rec.date).slice(0,4)!==yr)return;L.set(rec.id,msg);};
     C.rows.forEach(r=>{const e=r.e,lab=NM[e.type];
       if(r.st==='diff')r.recs.forEach(q=>put(q,`일일수명 ${lab} ${r.exp}CH (${fmtMD(e.date)}) ↔ 수명관리 ${q.daily||0}CH`));
       /* 2026-10-05: 수명이 같으면(일자·구분만 다름) 표시하지 않는다 — 수명이 다른 건만 노랑 */ });
@@ -8695,10 +8708,13 @@ function dlxMarks(){
     // 턴디쉬 : 일일수명의 사용완료 호수와 대조
     const evs=dlxTundishEvents(),key=new Map();evs.forEach(e=>key.set(e.date+'|'+e.no,e));
     const first=dlxMonths()[0]+'-01';
-    tundishData.forEach(r=>{if(r.type!=='해체'||r.date<first)return;
-      const e=key.get(r.date+'|'+r.no);
-      if(!e)T.set(r.id,'일일수명 사용완료 호수에서 찾지 못함 (일자·호수 확인)');
-      else if(e.life!=null&&(r.daily||0)!==e.life)T.set(r.id,`일일수명 ${e.life}CH ↔ 수명관리 ${r.daily||0}CH`);});
+    const dd=(a,b)=>Math.abs((new Date(a)-new Date(b))/86400000);
+    tundishData.forEach(r=>{if(r.type!=='해체'||r.date<first||String(r.date).slice(0,4)!==yr)return;
+      let e=key.get(r.date+'|'+r.no);
+      if(!e){const nr=evs.filter(x=>x.no===String(r.no)&&dd(x.date,r.date)<=3).sort((a,b)=>dd(a.date,r.date)-dd(b.date,r.date))[0];
+        if(nr){T.set(r.id,`일자 다름 — 일일수명 사용완료 ${fmtMD(nr.date)}${nr.life!=null?' · '+nr.life+'CH':''} ↔ 수명관리 ${fmtMD(r.date)} ${r.daily||0}CH`);return;}
+        T.set(r.id,'일일수명 사용완료 호수에서 찾지 못함 (일자·호수 확인)');return;}
+      if(e.life!=null&&(r.daily||0)!==e.life)T.set(r.id,`일일수명 ${e.life}CH ↔ 수명관리 ${r.daily||0}CH`);});
     cnt.tundish=T.size;
   }catch(err){console.warn('dlxMarks',err);}
   dlxMarkCache={L,T,cnt};return dlxMarkCache;
@@ -8707,7 +8723,7 @@ function dlxBanner(kind){
   if(!DLX_ON){const e0=document.getElementById(kind==='ladle'?'l_dlxBanner':'t_dlxBanner');if(e0)e0.innerHTML='';return;}
   const m=dlxMarks(),n=m.cnt[kind],el=document.getElementById(kind==='ladle'?'l_dlxBanner':'t_dlxBanner');if(!el)return;
   const yr=todayStr().slice(0,4),arr=kind==='ladle'?ladleData:tundishData,mp=kind==='ladle'?m.L:m.T,ny=arr.filter(r=>mp.has(r.id)&&r.date.slice(0,4)===yr).length;
-  el.innerHTML=n?`<label style="font-size:12px;background:#fef08a;border:1px solid #eab308;border-radius:6px;padding:3px 8px;cursor:pointer;color:#713f12"><input type="checkbox" ${dlxOnlyMarked[kind]?'checked':''} onchange="dlxOnlyMarked['${kind}']=this.checked;${kind==='ladle'?'renderLadle':'renderTundish'}()"> 🟡 일일수명과 다른 기록 올해 <b>${ny}건</b> · 전체 ${n}건 만 보기</label> <button class="btn sm" onclick="dlxOpen('${kind}')">상세 비교</button>`:'<span style="font-size:12px;color:#15803d">✔ 일일수명과 모두 일치</span>';
+  el.innerHTML=ny?`<label style="font-size:12px;background:#fef08a;border:1px solid #eab308;border-radius:6px;padding:3px 8px;cursor:pointer;color:#713f12"><input type="checkbox" ${dlxOnlyMarked[kind]?'checked':''} onchange="dlxOnlyMarked['${kind}']=this.checked;${kind==='ladle'?'renderLadle':'renderTundish'}()"> 🟡 일일수명과 다른 기록 올해 <b>${ny}건</b> 만 보기</label> <button class="btn sm" onclick="dlxOpen('${kind}')">상세 비교</button>`:'<span style="font-size:12px;color:#15803d">✔ 올해 일일수명과 모두 일치</span> <button class="btn sm" onclick="dlxOpen(\'${kind}\')">상세 비교</button>';
 }
 
 /* ============ 사이드바 네비 ============ */
@@ -9312,7 +9328,46 @@ function eafStatus(asOf){
     out[ro]=o;});
   return out;
 }
-function renderEaf(){renderEafStatus();renderEafLog();renderEafCards();}
+/* 2026-10-06: 전기로 누적수명·조업기록 직접 수정 + 저장 버튼
+   ✏️ 수정 모드에서 부위별 누적수명(CH)·누계 CH와 각 일 기록(CH·생산량·비고)을 고친 뒤 [💾 저장]을 누르면 반영된다.
+   누적수명 수정은 '기준일' 날짜의 [기초 누적(직접 수정)] 기록으로 저장되어, 그 이후 조업 CH가 그 값 위에 계속 쌓인다(삭제하면 원복). */
+let eafEditMode=false,eafDraft={rows:{},cum:{A:{},B:{}}},eafSavedAt='';
+function eafDirtyN(){return Object.keys(eafDraft.rows).length+Object.keys(eafDraft.cum.A).length+Object.keys(eafDraft.cum.B).length;}
+function eafEditToggle(on){
+  if(!on&&eafDirtyN()&&!confirm('저장하지 않은 수정 '+eafDirtyN()+'건이 있습니다. 취소하고 닫을까요?'))return;
+  eafEditMode=!!on;eafDraft={rows:{},cum:{A:{},B:{}}};renderEaf();}
+function eafCumInput(ro,p,v){if(v===''){delete eafDraft.cum[ro][p];}else eafDraft.cum[ro][p]=+v;eafEditBarRender();}
+function eafRowInput(id,k,v){const d=eafDraft.rows[id]=eafDraft.rows[id]||{};d[k]=(k==='note')?v:(+v||0);eafEditBarRender();}
+function eafEditBarRender(){
+  const el=document.getElementById('eafEditBar');if(!el)return;
+  if(typeof isField==='function'&&isField()){el.innerHTML='';return;}
+  const n=eafDirtyN(),st=n?`<span style="font-size:12px;color:#c2410c;font-weight:700">● 수정 ${n}건 · 저장 전</span>`:(eafSavedAt?`<span style="font-size:12px;color:#15803d">✔ ${eafSavedAt} 저장됨</span>`:'');
+  el.innerHTML=eafEditMode
+    ?`${st}<span style="font-size:12px;color:var(--muted)">기준일 <input type="date" id="eafBaseDate" class="binp" style="border:1px solid var(--line);padding:3px 6px" value="${(document.getElementById('eafBaseDate')||{}).value||todayStr()}" title="누적수명 수정값이 적용되는 날짜 (이 날짜 이후 조업 CH가 그 위에 쌓입니다)"></span>
+       <button class="btn primary" style="background:#15803d;border-color:#15803d" onclick="eafSaveAll()" title="Ctrl+S">💾 저장</button><button class="btn" onclick="eafEditToggle(false)">취소</button>`
+    :`${st}<button class="btn" onclick="eafEditToggle(true)" title="누적수명과 조업 기록을 직접 수정합니다">✏️ 누적·기록 수정</button>`;
+}
+async function eafSaveAll(){
+  if(!eafDirtyN()){toast('저장할 수정 내용이 없습니다');return;}
+  const asOf=(document.getElementById('eafBaseDate')||{}).value||todayStr();let n=0;
+  try{
+    for(const id of Object.keys(eafDraft.rows)){const r=eafData.find(x=>x.id===id);if(!r)continue;const d=eafDraft.rows[id];
+      if(d.ch!=null)r.ch=d.ch;if(d.ton!=null)r.ton=d.ton;if(d.note!=null)r.note=d.note;await putRec('eaf',r);n++;}
+    eafCompute();
+    for(const ro of ['A','B']){const d=eafDraft.cum[ro];if(!Object.keys(d).length)continue;
+      const cur=eafStatus(asOf)[ro];const set={};EAF_PARTS.forEach(p=>set[p]=d[p]!=null?d[p]:(cur[p]||0));
+      const tot=d.tot!=null?d.tot:(cur.totCH||0);
+      let rec=eafData.find(x=>x.base&&x.src==='manual'&&x.ro===ro&&x.date===asOf);
+      if(rec){rec.set=set;rec.setTot=tot;rec.seq=Date.now();}
+      else{rec={id:uid(),date:asOf,ro,ch:0,ton:0,base:true,set,setTot:tot,note:'직접 수정',src:'manual',seq:Date.now()};eafData.push(rec);}
+      await putRec('eaf',rec);n++;}
+  }catch(err){console.warn('eafSaveAll',err);alert('저장 중 오류가 발생했습니다. 다시 시도해 주세요.');return;}
+  eafSavedAt=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  eafEditMode=false;eafDraft={rows:{},cum:{A:{},B:{}}};
+  flashSave();toast('✔ 전기로 수정 '+n+'건 저장되었습니다');renderEaf();
+}
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')&&typeof curView!=='undefined'&&curView==='eaf'&&eafEditMode){e.preventDefault();eafSaveAll();}});
+function renderEaf(){renderEafStatus();renderEafLog();renderEafCards();eafEditBarRender();}
 // 2026-10-03: 전기로 생산 집계는 "매월 1일 ~ 말일" 기준 — 집계 기준월을 고르면 그 달의 조업 CH·생산량만 합산한다.
 // (부위별 수명은 교체 후 누적이라 월과 무관하게 그대로 누적)
 function eafMonthVal(){const el=document.getElementById('eafMonth');if(el&&!el.value)el.value=todayStr().slice(0,7);return (el&&el.value)||todayStr().slice(0,7);}
@@ -9342,9 +9397,13 @@ function renderEafStatus(){
   document.getElementById('eafStatus').innerHTML=['A','B'].map(ro=>{const s=st[ro];const c=ro==='A'?'#1d4ed8':'#c81e1e';
     return `<div class="eafcard"><div class="eafcard-h" style="background:${c}">${ro}로 <span style="font-size:12px;font-weight:600">${ms.m}월 ${ms[ro].ch.toLocaleString()} CH · 누계 ${s.totCH.toLocaleString()} CH · 최근 ${s.lastCH} CH</span></div>
       <div class="eafcard-b">
-        ${EAF_PARTS.map(p=>`<div class="eafmetric" style="cursor:pointer" onclick="eafPickPart('${p}','${ro}')" title="이 부위만 조회">
+        ${EAF_PARTS.map(p=>eafEditMode
+          ?`<div class="eafmetric"><div class="em-l" style="color:${EAF_PART_COLOR[p]}">${EAF_PART_LABEL[p]}</div>
+            <div class="em-v"><input type="number" min="0" class="binp" style="width:96px;border:1px solid #f59e0b;background:#fffbeb;font-weight:700;font-size:15px;padding:3px 6px;text-align:right" value="${eafDraft.cum[ro][p]!=null?eafDraft.cum[ro][p]:(s[p]||0)}" oninput="eafCumInput('${ro}','${p}',this.value)"><small> CH</small></div></div>`
+          :`<div class="eafmetric" style="cursor:pointer" onclick="eafPickPart('${p}','${ro}')" title="이 부위만 조회">
           <div class="em-l" style="color:${EAF_PART_COLOR[p]}">${EAF_PART_LABEL[p]}</div>
           <div class="em-v">${(s[p]||0).toLocaleString()}<small> CH</small></div>${prevTxt(s.prev[p])}</div>`).join('')}
+        ${eafEditMode?`<div class="eafmetric"><div class="em-l">누계 조업 CH</div><div class="em-v"><input type="number" min="0" class="binp" style="width:96px;border:1px solid #f59e0b;background:#fffbeb;font-weight:700;font-size:15px;padding:3px 6px;text-align:right" value="${eafDraft.cum[ro].tot!=null?eafDraft.cum[ro].tot:(s.totCH||0)}" oninput="eafCumInput('${ro}','tot',this.value)"><small> CH</small></div></div>`:''}
         <div class="eafmetric"><div class="em-l">생산량(${ms.m}월)</div><div class="em-v">${ms[ro].ton.toLocaleString()}<small> TON</small></div></div>
         <div class="eafmetric"><div class="em-l">생산량(누계)</div><div class="em-v">${s.ton.toLocaleString()}<small> TON</small></div></div>
       </div></div>`;}).join('');
@@ -9371,10 +9430,11 @@ function renderEafLog(){
     return `<tr${r.base?' style="background:#f8fafc"':''}>
       <td>${esc(r.date)}${r.base?' <span style="font-size:9.5px;color:#94a3b8">기초</span>':''}</td>
       <td><span class="tag" style="color:#fff;background:${r.ro==='A'?'#1d4ed8':'#c81e1e'};font-size:10.5px">${r.ro}로</span></td>
-      <td class="n">${r.base?'-':(r.ch||0)}</td><td class="n">${r.ton?(+r.ton).toLocaleString():'-'}</td>
+      <td class="n">${r.base?'-':(eafEditMode?`<input type="number" min="0" class="binp" style="width:64px;border:1px solid #f59e0b;background:#fffbeb;text-align:right" value="${(eafDraft.rows[r.id]&&eafDraft.rows[r.id].ch!=null)?eafDraft.rows[r.id].ch:(r.ch||0)}" oninput="eafRowInput('${r.id}','ch',this.value)">`:(r.ch||0))}</td>
+      <td class="n">${(eafEditMode&&!r.base)?`<input type="number" min="0" class="binp" style="width:84px;border:1px solid #f59e0b;background:#fffbeb;text-align:right" value="${(eafDraft.rows[r.id]&&eafDraft.rows[r.id].ton!=null)?eafDraft.rows[r.id].ton:(r.ton||0)}" oninput="eafRowInput('${r.id}','ton',this.value)">`:(r.ton?(+r.ton).toLocaleString():'-')}</td>
       ${cols.map(p=>`<td class="n">${cell(r,p)}</td>`).join('')}
       <td>${rp?`<span class="tag pat-sl" style="font-size:10px">${rp} 교체${r.post?' (후 '+r.post+'CH)':''}</span>`:'-'}</td>
-      <td style="font-size:11px">${esc(r.note||'')}</td>
+      <td style="font-size:11px">${(eafEditMode&&!r.base)?`<input type="text" class="binp" style="width:130px;border:1px solid #f59e0b;background:#fffbeb" value="${esc((eafDraft.rows[r.id]&&eafDraft.rows[r.id].note!=null)?eafDraft.rows[r.id].note:(r.note||''))}" oninput="eafRowInput('${r.id}','note',this.value)">`:esc(r.note||'')}</td>
       <td><button class="btn sm danger del-rec" onclick="removeEaf('${r.id}')">삭제</button></td></tr>`;}).join('');
   if(!rows.length)body=`<tr><td colspan="${cols.length+7}"><div class="empty">해당하는 조업 기록이 없습니다.</div></td></tr>`;
   document.getElementById('eafLogBody').innerHTML=body;
