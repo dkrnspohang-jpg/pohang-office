@@ -1728,6 +1728,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <span class="spacer"></span>
       <label style="font-size:12px;cursor:pointer" title="일일수명에 콘보수·SL보수·해체·수명을 쓰면 래들 수명관리에 자동 반영합니다 (이번 달·지난달)"><input type="checkbox" id="dlxAutoChk" onchange="dlxAutoSet(this.checked)" style="vertical-align:middle"> 수명관리 자동 연동</label>
       <button class="btn sm primary" onclick="dlxOpen('ladle')" title="일일 사용현황을 읽어 래들 보수 수명·턴디쉬 사용완료 호수를 수명관리와 비교하고, 승인한 건만 반영합니다">🔄 수명관리 반영</button>
+      <button class="btn sm primary" onclick="dlpOpen()" title="래들·턴디쉬 수명관리의 9/25 이후 이벤트 중 사용현황에 빠진 것과, 사용중 래들의 현재 사용수명을 사용현황으로 가져옵니다 (수명관리는 변경되지 않음)">📥 수명관리→사용현황 (9/25~)</button>
       <button class="btn sm" onclick="dlAddCol()">＋ 호수 추가</button>
       <button class="btn sm" onclick="dlCsv()">⬇ 엑셀(CSV) 저장</button>
       <button class="btn sm" onclick="dlResetMonth()">↺ 이 달 엑셀 원본으로 되돌리기</button>
@@ -8064,7 +8065,17 @@ function dlEditTop(inp){const v=inp.value.trim();inp.value=v;dlTopSet(dlYM,inp.d
   const k=inp.dataset.top,c=document.querySelector(`#dlTbl td[data-avg="${k}"]`);if(c){const a=dlAvg(dlYM,k,dlCols());c.textContent=a===''?'':'평균 '+a;}}
 function dlEditNote(inp){const v=inp.value.trim();inp.value=v;dlSetNote(dlYM,inp.dataset.d,v);dlSave();}
 function dlKey(e,inp){
-  const k=e.key;if(k!=='Enter'&&k!=='ArrowDown'&&k!=='ArrowUp')return;
+  const k=e.key;
+  /* 2026-10-06: 좌/우 방향키 — 같은 날짜(행)의 옆 칸으로 이동. 칸 안에서 글자를 편집 중이면(커서가 처음/끝이 아닐 때) 기존처럼 커서만 움직인다. */
+  if(k==='ArrowLeft'||k==='ArrowRight'){
+    const s=inp.selectionStart,t=inp.selectionEnd,len=inp.value.length,whole=(s===0&&t===len);
+    const atEdge=k==='ArrowLeft'?(whole||(s===0&&t===0)):(whole||(s===len&&t===len));
+    if(!atEdge)return;
+    const row=[...inp.closest('tr').querySelectorAll('input')],ci=row.indexOf(inp),nc=row[k==='ArrowLeft'?ci-1:ci+1];
+    if(!nc)return;
+    e.preventDefault();inp.blur();nc.focus();nc.select();return;
+  }
+  if(k!=='Enter'&&k!=='ArrowDown'&&k!=='ArrowUp')return;
   e.preventDefault();inp.blur();
   const sel=inp.dataset.note?'input[data-note]':`input[data-no="${inp.dataset.no}"]`;
   const all=[...document.querySelectorAll('#dlTbl '+sel)],i=all.indexOf(inp),n=all[k==='ArrowUp'?i-1:i+1];
@@ -8486,8 +8497,8 @@ async function dlxApply(){
    수명관리에 ① 없는 기록은 추가 ② 수명(CH)이나 일자가 다른 기록은 일일수명 값으로 수정한다.
    · 반영 때문에 해체의 보수 구성이 틀어질 수 있으면(합계가 해체수명 초과 등) 자동 반영을 보류하고 알린다.
    · 모식도는 수명관리 일자가 바뀌면 함께 따라간다. · 반영분은 [🔄 일일수명 반영 > 마지막 반영 되돌리기]로 되돌릴 수 있다. */
-function dlxAutoOn(){try{return localStorage.getItem('dgrns_dlxAuto')!=='0';}catch(e){return true;}}
-function dlxAutoSet(on){try{localStorage.setItem('dgrns_dlxAuto',on?'1':'0');}catch(e){}toast(on?'수명관리 자동 연동을 켰습니다':'수명관리 자동 연동을 껐습니다 (🔄 일일수명 반영에서 수동 반영)');}
+function dlxAutoOn(){return false;}  // 2026-10-06: 래들 수명관리 고정 — 사용현황 입력이 수명관리를 바꾸지 않도록 자동 연동 차단
+function dlxAutoSet(on){const ac=document.getElementById('dlxAutoChk');if(ac)ac.checked=false;toast('수명관리는 고정되어 있어 자동 연동을 사용하지 않습니다 (수명관리 → 사용현황 방향 가져오기만 가능)');}
 let dlxAutoTimer=null,dlxAutoBusy=false;
 function dlxAutoQueue(ym,no){
   if(!DLX_ON||!dlxAutoOn()||!/^NO\.\d+$/.test(no||''))return;
@@ -8541,6 +8552,125 @@ async function dlxUndo(){
   refreshLadle();refreshTundish();dlxRun();
 }
 
+
+/* ===== 2026-10-06: 수명관리 → 사용현황 가져오기 (단방향) =====
+   래들·턴디쉬 수명관리(ladleData·tundishData)는 읽기만 하고 절대 수정하지 않는다.
+   9/25 이후 사용현황에 빠진 이벤트(신축·콘보수·SL보수·해체·대수리 / 턴디쉬 사용완료)와
+   사용중 래들의 현재 사용수명을 사용현황 칸에 채운다. 비어 있는 칸만 채우고(현재수명 숫자만 수정 가능),
+   반영 전 상태를 백업해 [되돌리기]로 복구할 수 있다. */
+const DLP_FROM='2026-09-25';
+let dlpRows=[],dlpSel={};
+function dlpCell(date,no){return String(dlGet(date.slice(0,7),no,String(parseInt(date.slice(8,10),10)))||'').trim();}
+function dlpShift(date,k){const d=new Date(date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+k);return d.toISOString().slice(0,10);}
+function dlpWr(date,no,v){return {ym:date.slice(0,7),no,d:String(parseInt(date.slice(8,10),10)),v};}
+function dlpKind(v){
+  if(!v)return '';
+  if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v))return 'NEW';
+  if(DLX_END_TXT.includes(v)||/해체$/.test(v))return 'END';
+  if(v==='SL보수')return 'SL';
+  if(v==='콘보수')return 'CONE';
+  if(/대수리/.test(v))return 'BIG';
+  return '';
+}
+function dlpEv(r){ // 수명관리 기록 → {kind,text}
+  const v=String(r.vendor||'');
+  if(r.type==='해체')return {kind:'END',text:/원진/.test(v)?'원진해체':/^KR/.test(v)?'KR해체':'해체'};
+  if(r.type==='폐기')return {kind:'END',text:'폐기'};
+  if(r.type==='신축')return {kind:'NEW',text:/^KR/.test(v)?'KR축조':'신축'};
+  if(r.type==='SL보수')return {kind:'SL',text:'SL보수'};
+  if(CONE_TYPES.includes(r.type))return {kind:'CONE',text:'콘보수'};
+  if(r.type==='대수리(영구장)')return {kind:'BIG',text:'대수리'};
+  return null;
+}
+function dlpPlan(){
+  const rows=[],from=DLP_FROM,today=todayStr();let n=0;
+  const g={};ladleData.forEach(r=>{if(/^NO\.\d+$/.test(r.no||'')&&r.date<=today)(g[r.no]=g[r.no]||[]).push(r);});
+  Object.keys(g).sort(cmpNo).forEach(no=>{
+    const list=withCum(g[no].slice());
+    // ① 이벤트
+    list.forEach(r=>{
+      if(r.date<from)return;const ev=dlpEv(r);if(!ev)return;
+      let st='add',cur=dlpCell(r.date,no);
+      if(dlpKind(cur)===ev.kind)st='same';
+      else{let near=false;for(let k=-3;k<=3&&!near;k++){if(k&&dlpKind(dlpCell(dlpShift(r.date,k),no))===ev.kind)near=true;}
+        if(near)st='near';else if(cur)st='conf';}
+      rows.push({id:'P'+(n++),grp:'래들 이벤트',no,date:r.date,ref:r.type+(r.daily?' · '+r.daily+'CH':''),cur,val:ev.text,st,build:()=>[dlpWr(r.date,no,ev.text)]});
+    });
+    // ② 현재 사용수명 (사용중인 래들만)
+    const last=list[list.length-1];if(!last||END_EVT.includes(last.type))return;
+    const u=[...list].reverse().find(r=>r.type==='사용'&&r._camp!=null&&r._campStart===last._campStart);
+    if(!u||u.date<from)return;
+    const N=u._camp,cur=dlpCell(u.date,no),nm=dlxNums(cur);
+    let st='add';if(cur){if(nm&&nm[0]===N)st='same';else if(nm)st='upd';else st='conf';}
+    rows.push({id:'P'+(n++),grp:'현재 사용수명',no,date:u.date,ref:'현재수명 '+N+'CH',cur,val:String(N),st,build:()=>[dlpWr(u.date,no,String(N))]});
+  });
+  // ③ 턴디쉬 사용완료(해체·대수리)
+  const evs=dlxTundishEvents();
+  tundishData.filter(r=>r.date>=from&&r.date<=today&&(r.type==='해체'||r.type==='대수리(영구장)')).sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0)).forEach(r=>{
+    const no=String(dlNum(r.no)),life=r.daily||0;
+    let st='add';const v1=dlpCell(r.date,'TD_1'),v2=dlpCell(r.date,'TD_2');
+    if(evs.some(e=>e.no===no&&e.date===r.date))st='same';
+    else if(evs.some(e=>e.no===no&&Math.abs((new Date(e.date)-new Date(r.date))/86400000)<=2))st='near';
+    else if(v1||v2)st='conf';
+    const row={id:'P'+(n++),grp:'턴디쉬 사용완료',no:no+'호',date:r.date,ref:(r.kind||'')+' '+life+'CH',cur:[v1,v2].filter(Boolean).join(' | '),st,nxt:String(parseInt(no,10)+1)};
+    row.val=()=>no+'/'+row.nxt+'  ·  '+life+'/0';
+    row.build=()=>{const w=[dlpWr(r.date,'TD_1',no+'/'+row.nxt),dlpWr(r.date,'TD_2',life+'/0')];
+      if(r.kind&&!dlpCell(r.date,'TD_T'))w.push(dlpWr(r.date,'TD_T',r.kind));return w;};
+    rows.push(row);
+  });
+  return rows;
+}
+const DLP_ST={add:['신규','#dcfce7','#166534'],upd:['수정','#fef3c7','#92400e'],same:['이미 있음','#e2e8f0','#475569'],near:['이미 있음(±일)','#e2e8f0','#475569'],conf:['충돌·직접 확인','#fee2e2','#991b1b']};
+function dlpOpen(){
+  let m=document.getElementById('dlpModal');
+  if(!m){m=document.createElement('div');m.id='dlpModal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9000;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px';
+    m.addEventListener('click',e=>{if(e.target===m)dlpClose();});document.body.appendChild(m);}
+  m.style.display='flex';dlpRun();
+}
+function dlpClose(){const m=document.getElementById('dlpModal');if(m)m.style.display='none';}
+function dlpRun(){dlpRows=dlpPlan();dlpSel={};dlpRows.forEach(r=>{if(r.st==='add'||r.st==='upd')dlpSel[r.id]=true;});dlpRender();}
+function dlpToggle(id,on){dlpSel[id]=!!on;dlpRenderFoot();}
+function dlpNxt(id,v){const r=dlpRows.find(x=>x.id===id);if(r)r.nxt=String(parseInt(v,10)||'');}
+function dlpRender(){
+  const m=document.getElementById('dlpModal');if(!m)return;
+  const td='style="padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:12.5px"',th='style="padding:6px 8px;background:#f1f5f9;border-bottom:1px solid #cbd5e1;font-size:12px;text-align:left;position:sticky;top:0"';
+  const cc={};dlpRows.forEach(r=>cc[r.st]=(cc[r.st]||0)+1);
+  const chips=Object.keys(DLP_ST).filter(k=>cc[k]).map(k=>`<span style="padding:2px 9px;border-radius:12px;background:${DLP_ST[k][1]};color:${DLP_ST[k][2]};font-weight:700;font-size:12px">${DLP_ST[k][0]} ${cc[k]}</span>`).join(' ');
+  const body=dlpRows.length?dlpRows.map(r=>{
+    const can=(r.st==='add'||r.st==='upd'),S=DLP_ST[r.st];
+    const chk=can?`<input type="checkbox" ${dlpSel[r.id]?'checked':''} onchange="dlpToggle('${r.id}',this.checked)">`:'';
+    const val=(typeof r.val==='function')?`<b>${esc(r.no.replace('호',''))}/</b><input type="number" value="${esc(r.nxt)}" style="width:52px;text-align:center;border:1px solid #cbd5e1;border-radius:4px" title="새로 사용하는 다음 호수" onchange="dlpNxt('${r.id}',this.value)"> <b>· ${esc(r.val().split('·')[1].trim())}</b>`:`<b>${esc(r.val)}</b>`;
+    return `<tr><td ${td}>${chk}</td><td ${td}>${esc(r.grp)}</td><td ${td}>${esc(noLabel(r.no))}</td><td ${td}>${fmtYMD(r.date)}</td><td ${td}>${esc(r.ref)}</td><td ${td}>${r.cur?esc(r.cur):'<span style="color:#cbd5e1">비어 있음</span>'}</td><td ${td}>${can?val:''}</td><td ${td}><span style="padding:1px 7px;border-radius:10px;background:${S[1]};color:${S[2]};font-weight:700;font-size:11px">${S[0]}</span></td></tr>`;}).join('')
+    :`<tr><td colspan="8" ${td}>${DLP_FROM} 이후 가져올 수명관리 기록이 없습니다.</td></tr>`;
+  m.innerHTML=`<div style="background:#fff;border-radius:10px;padding:16px 18px;width:min(1080px,100%);box-shadow:0 10px 40px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><b style="font-size:16px">📥 수명관리 → 사용현황 가져오기 (${DLP_FROM} 이후)</b><span style="flex:1"></span><button class="btn sm" onclick="dlpClose()">닫기</button></div>
+    <div style="font-size:12px;color:#475569;margin-bottom:8px">수명관리는 읽기만 하며 변경되지 않습니다. 사용현황의 <b>빈 칸</b>에만 채우고(현재 사용수명 숫자만 수정), 다른 값이 있는 칸은 '충돌'로 표시하고 건드리지 않습니다.</div>
+    <div style="margin-bottom:8px">${chips}</div>
+    <div style="max-height:56vh;overflow:auto"><table style="border-collapse:collapse;width:100%"><thead><tr><th ${th}>반영</th><th ${th}>구분</th><th ${th}>호수</th><th ${th}>일자</th><th ${th}>수명관리 기준</th><th ${th}>사용현황 현재값</th><th ${th}>반영할 값</th><th ${th}>상태</th></tr></thead><tbody>${body}</tbody></table></div>
+    <div id="dlpFoot" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"></div></div>`;
+  dlpRenderFoot();
+}
+function dlpRenderFoot(){
+  const f=document.getElementById('dlpFoot');if(!f)return;
+  const n=dlpRows.filter(r=>dlpSel[r.id]&&(r.st==='add'||r.st==='upd')).length,has=!!localStorage.getItem('dgrns_daylog_prebackup');
+  f.innerHTML=`<button class="btn primary" ${n?'':'disabled'} onclick="dlpApply()">✔ 선택한 ${n}건 사용현황에 반영</button><span style="flex:1"></span><button class="btn sm danger" ${has?'':'disabled'} onclick="dlpUndo()">↶ 마지막 반영 되돌리기</button>`;
+}
+function dlpApply(){
+  const rows=dlpRows.filter(r=>dlpSel[r.id]&&(r.st==='add'||r.st==='upd'));if(!rows.length)return;
+  if(!confirm(rows.length+'건을 사용현황에 반영합니다.\n(수명관리는 변경되지 않으며, 반영 전 상태는 [마지막 반영 되돌리기]로 복구할 수 있습니다) 진행할까요?'))return;
+  try{localStorage.setItem('dgrns_daylog_prebackup',JSON.stringify({at:new Date().toLocaleString('ko-KR'),store:dlStore}));}catch(e){toast('백업 저장에 실패해 반영을 중단했습니다');return;}
+  rows.forEach(r=>r.build().forEach(w=>dlSet(w.ym,w.no,w.d,w.v)));
+  dlSave(true);try{dlRender();}catch(e){}
+  dlpRun();
+}
+function dlpUndo(){
+  let b=null;try{b=JSON.parse(localStorage.getItem('dgrns_daylog_prebackup')||'null');}catch(e){}
+  if(!b||!b.store){toast('되돌릴 내역이 없습니다');return;}
+  if(!confirm('마지막 반영('+b.at+') 이전 상태로 사용현황을 되돌릴까요?'))return;
+  dlStore=b.store;dlStore.cells=dlStore.cells||{};dlStore.notes=dlStore.notes||{};dlStore.tops=dlStore.tops||{};
+  localStorage.removeItem('dgrns_daylog_prebackup');dlSave(true);try{dlRender();}catch(e){}dlpRun();
+}
 
 /* 2026-10-05: 일일수명과 다른 수명관리 기록을 노랑으로 표시(수정은 직접) */
 let dlxMarkCache=null,dlxOnlyMarked={ladle:false,tundish:false};
