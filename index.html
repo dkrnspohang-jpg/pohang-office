@@ -12606,8 +12606,10 @@ function editSgItem(id,key,v){
   saveSgPrice();
   if(key==='priceConfirmed')renderSgPrice();
 }
+/* 2026-10-06: 안전관리담당자에게 안전 폴더(안전보호구 발주 관리) 전체 권한 부여 — 이 폴더 안에서만 삭제 포함 */
+function sgCanDel(){return canDelete()||appRole()==='safety';}
 function delSgItem(id){
-  if(!canDelete()){alert('삭제는 관리자·관리직만 가능합니다.');return;}
+  if(!sgCanDel()){alert('삭제는 관리자·관리직·안전관리담당자만 가능합니다.');return;}
   if(!confirm('이 품목을 삭제할까요?'))return;
   sgPrice=sgPrice.filter(x=>x.id!==id);saveSgPrice();renderSgPrice();
 }
@@ -12627,7 +12629,7 @@ function sgPriceRowHtml(r){
       <span style="font-size:9px;color:var(--muted);white-space:nowrap">${esc(r.newAsOf||'')}</span></div></td>
     <td style="text-align:center"><input type="checkbox" ${unconfirmed?'':'checked'} title="실제 거래명세표·세금계산서로 확인된 단가면 체크, 아직 협의 중이거나 1회만 확인된 단가면 해제" onchange="editSgItem('${r.id}','priceConfirmed',this.checked)"></td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line);padding:3px 5px;font-size:12px" value="${esc(r.note||'')}" oninput="editSgItem('${r.id}','note',this.value)"></td>
-    <td><button class="btn sm danger del-rec" onclick="delSgItem('${r.id}')">삭제</button></td>
+    <td><button class="btn sm danger sg-del" onclick="delSgItem('${r.id}')">삭제</button></td>
   </tr>`;
 }
 function renderSgPrice(){
@@ -12873,7 +12875,7 @@ function downloadSgSizeSummary(){
   downloadXls(`${label}_사이즈별_합계`,t);
 }
 function delSgSize(id){
-  if(!canDelete()){alert('삭제는 관리자·관리직만 가능합니다.');return;}
+  if(!sgCanDel()){alert('삭제는 관리자·관리직·안전관리담당자만 가능합니다.');return;}
   if(!confirm('이 인원을 삭제할까요?'))return;
   sgSize=sgSize.filter(x=>x.id!==id);saveSgSize();renderSgSize();
 }
@@ -12895,7 +12897,7 @@ function sgSizeRowHtml(r){
     <td>${sgSizeField(r,'vest','예: L')}</td>
     <td>${sgSizeField(r,'summerVest','예: L')}</td>
     <td><input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(r.note||'')}" oninput="editSgSize('${r.id}','note',this.value)"></td>
-    <td><button class="btn sm danger del-rec" onclick="delSgSize('${r.id}')">삭제</button></td>
+    <td><button class="btn sm danger sg-del" onclick="delSgSize('${r.id}')">삭제</button></td>
   </tr>`;
 }
 function renderSgSize(){
@@ -19742,7 +19744,7 @@ const MODE_LIST=[['admin','사업소장','모든 권한','mp-boss','👑'],
                  ['foreman','현장기성','현장 + 근태 결재','mp-fore','🧭'],
                  ['sn','SN반','래들 수명 · 교대 인수인계 · 휴가','mp-sn','🔩'],
                  ['furnace','축로반','래들·턴디쉬 보수 · 휴가','mp-fur','🧱'],
-                 ['safety','안전관리담당자','본인 근태 · 안전 확인','mp-safe','🦺']];
+                 ['safety','안전관리담당자','본인 근태 · 안전 폴더 전체','mp-safe','🦺']];
 // 역할별 접근 가능 화면 (null = 전체)
 const ROLE_VIEWS={
   pohang:['board'],                                             // 첫 화면 : 작업현황판만 (여기서 파트 선택)
@@ -19755,7 +19757,7 @@ const ROLE_VIEWS={
   sn:['attend','shift4'],
   furnace:['attend','shift4'],
   // 2026-10-01: 안전관리담당자는 근태 화면 외에 신설된 '안전보호구 발주 관리' 화면도 열람·입력 가능
-  safety:['attend','shift4','safetygear']
+  safety:['attend','shift4','safetygear']   // 안전 폴더(사이드바)의 모든 화면 — 2026-10-06 삭제까지 포함해 전체 권한 부여
 };
 const FIELD_ROLES=['foreman','sn','furnace','pohang'];
 const FIELD_VIEWS=['board','attend','ladle','tundish','eaf','handover'];
