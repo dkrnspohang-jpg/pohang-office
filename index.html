@@ -3388,7 +3388,29 @@ function withCum(list){
 function annotate(){
   const groups=(data)=>{const g={};data.forEach(r=>{(g[r.no]=g[r.no]||[]).push(r);});
     Object.values(g).forEach(withCum);};
+  try{tundishNormalize();}catch(e){console.warn('tundishNormalize',e);}
   groups(ladleData); groups(tundishData);
+}
+/* 2026-10-07: 턴디쉬는 한 번 사용하면 모두 해체(사용완료) — 지금 사용 중인 호수(일일수명 ①칸의 마지막 호수)의 진행 중 기록만 '사용'으로 남기고
+   나머지 '사용' 기록은 해체(사용완료)로 취급한다. 저장된 값은 바꾸지 않고 화면·누적 계산에서만 해체로 보며(_wasUse),
+   같은 호수를 다시 쓸 때 이전 사용분이 누적수명에 합산되지 않게 한다. */
+function dlxTundishCurrent(){
+  let cur=null,since='';
+  dlxMonths().forEach(ym=>{
+    [...dlxDayKeys(ym,'TD_1')].sort((a,b)=>a-b).forEach(d=>{
+      const v=String(dlGet(ym,'TD_1',d)||'').trim();if(!/^\d+(\/\d+)*$/.test(v))return;
+      const last=v.split('/').pop(),date=ym+'-'+String(d).padStart(2,'0');
+      if(cur!==last){cur=last;since=date;}});});
+  return cur?{no:cur,since}:null;
+}
+function tundishNormalize(){
+  tundishData.forEach(r=>{if(r._wasUse){r.type='사용';delete r._wasUse;}});   // 재판정을 위해 원복
+  let c=null;try{c=dlxTundishCurrent();}catch(e){}
+  if(!c){const l=tundishData.filter(r=>r.type==='사용').sort((a,b)=>b.date.localeCompare(a.date)||(b.seq||0)-(a.seq||0))[0];if(l)c={no:String(l.no),since:l.date};}
+  tundishData.forEach(r=>{
+    if(r.type!=='사용')return;
+    if(c&&String(r.no)===String(c.no)&&r.date>=c.since)return;   // 지금 사용 중인 호수의 진행 기록만 '사용' 유지
+    r.type='해체';r._wasUse=true;});
 }
 // 2026-10-01: "해체 수명만 봐서는 중간에 콘보수·SL보수한 시점의 수명을 알 수 없다"는 요청 —
 // 같은 래들·같은 캠페인(_campStart) 안에서 이 해체(또는 폐기) 기록보다 앞선 콘보수/SL보수(NON_ACCUM)
@@ -7439,7 +7461,23 @@ function editTundish(id){const r=tundishData.find(x=>x.id===id);if(!r)return;edi
   document.getElementById('tFormTitle').textContent='✎ 턴디쉬 기록 수정';document.querySelector('.main').scrollTo({top:0,behavior:'smooth'});}
 async function removeTundish(id){if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}if(!confirm('이 기록을 삭제할까요?'))return;
   await delRec('tundish',id);tundishData=tundishData.filter(x=>x.id!==id);flashSave();toast('삭제되었습니다');refreshTundish();}
-function refreshTundish(){dlxInvalidate();annotate();syncNoOptions();renderTundish();renderTundishSummary();renderTundishCards();if(curView==='board')renderBoard();}
+function refreshTundish(){dlxInvalidate();annotate();syncNoOptions();renderTundish();renderTundishSummary();renderTundishCards();if(curView==='board')renderBoard();
+  tundishAutoRepair().then(n=>{if(n){toast('🔧 대수리 예정 '+n+'건 → 영구장 대수리 기록을 만들었습니다 (다음 사용분부터 영구장 누적 초기화)');refreshTundish();}}).catch(e=>console.warn('tundishAutoRepair',e));}
+/* 2026-10-07: 비고에 '대수리 예정'이 적힌 턴디쉬 해체 기록 → 그 뒤 영구장 대수리를 하므로 같은 날짜에 '대수리(영구장)' 기록을 자동으로 만든다.
+   (이 기록이 있으면 같은 호수의 다음 사용분부터 영구장 누적이 0에서 다시 시작 — withCum의 대수리(영구장) 초기화 규칙) 이미 14일 안에 같은 호수의 영구장 대수리 기록이 있으면 만들지 않는다. */
+let tundishRepairBusy=false;
+async function tundishAutoRepair(){
+  if(tundishRepairBusy)return 0;tundishRepairBusy=true;let n=0;
+  try{
+    const recs=tundishData.filter(r=>r.type==='해체'&&/대수리\s*예정/.test(r.note||'')&&r.date>='2026-01-01');
+    for(const r of recs){
+      const t0=new Date(r.date);
+      if(tundishData.some(x=>x.type==='대수리(영구장)'&&String(x.no)===String(r.no)&&x.date>=r.date&&(new Date(x.date)-t0)/86400000<=14))continue;
+      const rec={id:uid(),date:r.date,no:String(r.no),kind:r.kind||'',type:'대수리(영구장)',daily:0,note:'영구장 수리 (대수리 예정 기록에서 자동 생성)',vendor:'',seq:(r.seq||0)+1,src:'auto-repair',fromId:r.id};
+      await putRec('tundish',rec);tundishData.push(rec);n++;}
+  }finally{tundishRepairBusy=false;}
+  return n;
+}
 
 function renderTundish(){
   const q=document.getElementById('t_search').value.trim().toLowerCase();
@@ -7457,7 +7495,7 @@ function renderTundish(){
   if(!rows.length){b.innerHTML=`<tr><td colspan="9"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
   b.innerHTML=rows.map(r=>{const mkMsg=_mk.get(r.id)||'';return `<tr${mkMsg?' style="background:#fef08a" title="'+esc(mkMsg)+'"':''}>
     <td style="white-space:nowrap">${esc(r.date)}${mkMsg?`<div style="font-size:10px;color:#a16207;white-space:normal;max-width:150px;line-height:1.25">🟡 ${esc(mkMsg)}</div>`:''}</td><td><strong>${esc(r.no)}</strong></td><td>${esc(r.kind)||'-'}</td>
-    <td><span class="tag ${ttClass(r.type)}">${esc(r.type)}</span></td>
+    <td><span class="tag ${ttClass(r.type)}"${r._wasUse?' title="사용완료 처리 — 지금 사용 중인 호수가 아니어서 해체로 봅니다 (저장값은 사용)"':''}>${esc(r.type)}</span></td>
     <td>${r.daily?`<span class="ch-num">${r.daily}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
     <td><span class="ch-cum">${r._camp??'-'}</span></td><td><span class="ch-shell">${r._shell??'-'}</span></td>
     <td>${esc(r.note)||'<span style="color:#c5ccd3">-</span>'}</td>
@@ -8709,7 +8747,7 @@ function dlxMarks(){
     const evs=dlxTundishEvents(),key=new Map();evs.forEach(e=>key.set(e.date+'|'+e.no,e));
     const first=dlxMonths()[0]+'-01';
     const dd=(a,b)=>Math.abs((new Date(a)-new Date(b))/86400000);
-    tundishData.forEach(r=>{if(r.type!=='해체'||r.date<first||String(r.date).slice(0,4)!==yr)return;
+    tundishData.forEach(r=>{if(r.type!=='해체'||r._wasUse||r.date<first||String(r.date).slice(0,4)!==yr)return;
       let e=key.get(r.date+'|'+r.no);
       if(!e){const nr=evs.filter(x=>x.no===String(r.no)&&dd(x.date,r.date)<=3).sort((a,b)=>dd(a.date,r.date)-dd(b.date,r.date))[0];
         if(nr){T.set(r.id,`일자 다름 — 일일수명 사용완료 ${fmtMD(nr.date)}${nr.life!=null?' · '+nr.life+'CH':''} ↔ 수명관리 ${fmtMD(r.date)} ${r.daily||0}CH`);return;}
