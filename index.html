@@ -915,6 +915,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
     <div class="side-item" data-view="approve" onclick="nav('approve')"><span class="ic">✍️</span>결재함 <span id="apprBadge" class="apbadge" hidden>0</span></div>
     <div class="side-item" data-view="emp" onclick="nav('emp')"><span class="ic">👥</span>직원 관리</div>
     <div class="side-item" data-view="shift4" onclick="nav('shift4')"><span class="ic">🔄</span>4조 3교대 근무표</div>
+    <div class="side-item" data-view="mypay" onclick="nav('mypay')"><span class="ic">💰</span>내 급여 계산</div>
   </div>
   <!-- 2026-10-01: "사이드바에 안전 파트를 만들어달라"는 요청으로 신설 —
        10. 안전보호구 폴더의 실제 발주 이력(조은산업)을 기준단가로 가져오고,
@@ -1693,6 +1694,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
   </section>
 
   <!-- ===== 4조 3교대 근무표 (2026-09-30 신규) ===== -->
+  <section id="v-mypay" class="hidden"><div id="payBoxPc" style="max-width:760px"></div></section>
   <section id="v-shift4" class="hidden">
     <div class="toolrow">
       <span style="font-size:12px;color:var(--muted)">연도</span>
@@ -3181,6 +3183,9 @@ function saveViewHook(v){
     else if(v==='stockvs')saveStockAll('베수비우스');
     else if(v==='inv')saveInvMasterAll();
     else if(v==='bizplan')bizplanSaveNow();
+    else if(v==='mypay')paySave('pcpay');
+    else if(v==='eaf'&&eafEditMode&&eafDirtyN())eafSaveAll();
+    else if(v==='safetygear'&&typeof sgSizeDirty!=='undefined'&&sgSizeDirty)saveSgSizeNow();
   }catch(err){console.warn('saveViewHook',err);}
 }
 function saveCurrentView(){
@@ -8791,6 +8796,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   approve:['결재함','내 결재 대기 문서 · 승인/반려 처리 (사인 자동 날인)'],
   emp:['직원 관리','현장·관리직 직원 등록 · 근무형태(상주/교대 4조3교대) · 개인 사인 등록'],
   shift4:['4조 3교대 근무표','SN반 A~D반 교대 근무표 자동계산 (2026년 근무일정표 기준)'],
+  mypay:['내 급여 계산','근무표 합계(시간·일수)와 기본시급을 넣으면 참고용 예상 급여가 계산됩니다 · 입력값은 이 기기에만 저장'],
   mperf:['월별 실적관리','전기로·래들·턴디쉬 월별 사용실적 (2026년 내화물 사용현황 양식 기준 자동 집계)'],
   planperf:['판매실적분석','사업계획 대비 판매실적 분석 (판매실적분석 화면으로 통합)'],
   salesperf:['판매실적분석','월·분기·반기 사업계획 대비 판매실적 · 동국제강=원단위 입고 자동연동 · 포스코/시중/축로 직접입력 · 보수 계획 vs 실적 · 분기/반기 비교 · 엑셀(포항영업소 양식)'],
@@ -8805,7 +8811,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
 let quoteInit=false, curView='home';
 // 2026-09-29: 'poscobase'(포스코 품목단가)는 더 이상 독립된 사이드바 화면이 아니라 'prodm'(내화물 품목마스터)
 // 화면 안의 탭으로 통합됨 — ALL_VIEWS/네비게이션 대상에서 제외하고, prodmTab()이 그 표시를 담당함.
-const ALL_VIEWS=['home','board','ladle','daylog','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup','safetygear','bizplan','salesperf','nextfc'];
+const ALL_VIEWS=['home','board','ladle','daylog','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup','safetygear','bizplan','salesperf','nextfc','mypay'];
 /* ============ 상단 작업 탭(여러 화면 동시에 열어두고 전환) ============
    2026-09-28: "폴더(화면)를 바꾸면 처음부터 다시 시작해야 해서 불편하다"는 의견 반영 —
    최근/현재 열어본 화면들을 상단에 탭으로 남겨두고 클릭 한번에 다시 전환할 수 있게 하고,
@@ -8970,6 +8976,7 @@ function nav(v){
   if(v==='approve')initApprove();
   if(v==='emp')initEmpView();
   if(v==='shift4')initShift4();
+  if(v==='mypay')initMyPay();
   if(v==='mperf')initMperf();
   if(v==='salesperf')initSalesPerf();
   if(v==='nextfc')initNextFc();
@@ -9404,7 +9411,6 @@ async function eafSaveAll(){
   eafEditMode=false;eafDraft={rows:{},cum:{A:{},B:{}}};
   flashSave();toast('✔ 전기로 수정 '+n+'건 저장되었습니다');renderEaf();
 }
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')&&typeof curView!=='undefined'&&curView==='eaf'&&eafEditMode){e.preventDefault();eafSaveAll();}});
 function renderEaf(){renderEafStatus();renderEafLog();renderEafCards();eafEditBarRender();}
 // 2026-10-03: 전기로 생산 집계는 "매월 1일 ~ 말일" 기준 — 집계 기준월을 고르면 그 달의 조업 CH·생산량만 합산한다.
 // (부위별 수명은 교체 후 누적이라 월과 무관하게 그대로 누적)
@@ -12918,8 +12924,6 @@ function saveSgSizeNow(){
   sgSizeDirty=false;sgSizeSavedAt=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   sgSizeStatus();try{flashSave();}catch(e){}toast('저장되었습니다 ('+sgSize.length+'명)');
 }
-document.addEventListener('keydown',e=>{
-  if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')&&typeof curView!=='undefined'&&curView==='safetygear'&&sgCurTab==='size'){e.preventDefault();saveSgSizeNow();}});
 function addSgSize(){
   sgSizeDirty=true;
   sgSize.unshift({id:uid(),name:'',workTop:'',workBottom:'',tshirtShort:'',tshirtLong:'',flameSuitSize:'',shoeModel:'',shoeSize:'',heatShoeSize:'',winterJacket:'',vest:'',summerVest:'',note:''});
@@ -19605,6 +19609,7 @@ function mvHome(){
       ${mvB('mv-m1','🏖️ 휴가원 신청','연차 · 반차 · 연중휴가',"mvOpen('leave')")}
       ${mvB('mv-m2','🌙 잔업 신청','휴게 자동공제',"mvOpen('ot')")}
       ${mvB('mv-m4','📋 내 신청 현황','결재 진행 확인',"mvOpen('my')")}
+      ${mvB('mv-m3','💰 내 급여 계산','근무표 합계로 참고용 예상 급여',"mvOpen('pay')")}
       ${wait||['foreman','office','admin'].includes(role)?mvB('mv-m5','✍️ 결재함'+(wait?' ('+wait+')':''),'승인 · 반려',"mvOpen('appr')"):''}
     </div>
     <div class="mv-card" style="margin-top:13px">
@@ -19612,6 +19617,137 @@ function mvHome(){
       <div style="font-size:12.5px;color:var(--muted)">근무형태 ${esc(me.wtype||'-')} ${esc(WORKTIME[me.wtype]||'')}</div>
     </div>
     <div style="text-align:center;margin-top:14px"><button class="btn sm" onclick="mvLogout()">다른 사람으로 로그인</button></div>`;
+}
+
+/* ===== 2026-10-07: 내 급여 계산 =====
+   근무표의 월 합계(근무·연장·휴일근무·휴일연장·야간 시간, 유급휴가·주차 일수)와 시급을 넣으면 급여명세서와 같은 방식으로 지급액을 계산한다.
+   산식(급여명세서 '계산 방법' 기준): 기본급=근로시간×기본시급 · 연장=연장×통상시급×1.5 · 휴일=휴일근로×통상시급×1.5 · 휴일연장=×2 · 야간=야간×통상시급×0.5
+   · 유급=유급일수×8h×기본시급 · 주차=주차일수×8h×통상시급 (지급 항목은 10원 단위 올림). 공제는 요율 기반 예상치(소득세는 직접 입력).
+   저장은 이 기기 전용(키가 dgrns_로 시작하지 않아 팀 공유(실시간)·서버로 올라가지 않는다). */
+const PAY_KEY='mypay_local_v1';
+let payYM={};
+function payStore(){try{return JSON.parse(localStorage.getItem(PAY_KEY)||'{}');}catch(e){return {};}}
+function payWho(){return myEmpId()||'local';}
+function payNum(v){if(v==null)return 0;v=String(v).trim().replace(/,/g,'');if(!v)return 0;
+  if(/^\d+:\d{1,2}$/.test(v)){const a=v.split(':');return (+a[0])+(+a[1])/60;}
+  const n=parseFloat(v);return isNaN(n)?0:n;}
+const payC10=x=>Math.ceil(Math.round(x*1000)/1000/10)*10;
+const payF10=x=>Math.floor(Math.round(x*1000)/1000/10)*10;
+const payW=n=>Math.round(n).toLocaleString('ko-KR');
+function payCalc(i){
+  const base=i.base,tong=i.base;   // 2026-10-07: 통상시급은 사용하지 않고 모든 수당을 기본시급 기준(참고치)으로 계산
+  const h=x=>+(+x).toFixed(2);
+  const items=[
+    ['기본급',`근로 ${h(i.work)}h × ${payW(base)}원`,payC10(i.work*base)],
+    ['연장수당',`연장 ${h(i.ot)}h × ${payW(tong)}원 × 1.5`,payC10(i.ot*tong*1.5)],
+    ['휴일수당',`휴일근로 ${h(i.hol)}h × ${payW(tong)}원 × 1.5`,payC10(i.hol*tong*1.5)],
+    ['휴일연장수당',`휴일연장 ${h(i.holot)}h × ${payW(tong)}원 × 2`,payC10(i.holot*tong*2)],
+    ['야간수당',`야간 ${h(i.night)}h × ${payW(tong)}원 × 0.5`,payC10(i.night*tong*0.5)],
+    ['유급수당',`유급휴가 ${h(i.paid)}일 × 8h × ${payW(base)}원`,payC10(i.paid*8*base)],
+    ['주차수당',`주차 ${h(i.week)}일 × 8h × ${payW(tong)}원`,payC10(i.week*8*tong)],
+    ['상여금','고정 지급',Math.round(i.bonus)],['기타수당','고정 지급',Math.round(i.etc)]];
+  const gross=items.reduce((s,x)=>s+x[2],0);
+  const dbase=i.dbase>0?i.dbase:gross;
+  const hel=payF10(dbase*i.rHel/100);
+  const ded=[['국민연금',payF10(dbase*i.rPen/100)],['건강보험',hel],['장기요양',payF10(hel*i.rCare/100)],['고용보험',payF10(dbase*i.rEmp/100)],
+    ['소득세',Math.round(i.tax)],['주민세',payF10(i.tax*0.1)]];
+  const dsum=ded.reduce((s,x)=>s+x[1],0);
+  return {items,gross,ded,dsum,net:gross-dsum,tong};
+}
+function payRead(c){
+  const g=id=>{const e=document.getElementById(c+'_'+id);return e?e.value:'';};
+  return {ym:g('ym')||todayStr().slice(0,7),base:payNum(g('base')),
+    work:payNum(g('work')),ot:payNum(g('ot')),hol:payNum(g('hol')),holot:payNum(g('holot')),night:payNum(g('night')),paid:payNum(g('paid')),week:payNum(g('week')),
+    bonus:payNum(g('bonus')),etc:payNum(g('etc')),dbase:payNum(g('dbase')),tax:payNum(g('tax')),
+    rPen:payNum(g('rPen')),rHel:payNum(g('rHel')),rCare:payNum(g('rCare')),rEmp:payNum(g('rEmp'))};
+}
+function payHtml(c){
+  const S=(payStore()[payWho()])||{},st=S.settings||{},ym=payYM[c]||todayStr().slice(0,7);payYM[c]=ym;
+  const mh=(S.months||{})[ym]||{};
+  const F=(id,label,val,ph,hint)=>`<div class="mv-f"><label>${label}</label><input id="${c}_${id}" type="text" inputmode="decimal" autocomplete="off" value="${esc(val==null?'':val)}" placeholder="${ph||''}" oninput="payRecalc('${c}')">${hint?`<small style="display:block;font-size:11px;color:var(--muted);margin-top:3px">${hint}</small>`:''}</div>`;
+  const me=meEmp(),otM=me?otStat(me.id,ym.slice(0,4),ym.slice(5,7)):0;
+  return `<div class="mv-card">
+    <div class="mv-h">💰 내 급여 계산 <small style="font-weight:500;color:var(--muted)">· 참고용 예상 급여</small></div>
+    <div class="mv-sub">근무표의 월 합계와 기본시급을 넣으면 급여명세서의 계산 방식으로 <b>참고용 예상 급여</b>를 보여 줍니다(실제 지급액과 다를 수 있음). 입력값은 <b>이 기기에만</b> 저장되며 서버·팀 공유로 전송되지 않습니다.</div>
+    <div class="mv-f"><label>급여 월</label><input type="month" id="${c}_ym" value="${ym}" onchange="payMonth('${c}')"></div>
+    ${F('base','기본시급 (원)',st.base,'예: 15,000','기본급·연장·휴일·야간·유급·주차 수당 모두 이 시급 기준으로 계산합니다 (참고용)')}
+  </div>
+  <div class="mv-card">
+    <div class="mv-h">근무표 월 합계 <small style="font-weight:500;color:var(--muted)">(시간은 56 또는 56:30 형식)</small></div>
+    <div class="mv-2">${F('work','근무 (근로시간)',mh.work,'예: 120')}${F('ot','연장 (시간)',mh.ot,'0')}</div>
+    <div class="mv-2">${F('hol','휴일근무 (시간)',mh.hol,'0')}${F('holot','휴일연장 (시간)',mh.holot,'0')}</div>
+    <div class="mv-2">${F('night','야간 (시간)',mh.night,'0')}${F('paid','유급휴가 (일)',mh.paid,'0')}</div>
+    <div class="mv-2">${F('week','주차 (일)',mh.week,'0')}<div></div></div>
+    ${otM?`<div class="mv-sub" style="margin:0">참고 · 이 달 승인된 내 잔업 신청 합계 <b>${+otM.toFixed(1)}시간</b> <button class="btn sm" onclick="document.getElementById('${c}_ot').value='${+otM.toFixed(1)}';payRecalc('${c}')">연장에 넣기</button></div>`:''}
+  </div>
+  <div class="mv-card">
+    <div class="mv-h">고정 지급 <small style="font-weight:500;color:var(--muted)">(해당 시)</small></div>
+    <div class="mv-2">${F('bonus','상여금 (원)',st.bonus,'0')}${F('etc','기타수당 (원)',st.etc,'0')}</div>
+  </div>
+  <div class="mv-card" id="${c}_res"></div>
+  <div class="mv-card">
+    <details><summary style="cursor:pointer;font-weight:800;font-size:14px">예상 공제 · 실수령액 <small style="font-weight:500;color:var(--muted)">(요율 입력 · 추정치)</small></summary>
+      <div class="mv-sub" style="margin-top:8px">공제는 요율로 계산한 <b>추정치</b>라 실제 명세서와 다를 수 있습니다. 4대보험 기준금액을 비우면 소득총액으로 계산하고, 소득세는 명세서 금액을 직접 입력하세요.</div>
+      <div class="mv-2">${F('dbase','4대보험 기준금액 (원)',st.dbase,'비우면 소득총액')}${F('tax','소득세 (원)',st.tax,'명세서 금액')}</div>
+      <div class="mv-2">${F('rPen','국민연금 (%)',st.rPen!=null?st.rPen:4.5,'4.5')}${F('rHel','건강보험 (%)',st.rHel!=null?st.rHel:3.595,'3.595')}</div>
+      <div class="mv-2">${F('rCare','장기요양 (건보료의 %)',st.rCare!=null?st.rCare:13.14,'13.14')}${F('rEmp','고용보험 (%)',st.rEmp!=null?st.rEmp:0.9,'0.9')}</div>
+      <div class="mv-sub" style="margin:0">주민세는 소득세의 10%로 계산합니다. 요율은 2026년 기준 기본값이며 변경될 수 있습니다.</div>
+    </details>
+  </div>
+  <div style="display:flex;gap:9px;flex-wrap:wrap;margin:4px 0 16px">
+    <button class="btn primary" style="background:#15803d;border-color:#15803d" onclick="paySave('${c}')">💾 저장</button>
+    <button class="btn" onclick="payCopy('${c}')">📋 결과 복사</button>
+    <button class="btn" onclick="payClear('${c}')">월 입력 초기화</button>
+    <span id="${c}_saved" style="font-size:12px;align-self:center"></span>
+  </div>`;
+}
+function payRecalc(c){
+  const el=document.getElementById(c+'_res');if(!el)return;
+  const i=payRead(c);
+  if(!(i.base>0)){el.innerHTML='<div class="mv-h">계산 결과</div><div class="mv-sub" style="margin:0">기본시급을 입력하면 급여가 계산됩니다.</div>';return;}
+  const r=payCalc(i);
+  const rows=r.items.filter(x=>x[2]>0||x[0]==='기본급').map(x=>`<tr><td style="padding:6px 4px;font-weight:700;white-space:nowrap">${x[0]}</td><td style="padding:6px 4px;font-size:11px;color:var(--muted)">${x[1]}</td><td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${payW(x[2])}</td></tr>`).join('');
+  const drows=r.ded.filter(x=>x[1]>0).map(x=>`<tr><td style="padding:5px 4px;color:#b91c1c">${x[0]}</td><td style="padding:5px 4px;text-align:right;color:#b91c1c;white-space:nowrap">- ${payW(x[1])}</td></tr>`).join('');
+  el.innerHTML=`<div class="mv-h">계산 결과 <small style="font-weight:500;color:var(--muted)">· ${i.ym.replace('-','년 ')}월분 · 기본시급 기준 참고치</small></div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">${rows}</table>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:8px;padding-top:9px"><b>소득총액 (지급 합계)</b><b style="font-size:22px;color:var(--accent)">${payW(r.gross)}<small style="font-size:12px"> 원</small></b></div>
+    ${r.dsum>0?`<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px"><tr><td colspan="2" style="font-weight:800;padding:3px 4px">예상 공제 (추정)</td></tr>${drows}</table>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed var(--line);margin-top:6px;padding-top:8px"><b>예상 실수령액</b><b style="font-size:19px;color:#15803d">${payW(r.net)}<small style="font-size:12px"> 원</small></b></div>`:`<div class="mv-sub" style="margin:8px 0 0">아래 '예상 공제'를 펼쳐 소득세 등을 입력하면 실수령액도 볼 수 있습니다.</div>`}`;
+}
+function payMonth(c){
+  const ym=(document.getElementById(c+'_ym')||{}).value;if(!ym)return;
+  const S=(payStore()[payWho()])||{},mh=(S.months||{})[ym]||{};payYM[c]=ym;
+  ['work','ot','hol','holot','night','paid','week'].forEach(k=>{const e=document.getElementById(c+'_'+k);if(e)e.value=mh[k]==null?'':mh[k];});
+  payRecalc(c);
+}
+function paySave(c){
+  const i=payRead(c),raw=id=>((document.getElementById(c+'_'+id)||{}).value||'').trim();
+  const all=payStore(),w=payWho(),S=all[w]=all[w]||{settings:{},months:{}};
+  S.settings={base:raw('base'),bonus:raw('bonus'),etc:raw('etc'),dbase:raw('dbase'),tax:raw('tax'),
+    rPen:raw('rPen'),rHel:raw('rHel'),rCare:raw('rCare'),rEmp:raw('rEmp')};
+  S.months=S.months||{};S.months[i.ym]={work:raw('work'),ot:raw('ot'),hol:raw('hol'),holot:raw('holot'),night:raw('night'),paid:raw('paid'),week:raw('week')};
+  try{localStorage.setItem(PAY_KEY,JSON.stringify(all));}catch(e){alert('저장에 실패했습니다. 브라우저 저장공간을 확인해 주세요.');return;}
+  const t=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  const sv=document.getElementById(c+'_saved');if(sv)sv.innerHTML='<span style="color:#15803d">✔ '+t+' 저장됨 ('+i.ym+')</span>';
+  toast('저장되었습니다 · 이 기기에만 보관됩니다');
+}
+function payClear(c){
+  if(!confirm('이 달에 입력한 근무 시간·일수를 지울까요? (시급·요율은 유지됩니다)'))return;
+  ['work','ot','hol','holot','night','paid','week'].forEach(k=>{const e=document.getElementById(c+'_'+k);if(e)e.value='';});
+  payRecalc(c);
+}
+function payCopy(c){
+  const i=payRead(c);if(!(i.base>0)){toast('기본시급을 먼저 입력하세요');return;}
+  const r=payCalc(i);
+  const t=i.ym+' 예상 급여(참고용)\n'+r.items.filter(x=>x[2]>0).map(x=>x[0]+' '+payW(x[2])).join('\n')+'\n소득총액 '+payW(r.gross)+'원'+(r.dsum>0?'\n예상 공제 '+payW(r.dsum)+'원\n예상 실수령액 '+payW(r.net)+'원':'');
+  const ok=()=>toast('결과를 복사했습니다');
+  try{navigator.clipboard.writeText(t).then(ok,()=>{prompt('복사해서 사용하세요',t);});}catch(e){prompt('복사해서 사용하세요',t);}
+}
+function initMyPay(){const b=document.getElementById('payBoxPc');if(!b)return;b.innerHTML=payHtml('pcpay');payRecalc('pcpay');}
+function mvPay(){
+  mvHead('내 급여 계산','근무표 합계 · 기본시급 → 참고용 예상 급여',true);
+  document.getElementById('mvBody').innerHTML=payHtml('mvpay');payRecalc('mvpay');
+  mvGo(`<button class="go2" onclick="mvHome()">홈으로</button><button class="go1" onclick="paySave('mvpay')">💾 저장</button>`);
 }
 function mvLogout(){try{localStorage.removeItem('dgrns_me');}catch(e){}setRole('pohang');updateMeChip();mvHome();}
 function mvOpen(v){
@@ -19623,6 +19759,7 @@ function mvOpen(v){
   else if(v==='ot'){mvEditOtId=null;mvOt();}
   else if(v==='ho')mvHo();
   else if(v==='my')mvMy();else if(v==='appr')mvAppr();
+  else if(v==='pay')mvPay();
 }
 /* --- 휴가원 --- */
 // 2026-09-26: PC 수정과 마찬가지로, 결재가 진행되지 않은 본인 문서를 모바일에서도 바로
@@ -19868,11 +20005,11 @@ const ROLE_VIEWS={
   // 2026-09-21: 현장직원(현장기성·SN반·축로반·안전관리담당자)은 근태관리(휴가·잔업 신청)만 접근,
   // 그 외 화면은 전부 숨김 처리 — 사업소장·관리직만 기존처럼 전체 권한 유지
   // 2026-09-30: 4조 3교대 근무표(shift4)는 본인 근무일정 조회용이라 현장 역할도 열람 가능하도록 함께 허용
-  foreman:['attend','shift4'],
-  sn:['attend','shift4'],
-  furnace:['attend','shift4'],
+  foreman:['attend','shift4','mypay'],      // 2026-10-07: 내 급여 계산 — 본인 근무표 합계로 예상 급여 확인
+  sn:['attend','shift4','mypay'],
+  furnace:['attend','shift4','mypay'],
   // 2026-10-01: 안전관리담당자는 근태 화면 외에 신설된 '안전보호구 발주 관리' 화면도 열람·입력 가능
-  safety:['attend','shift4','safetygear']   // 안전 폴더(사이드바)의 모든 화면 — 2026-10-06 삭제까지 포함해 전체 권한 부여
+  safety:['attend','shift4','safetygear','mypay']   // 안전 폴더(사이드바)의 모든 화면 — 2026-10-06 삭제까지 포함해 전체 권한 부여
 };
 const FIELD_ROLES=['foreman','sn','furnace','pohang'];
 const FIELD_VIEWS=['board','attend','ladle','tundish','eaf','handover'];
