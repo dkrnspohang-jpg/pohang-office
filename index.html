@@ -1205,10 +1205,10 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <div class="subhead">구분별 부위 평균 용손율 <span class="hint">3개 업체(DK·KR·원진)를 합쳐 구분(SL 소수리 / SL 중수리 / 무보수 중수리)별로 따로 평균 · 낮을수록 내침식성 우수</span>
         <label style="font-size:12px;font-weight:400;margin-left:10px;cursor:pointer;color:var(--text)"><input type="checkbox" id="er_vexp" checked onchange="renderLadleErode()" style="vertical-align:middle"> 구분 아래에 업체별로 나눠 보기</label></div>
       <div class="tablewrap"><table class="bomtbl">
-        <thead><tr><th>구분</th><th>업체 구성</th><th class="n">건수</th><th class="n">평균 수명</th><th class="n">S/L 최소잔존</th><th class="n">S/L 용손율</th><th class="n">M/L 최소잔존</th><th class="n">M/L 용손율</th><th class="n">바닥 잔존</th><th class="n">바닥 용손율</th><th class="n" title="부위 용손율의 합 — S/L+M/L+바닥 (SL 중수리는 S/L 제외: M/L+바닥)">합계 용손율</th></tr></thead>
+        <thead><tr><th>구분</th><th>업체 구성</th><th class="n">건수</th><th class="n">평균 수명</th><th class="n">S/L 최소잔존</th><th class="n">S/L 용손율</th><th class="n">M/L 최소잔존</th><th class="n">M/L 용손율</th><th class="n">바닥 잔존</th><th class="n">바닥 용손율</th></tr></thead>
         <tbody id="erodeVendor"></tbody>
       </table></div>
-      <div class="subhead" style="margin-top:14px">업체별 비교 분석 <span class="hint">같은 구분(보수 패턴)끼리만 업체를 비교 · 낮을수록 용손율 우수 · 🥇🥈🥉 = 건수 3건 이상 업체 중 1~3위 · 건수 3건 미만은 참고용(회색) · 합계 용손율 = 부위 용손율의 합</span></div>
+      <div class="subhead" style="margin-top:14px">업체별 비교 분석 <span class="hint">같은 구분(보수 패턴)끼리 업체를 비교 · 용손율은 낮을수록, 수명·잔존은 높을수록 우수 · 🥇🥈🥉 = 업체 1~3위 · 건수 3건 미만은 회색(참고)으로 표시하되 순위에는 포함 · 소수리는 S/L만, SL 중수리는 M/L·바닥만 비교</span></div>
       <div class="tablewrap"><table class="bomtbl" id="erodeVcmpTbl">
         <thead id="erodeVcmpHead"></thead>
         <tbody id="erodeVcmp"></tbody>
@@ -7250,9 +7250,6 @@ function ppExclSet(){
   if(!on&&ppExcl[key])ppExcl[key].on=0;
   savePpExcl();flashSave();}
 /* 2026-10-05: 업체별 비교 분석 — 같은 구분(보수 패턴) 안에서 업체(DK·KR·원진·미지정)를 나란히 비교 */
-/* 2026-10-06: 합계 용손율 = 부위(S/L·M/L·바닥) 용손율의 합. SL 중수리는 S/L 보수를 동국R&S만 쓰므로 S/L 제외(M/L+바닥) */
-function erPartsOf(pt){return pt==='SLEND'?['ml','bt']:['sl','ml','bt'];}
-function erTotalRate(r){const v=erPartsOf(r.pat).map(k=>r.z[k]&&r.z[k].rate);return v.every(x=>x!=null)?v.reduce((a,b)=>a+b,0):null;}
 function erVendorCompare(rows){
   const hd=document.getElementById('erodeVcmpHead'),bd=document.getElementById('erodeVcmp'),nt=document.getElementById('erodeVcmpNote');
   if(!hd||!bd)return;
@@ -7261,43 +7258,47 @@ function erVendorCompare(rows){
   const vs=[...new Set(rows.map(r=>r.vendor))].sort((x,y)=>{const i=vOrd.indexOf(x),j=vOrd.indexOf(y);return (i<0?9:i)-(j<0?9:j)||x.localeCompare(y);});
   if(!rows.length||vs.length<1){hd.innerHTML='';bd.innerHTML='<tr><td><div class="empty">비교할 모식도가 없습니다.</div></td></tr>';if(nt)nt.innerHTML='';return;}
   hd.innerHTML='<tr><th>구분</th><th>비교 항목</th>'+vs.map(v=>`<th class="n">${esc(v)}</th>`).join('')+'<th class="n">순위 (1~3위)</th><th class="n">최고−최저</th></tr>';
-  const METR=[
-    ['건수',a=>a.length,0,false,null],
-    ['평균 수명(CH)',a=>avg(a.map(r=>r.life).filter(Boolean)),0,'hi',null],
-    ['S/L 용손율',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rate).filter(x=>x!=null)),2,'lo','sl'],
-    ['S/L 최소잔존(mm)',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rem).filter(x=>x!=null)),0,'hi','sl'],
-    ['M/L 용손율',a=>avg(a.map(r=>r.z.ml&&r.z.ml.rate).filter(x=>x!=null)),2,'lo',null],
-    ['바닥 용손율',a=>avg(a.map(r=>r.z.bt&&r.z.bt.rate).filter(x=>x!=null)),2,'lo',null],
-    ['합계 용손율',a=>avg(a.map(erTotalRate).filter(x=>x!=null)),2,'lo','tot']];
+  const M={ n:['건수',a=>a.length,0,false],
+    life:['평균 수명(CH)',a=>avg(a.map(r=>r.life).filter(Boolean)),0,'hi'],
+    slR:['S/L 용손율',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rate).filter(x=>x!=null)),2,'lo'],
+    slM:['S/L 최소잔존(mm)',a=>avg(a.map(r=>r.z.sl&&r.z.sl.rem).filter(x=>x!=null)),0,'hi'],
+    mlR:['M/L 용손율',a=>avg(a.map(r=>r.z.ml&&r.z.ml.rate).filter(x=>x!=null)),2,'lo'],
+    mlM:['M/L 최소잔존(mm)',a=>avg(a.map(r=>r.z.ml&&r.z.ml.rem).filter(x=>x!=null)),0,'hi'],
+    btR:['바닥 용손율',a=>avg(a.map(r=>r.z.bt&&r.z.bt.rate).filter(x=>x!=null)),2,'lo'],
+    btM:['바닥 잔존(mm)',a=>avg(a.map(r=>r.z.bt&&r.z.bt.rem).filter(x=>x!=null)),0,'hi']};
+  // 구분별 비교 항목 — 소수리: S/L만(M/L·바닥은 잔존 CHK 안 함) · SL 중수리: M/L·바닥만(S/L은 동국R&S만 사용) · 무보수 중수리: S/L·M/L·바닥
+  const SETS={SLCHK:['n','life','slR','slM'],SLEND:['n','life','mlR','btR'],NONE:['n','life','slR','slM','mlR','btR']};
   const MEDAL=['🥇','🥈','🥉'];
   let h='';const best={};
-  ER_PAT_ORD.forEach(pt=>{const A=rows.filter(r=>r.pat===pt);if(!A.length)return;
+  const block=(A,tag,keys)=>{
     const by={};vs.forEach(v=>by[v]=A.filter(r=>r.vendor===v));
-    const mets=METR.filter(m=>!(pt==='SLEND'&&m[4]==='sl'));   // SL 중수리: S/L 항목 숨김
-    mets.forEach(([lab,fn,dg,mode],mi)=>{
+    keys.forEach((k,mi)=>{const [lab,fn,dg,mode]=M[k];
       const vals=vs.map(v=>by[v].length?fn(by[v]):null);
-      // 순위 : 건수 3건 이상 업체만 · 용손율은 낮은 순, 수명·잔존은 높은 순 → 1~3위 표시
-      const elig=[];vals.forEach((x,i)=>{if(mode&&x!=null&&by[vs[i]].length>=3)elig.push(i);});
+      // 순위 : 건수와 관계없이 값이 있는 모든 업체 — 용손율은 낮은 순, 수명·잔존은 높은 순 (건수 3건 미만은 회색 참고 표시)
+      const elig=[];vals.forEach((x,i)=>{if(mode&&x!=null)elig.push(i);});
       if(mode)elig.sort((i,j)=>mode==='lo'?vals[i]-vals[j]:vals[j]-vals[i]);
-      const rankOf={};elig.forEach((i,k)=>{rankOf[i]=k;});
+      const rankOf={};elig.forEach((i,r)=>{rankOf[i]=r;});
       const okv=elig.map(i=>vals[i]);
       const spread=(mode&&okv.length>=2)?Math.max(...okv)-Math.min(...okv):null;
       if(mode==='lo'&&elig.length){best[vs[elig[0]]]=(best[vs[elig[0]]]||0)+1;}
-      const isTot=lab==='합계 용손율';
-      h+=`<tr${mi===0?' style="border-top:2px solid #cbd5e1"':''}${isTot?' style="background:#f8fafc"':''}><td>${mi===0?erPatTag(pt):''}</td><td style="font-size:12px${isTot?';font-weight:700':''}">${lab}${isTot&&pt==='SLEND'?' <span style="font-size:10px;color:#64748b">(M/L+바닥)</span>':''}</td>`
+      h+=`<tr${mi===0?' style="border-top:2px solid #cbd5e1"':''}><td>${mi===0?tag:''}</td><td style="font-size:12px">${lab}</td>`
         +vals.map((x,i)=>{
           if(x==null)return '<td class="n" style="color:#c5ccd3">-</td>';
           const few=lab!=='건수'&&by[vs[i]].length<3;
           const col=few?'#94a3b8':(mode==='lo'?eroColor(x):'inherit');
-          const k=rankOf[i],star=(k!=null&&k<3)?' '+MEDAL[k]:'';
-          return `<td class="n" style="color:${col};font-weight:${mode==='lo'&&!few?700:400}${k===0?';background:#f0fdf4':''}">${x.toFixed(dg)}${star}${few?'<span style="font-size:10px"> (n='+by[vs[i]].length+')</span>':''}</td>`;}).join('')
-        +`<td class="n" style="font-weight:700;font-size:11.5px;white-space:nowrap">${elig.length?elig.slice(0,3).map((i,k)=>(k+1)+'위 '+esc(vs[i])).join(' · '):'-'}</td><td class="n" style="color:#64748b">${spread!=null?spread.toFixed(dg):'-'}</td></tr>`;});
-  });
+          const r=rankOf[i],star=(r!=null&&r<3)?' '+MEDAL[r]:'';
+          return `<td class="n" style="color:${col};font-weight:${mode==='lo'&&!few?700:400}${r===0?';background:#f0fdf4':''}">${x.toFixed(dg)}${star}${few?'<span style="font-size:10px"> (n='+by[vs[i]].length+')</span>':''}</td>`;}).join('')
+        +`<td class="n" style="font-weight:700;font-size:11.5px;white-space:nowrap">${elig.length?elig.slice(0,3).map((i,r)=>(r+1)+'위 '+esc(vs[i])).join(' · '):'-'}</td><td class="n" style="color:#64748b">${spread!=null?spread.toFixed(dg):'-'}</td></tr>`;});
+  };
+  ER_PAT_ORD.forEach(pt=>{const A=rows.filter(r=>r.pat===pt);if(!A.length)return;block(A,erPatTag(pt),SETS[pt]||SETS.NONE);});
+  // 중수리 통합(SL보수 + 무보수) — 메탈라인·바닥 전체 잔존/용손율 비교
+  const MID=rows.filter(r=>r.pat==='SLEND'||r.pat==='NONE');
+  if(MID.length)block(MID,'<span class="tag" style="font-size:11px;background:#e0f2fe;color:#075985;border:1px solid #7dd3fc;white-space:nowrap">중수리 통합<br>(SL보수+무보수)</span>',['n','life','mlM','mlR','btM','btR']);
   bd.innerHTML=h||'<tr><td colspan="9"><div class="empty">비교할 데이터가 없습니다.</div></td></tr>';
   const lead=Object.keys(best).sort((a,b)=>best[b]-best[a]);
-  if(nt)nt.innerHTML='※ 용손율 항목(S/L·M/L·바닥·합계)에서 1위(🥇) 횟수: '+(lead.length?lead.map(v=>`<b>${esc(v)}</b> ${best[v]}회`).join(' · '):'비교 가능한 업체 없음(건수 3건 이상 업체가 있어야 순위가 표시됩니다)')
-    +'<br>※ 구분(SL 소수리·SL 중수리·무보수 중수리)마다 수명·보수 구성이 달라 <b>다른 구분끼리는 비교하지 않고</b> 같은 구분 안에서만 업체를 비교합니다. 건수가 3건 미만인 업체는 표본 부족으로 순위에서 제외하고 값만 회색으로 표시합니다.'
-    +'<br>※ SL 중수리는 S/L 보수를 동국R&S만 사용하므로 S/L 항목은 표시하지 않으며, 합계 용손율은 M/L+바닥으로 계산합니다.';
+  if(nt)nt.innerHTML='※ 용손율 항목에서 1위(🥇) 횟수: '+(lead.length?lead.map(v=>`<b>${esc(v)}</b> ${best[v]}회`).join(' · '):'비교 가능한 업체 없음')
+    +'<br>※ 구분(SL 소수리·SL 중수리·무보수 중수리)마다 수명·보수 구성이 달라 같은 구분 안에서만 업체를 비교합니다. 건수가 3건 미만인 업체는 표본이 적어 값을 회색으로 표시하되 순위에는 포함합니다.'
+    +'<br>※ SL 소수리는 M/L·바닥 잔존을 CHK하지 않아 S/L만, SL 중수리는 S/L 보수를 동국R&S만 사용해 M/L·바닥만 비교합니다. <b>중수리 통합</b>은 SL보수(중수리)+무보수(중수리)를 합쳐 M/L·바닥 전체 잔존·용손율을 비교합니다.';
 }
 function renderLadleErode(){
   const rows=erodeFiltered();
@@ -7331,16 +7332,15 @@ function renderLadleErode(){
   const numOr=(x,d)=>x!=null?x.toFixed(d):'-';
   const sumRow=(a,lab1,lab2,sub)=>{
     const noSL=a.length&&a[0].pat==='SLEND';   // SL 중수리: S/L 보수는 동국R&S만 사용 → S/L 칸은 표시하지 않음(바닥·M/L만)
-    const totR=avg(a.map(erTotalRate).filter(x=>x!=null));
+    const noML=a.length&&a[0].pat==='SLCHK';   // SL 소수리: M/L·바닥은 잔존 CHK를 하지 않음 → S/L만
     const life=avg(a.map(r=>r.life).filter(Boolean));
     const slR=avg(a.map(r=>r.z.sl&&r.z.sl.rate).filter(x=>x!=null)),slM=avg(a.map(r=>r.z.sl&&r.z.sl.rem).filter(x=>x!=null));
     const mlR=avg(a.map(r=>r.z.ml&&r.z.ml.rate).filter(x=>x!=null)),mlM=avg(a.map(r=>r.z.ml&&r.z.ml.rem).filter(x=>x!=null));
     const btR=avg(a.map(r=>r.z.bt&&r.z.bt.rate).filter(x=>x!=null)),btM=avg(a.map(r=>r.z.bt&&r.z.bt.rem).filter(x=>x!=null));
     return `<tr${sub?' style="background:#fafafa;color:#475569"':''}><td>${lab1}</td><td style="font-size:11.5px">${lab2}</td><td class="n">${a.length}</td><td class="n">${life!=null?Math.round(life):'-'}</td>
       ${noSL?'<td class="n" style="color:#c5ccd3">–</td><td class="n" style="color:#c5ccd3">–</td>':`<td class="n">${slM!=null?Math.round(slM):'-'}</td><td class="n" style="color:${slR!=null?eroColor(slR):'inherit'};font-weight:700">${numOr(slR,2)}</td>`}
-      <td class="n">${mlM!=null?Math.round(mlM):'-'}</td><td class="n" style="color:${mlR!=null?eroColor(mlR):'inherit'};font-weight:700">${numOr(mlR,2)}</td>
-      <td class="n">${btM!=null?Math.round(btM):'-'}</td><td class="n" style="color:${btR!=null?eroColor(btR):'inherit'};font-weight:700">${numOr(btR,2)}</td>
-      <td class="n" style="color:${totR!=null?eroColor(totR/(noSL?2:3)):'inherit'};font-weight:700;background:#f8fafc">${numOr(totR,2)}</td></tr>`;};
+      ${noML?'<td class="n" style="color:#c5ccd3">–</td><td class="n" style="color:#c5ccd3">–</td><td class="n" style="color:#c5ccd3">–</td><td class="n" style="color:#c5ccd3">–</td>':`<td class="n">${mlM!=null?Math.round(mlM):'-'}</td><td class="n" style="color:${mlR!=null?eroColor(mlR):'inherit'};font-weight:700">${numOr(mlR,2)}</td>
+      <td class="n">${btM!=null?Math.round(btM):'-'}</td><td class="n" style="color:${btR!=null?eroColor(btR):'inherit'};font-weight:700">${numOr(btR,2)}</td>`}</tr>`;};
   const vexp=!!(document.getElementById('er_vexp')||{}).checked;
   const vmix=a=>{const m={};a.forEach(r=>{m[r.vendor]=(m[r.vendor]||0)+1;});
     return Object.keys(m).sort((x,y)=>m[y]-m[x]||x.localeCompare(y)).map(k=>`${esc(k)} ${m[k]}`).join(' · ');};
@@ -7352,7 +7352,7 @@ function renderLadleErode(){
       vs.forEach(v=>{vh+=sumRow(a.filter(r=>r.vendor===v),'<span style="padding-left:14px">└ <b>'+esc(v)+'</b></span>','',true);});}});
   try{erVendorCompare(rows);}catch(e){console.warn('erVendorCompare',e);}
   document.getElementById('erodeVendor').innerHTML=vh
-    ||`<tr><td colspan="11"><div class="empty">저장된 해체 모식도가 없습니다. 모식도 탭에서 단수별 잔존을 입력·저장하세요.</div></td></tr>`;
+    ||`<tr><td colspan="10"><div class="empty">저장된 해체 모식도가 없습니다. 모식도 탭에서 단수별 잔존을 입력·저장하세요.</div></td></tr>`;
   // PP-CONE : 사이즈별 / 월별 / 건별 — #1 · #2 용손율 비교만 (CHK 평균제외 건은 평균에서 빠짐)
   const ppAll=rows.filter(r=>r.z.pp2), ppRows=ppAll.filter(r=>!ppIsExcl(r));
   const sideAvg=(a,k,f)=>avg(a.map(r=>r.z.pp2[k]&&r.z.pp2[k][f]).filter(x=>x!=null));
