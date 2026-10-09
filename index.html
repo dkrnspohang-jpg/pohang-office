@@ -108,6 +108,7 @@
   .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
   .field.grow{flex:1;min-width:140px}
   .w-date input{width:150px}.w-no input{width:100px}.w-sel select{width:132px}.w-kind input{width:96px}.w-ch input{width:100px}
+  .w-time input{width:142px}   /* 2026-10-08: 시작·종료 시각의 '분'까지 보이도록 (오후 05:30 + 시계 아이콘) */
   /* Toolbar */
   .toolrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
   .toolrow .spacer{margin-left:auto}
@@ -799,7 +800,7 @@
     .content{padding:12px 10px 30px}
     .btn{padding:5px 10px;font-size:11.5px}
     .field input,.field select,.field textarea{padding:5px 8px;font-size:12px}
-    .w-date input{width:110px}.w-no input{width:75px}.w-sel select{width:95px}.w-kind input{width:75px}.w-ch input{width:75px}
+    .w-date input{width:110px}.w-no input{width:75px}.w-sel select{width:95px}.w-kind input{width:75px}.w-ch input{width:75px}.w-time input{width:132px}
     .search{width:110px;font-size:12px}
     .cards{grid-template-columns:1fr}
     table{font-size:11px}
@@ -923,6 +924,12 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
   <div class="side-group">
     <div class="gh">안전</div>
     <div class="side-item" data-view="safetygear" onclick="nav('safetygear')"><span class="ic">🦺</span>안전보호구 발주 관리</div>
+  </div>
+  <!-- 2026-10-08: MSDS · 교육 자료 폴더 신설 -->
+  <div class="side-group">
+    <div class="gh">MSDS · 교육 자료</div>
+    <div class="side-item" data-view="msds" onclick="nav('msds')"><span class="ic">🧪</span>MSDS</div>
+    <div class="side-item" data-view="edudoc" onclick="nav('edudoc')"><span class="ic">🎓</span>교육 자료</div>
   </div>
   <div class="side-group">
     <div class="gh">데이터</div>
@@ -1495,17 +1502,18 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <div class="cards" id="otCards"></div>
       <div class="formbar">
         <h3 id="otFormTitle">＋ 잔업신청서 작성</h3>
+        <!-- 2026-10-08: 함께 신청할 인원은 입력 줄 위에 전체 폭으로 펼쳐 여러 명이어도 잘리지 않고 모두 보이게 함 -->
+        <div class="field" id="otPeopleWrap" hidden style="margin-bottom:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px"><label>함께 신청할 인원 <b id="otPeopleN" style="color:#1d4ed8"></b> <span style="font-size:10px;color:var(--muted)">(이름을 클릭하면 제외)</span></label>
+          <div id="otPeople" style="display:flex;gap:6px;flex-wrap:wrap;min-height:30px;align-items:center"></div></div>
         <div class="frow">
           <div class="field w-no"><label>신청자</label>
             <div style="display:flex;gap:5px">
               <select id="ot_emp" style="min-width:0;flex:1"></select>
               <button class="btn sm" onclick="otAddPerson()" title="여러 명을 한 번에 신청합니다">＋</button>
             </div></div>
-          <div class="field grow" id="otPeopleWrap" hidden><label>함께 신청할 인원 <span style="font-size:10px;color:var(--muted)">(클릭하면 제외)</span></label>
-            <div id="otPeople" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;min-height:34px;align-items:center;padding-bottom:4px"></div></div>
           <div class="field w-date"><label>일자</label><input type="date" id="ot_date"></div>
-          <div class="field w-ch"><label>시작</label><input type="time" id="ot_st" value="17:30" onchange="otCalcHours()"></div>
-          <div class="field w-ch"><label>종료</label><input type="time" id="ot_et" value="20:00" onchange="otCalcHours()"></div>
+          <div class="field w-ch w-time"><label>시작</label><input type="time" id="ot_st" value="17:30" onchange="otCalcHours()"></div>
+          <div class="field w-ch w-time"><label>종료</label><input type="time" id="ot_et" value="20:00" onchange="otCalcHours()"></div>
           <div class="field w-ch"><label>총시간</label><input type="number" step="0.5" id="ot_gross" readonly style="background:#f6f8fa"></div>
           <div class="field w-ch"><label>휴게</label><input type="number" step="0.5" id="ot_rest" readonly style="background:#f6f8fa" title="4시간마다 30분 휴게 자동 공제"></div>
           <div class="field w-ch"><label>실잔업</label><input type="number" step="0.5" id="ot_hours"></div>
@@ -1694,6 +1702,8 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
   </section>
 
   <!-- ===== 4조 3교대 근무표 (2026-09-30 신규) ===== -->
+  <section id="v-msds" class="hidden"><div id="docBox_msds"></div></section>
+  <section id="v-edudoc" class="hidden"><div id="docBox_edudoc"></div></section>
   <section id="v-mypay" class="hidden"><div id="payBoxPc" style="max-width:760px"></div></section>
   <section id="v-shift4" class="hidden">
     <div class="toolrow">
@@ -2096,6 +2106,7 @@ service cloud.firestore {
   <section id="v-eaf" class="hidden">
     <div class="subtabs" id="eafSubtabs">
       <button class="subtab active" data-sp="life" onclick="eafTab('life')">🔥 전기로 수명관리</button>
+      <button class="subtab" data-sp="prod" onclick="eafTab('prod')">📊 일일 생산량</button>
       <button class="subtab" data-sp="cost" onclick="eafTab('cost')">💰 전기로 원가관리</button>
       <button class="subtab" data-sp="teardown" onclick="eafTab('teardown')">🧱 해체 점검 보고서</button>
     </div>
@@ -2140,11 +2151,12 @@ service cloud.firestore {
     <div class="subhead">A/B로 현재 수명 <span class="hint">누적 조업 CH 기준 · 부위를 클릭하면 그 부위만 조회합니다</span></div>
     <div id="eafStatus" class="eafgrid"></div>
     <div id="eafPartBox" hidden></div>
-    <div class="toolrow" style="margin-top:16px">
+    <div class="subhead" style="margin-top:16px">🛠 보수 · 교체 이력 <span class="hint">조업 CH는 '일일 생산량' 탭에서 관리 — 여기서는 보수·교체·기준값 입력 이력만 보여 줍니다</span></div>
+    <div class="toolrow">
       <select class="selbox" id="e_filterRo" onchange="renderEafLog()"><option value="">A·B로 전체</option><option value="A">A로</option><option value="B">B로</option></select>
       <select class="selbox" id="e_filterPart" onchange="renderEafLog()" title="부위별로 조회합니다"></select>
       <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px">
-        <input type="checkbox" id="e_onlyRepl" onchange="renderEafLog()"> 교체건만 보기</label>
+        <input type="checkbox" id="e_showDaily" onchange="renderEafLog()"> 일일 조업 기록도 보기</label>
       <button class="btn" onclick="downloadEaf()">📥 엑셀</button>
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="e_count"></span>
     </div>
@@ -2153,6 +2165,27 @@ service cloud.firestore {
       <tbody id="eafLogBody"></tbody>
     </table></div>
     </div><!-- /esp-life -->
+    <div class="subpanel" id="esp-prod">
+      <div class="formbar"><h3>＋ 일일 조업 CH → 생산량 자동 계산</h3>
+        <div class="frow">
+          <div class="field w-date"><label>일자</label><input type="date" id="ep_date" onchange="eafProdLoad()"></div>
+          <div class="field w-ch"><label>🔵 A로 CH</label><input type="number" id="ep_a" min="0" step="1" placeholder="예:15" oninput="eafProdCalc()"></div>
+          <div class="field w-ch"><label>🔴 B로 CH</label><input type="number" id="ep_b" min="0" step="1" placeholder="예:15" oninput="eafProdCalc()"></div>
+          <div class="field w-ch"><label>합계 CH</label><input type="text" id="ep_tot" readonly style="background:#f1f5f9;font-weight:700"></div>
+          <div class="field w-ch"><label>일일 합계 생산량(TON)</label><input type="text" id="ep_ton" readonly style="background:#f1f5f9;font-weight:700;color:var(--accent)"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn primary" onclick="eafProdSave()">💾 저장</button></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ A로·B로 <b>CH만 입력</b>하면 합계 CH와 일일 합계 생산량(1CH = 145톤)이 자동 계산됩니다. 같은 날짜를 다시 저장하면 <b>덮어써서</b> 중복 등록되지 않으며, 저장한 CH는 로·부위별 수명 누적에 그대로 반영됩니다. 보수·교체 이력은 '전기로 수명관리' 탭에서 등록하세요.</div>
+      </div>
+      <div class="toolrow">
+        <span style="font-size:13px;font-weight:700;color:#516170">📅 월 선택</span>
+        <input type="month" id="ep_month" class="binp" style="width:150px;border:1px solid var(--line);padding:5px 8px" onchange="eafProdRender()">
+        <button class="btn" onclick="eafProdCsv()">📥 엑셀(CSV)</button>
+        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="ep_count"></span>
+      </div>
+      <div class="cards" id="ep_cards" style="margin-bottom:10px"></div>
+      <div class="tablewrap"><table style="min-width:640px"><thead><tr><th>일자</th><th class="n">🔵 A로 CH</th><th class="n">🔴 B로 CH</th><th class="n">합계 CH</th><th class="n">일일 합계 생산량(TON)</th><th style="width:120px">관리</th></tr></thead><tbody id="ep_body"></tbody></table></div>
+    </div><!-- /esp-prod -->
     <div class="subpanel" id="esp-cost">
       <div class="toolrow">
         <span style="font-size:12.5px;color:var(--muted);font-weight:700">🧾 전기로 보수원가 관리 (실적 기준 · 직접 입력)</span>
@@ -3212,7 +3245,7 @@ function saveCurrentView(){
 document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();saveCurrentView();}});
 
 /* ============ 저장소 (IndexedDB) ============ */
-const DB_NAME='dgrns_life_mgmt', DB_VER=12;
+const DB_NAME='dgrns_life_mgmt', DB_VER=13;
 let db=null, ladleData=[], tundishData=[], scheduleData=[], bomData=[], eafData=[], invData=[], invInData=[], stockData=[], planActualData=[];
 let editId={ladle:null,tundish:null};
 const RESET_CAMP=['신축','대수리(영구장)','철피신규'];
@@ -3235,7 +3268,8 @@ function openDB(){return new Promise((res,rej)=>{const rq=indexedDB.open(DB_NAME
     if(!d.objectStoreNames.contains('ot'))d.createObjectStore('ot',{keyPath:'id'});
     if(!d.objectStoreNames.contains('handover'))d.createObjectStore('handover',{keyPath:'id'});
     if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'});
-    if(!d.objectStoreNames.contains('planactual'))d.createObjectStore('planactual',{keyPath:'id'});};
+    if(!d.objectStoreNames.contains('planactual'))d.createObjectStore('planactual',{keyPath:'id'});
+    if(!d.objectStoreNames.contains('docs'))d.createObjectStore('docs',{keyPath:'id'});};
   rq.onsuccess=e=>res(e.target.result);rq.onerror=e=>rej(e.target.error);});}
 function txAll(s){return new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).getAll();
   r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});}
@@ -5030,12 +5064,13 @@ function tundishTab(sp){subScrollSave('tundish:'+tundishSub,document.getElementB
   document.getElementById('tsp-'+sp).classList.add('active');
   if(sp==='cost')renderTundishCost();
   subScrollRestore('tundish:'+sp,document.getElementById('v-tundish'));}
-function eafTab(sp){subScrollSave('eaf:'+eafSub,document.getElementById('v-eaf'));if(isField()&&sp!=='life')sp='life';eafSub=sp;
+function eafTab(sp){subScrollSave('eaf:'+eafSub,document.getElementById('v-eaf'));if(isField()&&sp!=='life'&&sp!=='prod')sp='life';eafSub=sp;
   document.querySelectorAll('#eafSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sp===sp));
   document.querySelectorAll('#v-eaf .subpanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('esp-'+sp).classList.add('active');
   if(sp==='cost')renderEafRepairCost();
   else if(sp==='teardown')eafTdInitForm();
+  else if(sp==='prod')eafProdInit();
   subScrollRestore('eaf:'+sp,document.getElementById('v-eaf'));}
 function renderEafRepairCost(){renderEafRepair();renderEquipCost('eaf');}
 /* ---- 설비별 원가관리(래들과 동일 방식: 부위별 상세 + 유형별 기준원가) ---- */
@@ -8826,6 +8861,8 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   approve:['결재함','내 결재 대기 문서 · 승인/반려 처리 (사인 자동 날인)'],
   emp:['직원 관리','현장·관리직 직원 등록 · 근무형태(상주/교대 4조3교대) · 개인 사인 등록'],
   shift4:['4조 3교대 근무표','SN반 A~D반 교대 근무표 자동계산 (2026년 근무일정표 기준)'],
+  msds:['MSDS','물질안전보건자료(MSDS) 모음 · 링크는 팀 공유로 함께 보이고, 올린 파일은 이 PC에 보관됩니다'],
+  edudoc:['교육 자료','안전·작업 교육 자료 모음 · 링크는 팀 공유로 함께 보이고, 올린 파일은 이 PC에 보관됩니다'],
   mypay:['내 급여 계산','근무표 합계(시간·일수)와 기본시급을 넣으면 참고용 예상 급여가 계산됩니다 · 입력값은 이 기기에만 저장'],
   mperf:['월별 실적관리','전기로·래들·턴디쉬 월별 사용실적 (2026년 내화물 사용현황 양식 기준 자동 집계)'],
   planperf:['판매실적분석','사업계획 대비 판매실적 분석 (판매실적분석 화면으로 통합)'],
@@ -8841,7 +8878,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
 let quoteInit=false, curView='home';
 // 2026-09-29: 'poscobase'(포스코 품목단가)는 더 이상 독립된 사이드바 화면이 아니라 'prodm'(내화물 품목마스터)
 // 화면 안의 탭으로 통합됨 — ALL_VIEWS/네비게이션 대상에서 제외하고, prodmTab()이 그 표시를 담당함.
-const ALL_VIEWS=['home','board','ladle','daylog','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup','safetygear','bizplan','salesperf','nextfc','mypay'];
+const ALL_VIEWS=['home','board','ladle','daylog','tundish','eaf','monthly','quote','posco','inv','perf','news','fieldwork','prodm','bom','sync','attend','approve','emp','shift4','mperf','planperf','handover','report','stocksd','stockvs','poscononsup','safetygear','bizplan','salesperf','nextfc','mypay','msds','edudoc'];
 /* ============ 상단 작업 탭(여러 화면 동시에 열어두고 전환) ============
    2026-09-28: "폴더(화면)를 바꾸면 처음부터 다시 시작해야 해서 불편하다"는 의견 반영 —
    최근/현재 열어본 화면들을 상단에 탭으로 남겨두고 클릭 한번에 다시 전환할 수 있게 하고,
@@ -9007,6 +9044,7 @@ function nav(v){
   if(v==='emp')initEmpView();
   if(v==='shift4')initShift4();
   if(v==='mypay')initMyPay();
+  if(v==='msds'||v==='edudoc')initDocs(v);
   if(v==='mperf')initMperf();
   if(v==='salesperf')initSalesPerf();
   if(v==='nextfc')initNextFc();
@@ -9411,14 +9449,36 @@ function eafDirtyN(){return Object.keys(eafDraft.rows).length+Object.keys(eafDra
 function eafEditToggle(on){
   if(!on&&eafDirtyN()&&!confirm('저장하지 않은 수정 '+eafDirtyN()+'건이 있습니다. 취소하고 닫을까요?'))return;
   eafEditMode=!!on;eafDraft={rows:{},cum:{A:{},B:{}}};renderEaf();}
-function eafCumInput(ro,p,v){if(v===''){delete eafDraft.cum[ro][p];}else eafDraft.cum[ro][p]=+v;eafEditBarRender();}
+function eafBaseDateVal(){return (document.getElementById('eafBaseDate')||{}).value||todayStr();}
+function eafBaseChanged(){renderEafStatus();}
+/* 기준값 저장 후 '현재'가 어떻게 되는지 미리 계산 — 기준일 이후의 기록(조업·교체·다른 기준값)을 같은 규칙으로 적용 */
+function eafSimulate(ro,asOf,set,tot){
+  const a=Object.assign({},set);let t=tot,sum=0;
+  eafSorted().filter(r=>r.ro===ro&&r.date>asOf).forEach(r=>{
+    if(r.base&&r.set){EAF_PARTS.forEach(p=>{a[p]=+r.set[p]||0;});t=+r.setTot||0;return;}
+    const ch=+r.ch||0,post=+r.post||0;sum+=ch;
+    EAF_PARTS.forEach(p=>{if(r[p])a[p]=post;else a[p]+=ch;});t+=ch;});
+  return {a,t,sum};
+}
+function eafPvUpdate(ro){
+  if(!eafEditMode)return;
+  const asOf=eafBaseDateVal(),as=eafStatus(asOf)[ro],d=eafDraft.cum[ro];
+  const set={};EAF_PARTS.forEach(p=>{set[p]=d[p]!=null?d[p]:(as[p]||0);});
+  const tot=d.tot!=null?d.tot:(as.totCH||0),sim=eafSimulate(ro,asOf,set,tot);
+  const later=eafData.some(r=>r.base&&r.ro===ro&&r.date>asOf);
+  EAF_PARTS.concat(['tot']).forEach(p=>{const el=document.getElementById('eafPv_'+ro+'_'+p);if(!el)return;
+    const v=p==='tot'?sim.t:sim.a[p],b=p==='tot'?tot:set[p];
+    el.innerHTML=`→ 현재 <b>${Math.round(v).toLocaleString()}</b> <span style="color:var(--muted)">(기준일 이후 ${p==='tot'||v-b>=0?'+':''}${Math.round(v-b).toLocaleString()})</span>${later?'<span style="color:#c2410c"> ⚠ 이후 기준값 있음</span>':''}`;});
+}
+function eafCumInput(ro,p,v){if(v===''){delete eafDraft.cum[ro][p];}else eafDraft.cum[ro][p]=+v;eafPvUpdate(ro);eafEditBarRender();}
 function eafRowInput(id,k,v){const d=eafDraft.rows[id]=eafDraft.rows[id]||{};d[k]=(k==='note')?v:(+v||0);eafEditBarRender();}
 function eafEditBarRender(){
   const el=document.getElementById('eafEditBar');if(!el)return;
   if(typeof isField==='function'&&isField()){el.innerHTML='';return;}
   const n=eafDirtyN(),st=n?`<span style="font-size:12px;color:#c2410c;font-weight:700">● 수정 ${n}건 · 저장 전</span>`:(eafSavedAt?`<span style="font-size:12px;color:#15803d">✔ ${eafSavedAt} 저장됨</span>`:'');
   el.innerHTML=eafEditMode
-    ?`${st}<span style="font-size:12px;color:var(--muted)">기준일 <input type="date" id="eafBaseDate" class="binp" style="border:1px solid var(--line);padding:3px 6px" value="${(document.getElementById('eafBaseDate')||{}).value||todayStr()}" title="누적수명 수정값이 적용되는 날짜 (이 날짜 이후 조업 CH가 그 위에 쌓입니다)"></span>
+    ?`${st}<span style="font-size:12px;color:var(--muted)">기준일 <input type="date" id="eafBaseDate" class="binp" style="border:1px solid var(--line);padding:3px 6px" value="${eafBaseDateVal()}" onchange="eafBaseChanged()" title="이 날 종료 시점의 누적값을 입력합니다 (이후 조업 CH는 자동으로 더해집니다)"></span>
+       <span style="font-size:11px;color:#15803d;max-width:330px;line-height:1.35">기준일 = 입력값이 <b>그 날 종료 시점의 누적</b>. 이후 날짜의 조업 CH는 자동으로 더해져 아래 '→ 현재'에 미리 보입니다.</span>
        <button class="btn primary" style="background:#15803d;border-color:#15803d" onclick="eafSaveAll()" title="Ctrl+S">💾 저장</button><button class="btn" onclick="eafEditToggle(false)">취소</button>`
     :`${st}<button class="btn" onclick="eafEditToggle(true)" title="누적수명과 조업 기록을 직접 수정합니다">✏️ 누적·기록 수정</button>`;
 }
@@ -9432,6 +9492,9 @@ async function eafSaveAll(){
     for(const ro of ['A','B']){const d=eafDraft.cum[ro];if(!Object.keys(d).length)continue;
       const cur=eafStatus(asOf)[ro];const set={};EAF_PARTS.forEach(p=>set[p]=d[p]!=null?d[p]:(cur[p]||0));
       const tot=d.tot!=null?d.tot:(cur.totCH||0);
+      const later=eafData.filter(x=>x.base&&x.ro===ro&&x.date>asOf);
+      if(later.length&&confirm(ro+'로: 기준일('+asOf+') 이후 날짜에 저장된 기준값이 있습니다 ('+later.map(x=>x.date).join(', ')+').\n그 값이 이번 기준값을 덮어쓰므로, 삭제하고 이번 값에서 이어서 계산할까요?\n\n[확인] 삭제 후 이어서 계산 / [취소] 그대로 두기')){
+        for(const x of later){await delRec('eaf',x.id);eafData.splice(eafData.indexOf(x),1);}}
       let rec=eafData.find(x=>x.base&&x.src==='manual'&&x.ro===ro&&x.date===asOf);
       if(rec){rec.set=set;rec.setTot=tot;rec.seq=Date.now();}
       else{rec={id:uid(),date:asOf,ro,ch:0,ton:0,base:true,set,setTot:tot,note:'직접 수정',src:'manual',seq:Date.now()};eafData.push(rec);}
@@ -9441,7 +9504,7 @@ async function eafSaveAll(){
   eafEditMode=false;eafDraft={rows:{},cum:{A:{},B:{}}};
   flashSave();toast('✔ 전기로 수정 '+n+'건 저장되었습니다');renderEaf();
 }
-function renderEaf(){renderEafStatus();renderEafLog();renderEafCards();eafEditBarRender();}
+function renderEaf(){renderEafStatus();renderEafLog();renderEafCards();eafEditBarRender();if(document.getElementById('esp-prod')&&document.getElementById('esp-prod').classList.contains('active'))eafProdRender();}
 // 2026-10-03: 전기로 생산 집계는 "매월 1일 ~ 말일" 기준 — 집계 기준월을 고르면 그 달의 조업 CH·생산량만 합산한다.
 // (부위별 수명은 교체 후 누적이라 월과 무관하게 그대로 누적)
 function eafMonthVal(){const el=document.getElementById('eafMonth');if(el&&!el.value)el.value=todayStr().slice(0,7);return (el&&el.value)||todayStr().slice(0,7);}
@@ -9468,42 +9531,64 @@ function renderEafCards(){
 function prevTxt(v){return v!=null?`<div style="font-size:10px;color:#94a3b8;margin-top:2px">직전 ${v.toLocaleString()} CH</div>`:'';}
 function renderEafStatus(){
   const st=eafStatus(), ms=eafMonthStat(eafMonthVal());
+  const asof=eafEditMode?eafStatus(eafBaseDateVal()):null;   // 편집 모드: 기준일 종료 시점의 값
   document.getElementById('eafStatus').innerHTML=['A','B'].map(ro=>{const s=st[ro];const c=ro==='A'?'#1d4ed8':'#c81e1e';
     return `<div class="eafcard"><div class="eafcard-h" style="background:${c}">${ro}로 <span style="font-size:12px;font-weight:600">${ms.m}월 ${ms[ro].ch.toLocaleString()} CH · 누계 ${s.totCH.toLocaleString()} CH · 최근 ${s.lastCH} CH</span></div>
       <div class="eafcard-b">
         ${EAF_PARTS.map(p=>eafEditMode
           ?`<div class="eafmetric"><div class="em-l" style="color:${EAF_PART_COLOR[p]}">${EAF_PART_LABEL[p]}</div>
-            <div class="em-v"><input type="number" min="0" class="binp" style="width:96px;border:1px solid #f59e0b;background:#fffbeb;font-weight:700;font-size:15px;padding:3px 6px;text-align:right" value="${eafDraft.cum[ro][p]!=null?eafDraft.cum[ro][p]:(s[p]||0)}" oninput="eafCumInput('${ro}','${p}',this.value)"><small> CH</small></div></div>`
+            <div class="em-v"><input type="number" min="0" class="binp" style="width:96px;border:1px solid #f59e0b;background:#fffbeb;font-weight:700;font-size:15px;padding:3px 6px;text-align:right" value="${eafDraft.cum[ro][p]!=null?eafDraft.cum[ro][p]:(asof[ro][p]||0)}" oninput="eafCumInput('${ro}','${p}',this.value)"><small> CH</small></div><div id="eafPv_${ro}_${p}" style="font-size:11px;color:#15803d;margin-top:3px"></div></div>`
           :`<div class="eafmetric" style="cursor:pointer" onclick="eafPickPart('${p}','${ro}')" title="이 부위만 조회">
           <div class="em-l" style="color:${EAF_PART_COLOR[p]}">${EAF_PART_LABEL[p]}</div>
           <div class="em-v">${(s[p]||0).toLocaleString()}<small> CH</small></div>${prevTxt(s.prev[p])}</div>`).join('')}
-        ${eafEditMode?`<div class="eafmetric"><div class="em-l">누계 조업 CH</div><div class="em-v"><input type="number" min="0" class="binp" style="width:96px;border:1px solid #f59e0b;background:#fffbeb;font-weight:700;font-size:15px;padding:3px 6px;text-align:right" value="${eafDraft.cum[ro].tot!=null?eafDraft.cum[ro].tot:(s.totCH||0)}" oninput="eafCumInput('${ro}','tot',this.value)"><small> CH</small></div></div>`:''}
+        ${eafEditMode?`<div class="eafmetric"><div class="em-l">누계 조업 CH</div><div class="em-v"><input type="number" min="0" class="binp" style="width:96px;border:1px solid #f59e0b;background:#fffbeb;font-weight:700;font-size:15px;padding:3px 6px;text-align:right" value="${eafDraft.cum[ro].tot!=null?eafDraft.cum[ro].tot:(asof[ro].totCH||0)}" oninput="eafCumInput('${ro}','tot',this.value)"><small> CH</small></div><div id="eafPv_${ro}_tot" style="font-size:11px;color:#15803d;margin-top:3px"></div></div>`:''}
         <div class="eafmetric"><div class="em-l">생산량(${ms.m}월)</div><div class="em-v">${ms[ro].ton.toLocaleString()}<small> TON</small></div></div>
         <div class="eafmetric"><div class="em-l">생산량(누계)</div><div class="em-v">${s.ton.toLocaleString()}<small> TON</small></div></div>
       </div></div>`;}).join('');
+  if(eafEditMode){eafPvUpdate('A');eafPvUpdate('B');}
 }
 function renderEafLog(){
   eafCompute();initEafParts();
   const f=document.getElementById('e_filterRo').value;
   const fp=(document.getElementById('e_filterPart')||{}).value||'';
-  const only=!!(document.getElementById('e_onlyRepl')||{}).checked;
+  const daily=!!(document.getElementById('e_showDaily')||{}).checked;
   const cols=fp?[fp]:EAF_PARTS;
+  const roTag=r=>`<span class="tag" style="color:#fff;background:${r.ro==='A'?'#1d4ed8':'#c81e1e'};font-size:10.5px">${r.ro}로</span>`;
+  const repl=r=>EAF_PARTS.filter(p=>r[p]).map(p=>EAF_PART_LABEL[p]).join(', ');
+  let rows=eafSorted().filter(r=>!f||r.ro===f);
+  renderEafPartBox();
+  if(!daily){
+    /* 2026-10-08: 보수·교체 이벤트 이력만 (조업 CH 행은 숨김) */
+    rows=rows.filter(r=>r.base||EAF_PARTS.some(p=>r[p])||String(r.note||'').trim());
+    if(fp)rows=rows.filter(r=>r[fp]||r.base);
+    rows=rows.reverse();
+    document.getElementById('e_count').textContent=rows.length+' 건';
+    document.getElementById('eafLogHead').innerHTML='<th>일자</th><th>로</th><th>구분</th><th>내용</th><th>비고</th><th style="width:60px">관리</th>';
+    let body=rows.map(r=>{
+      let kind,desc;
+      if(r.base){kind='<span class="tag" style="background:#e2e8f0;color:#334155;font-size:10.5px">기준값 입력</span>';
+        desc=EAF_PARTS.map(p=>`<span style="color:${EAF_PART_COLOR[p]}">${EAF_PART_LABEL[p]}</span> <b>${(+(r.set||{})[p]||0).toLocaleString()}</b>`).join(' · ')+(r.setTot!=null?` · 누계 <b>${(+r.setTot).toLocaleString()}</b>CH`:'')+'<div style="font-size:10.5px;color:var(--muted)">이 날 종료 시점의 누적값 — 이후 조업 CH가 자동으로 더해집니다</div>';}
+      else if(EAF_PARTS.some(p=>r[p])){kind='<span class="tag pat-sl" style="font-size:10.5px">교체</span>';
+        desc=EAF_PARTS.filter(p=>r[p]).map(p=>`<span style="color:${EAF_PART_COLOR[p]};font-weight:700">${EAF_PART_LABEL[p]}</span> 교체 <span style="font-size:11px;color:var(--muted)">직전 수명 <b style="color:#c2410c">${(r['_'+p+'Done']!=null?r['_'+p+'Done']:0).toLocaleString()}</b>CH → 교체 후 ${(+r.post||0)}CH</span>`).join('<br>');}
+      else{kind='<span class="tag" style="background:#fef9c3;color:#854d0e;font-size:10.5px">보수·메모</span>';desc='<span style="color:var(--muted)">-</span>';}
+      return `<tr${r.base?' style="background:#f8fafc"':''}><td style="white-space:nowrap">${esc(r.date)}</td><td>${roTag(r)}</td><td>${kind}</td><td style="font-size:12px;line-height:1.5">${desc}</td><td style="font-size:12px">${esc(r.note||'')||'<span style="color:#c5ccd3">-</span>'}</td>
+        <td><button class="btn sm danger del-rec" onclick="removeEaf('${r.id}')">삭제</button></td></tr>`;}).join('');
+    if(!rows.length)body='<tr><td colspan="6"><div class="empty">등록된 보수·교체 이력이 없습니다. 위 \'일일 조업 등록\'에서 교체 부위를 체크하거나 비고에 보수 내용을 적으면 이곳에 쌓입니다.</div></td></tr>';
+    document.getElementById('eafLogBody').innerHTML=body;
+    return;
+  }
   document.getElementById('eafLogHead').innerHTML=
     '<th>일자</th><th>로</th><th class="n">일일 CH</th><th class="n">생산(TON)</th>'
     +cols.map(p=>`<th class="n" style="color:${EAF_PART_COLOR[p]}">${EAF_PART_LABEL[p]}</th>`).join('')
     +'<th>교체</th><th>비고</th><th style="width:60px">관리</th>';
-  let rows=eafSorted().filter(r=>!f||r.ro===f);
-  if(fp&&only)rows=rows.filter(r=>r[fp]||r.base);
-  else if(only)rows=rows.filter(r=>EAF_PARTS.some(p=>r[p])||r.base);
+  if(fp)rows=rows.filter(r=>r[fp]||r.base||true);
   rows=rows.reverse();
   document.getElementById('e_count').textContent=rows.length+' 건';
-  renderEafPartBox();
-  const repl=r=>EAF_PARTS.filter(p=>r[p]).map(p=>EAF_PART_LABEL[p]).join(', ');
   const cell=(r,p)=>r['_'+p+'Done']!=null?`<span style="color:#c2410c;font-weight:700">${r['_'+p+'Done'].toLocaleString()}</span> → ${(r['_'+p]||0).toLocaleString()}`:(r['_'+p]||0).toLocaleString();
   let body=rows.map(r=>{const rp=repl(r);
     return `<tr${r.base?' style="background:#f8fafc"':''}>
       <td>${esc(r.date)}${r.base?' <span style="font-size:9.5px;color:#94a3b8">기초</span>':''}</td>
-      <td><span class="tag" style="color:#fff;background:${r.ro==='A'?'#1d4ed8':'#c81e1e'};font-size:10.5px">${r.ro}로</span></td>
+      <td>${roTag(r)}</td>
       <td class="n">${r.base?'-':(eafEditMode?`<input type="number" min="0" class="binp" style="width:64px;border:1px solid #f59e0b;background:#fffbeb;text-align:right" value="${(eafDraft.rows[r.id]&&eafDraft.rows[r.id].ch!=null)?eafDraft.rows[r.id].ch:(r.ch||0)}" oninput="eafRowInput('${r.id}','ch',this.value)">`:(r.ch||0))}</td>
       <td class="n">${(eafEditMode&&!r.base)?`<input type="number" min="0" class="binp" style="width:84px;border:1px solid #f59e0b;background:#fffbeb;text-align:right" value="${(eafDraft.rows[r.id]&&eafDraft.rows[r.id].ton!=null)?eafDraft.rows[r.id].ton:(r.ton||0)}" oninput="eafRowInput('${r.id}','ton',this.value)">`:(r.ton?(+r.ton).toLocaleString():'-')}</td>
       ${cols.map(p=>`<td class="n">${cell(r,p)}</td>`).join('')}
@@ -9519,12 +9604,22 @@ async function submitEaf(ro){
   if(!date){toast('일자를 입력하세요');return;}
   const pre='e'+ro+'_';
   const ch=num(document.getElementById(pre+'ch').value)||0;
-  const rec={id:uid(),date,ro,
+  let rec={id:uid(),date,ro,
     ch,ton:num(document.getElementById(pre+'ton').value)||(ch*TON_PER_CH),
     post:num(document.getElementById(pre+'post').value)||0,
     note:document.getElementById(pre+'note').value.trim(),seq:Date.now()};
   EAF_PARTS.forEach(p=>{const el=document.getElementById(pre+p);rec[p]=!!(el&&el.checked);});
-  await putRec('eaf',rec);eafData.push(rec);flashSave();
+  /* 2026-10-08: 같은 날·같은 로의 기록이 이미 있으면(예: '일일 생산량' 탭에서 CH를 먼저 입력) 새로 쌓지 않고 합쳐서 갱신 — 조업 CH 이중 합산 방지 */
+  const ex=eafData.filter(r=>!r.base&&r.date===date&&r.ro===ro)[0];
+  if(ex){
+    if(ch>0){ex.ch=ch;ex.ton=rec.ton;}
+    EAF_PARTS.forEach(p=>{if(rec[p])ex[p]=true;});
+    if(rec.post)ex.post=rec.post;
+    if(rec.note)ex.note=ex.note&&ex.note!==rec.note?(ex.note+' / '+rec.note):rec.note;
+    rec=ex;
+    await putRec('eaf',ex);flashSave();
+  }else{
+  await putRec('eaf',rec);eafData.push(rec);flashSave();}
   const rp=EAF_PARTS.filter(p=>rec[p]).map(p=>EAF_PART_LABEL[p]).join('·');
   toast(`${rec.ro}로 ${date} 조업 등록${rp?' · '+rp+' 교체':''}`);resetEafForm(ro);renderEaf();if(curView==='board')renderBoard();
 }
@@ -18624,7 +18719,7 @@ function renderOtPeople(){
   const w=document.getElementById('otPeopleWrap'),box=document.getElementById('otPeople');
   if(!w||!box)return;
   if(!otExtra.length){w.hidden=true;box.innerHTML='';return;}
-  w.hidden=false;
+  w.hidden=false;const _n=document.getElementById('otPeopleN');if(_n)_n.textContent='('+otExtra.length+'명)';
   box.innerHTML=otExtra.map(id=>{const e=empData.find(x=>x.id===id)||{name:id};
     return `<span class="tag" style="background:#dbeafe;color:#1d4ed8;font-size:11.5px;padding:5px 9px;cursor:pointer"
       onclick="otDelPerson('${id}')" title="클릭하면 제외">${esc(e.name)}${e.team?' '+esc(e.team):''} ✕</span>`;}).join('')
@@ -19782,6 +19877,155 @@ function mvPay(){
   document.getElementById('mvBody').innerHTML=payHtml('mvpay');payRecalc('mvpay');
   mvGo(`<button class="go2" onclick="mvHome()">홈으로</button><button class="go1" onclick="paySave('mvpay')">💾 저장</button>`);
 }
+
+/* ===== 2026-10-08: MSDS · 교육 자료 =====
+   목록(제목·구분·링크·메모)은 localStorage 'dgrns_docs_*' 에 저장되어 팀 공유(실시간)로 함께 보이고,
+   올린 파일(PDF·이미지·문서)은 이 PC의 IndexedDB('docs')에만 보관된다. 등록·삭제는 사업소장·관리직·안전관리담당자만. */
+const DOC_KINDS={
+  msds:{title:'MSDS (물질안전보건자료)',ic:'🧪',cats:['내화물','화학물질','가스·연료','기타'],ph:'예: 알루미나 캐스타블 MSDS'},
+  edudoc:{title:'교육 자료',ic:'🎓',cats:['안전교육','작업표준','신입교육','법정교육','기타'],ph:'예: 2026년 4분기 정기 안전보건교육'}};
+let docUI={msds:{q:'',c:''},edudoc:{q:'',c:''}};
+function docLoad(k){try{return JSON.parse(localStorage.getItem('dgrns_docs_'+k)||'[]');}catch(e){return [];}}
+function docSaveMeta(k,a){try{localStorage.setItem('dgrns_docs_'+k,JSON.stringify(a));}catch(e){alert('저장공간이 부족합니다.');return false;}try{flashSave();}catch(e){}return true;}
+function docCanManage(){const r=appRole(),pr=personRule();return (r==='admin'||r==='office'||r==='safety')&&!(pr&&pr.noDelete&&!pr.full);}
+function docGetFile(id){return new Promise((res,rej)=>{const r=db.transaction('docs','readonly').objectStore('docs').get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function initDocs(k){docRender(k);}
+function docRender(k){
+  const K=DOC_KINDS[k],box=document.getElementById('docBox_'+k);if(!box)return;
+  const U=docUI[k],all=docLoad(k).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.id||'').localeCompare(a.id||''));
+  const rows=all.filter(d=>(!U.c||d.cat===U.c)&&(!U.q||((d.title||'')+' '+(d.note||'')+' '+(d.cat||'')).toLowerCase().includes(U.q.toLowerCase())));
+  const mg=docCanManage();
+  const form=mg?`<div class="formbar"><h3>＋ ${K.title} 등록</h3>
+    <div class="frow">
+      <div class="field grow"><label>제목</label><input type="text" id="docT_${k}" placeholder="${K.ph}"></div>
+      <div class="field w-sel"><label>구분</label><select id="docG_${k}">${K.cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+      <div class="field grow"><label>링크 (공유폴더·드라이브 주소, 선택)</label><input type="text" id="docU_${k}" placeholder="https:// 또는 \\\\서버\\폴더\\파일.pdf"></div>
+    </div>
+    <div class="frow" style="margin-top:8px">
+      <div class="field grow"><label>파일 첨부 (PDF·이미지·문서, 30MB 이하, 선택)</label><input type="file" id="docF_${k}"></div>
+      <div class="field grow"><label>비고</label><input type="text" id="docN_${k}" placeholder="개정일·취급 주의 등"></div>
+      <div class="field"><label>&nbsp;</label><button class="btn primary" onclick="docAdd('${k}')">등록</button></div>
+    </div>
+    <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ <b>링크</b>는 팀 공유(실시간)로 모든 PC에 함께 보이고, <b>첨부 파일</b>은 이 PC(브라우저)에만 보관됩니다. 여러 PC에서 함께 보려면 공유폴더·드라이브 링크를 같이 적어 주세요.</div></div>`:'';
+  box.innerHTML=`<div class="cards" style="margin-bottom:10px"><div class="card"><div class="l">${K.ic} ${K.title}</div><div class="v">${all.length}<small> 건</small></div></div></div>
+    ${form}
+    <div class="toolrow">
+      <input type="text" class="selbox" style="min-width:200px" id="docQ_${k}" placeholder="제목·비고 검색" value="${esc(U.q)}" oninput="docUI['${k}'].q=this.value;docRender('${k}');document.getElementById('docQ_${k}').focus()">
+      <select class="selbox" id="docC_${k}" onchange="docUI['${k}'].c=this.value;docRender('${k}')"><option value="">전체 구분</option>${K.cats.map(c=>`<option ${U.c===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+      <span class="spacer"></span><span style="font-size:12px;color:var(--muted)">${rows.length}건</span></div>
+    <div class="tablewrap"><table style="min-width:0"><thead><tr><th>등록일</th><th>구분</th><th>제목</th><th>자료</th><th>비고</th>${mg?'<th>관리</th>':''}</tr></thead><tbody>
+    ${rows.length?rows.map(d=>`<tr><td style="white-space:nowrap">${esc(d.date||'')}</td><td><span class="tag" style="background:#e0f2fe;color:#075985">${esc(d.cat||'')}</span></td>
+      <td><b>${esc(d.title)}</b>${d.by?`<div style="font-size:10.5px;color:var(--muted)">${esc(d.by)}</div>`:''}</td>
+      <td style="white-space:nowrap">${d.url?`<a href="#" onclick="docOpenUrl('${d.id}','${k}');return false">🔗 링크 열기</a>`:''}${d.url&&d.file?'<br>':''}${d.file?`<a href="#" onclick="docOpenFile('${d.id}');return false">📎 ${esc(d.file.name)}</a> <small style="color:var(--muted)">(${Math.round(d.file.size/1024).toLocaleString()}KB)</small>`:''}</td>
+      <td style="font-size:12px">${esc(d.note||'')||'<span style="color:#c5ccd3">-</span>'}</td>
+      ${mg?`<td><button class="btn sm danger" onclick="docDel('${k}','${d.id}')">삭제</button></td>`:''}</tr>`).join(''):`<tr><td colspan="${mg?6:5}"><div class="empty">등록된 자료가 없습니다.${mg?' 위에서 제목과 링크 또는 파일을 등록하세요.':''}</div></td></tr>`}
+    </tbody></table></div>`;
+}
+async function docAdd(k){
+  const v=id=>((document.getElementById(id)||{}).value||'').trim();
+  const t=v('docT_'+k),url=v('docU_'+k),inp=document.getElementById('docF_'+k),f=inp&&inp.files&&inp.files[0];
+  if(!t){toast('제목을 입력하세요');return;}
+  if(!url&&!f){toast('링크 또는 파일을 넣어 주세요');return;}
+  if(f&&f.size>30*1024*1024){alert('파일이 너무 큽니다 (30MB 이하). 큰 파일은 공유폴더에 올리고 링크로 등록해 주세요.');return;}
+  const id='doc_'+Date.now()+Math.floor(Math.random()*1000);
+  if(f){try{await putRec('docs',{id,name:f.name,type:f.type,size:f.size,blob:f});}catch(e){alert('파일 저장에 실패했습니다. 브라우저 저장공간을 확인해 주세요.');return;}}
+  const a=docLoad(k);
+  a.push({id,title:t,cat:v('docG_'+k),date:todayStr(),url,note:v('docN_'+k),by:(meEmp()||{}).name||'',file:f?{name:f.name,size:f.size,type:f.type}:null});
+  if(!docSaveMeta(k,a))return;
+  toast('등록되었습니다');docRender(k);
+}
+function docOpenUrl(id,k){
+  const d=docLoad(k).find(x=>x.id===id);if(!d||!d.url)return;
+  if(/^https?:\/\//i.test(d.url))window.open(d.url,'_blank','noopener');
+  else{try{navigator.clipboard.writeText(d.url);toast('경로를 복사했습니다 — 탐색기 주소창에 붙여넣으세요');}catch(e){prompt('경로를 복사해서 사용하세요',d.url);}}
+}
+async function docOpenFile(id){
+  let rec=null;try{rec=await docGetFile(id);}catch(e){}
+  if(!rec||!rec.blob){alert('이 PC에는 파일이 없습니다. 파일을 올린 PC에서 열거나, 링크를 이용해 주세요.');return;}
+  const u=URL.createObjectURL(rec.blob);
+  if(/pdf|image/.test(rec.type||'')){window.open(u,'_blank');}
+  else{const a=document.createElement('a');a.href=u;a.download=rec.name||'file';document.body.appendChild(a);a.click();a.remove();}
+  setTimeout(()=>URL.revokeObjectURL(u),60000);
+}
+async function docDel(k,id){
+  if(!docCanManage())return;
+  const d=docLoad(k).find(x=>x.id===id);if(!d||!confirm('"'+d.title+'" 자료를 삭제할까요?'))return;
+  if(d.file){try{await delRec('docs',id);}catch(e){}}
+  docSaveMeta(k,docLoad(k).filter(x=>x.id!==id));toast('삭제되었습니다');docRender(k);
+}
+
+/* ===== 2026-10-08: 전기로 일일 생산량 (A·B로 CH만 입력 → 합계 CH·생산량 자동) =====
+   저장하면 같은 날·같은 로의 기록을 갱신(없으면 생성)하므로 중복 등록되지 않고, 부위별 수명 누적에도 그대로 반영된다. 생산량 = CH × 145톤. */
+function eafProdSum(date,ro){return eafData.filter(r=>!r.base&&r.date===date&&r.ro===ro).reduce((s,r)=>s+(+r.ch||0),0);}
+function eafProdInit(){
+  const d=document.getElementById('ep_date');if(d&&!d.value)d.value=todayStr();
+  const m=document.getElementById('ep_month');if(m&&!m.value)m.value=(d&&d.value||todayStr()).slice(0,7);
+  eafProdLoad();eafProdRender();
+}
+function eafProdLoad(){
+  const date=(document.getElementById('ep_date')||{}).value;if(!date)return;
+  const a=eafProdSum(date,'A'),b=eafProdSum(date,'B');
+  document.getElementById('ep_a').value=a||'';document.getElementById('ep_b').value=b||'';
+  const m=document.getElementById('ep_month');if(m)m.value=date.slice(0,7);
+  eafProdCalc();eafProdRender();
+}
+function eafProdCalc(){
+  const a=num(document.getElementById('ep_a').value)||0,b=num(document.getElementById('ep_b').value)||0,t=a+b;
+  document.getElementById('ep_tot').value=t?t.toLocaleString()+' CH':'';
+  document.getElementById('ep_ton').value=t?(t*TON_PER_CH).toLocaleString()+' TON':'';
+}
+async function eafProdSave(){
+  const date=(document.getElementById('ep_date')||{}).value;if(!date){toast('일자를 입력하세요');return;}
+  const raw=id=>((document.getElementById(id)||{}).value||'').trim();
+  if(raw('ep_a')===''&&raw('ep_b')===''){toast('A로 또는 B로 CH를 입력하세요');return;}
+  let n=0,warn='';
+  for(const [ro,id] of [['A','ep_a'],['B','ep_b']]){
+    const v=raw(id);if(v==='')continue;
+    const ch=Math.max(0,num(v)||0),recs=eafData.filter(r=>!r.base&&r.date===date&&r.ro===ro);
+    if(!recs.length){
+      if(ch>0){const r={id:uid(),date,ro,ch,ton:ch*TON_PER_CH,post:0,note:'',seq:Date.now()+(ro==='B'?1:0)};EAF_PARTS.forEach(p=>{r[p]=false;});
+        await putRec('eaf',r);eafData.push(r);n++;}
+    }else{
+      const f=recs[0],others=recs.slice(1).reduce((s,r)=>s+(+r.ch||0),0);
+      f.ch=Math.max(0,ch-others);f.ton=f.ch*TON_PER_CH;
+      if(ch<others)warn=ro+'로 같은 날 다른 기록의 CH가 더 커서 합계가 '+others+'CH로 남았습니다';
+      await putRec('eaf',f);n++;}
+  }
+  flashSave();toast(n?('저장되었습니다 · '+date+(warn?' ('+warn+')':'')):'변경할 내용이 없습니다');
+  renderEaf();eafProdRender();if(curView==='board')try{renderBoard();}catch(e){}
+}
+function eafProdRows(ym){
+  const map={};
+  eafData.forEach(r=>{if(r.base||!String(r.date).startsWith(ym))return;const o=map[r.date]=map[r.date]||{date:r.date,A:0,B:0};o[r.ro]+=(+r.ch||0);});
+  return Object.values(map).sort((x,y)=>y.date.localeCompare(x.date));
+}
+function eafProdRender(){
+  const b=document.getElementById('ep_body');if(!b)return;
+  const ym=(document.getElementById('ep_month')||{}).value||todayStr().slice(0,7);
+  const rows=eafProdRows(ym);
+  const sa=rows.reduce((s,r)=>s+r.A,0),sb=rows.reduce((s,r)=>s+r.B,0),st=sa+sb;
+  document.getElementById('ep_count').textContent=rows.length+'일 · '+ym.replace('-','년 ')+'월';
+  document.getElementById('ep_cards').innerHTML=[['🔵 A로 CH',sa,'CH'],['🔴 B로 CH',sb,'CH'],['합계 CH',st,'CH'],['월 합계 생산량',st*TON_PER_CH,'TON']]
+    .map(c=>`<div class="card"><div class="l">${c[0]}</div><div class="v">${Math.round(c[1]).toLocaleString()}<small> ${c[2]}</small></div></div>`).join('');
+  b.innerHTML=rows.length?rows.map(r=>{const t=r.A+r.B;return `<tr><td style="white-space:nowrap;font-weight:700">${r.date}</td><td class="n">${r.A||'-'}</td><td class="n">${r.B||'-'}</td><td class="n"><b>${t}</b></td><td class="n" style="color:var(--accent);font-weight:700">${(t*TON_PER_CH).toLocaleString()}</td>
+      <td><button class="btn sm" onclick="document.getElementById('ep_date').value='${r.date}';eafProdLoad();window.scrollTo&&document.querySelector('.main')&&document.querySelector('.main').scrollTo({top:0,behavior:'smooth'})">수정</button> <button class="btn sm danger del-rec" onclick="eafProdDel('${r.date}')">삭제</button></td></tr>`;}).join('')
+      +`<tr style="background:#f1f5f9;font-weight:800"><td>${ym.slice(5)}월 합계</td><td class="n">${sa}</td><td class="n">${sb}</td><td class="n">${st}</td><td class="n" style="color:var(--accent)">${(st*TON_PER_CH).toLocaleString()}</td><td></td></tr>`
+    :'<tr><td colspan="6"><div class="empty">이 달에 입력된 조업 CH가 없습니다. 위에서 일자와 A·B로 CH를 입력하세요.</div></td></tr>';
+}
+async function eafProdDel(date){
+  if(!canDelete()){alert('삭제는 관리자·관리직만 가능합니다.');return;}
+  if(!confirm(date+' 조업 CH를 삭제할까요?\n(교체·보수 이력이 있는 기록은 CH만 0으로 바뀌고 이력은 유지됩니다)'))return;
+  for(const r of eafData.filter(r=>!r.base&&r.date===date).slice()){
+    const keep=EAF_PARTS.some(p=>r[p])||String(r.note||'').trim();
+    if(keep){r.ch=0;r.ton=0;await putRec('eaf',r);}else{await delRec('eaf',r.id);eafData.splice(eafData.indexOf(r),1);}}
+  flashSave();toast('삭제되었습니다');renderEaf();eafProdRender();eafProdLoad();
+}
+function eafProdCsv(){
+  const ym=(document.getElementById('ep_month')||{}).value||todayStr().slice(0,7);
+  const rows=eafProdRows(ym).reverse();
+  const csv='\ufeff일자,A로 CH,B로 CH,합계 CH,합계 생산량(TON)\n'+rows.map(r=>[r.date,r.A,r.B,r.A+r.B,(r.A+r.B)*TON_PER_CH].join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='전기로_일일생산량_'+ym+'.csv';document.body.appendChild(a);a.click();a.remove();
+}
 function mvLogout(){try{localStorage.removeItem('dgrns_me');}catch(e){}setRole('pohang');updateMeChip();mvHome();}
 function mvOpen(v){
   const me=meEmp();if(!me&&v!=='appr'){toast('먼저 로그인하세요');return mvHome();}
@@ -20038,11 +20282,11 @@ const ROLE_VIEWS={
   // 2026-09-21: 현장직원(현장기성·SN반·축로반·안전관리담당자)은 근태관리(휴가·잔업 신청)만 접근,
   // 그 외 화면은 전부 숨김 처리 — 사업소장·관리직만 기존처럼 전체 권한 유지
   // 2026-09-30: 4조 3교대 근무표(shift4)는 본인 근무일정 조회용이라 현장 역할도 열람 가능하도록 함께 허용
-  foreman:['attend','shift4','mypay'],      // 2026-10-07: 내 급여 계산 — 본인 근무표 합계로 예상 급여 확인
+  foreman:['attend','shift4','mypay','safetygear','msds','edudoc'],   // 2026-10-08: 현장기성은 안전 폴더(안전보호구 발주)·MSDS·교육 자료까지 확대
   sn:['attend','shift4','mypay'],
   furnace:['attend','shift4','mypay'],
   // 2026-10-01: 안전관리담당자는 근태 화면 외에 신설된 '안전보호구 발주 관리' 화면도 열람·입력 가능
-  safety:['attend','shift4','safetygear','mypay']   // 안전 폴더(사이드바)의 모든 화면 — 2026-10-06 삭제까지 포함해 전체 권한 부여
+  safety:['attend','shift4','safetygear','mypay','msds','edudoc']   // 안전 폴더(사이드바)의 모든 화면 — 2026-10-06 삭제까지 포함해 전체 권한 부여
 };
 const FIELD_ROLES=['foreman','sn','furnace','pohang'];
 const FIELD_VIEWS=['board','attend','ladle','tundish','eaf','handover'];
@@ -20144,11 +20388,19 @@ function renderModePanel(){
 }
 // 2026-10-01: "삭제 버튼이 안 보여 불편하다"는 신고 → 삭제 권한을 사업소장(admin) 전용에서
 // 관리직(office)까지 확대. 현장 역할(기성·SN반·축로반·안전관리담당자)은 기존처럼 삭제 불가로 유지.
-function canDelete(){const r=appRole();return r==='admin'||r==='office';}
+/* 2026-10-08 권한 재분배 — 개인별 규칙(로그인한 직원 이름 기준)
+   · 강경묵(사업소장)·서승수(관리직): 모든 권한 · 정현주: 삭제 불가, 1차로 래들·턴디쉬·전기로 수명관리(+사용현황)와 제강 원가 관리 폴더만 */
+const PERSON_RULES={
+  '강경묵':{full:true},
+  '서승수':{full:true},
+  '정현주':{noDelete:true,views:['daylog','ladle','tundish','eaf','inv','perf','mperf','report','attend','shift4','mypay']}
+};
+function personRule(){try{const m=meEmp();return m?(PERSON_RULES[m.name]||null):null;}catch(e){return null;}}
+function canDelete(){const pr=personRule();if(pr&&pr.full)return true;if(pr&&pr.noDelete)return false;const r=appRole();return r==='admin'||r==='office';}
 function updateRoleChip(){const c=document.getElementById('roleChip');if(!c)return;const r=appRole();c.textContent='👤 '+ROLE_LABEL[r];c.className='rolechip r-'+r;}
 function setRole(r){try{localStorage.setItem('dgrns_role',r);}catch(e){}updateRoleChip();applyRoleLock();applyRoleNav();
   if(!viewAllowed(curView))nav(defaultView());else renderViewTabs();}
-function viewAllowed(v){const a=ROLE_VIEWS[appRole()];return !a||a.indexOf(v)>=0;}
+function viewAllowed(v){const pr=personRule();if(pr&&pr.full)return true;if(pr&&pr.views)return pr.views.indexOf(v)>=0;const a=ROLE_VIEWS[appRole()];return !a||a.indexOf(v)>=0;}
 function defaultView(){
   if(viewAllowed('home'))return 'home';
   if(viewAllowed('board'))return 'board';
@@ -20194,7 +20446,7 @@ function applyRoleSubtabs(){
   [['ladleSubtabs',()=>ladleTab('life')],['tundishSubtabs',()=>tundishTab('life')],['eafSubtabs',()=>eafTab('life')]]
    .forEach(([id,toLife])=>{const box=document.getElementById(id);if(!box)return;
      let forced=false;
-     box.querySelectorAll('.subtab').forEach(b=>{const hide=field&&b.dataset.sp!=='life';
+     box.querySelectorAll('.subtab').forEach(b=>{const hide=field&&b.dataset.sp!=='life'&&!(id==='eafSubtabs'&&b.dataset.sp==='prod');
        b.hidden=hide;if(hide&&b.classList.contains('active'))forced=true;});
      if(forced){try{toLife();}catch(e){}}});
 }
