@@ -1890,6 +1890,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <select class="selbox" id="pm_chk" onchange="renderProdMaster()" title="사용중 품목만 점검합니다. 미입력 = 해당 시점 단가가 비었거나 0원 · 이상 의심 = 단위 혼동(원/kg↔원/개)·같은 품명 내 편차 30%↑·직전 시점 대비 30%↑ 급변·단중 누락. 🔁 자재코드 중복·충돌 = 같은 동국R&S 제품명+규격 중복 / 같은 자재코드인데 고객사 제품명이 다름 / 같은 고객사 제품명인데 자재코드가 다름">
         <option value="">단가 점검: 전체</option><option value="empty">⚠ 단가 미입력만</option><option value="odd">🔎 단가 이상 의심만</option><option value="both">⚠+🔎 미입력·이상 모두</option><option value="dupq">🔁 자재코드 중복·충돌 점검</option><option value="shareq">👥 같은 자재코드 공유 전체</option>
       </select>
+      <button class="btn danger" id="pm_fixid" style="display:none" onclick="pmFixDupIds()" title="같은 내부 ID를 쓰는 품목이 있습니다 — 나중에 만들어진 행에 새 ID를 부여해 분리합니다(데이터 삭제 없음)">🛠 중복 ID 분리</button>
       <button class="btn primary" onclick="addProd()">＋ 제품</button>
       <button class="btn primary" id="pm_save" onclick="saveProdMaster()" style="display:none">💾 저장</button>
       <button class="btn" onclick="renderProdMaster()" title="이름순 재정렬·조회">🔄 새로고침</button>
@@ -6466,11 +6467,21 @@ function pmBuildDupq(){
     (byNS[k]=byNS[k]||[]).push(p);});
   const m={};const add=(p,t,msg)=>{(m[p.id]=m[p.id]||{k:[],msg:[]});if(!m[p.id].k.includes(t))m[p.id].k.push(t);m[p.id].msg.push(msg);};
   Object.keys(byNS).forEach(k=>{const a=byNS[k];if(a.length>1&&k!=='|')a.forEach(p=>add(p,'dup','같은 제품명+규격이 '+a.length+'건 중복 등록'));});
+  const byId={},bySp={};act.forEach(p=>{(byId[p.id]=byId[p.id]||[]).push(p);const sp=nz(p.spec).replace(/\s+/g,''),w=+p.uw||0;if(sp.length>=8&&w>0)(bySp[sp+'|'+w]=bySp[sp+'|'+w]||[]).push(p);});
+  Object.keys(byId).forEach(i=>{const a=byId[i];if(a.length>1)a.forEach(p=>add(p,'id','같은 내부 ID를 쓰는 품목이 '+a.length+'건 — 삭제·단가저장·시점단가가 함께 꼬일 수 있음 (🛠 중복 ID 분리 버튼으로 해결)'));});
+  Object.keys(bySp).forEach(k=>{const a=bySp[k];if(a.length<2)return;const names=new Set(a.map(p=>nz(p.name)+'|'+nz(p.custName)));if(a.some(p=>m[p.id]&&m[p.id].k.includes('dup')))return;if(names.size>1||true)a.forEach(p=>add(p,'spec','같은 규격·단중 품목이 '+a.length+'건: '+a.map(x=>(x.name||'')+'/'+(x.unit==='ea'?'원/개':'원/kg')+'/'+(x.qcode||'코드없음')).join(' ◀▶ ')));});
   Object.keys(byQ).forEach(q=>{const a=byQ[q];if(a.length<2)return;const names=new Set(a.map(p=>nz(p.custName)));
     if(names.size>1)a.forEach(p=>add(p,'conf','자재코드 '+(p.qcode||q)+' 를 고객사 제품명이 다른 '+names.size+'종이 공유: '+[...new Set(a.map(x=>x.custName||'(빈칸)'))].join(' / ')));
     else a.forEach(p=>add(p,'share','자재코드 공유 '+a.length+'건(정상: 같은 고객사 제품명·규격만 다름)'));});
   Object.keys(byN).forEach(c=>{const a=byN[c],qs=new Set(a.map(p=>nz(p.qcode)).filter(Boolean));if(qs.size>1)a.forEach(p=>add(p,'split','같은 고객사 제품명인데 자재코드가 '+qs.size+'종: '+[...qs].join(', ')));});
   PM_DUPQ=m;
+}
+function pmFixDupIds(){
+  const seen=new Set();let n=0;
+  prodData.forEach(p=>{if(seen.has(p.id)){const old=p.id;p.id='p'+Date.now()+'_'+(n++)+'_'+Math.floor(Math.random()*1e4);}else seen.add(p.id);});
+  if(!n){toast('중복 ID가 없습니다');return;}
+  try{saveProd();}catch(e){}
+  toast('중복 ID '+n+'건을 분리했습니다 — 이제 행별로 따로 수정·삭제됩니다');renderProdMaster();
 }
 function pmDupqOf(p){if(!PM_DUPQ)pmBuildDupq();return PM_DUPQ[p.id]||null;}
 function pmDupqBad(p){const d=pmDupqOf(p);return !!(d&&d.k.some(t=>t!=='share'));}
@@ -6478,7 +6489,7 @@ let PM_DEV=null;
 function pmBuildDev(){
   const g={};prodData.forEach(p=>{if(prodUse(p)===0)return;const v=+priceAt(p.id,pricePeriod)||0;if(v>0){const k=(p.name||'')+'|'+(p.unit==='ea'?'ea':'kg');(g[k]=g[k]||[]).push(v);}});
   const med={};Object.keys(g).forEach(k=>{const a=g[k].slice().sort((x,y)=>x-y);if(a.length>=3)med[k]=a[a.length>>1];else if(a.length===2&&a[1]/a[0]>=1.5)med[k]=-1;});
-  PM_DEV={med,prev:(()=>{const per=snapPeriods(),cur=pricePeriod||'';let i=cur?per.indexOf(cur):per.length;if(i<=0)return '';return per[i-1];})()};
+  PM_DEV={med,prev:(()=>{const per=snapPeriods(),cur=pricePeriod||'';if(!cur){let cq='';try{cq=currentQuarterKey();}catch(e){}const ok=per.filter(k=>!cq||k<=cq);return ok.length?ok[ok.length-1]:'';}const i=per.indexOf(cur);return i>0?per[i-1]:'';})()};
 }
 function pmPriceIssues(p){
   if(prodUse(p)===0)return {empty:false,odd:[]};
@@ -6521,6 +6532,7 @@ function renderProdMaster(){
   const nGoods=prodData.filter(p=>prodGubun(p)==='상품').length;
   const nOth=prodData.filter(p=>prodSup(p).own===false).length;
   const nDupq=prodData.filter(p=>pmDupqBad(p)).length;
+  try{const fb=document.getElementById('pm_fixid');if(fb)fb.style.display=prodData.some(p=>{const d=pmDupqOf(p);return d&&d.k.includes('id');})?'':'none';}catch(e){}
   const nEmpty=prodData.filter(p=>pmPriceIssues(p).empty).length,nOdd=prodData.filter(p=>pmPriceIssues(p).odd.length>0).length;
   const viewLive=(pricePeriod==='');
   window.__pmShownIds=rows.map(({p})=>p.id);
@@ -6556,7 +6568,7 @@ function renderProdMaster(){
      <td><select onchange="editProdCustName(${i},this.value)" style="width:100%;min-width:130px;font-size:11px">${custNameOptions(p.custName||'',p.cat)}</select></td>
      <td><input value="${esc(p.qcode||'')}" style="width:100%;min-width:86px;font-size:11px" placeholder="고객사 자재코드" title="고객사가 관리하는 자재코드 — 배합·규격이 달라도 고객사 자재코드가 같으면 같은 품목으로 봅니다. 같은 고객사 제품명을 가진 규격들은 이 코드를 공유합니다" oninput="editProdQcode(${i},this.value)">
        <button type="button" class="btn sm" style="margin-top:2px;font-size:10px;padding:1px 5px;white-space:nowrap" onclick="fetchQcodeForRow(${i})" title="이 행의 고객사 제품명에 해당하는 자재코드를 [내화물 원단위] 목록에서 다시 불러옵니다(새 품목을 하나씩 추가할 때 사용)">🔄 불러오기</button>
-       ${qcodeBadge(p)}${(()=>{const d=pmDupqOf(p);if(!d)return '';const bad=d.k.filter(t=>t!=='share');if(!bad.length)return '';const L={dup:'제품 중복',conf:'코드 충돌',split:'코드 불일치'};return `<div style="margin-top:2px;font-size:10px;color:#dc2626;font-weight:700;cursor:help" title="${esc(d.msg.filter(x=>!x.startsWith('자재코드 공유')).join(' / '))}">🔁 ${bad.map(t=>L[t]).join('·')}</div>`;})()}</td>
+       ${qcodeBadge(p)}${(()=>{const d=pmDupqOf(p);if(!d)return '';const bad=d.k.filter(t=>t!=='share');if(!bad.length)return '';const L={dup:'제품 중복',conf:'코드 충돌',split:'코드 불일치',id:'ID 중복',spec:'규격·단중 동일'};return `<div style="margin-top:2px;font-size:10px;color:#dc2626;font-weight:700;cursor:help" title="${esc(d.msg.filter(x=>!x.startsWith('자재코드 공유')).join(' / '))}">🔁 ${bad.map(t=>L[t]).join('·')}</div>`;})()}</td>
      <td><input value="${esc(p.mix||'')}" style="width:100%;min-width:140px" placeholder="배합·재질" oninput="editProd(${i},'mix',this.value)"></td>
      <td><input value="${esc(p.spec||'')}" style="width:100%;min-width:160px" oninput="editProd(${i},'spec',this.value)"></td>
      <td class="n"><input type="number" value="${p.uw||''}" style="width:64px;text-align:right" oninput="editProd(${i},'uw',this.value)"></td>
