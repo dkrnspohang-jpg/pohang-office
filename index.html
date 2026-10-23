@@ -3026,6 +3026,7 @@ service cloud.firestore {
         <input type="date" class="selbox" id="ii_date" onchange="renderInflow()">
         <input class="search" id="ii_search" placeholder="품명·설비 검색" oninput="renderInflow()">
         <select class="selbox" id="ii_grp" onchange="renderInflow()"><option value="">전체 설비</option></select>
+        <select class="selbox" id="ii_vend" onchange="renderInflow()" title="업체(매출 구분)별로 모아봅니다 — 타사 입고를 빼고 동국R&S 매출만 볼 수 있습니다"><option value="">전체 업체</option><option value="ours">★ 동국R&amp;S 매출(일반+직매출)</option><option value="cat:일반">└ 일반(동국R&amp;S)</option><option value="cat:직매출">└ 직매출</option><option value="out">타사 전체(매출 미포함)</option><option value="cat:원진">└ 원진</option><option value="cat:KR">└ KR</option><option value="cat:조선내화">└ 조선내화</option><option value="cat:오성">└ 오성</option><option value="cat:기타">└ 기타</option><option value="rhf">형강가열로</option></select>
         <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="ii_only" onchange="renderInflow()"> 입고분만</label>
         <button class="btn" onclick="downloadInflow()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="ii_count"></span>
@@ -3038,11 +3039,13 @@ service cloud.firestore {
           <label style="font-size:12px;color:var(--muted)">종료일</label>
           <input type="date" class="selbox" id="ir_to" onchange="renderInflowRange()">
           <input class="search" id="ir_search" placeholder="품명·설비 검색" oninput="renderInflowRange()">
+          <select class="selbox" id="ir_vend" onchange="renderInflowRange()" title="업체(매출 구분)별로 모아봅니다"><option value="">전체 업체</option><option value="ours">★ 동국R&amp;S 매출(일반+직매출)</option><option value="cat:일반">└ 일반(동국R&amp;S)</option><option value="cat:직매출">└ 직매출</option><option value="out">타사 전체(매출 미포함)</option><option value="cat:원진">└ 원진</option><option value="cat:KR">└ KR</option><option value="cat:조선내화">└ 조선내화</option><option value="cat:오성">└ 오성</option><option value="cat:기타">└ 기타</option><option value="rhf">형강가열로</option></select>
           <button class="btn" onclick="downloadInflowRange()">📥 엑셀</button>
           <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="ir_count"></span>
         </div>
-        <div class="tablewrap"><table class="bomtbl" id="inflowRangeTbl" style="min-width:700px">
-          <thead><tr><th>일자</th><th>설비</th><th style="min-width:200px">품명</th><th class="n">입고량</th><th class="n">단가</th><th class="n">입고금액</th></tr></thead>
+        <div id="ir_sum" style="display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px"></div>
+        <div class="tablewrap"><table class="bomtbl" id="inflowRangeTbl" style="min-width:760px">
+          <thead><tr><th>일자</th><th>업체·구분</th><th>설비</th><th style="min-width:200px">품명</th><th class="n">입고량</th><th class="n">단가</th><th class="n">입고금액</th></tr></thead>
           <tbody id="inflowRangeBody"></tbody>
         </table></div>
       </div>
@@ -17343,6 +17346,7 @@ function renderInflow(){
   let items=INV_MASTER.filter(m=>!gf||m.g===gf).filter(m=>!q||(m.n||'').toLowerCase().includes(q)||(m.g||'').toLowerCase().includes(q));
   const SECO={main:0,direct:1,out:2,rhf:3},OUTORD=['원진','KR','조선내화','오성','기타','일반','직매출'];
   items=items.map((m,i)=>({m,i,sec:invSalesSec(m.c),inf:invSalesInfo(m.c)}));
+  {const vf=(document.getElementById('ii_vend')||{}).value||'';if(vf)items=items.filter(x=>invVendHit(x.m.c,vf));}   // rpt128: 업체별 조회
   items.sort((a,b)=>{
     if(SECO[a.sec]!==SECO[b.sec])return SECO[a.sec]-SECO[b.sec];
     if(a.sec==='out'&&a.inf.cat!==b.inf.cat)return OUTORD.indexOf(a.inf.cat)-OUTORD.indexOf(b.inf.cat);
@@ -17421,31 +17425,66 @@ function toggleInflowRange(){
     renderInflowRange();
   }
 }
-function inflowRangeRows(){
+function inflowRangeRows(noVend){
   const from=document.getElementById('ir_from').value,to=document.getElementById('ir_to').value;
   if(!from||!to)return [];
+  const vf=noVend?'':((document.getElementById('ir_vend')||{}).value||'');
   const q=(document.getElementById('ir_search').value||'').toLowerCase();
   return invInData.filter(r=>r.ymd>=from&&r.ymd<=to&&(+r.qty||0)>0)
     .map(r=>{const m=invM.get(r.code)||{};const it=invItem(r.code);const pr=invPriceAt(r.code,r.ymd.slice(0,7));
-      return {ymd:r.ymd,g:m.g||'',n:it.n,qty:+r.qty||0,pr,amt:(+r.qty||0)*pr};})
-    .filter(r=>!q||(r.n||'').toLowerCase().includes(q)||(r.g||'').toLowerCase().includes(q))
+      return {ymd:r.ymd,code:r.code,g:m.g||'',n:it.n,qty:+r.qty||0,pr,amt:(+r.qty||0)*pr,vend:invVendLabel(r.code),sec:invSalesSec(r.code)};})
+    .filter(r=>!q||(r.n||'').toLowerCase().includes(q)||(r.g||'').toLowerCase().includes(q)||(r.vend||'').toLowerCase().includes(q))
+    .filter(r=>invVendHit(r.code,vf))
     .sort((a,b)=>b.ymd.localeCompare(a.ymd)||(a.g||'').localeCompare(b.g||''));
 }
+function irVend(v){const e=document.getElementById('ir_vend');if(e){e.value=v;renderInflowRange();}}
 function renderInflowRange(){
   const from=document.getElementById('ir_from').value,to=document.getElementById('ir_to').value;
-  if(!from||!to){document.getElementById('inflowRangeBody').innerHTML='<tr><td colspan="6"><div class="empty">시작일·종료일을 선택하세요.</div></td></tr>';document.getElementById('ir_count').textContent='';return;}
+  if(!from||!to){document.getElementById('inflowRangeBody').innerHTML='<tr><td colspan="7"><div class="empty">시작일·종료일을 선택하세요.</div></td></tr>';document.getElementById('ir_count').textContent='';const s0=document.getElementById('ir_sum');if(s0)s0.innerHTML='';return;}
   const rows=inflowRangeRows();
   let tot=0;
-  const body=rows.map(r=>{tot+=r.amt;return `<tr><td style="white-space:nowrap">${esc(r.ymd)}</td><td style="font-size:10.5px;color:var(--muted)">${esc(r.g)}</td><td style="text-align:left" title="${esc(r.n)}">${esc(r.n)}</td><td class="n">${iN(r.qty)}</td><td class="n">${iN(r.pr)}</td><td class="n">${iN(r.amt)}</td></tr>`;}).join('');
-  document.getElementById('inflowRangeBody').innerHTML=body?body+`<tr style="background:#eef2f6;font-weight:800"><td colspan="5">합계</td><td class="n">${iN(tot)}</td></tr>`:`<tr><td colspan="6"><div class="empty">해당 기간에 입고 기록이 없습니다.</div></td></tr>`;
+  const body=rows.map(r=>{tot+=r.amt;return `<tr${r.sec==='out'?' style="background:#f8fafc;color:#475569"':''}><td style="white-space:nowrap">${esc(r.ymd)}</td><td>${invVendBadge(r.code)}</td><td style="font-size:10.5px;color:var(--muted)">${esc(r.g)}</td><td style="text-align:left" title="${esc(r.n)}">${esc(r.n)}</td><td class="n">${iN(r.qty)}</td><td class="n">${iN(r.pr)}</td><td class="n">${iN(r.amt)}</td></tr>`;}).join('');
+  // 업체별 소계(현재 표시 중인 행 기준) + 우리 매출/타사
+  const by={};rows.forEach(r=>{const o=by[r.vend]=by[r.vend]||{n:0,a:0,sec:r.sec};o.n++;o.a+=r.amt;});
+  const ours=rows.filter(r=>r.sec==='main'||r.sec==='direct').reduce((s,r)=>s+r.amt,0),oth=rows.filter(r=>r.sec==='out').reduce((s,r)=>s+r.amt,0),rh=rows.filter(r=>r.sec==='rhf').reduce((s,r)=>s+r.amt,0);
+  const sub=Object.keys(by).sort((a,b)=>by[b].a-by[a].a).map(k=>`<tr style="background:#f8fafc;font-size:11.5px"><td colspan="6" style="text-align:right;color:#475569">${esc(k)} ${by[k].n}건 소계</td><td class="n">${iN(by[k].a)}</td></tr>`).join('');
+  document.getElementById('inflowRangeBody').innerHTML=body?body+sub
+    +`<tr style="background:#dbeafe;font-weight:800"><td colspan="6">★ 동국R&amp;S 매출합계 (일반+직매출)</td><td class="n">${iN(ours)}</td></tr>`
+    +(oth?`<tr style="background:#e5e7eb;font-weight:800"><td colspan="6">타사 입고 (매출 미포함)</td><td class="n">${iN(oth)}</td></tr>`:'')
+    +(rh?`<tr style="background:#ffedd5;font-weight:800"><td colspan="6">형강가열로</td><td class="n">${iN(rh)}</td></tr>`:'')
+    +`<tr style="background:#eef2f6;font-weight:800"><td colspan="6">합계 (표시 중인 전체)</td><td class="n">${iN(tot)}</td></tr>`:`<tr><td colspan="7"><div class="empty">해당 기간에 입고 기록이 없습니다.</div></td></tr>`;
   document.getElementById('ir_count').textContent=rows.length+'건';
+  // 업체별 요약 칩 — 업체 필터와 무관하게 이 기간 전체를 보여 주고, 누르면 그 업체만 조회
+  const all=inflowRangeRows(true),B={};all.forEach(r=>{const o=B[r.vend]=B[r.vend]||{n:0,a:0,sec:r.sec};o.n++;o.a+=r.amt;});
+  const aOurs=all.filter(r=>r.sec==='main'||r.sec==='direct').reduce((s,r)=>s+r.amt,0),aOut=all.filter(r=>r.sec==='out').reduce((s,r)=>s+r.amt,0);
+  const cur=(document.getElementById('ir_vend')||{}).value||'';
+  const chip=(lab,sub,v,hl)=>`<div onclick="irVend('${v}')" style="cursor:pointer;border:2px solid ${cur===v?'#2563eb':'#e2e8f0'};background:${hl?'#eff6ff':'#fff'};border-radius:10px;padding:5px 12px"><div style="font-size:11px;color:#64748b">${lab}</div><div style="font-weight:800;font-size:14px">${sub}</div></div>`;
+  const ordr=Object.keys(B).sort((a,b)=>B[b].a-B[a].a);
+  const s=document.getElementById('ir_sum');
+  if(s)s.innerHTML=all.length?chip('전체',iN(aOurs+aOut+all.filter(r=>r.sec==='rhf').reduce((x,r)=>x+r.amt,0))+'원','',false)+chip('★ 동국R&S 매출',iN(aOurs)+'원','ours',true)+chip('타사 합계',iN(aOut)+'원','out',false)
+    +ordr.map(k=>chip(k+' · '+B[k].n+'건',iN(B[k].a)+'원',k==='동국R&S'?'cat:일반':k==='직매출'?'cat:직매출':k==='형강가열로'?'rhf':'cat:'+k,false)).join(''):'';
 }
 function downloadInflowRange(){
   const from=document.getElementById('ir_from').value,to=document.getElementById('ir_to').value;
   const rows=inflowRangeRows().slice().sort((a,b)=>a.ymd.localeCompare(b.ymd));
-  let t=`<table><tr><th>일자</th><th>설비</th><th>품명</th><th>입고량</th><th>단가</th><th>입고금액</th></tr>`;
-  rows.forEach(r=>{t+=`<tr><td>${esc(r.ymd)}</td><td>${esc(r.g)}</td><td>${esc(r.n)}</td><td>${r.qty}</td><td>${r.pr}</td><td>${r.amt}</td></tr>`;});
+  let t=`<table><tr><th>일자</th><th>업체·구분</th><th>매출합계</th><th>설비</th><th>품명</th><th>입고량</th><th>단가</th><th>입고금액</th></tr>`;
+  rows.forEach(r=>{t+=`<tr><td>${esc(r.ymd)}</td><td>${esc(r.vend)}</td><td>${(r.sec==='main'||r.sec==='direct')?'포함':'미포함'}</td><td>${esc(r.g)}</td><td>${esc(r.n)}</td><td>${r.qty}</td><td>${r.pr}</td><td>${r.amt}</td></tr>`;});
   t+=`</table>`;downloadXls('내화물_기간별입고_'+(from||'')+'_'+(to||''),t);
+}
+/* ===== 2026-10-23 (rpt128): 입고량 조회 — 업체(매출 구분)별 구분·필터·소계 ===== */
+function invVendLabel(code){const s=invSalesSec(code),inf=invSalesInfo(code);return s==='rhf'?'형강가열로':(s==='out'?inf.cat:(inf.cat==='직매출'?'직매출':'동국R&S'));}
+function invVendHit(code,v){
+  if(!v)return true;const s=invSalesSec(code),inf=invSalesInfo(code);
+  if(v==='ours')return s==='main'||s==='direct';
+  if(v==='out')return s==='out';
+  if(v==='rhf')return s==='rhf';
+  if(v.startsWith('cat:')){const c=v.slice(4);return s!=='rhf'&&((c==='일반')?(s==='main'):(inf.cat===c));}
+  return true;
+}
+function invVendBadge(code){
+  const s=invSalesSec(code),lab=invVendLabel(code);
+  const col=s==='main'?['#e0f2fe','#075985']:s==='direct'?['#ede9fe','#5b21b6']:s==='rhf'?['#ffedd5','#9a3412']:['#e5e7eb','#374151'];
+  return `<span style="background:${col[0]};color:${col[1]};border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:800;white-space:nowrap">${esc(lab)}${s==='out'?' · 미포함':''}</span>`;
 }
 const iN=n=>Math.round(n).toLocaleString();
 const iU=n=>(Math.abs(n)>=100?n.toFixed(0):n.toFixed(2));
@@ -27718,7 +27757,7 @@ function psLinkOne(i){
   scLink(i,pid);delete PS.selU[i];psRender();
 }
 function psPlanOne(pid){pmPlanOpen(pid);const w=setInterval(()=>{if(!document.getElementById('pmPlanDlg')){clearInterval(w);try{psRender();}catch(e){}}},400);}
-const APP_VERSION = "2026.10.23.rpt127";
+const APP_VERSION = "2026.10.23.rpt128";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
