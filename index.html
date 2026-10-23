@@ -1910,7 +1910,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <button class="btn primary" id="pm_save" onclick="saveProdMaster()" style="display:none">💾 저장</button>
     </div>
     <div class="toolrow">
-      <span class="ddw"><button class="btn primary" title="새 품목을 등록합니다" onclick="ddT(this,event)">＋ 등록 ▾</button><div class="ddm"><button class="ddi" onclick="addProd()">＋ 제품 한 줄 추가<small>마스터에만 빈 행을 추가합니다</small></button><button class="ddi" onclick="ncOpen()">⚡ 신규 품목(원스텝)<small>품명·자재코드·규격·단중·단가를 한 번 입력 → 원단위+마스터+연동+자재코드 동시 생성</small></button></div></span><span class="ddw"><button class="btn primary" title="점검·연결·누락 조회를 모았습니다" onclick="ddT(this,event)">📋 점검·연결 ▾</button><div class="ddm"><div class="ddh">기준 점검 (자재코드 기준)</div><button class="ddi" onclick="scOpen('0')">📋 내화물 기준 점검<small>마스터 → 원단위 → 물량표 → 사업계획 연결·단가를 한 화면에서 점검</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>코드별로 계획·마스터·원단위가 모두 있는지 확인·연결</small></button><button class="ddi" onclick="scOpen('6')">💲 Q코드 단가 변경<small>같은 자재코드의 모든 규격 단가를 한 번에 변경</small></button><div class="ddh">누락·빈칸 채우기</div><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>사업계획·물량표·원단위에는 있는데 마스터에 없는 품목 조회·추가</small></button><button class="ddi" onclick="invImportMissingToMaster()">⬇ 원단위 누락품목 일괄 가져오기<small>원단위에만 있는 품목을 단가와 함께 마스터로 한 번에 가져와 연동</small></button><button class="ddi" onclick="bulkFillQcodeFromInv()">🔄 자재코드 일괄채우기<small>제품명은 있고 자재코드가 빈 품목을 원단위 코드로 채움</small></button><div class="ddh">분류</div><button class="ddi" onclick="supOpen()">🏷 납품업체 구분<small>동국R&amp;S 납품 / 타사 납품(업체별)을 품명 단위로 지정</small></button></div></span><span class="ddw"><button class="btn" title="단가 파일·엑셀" onclick="ddT(this,event)">📤 단가·엑셀 ▾</button><div class="ddm"><button class="ddi" onclick="exportPriceCSV()">📤 단가양식 내보내기<small>단가 수정용 CSV 양식(엑셀에서 편집)</small></button><button class="ddi" onclick="document.getElementById('priceFile').click()">📥 단가일괄수정 (단가변동 파일 반영)<small>CSV(단가양식 편집본) 또는 동국제강 단가조정 세부내역 엑셀(.xlsx)을 형식에 맞게 자동 반영</small></button><button class="ddi" onclick="downloadProd()">📥 전체 엑셀<small>품목마스터 전체를 엑셀로 내려받기</small></button></div></span><span class="ddw"><button class="btn danger" id="pm_delMenu" title="삭제·정리·새로고침" onclick="ddT(this,event)">🗑 정리 ▾</button><div class="ddm"><button class="ddi dng" id="pm_bulkdel" disabled style="opacity:.5" onclick="bulkDelProd()">🗑 선택 삭제 (0)<small>체크한 제품을 한 번에 삭제(재조회 불가)</small></button><button class="ddi dng" onclick="delUnusedProd()">🗑 미사용 정리<small>미사용(사용여부 0) 제품을 한 번에 삭제</small></button><hr><button class="ddi" onclick="renderProdMaster()">🔄 새로고침<small>이름순 재정렬·다시 조회</small></button></div></span>
+      <span class="ddw"><button class="btn primary" title="새 품목을 등록합니다" onclick="ddT(this,event)">＋ 등록 ▾</button><div class="ddm"><button class="ddi" onclick="addProd()">＋ 제품 한 줄 추가<small>마스터에만 빈 행을 추가합니다</small></button><button class="ddi" onclick="ncOpen()">⚡ 신규 품목(원스텝)<small>품명·자재코드·규격·단중·단가를 한 번 입력 → 원단위+마스터+연동+자재코드 동시 생성</small></button></div></span><span class="ddw"><button class="btn primary" title="점검·연결·누락 조회를 모았습니다" onclick="ddT(this,event)">📋 점검·연결 ▾</button><div class="ddm"><div class="ddh">기준 점검 (자재코드 기준)</div><button class="ddi" onclick="psOpen('sync')">🔗 사업계획 ↔ 마스터 연결 센터<small>연결된 계획 품명·규격을 마스터와 동일하게 표시 · 미연결 계획 품목/마스터 전체 연결</small></button><button class="ddi" onclick="scOpen('0')">📋 내화물 기준 점검<small>마스터 → 원단위 → 물량표 → 사업계획 연결·단가를 한 화면에서 점검</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>코드별로 계획·마스터·원단위가 모두 있는지 확인·연결</small></button><button class="ddi" onclick="scOpen('6')">💲 Q코드 단가 변경<small>같은 자재코드의 모든 규격 단가를 한 번에 변경</small></button><div class="ddh">누락·빈칸 채우기</div><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>사업계획·물량표·원단위에는 있는데 마스터에 없는 품목 조회·추가</small></button><button class="ddi" onclick="invImportMissingToMaster()">⬇ 원단위 누락품목 일괄 가져오기<small>원단위에만 있는 품목을 단가와 함께 마스터로 한 번에 가져와 연동</small></button><button class="ddi" onclick="bulkFillQcodeFromInv()">🔄 자재코드 일괄채우기<small>제품명은 있고 자재코드가 빈 품목을 원단위 코드로 채움</small></button><div class="ddh">분류</div><button class="ddi" onclick="supOpen()">🏷 납품업체 구분<small>동국R&amp;S 납품 / 타사 납품(업체별)을 품명 단위로 지정</small></button></div></span><span class="ddw"><button class="btn" title="단가 파일·엑셀" onclick="ddT(this,event)">📤 단가·엑셀 ▾</button><div class="ddm"><button class="ddi" onclick="exportPriceCSV()">📤 단가양식 내보내기<small>단가 수정용 CSV 양식(엑셀에서 편집)</small></button><button class="ddi" onclick="document.getElementById('priceFile').click()">📥 단가일괄수정 (단가변동 파일 반영)<small>CSV(단가양식 편집본) 또는 동국제강 단가조정 세부내역 엑셀(.xlsx)을 형식에 맞게 자동 반영</small></button><button class="ddi" onclick="downloadProd()">📥 전체 엑셀<small>품목마스터 전체를 엑셀로 내려받기</small></button></div></span><span class="ddw"><button class="btn danger" id="pm_delMenu" title="삭제·정리·새로고침" onclick="ddT(this,event)">🗑 정리 ▾</button><div class="ddm"><button class="ddi dng" id="pm_bulkdel" disabled style="opacity:.5" onclick="bulkDelProd()">🗑 선택 삭제 (0)<small>체크한 제품을 한 번에 삭제(재조회 불가)</small></button><button class="ddi dng" onclick="delUnusedProd()">🗑 미사용 정리<small>미사용(사용여부 0) 제품을 한 번에 삭제</small></button><hr><button class="ddi" onclick="renderProdMaster()">🔄 새로고침<small>이름순 재정렬·다시 조회</small></button></div></span>
       <input type="file" id="priceFile" accept=".csv,.xlsx,text/csv" style="display:none" onchange="importPriceAny(this)">
       <span class="spacer"></span>
       <span id="pm_hint" style="font-size:11.5px;color:var(--muted)"></span>
@@ -3133,7 +3133,7 @@ service cloud.firestore {
     <div class="subpanel" id="isp-master">
       <div class="toolrow">
         <input class="search" id="invm_search" placeholder="품명·코드·원가보고서 분류 검색" oninput="renderInvMaster()">
-        <span class="ddw"><button class="btn" title="분류 보기·자동분류" onclick="ddT(this,event)">🏷 분류 ▾</button><div class="ddm"><button class="ddi" onclick="openInvCostCatFilterPicker()">🏷 분류로 모아보기<small>원가보고서 분류를 선택해 그 분류(설비) 품목만 모아 봄</small></button><button class="ddi" onclick="invAutoCatAll(true)">🏷 미지정 자동분류<small>분류가 비었거나 목록에 없는 품목을 품명으로 자동 지정(직접 지정값 유지)</small></button></div></span><span class="ddw"><button class="btn primary" title="품목 등록" onclick="ddT(this,event)">＋ 등록 ▾</button><div class="ddm"><button class="ddi" onclick="ncOpen()">⚡ 신규 품목(원스텝)<small>원단위 + 품목마스터 + 자재코드 연동을 한 번에 등록</small></button><button class="ddi" onclick="addInvItem()">＋ 원단위 품목만 추가<small>원단위에만 빈 품목 추가(마스터 연동 없음)</small></button></div></span><span class="ddw"><button class="btn primary" title="점검·연결" onclick="ddT(this,event)">📋 점검·연결 ▾</button><div class="ddm"><button class="ddi" onclick="scOpen('0')">📋 내화물 기준 점검<small>마스터 ↔ 원단위 ↔ 물량표 ↔ 사업계획 연결·단가 점검</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>코드별 계획·마스터·원단위 존재 여부 확인·연결</small></button><button class="ddi" onclick="scOpen('6')">💲 Q코드 단가 변경<small>같은 자재코드의 모든 규격 단가를 한 번에 변경</small></button><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>원단위에는 있고 마스터에 없는 품목 조회·추가</small></button></div></span>
+        <span class="ddw"><button class="btn" title="분류 보기·자동분류" onclick="ddT(this,event)">🏷 분류 ▾</button><div class="ddm"><button class="ddi" onclick="openInvCostCatFilterPicker()">🏷 분류로 모아보기<small>원가보고서 분류를 선택해 그 분류(설비) 품목만 모아 봄</small></button><button class="ddi" onclick="invAutoCatAll(true)">🏷 미지정 자동분류<small>분류가 비었거나 목록에 없는 품목을 품명으로 자동 지정(직접 지정값 유지)</small></button></div></span><span class="ddw"><button class="btn primary" title="품목 등록" onclick="ddT(this,event)">＋ 등록 ▾</button><div class="ddm"><button class="ddi" onclick="ncOpen()">⚡ 신규 품목(원스텝)<small>원단위 + 품목마스터 + 자재코드 연동을 한 번에 등록</small></button><button class="ddi" onclick="addInvItem()">＋ 원단위 품목만 추가<small>원단위에만 빈 품목 추가(마스터 연동 없음)</small></button></div></span><span class="ddw"><button class="btn primary" title="점검·연결" onclick="ddT(this,event)">📋 점검·연결 ▾</button><div class="ddm"><button class="ddi" onclick="psOpen('sync')">🔗 사업계획 ↔ 마스터 연결 센터<small>연결된 계획 품명·규격을 마스터와 동일하게 표시 · 미연결 계획 품목/마스터 전체 연결</small></button><button class="ddi" onclick="scOpen('0')">📋 내화물 기준 점검<small>마스터 ↔ 원단위 ↔ 물량표 ↔ 사업계획 연결·단가 점검</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>코드별 계획·마스터·원단위 존재 여부 확인·연결</small></button><button class="ddi" onclick="scOpen('6')">💲 Q코드 단가 변경<small>같은 자재코드의 모든 규격 단가를 한 번에 변경</small></button><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>원단위에는 있고 마스터에 없는 품목 조회·추가</small></button></div></span>
         <button class="btn primary" style="display:none" onclick="saveInvMasterAll()">💾 저장</button>
         <button class="btn" onclick="downloadInvMaster()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:11.5px;color:var(--muted)">설비·품명·단가·단위는 입력 즉시 자동 저장됩니다 · 내화물 기본정보와 연동시 단가 자동 동기화</span>
@@ -3834,7 +3834,7 @@ service cloud.firestore {
         </select>
         <select class="selbox" id="bizplanAmtUnitSel" onchange="bizplanAmtUnit=this.value;renderBizplanItems()" title="3줄 보기의 금액 단위"><option value="won">금액 원</option><option value="k">금액 천원</option></select>
         <button class="btn" onclick="downloadBizplanExcel()">📥 엑셀</button>
-        <span class="ddw"><button class="btn primary" title="품목마스터·자재코드 연동" onclick="ddT(this,event)">🔗 마스터 연동 ▾</button><div class="ddm"><button class="ddi" onclick="bpMasterOpen()">📥 품목마스터 기준 불러오기<small>규격·단중·단가를 품목마스터 값과 비교해 불러옴</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>계획 품목에 자재코드를 연결하고 빠진 곳 확인</small></button><button class="ddi" onclick="scOpen('0')">📋 기준 점검 (2026·2027 연동)<small>사업계획 연동·단가 점검</small></button><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>계획에는 있고 마스터에 없는 품목 조회·추가</small></button></div></span>
+        <span class="ddw"><button class="btn primary" title="품목마스터·자재코드 연동" onclick="ddT(this,event)">🔗 마스터 연동 ▾</button><div class="ddm"><button class="ddi" onclick="psOpen('sync')">🔗 사업계획 ↔ 마스터 연결 센터<small>연결된 계획 품명·규격을 마스터와 동일하게 표시 · 미연결 계획 품목/마스터 전체 연결</small></button><button class="ddi" onclick="bpMasterOpen()">📥 품목마스터 기준 불러오기<small>규격·단중·단가를 품목마스터 값과 비교해 불러옴</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>계획 품목에 자재코드를 연결하고 빠진 곳 확인</small></button><button class="ddi" onclick="scOpen('0')">📋 기준 점검 (2026·2027 연동)<small>사업계획 연동·단가 점검</small></button><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>계획에는 있고 마스터에 없는 품목 조회·추가</small></button></div></span>
         <button class="btn" onclick="bizplanItemDlg()" title="새 품목(설비·품명·규격·단중·단가)을 추가합니다">＋ 품목 추가</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="bizplanItemCount"></span>
       </div>
@@ -6634,7 +6634,7 @@ function renderProdMaster(){
        <button type="button" class="btn sm" style="margin-top:2px;font-size:10px;padding:1px 5px;white-space:nowrap" onclick="fetchQcodeForRow(${i})" title="이 행의 고객사 제품명에 해당하는 자재코드를 [내화물 원단위] 목록에서 다시 불러옵니다(새 품목을 하나씩 추가할 때 사용)">🔄 불러오기</button>
        ${qcodeBadge(p)}${(()=>{const d=pmDupqOf(p);if(!d)return '';const bad=d.k.filter(t=>t!=='share');if(!bad.length)return '';const L={dup:'제품 중복',conf:'코드 충돌',split:'코드 불일치',id:'ID 중복',spec:'규격·단중 동일'};return `<div style="margin-top:2px;font-size:10px;color:#dc2626;font-weight:700;cursor:help" title="${esc(d.msg.filter(x=>!x.startsWith('자재코드 공유')).join(' / '))}">🔁 ${bad.map(t=>L[t]).join('·')}</div>`;})()}</td>
      <td><input value="${esc(p.mix||'')}" style="width:100%;min-width:140px" placeholder="배합·재질" oninput="editProd(${i},'mix',this.value)"></td>
-     <td><input value="${esc(p.spec||'')}" style="width:100%;min-width:160px" oninput="editProd(${i},'spec',this.value)"></td>
+     <td><input value="${esc(p.spec||'')}" style="width:100%;min-width:160px" oninput="editProd(${i},'spec',this.value)">${pmPlanChip(p)}</td>
      <td class="n"><input type="number" value="${p.uw||''}" style="width:64px;text-align:right" oninput="editProd(${i},'uw',this.value)"></td>
      <td><select onchange="editProd(${i},'unit',this.value)" style="font-size:11px" title="중량단가=단중×수량×단가 / 수량단가=수량×단가">
         <option value="kg"${(p.unit||'kg')==='kg'?' selected':''}>중량(원/kg)</option><option value="ea"${p.unit==='ea'?' selected':''}>수량(원/개)</option></select></td>
@@ -15594,7 +15594,7 @@ function scPlan(year){
     const pid=(NFA._pl||{})[i],lp=pid?prodById(pid):null;
     let t={qty:0,wt:0,amt:0};try{t=bizplanItemTotal(i,year);}catch(e){}
     const a={name:it.name||'',spec:it.spec==null?'':String(it.spec),uw:+it.uw||0,price:+it.price||0,cat:lkCatB(it.eq)};
-    const r={i,eq:it.eq,name:it.name,spec:a.spec,uw:a.uw,qty:t.qty,wt:t.wt,amt:t.amt,lp,pid,a};
+    const r={i,eq:it.eq,name:bpDN(it),spec:(bpDS(it)==null?'':String(bpDS(it))),uw:a.uw,qty:t.qty,wt:t.wt,amt:t.amt,lp,pid,a};
     if(lp){const lf=lkMf(lp);const c=lkChk(a,lf,lkScore(a,lf));r.chk=c;r.mn=lp.name+(lp.spec?' '+lp.spec:'');r.mspec=lp.spec||'';r.muw=+lp.uw||0;r.q=lp.qcode||'';
       const qc=String(lp.qcode||'').trim(),inv=(invByPid[pid]||[]).slice();
       if(qc)INV_MASTER.forEach(m=>{if(m.c&&m.c===qc&&!inv.some(x=>x.c===m.c))inv.push(m);});   // 자재코드(Q코드)가 같은 원단위 = 연결
@@ -15640,12 +15640,12 @@ function scPickQc(i){
   INV_MASTER.slice().sort((a,b)=>String(a.n).localeCompare(String(b.n),'ko')).forEach(m=>{if(!m.c)return;seen.add(m.c);items.push({v:m.c,no:'🏷',label:m.c+' · '+m.n+(m.g?' ['+m.g+']':'')+' · 마스터 '+(cnt[m.c]||0)+'건'+((cnt[m.c]||0)?'':' (마스터에 없음)')});});
   Object.keys(cnt).filter(q=>!seen.has(q)).sort().forEach(q=>{const p=prodData.find(x=>x.use!==0&&String(x.qcode||'').trim()===q);items.push({v:q,no:'🏷',label:q+' · '+(p?p.name+' '+(p.spec||''):'')+' · 마스터 '+cnt[q]+'건 (원단위에 없음)'});});
   const cur=planQcInfo(i).c;
-  openPicker('🏷 자재코드 지정 — 원단위·마스터 코드 중에서 선택','사업계획 품목: '+it.name+(it.spec?' '+it.spec:'')+(cur?' · 현재 '+cur:'')+' · 코드/품명으로 검색하세요',items,cur,c=>{
+  openPicker('🏷 자재코드 지정 — 원단위·마스터 코드 중에서 선택','사업계획 품목: '+bpDN(it)+(bpDS(it)?' '+bpDS(it):'')+(cur?' · 현재 '+cur:'')+' · 코드/품명으로 검색하세요',items,cur,c=>{
     if(!c)return;const r=planQcApply(i,c);
     toast(r==='nomaster'?'코드 '+c+' 를 확정했습니다 — 단, 품목마스터에 이 코드의 품목이 없습니다(마스터에 등록 필요)':r==='multi'?'코드 '+c+' 확정 · 같은 코드 마스터가 여럿이라 가장 비슷한 품목에 연결했습니다(필요하면 🔗 연결 변경)':r==='kept'?'코드 '+c+' 확정 (기존 마스터 연결 유지)':'코드 '+c+' 확정 · 해당 마스터에 연결했습니다');
     planQcDone();});
 }
-function scClearQc(i){const it=BIZPLAN_ITEMS_SEED[i];if(!it)return;if(!confirm('\''+it.name+' '+(it.spec||'')+'\' 의 확정 자재코드를 해제할까요?\n(마스터 연결은 그대로 두고, 확정 코드만 지웁니다 — 연결된 마스터가 있으면 그 코드가 회색으로 표시됩니다)'))return;planQcApply(i,'');planQcDone();toast('확정 코드를 해제했습니다');}
+function scClearQc(i){const it=BIZPLAN_ITEMS_SEED[i];if(!it)return;if(!confirm('\''+bpDN(it)+' '+(bpDS(it)||'')+'\' 의 확정 자재코드를 해제할까요?\n(마스터 연결은 그대로 두고, 확정 코드만 지웁니다 — 연결된 마스터가 있으면 그 코드가 회색으로 표시됩니다)'))return;planQcApply(i,'');planQcDone();toast('확정 코드를 해제했습니다');}
 function scQcAll(year){
   const R=scPlan(year||'2026').filter(r=>r.st!=='skip');
   const conf=[],rel=[],mis=[],noM=[],un=[];
@@ -15676,24 +15676,24 @@ function scSkipPlan(i,on){const m=lkSkipMap();if(on)m['B|'+i]=1;else delete m['B
 function scSkipZero(year){const R=scPlan(year||'2026').filter(r=>r.st==='none'&&!(r.qty>0)&&!(r.amt>0));if(!R.length){toast('수량이 없는 미연결 품목이 없습니다');return;}
   if(!confirm('계획 수량·금액이 0이고 마스터에 연결되지 않은 품목 '+R.length+'건을 [연결 제외]로 분리합니다.\n(사업계획 표에는 그대로 남고, 미연결 점검 집계에서만 빠집니다. 나중에 [제외 해제]로 되돌릴 수 있습니다.)\n\n'+R.slice(0,10).map(r=>'· '+r.name+' '+r.spec).join('\n')+(R.length>10?'\n… 외 '+(R.length-10)+'건':'')))return;
   const m=lkSkipMap();R.forEach(r=>{m['B|'+r.i]=1;});lkSkipSave(m);try{flashSave();}catch(e){}toast('수량 없는 미연결 '+R.length+'건을 연결 제외로 분리했습니다');try{lkRefreshIfOpen();}catch(e){}scRender();}
-function scUnlinkPlan(i){const it=BIZPLAN_ITEMS_SEED[i];if(!confirm('\''+(it?it.name+' '+(it.spec||''):'')+'\' 의 마스터 연결을 해제할까요?\n(사업계획 수량·금액은 바뀌지 않습니다)'))return;nfaSetLink(i,'');try{bizplanSetItemField(i,{qc:''});BIZPLAN_ITEMS_SEED[i].qc='';bizplanItemsPersist();bizplanItemsChanged();}catch(e){}scRender();}
+function scUnlinkPlan(i){const it=BIZPLAN_ITEMS_SEED[i];if(!confirm('\''+(it?bpDN(it)+' '+(bpDS(it)||''):'')+'\' 의 마스터 연결을 해제할까요?\n(사업계획 수량·금액은 바뀌지 않습니다)'))return;nfaSetLink(i,'');try{bizplanSetItemField(i,{qc:''});BIZPLAN_ITEMS_SEED[i].qc='';bizplanItemsPersist();bizplanItemsChanged();}catch(e){}scRender();}
 function scEditPlan(i){bizplanItemDlg({idx:i});}
 function scFixUw(i){const r=scPlan('2026').find(x=>x.i===i);if(!r||!r.lp||!(r.muw>0))return;const it=BIZPLAN_ITEMS_SEED[i];
-  if(!confirm('사업계획 「'+it.name+' '+(it.spec||'')+'」 단중을 '+(it.uw||0)+'kg → 마스터 단중 '+r.muw+'kg 으로 바꿉니다.\n(계획 수량은 그대로, 중량·금액 계산이 바뀔 수 있습니다) 진행할까요?'))return;
+  if(!confirm('사업계획 「'+bpDN(it)+' '+(bpDS(it)||'')+'」 단중을 '+(it.uw||0)+'kg → 마스터 단중 '+r.muw+'kg 으로 바꿉니다.\n(계획 수량은 그대로, 중량·금액 계산이 바뀔 수 있습니다) 진행할까요?'))return;
   bizplanSetItemField(i,{uw:r.muw});bizplanItemsPersist();bizplanItemsChanged();toast('단중을 마스터 기준으로 맞췄습니다');}
 function scDelPlan(i){
   const it=BIZPLAN_ITEMS_SEED[i];if(!it)return;
   if(it.custom){bizplanItemDelete(i);scRender();return;}
   let q=0,a=0;['2026','2027'].forEach(y=>{try{const t=bizplanItemTotal(i,y);q+=t.qty||0;a+=t.amt||0;}catch(e){}});
-  if(q>0||a>0){alert('\''+it.name+' '+(it.spec||'')+'\' 은(는) 계획 수량·금액이 있는 기본 품목이라 삭제하면 합계가 바뀝니다.\n마스터에 맞는 품목이 없어 연결이 필요 없다면 [제외]를 사용해 주세요.');return;}
-  if(!confirm('\''+it.name+' '+(it.spec||'')+'\' 품목을 사업계획 목록에서 삭제(숨김)할까요?\n· 계획 수량·금액이 모두 0이라 합계는 바뀌지 않습니다.\n· [삭제한 품목 복원]에서 되돌릴 수 있습니다.'))return;
+  if(q>0||a>0){alert('\''+bpDN(it)+' '+(bpDS(it)||'')+'\' 은(는) 계획 수량·금액이 있는 기본 품목이라 삭제하면 합계가 바뀝니다.\n마스터에 맞는 품목이 없어 연결이 필요 없다면 [제외]를 사용해 주세요.');return;}
+  if(!confirm('\''+bpDN(it)+' '+(bpDS(it)||'')+'\' 품목을 사업계획 목록에서 삭제(숨김)할까요?\n· 계획 수량·금액이 모두 0이라 합계는 바뀌지 않습니다.\n· [삭제한 품목 복원]에서 되돌릴 수 있습니다.'))return;
   bizplanOv.itemOv=bizplanOv.itemOv||{};const x=bizplanOv.itemOv[i]=bizplanOv.itemOv[i]||{n:it.name};x.hide=true;bizplanItemsPersist();bizplanItemsChanged();scRender();toast('삭제(숨김) 처리했습니다');
 }
 function scRestorePlan(i){const x=(bizplanOv.itemOv||{})[i];if(x)delete x.hide;bizplanItemsPersist();bizplanItemsChanged();scRender();toast('복원했습니다');}
 function scPickPlan(i){
   const it=BIZPLAN_ITEMS_SEED[i];if(!it)return;
   const items=prodData.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','en')||(a.spec||'').localeCompare(b.spec||'','en')).map(p=>({v:p.id,no:'🔗',label:invLinkPickerLabel(p)+(p.use===0?' · (사용안함)':'')+' · '+Math.round(prodLivePrice(p)).toLocaleString()+'원',sub:''}));
-  openPicker('🔗 마스터 품목 선택','사업계획 품목: '+it.name+(it.spec?' '+it.spec:'')+' · 검색해서 선택하세요',items,'',pid=>{if(pid)scLink(i,pid);});
+  openPicker('🔗 마스터 품목 선택','사업계획 품목: '+bpDN(it)+(bpDS(it)?' '+bpDS(it):'')+' · 검색해서 선택하세요',items,'',pid=>{if(pid)scLink(i,pid);});
 }
 function scMakePlan(i){lkMake('B','B|'+i);scRender();}
 function scActual(){   // 2026 원단위 입고(판매실적 원천) ↔ 마스터
@@ -15830,7 +15830,7 @@ function scRender(){
       const g=grpS[q];
       rowsHtml+=`<tr><td colspan="12" style="background:#e0e7ff;padding:6px 8px;font-weight:800;font-size:12.5px">▌${SC_EQN[q]||q} — 표시 ${L.length}건 <span style="font-weight:500;color:#475569">(전체 ${g.n} · 미연결 ${g.none} · 원단위 코드 없음 ${g.noinv} · 규격·단중 확인 ${g.chk})</span></td></tr>`+L.map(rowH).join('');});
     const hid=[];BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(!it.custom&&it.del)hid.push([i,it]);});
-    const hideHtml=hid.length?`<div style="font-size:12px;color:#475569;margin-top:8px">삭제(숨김)한 기본 품목 ${hid.length}건 — ${hid.map(([i,it])=>esc(it.name+(it.spec?' '+it.spec:''))+' <button class="btn sm" style="font-size:10.5px;padding:1px 6px" onclick="scRestorePlan('+i+')">복원</button>').join(' · ')}</div>`:'';
+    const hideHtml=hid.length?`<div style="font-size:12px;color:#475569;margin-top:8px">삭제(숨김)한 기본 품목 ${hid.length}건 — ${hid.map(([i,it])=>esc(bpDN(it)+(bpDS(it)?' '+bpDS(it):''))+' <button class="btn sm" style="font-size:10.5px;padding:1px 6px" onclick="scRestorePlan('+i+')">복원</button>').join(' · ')}</div>`:'';
     const planHtml=`<div style="font-weight:800;margin:14px 0 4px">${yr}년 사업계획 품목 ↔ 마스터 ↔ 원단위 코드 <label style="font-weight:500;font-size:12px;margin-left:10px"><input type="checkbox" ${SC.only?'checked':''} onchange="scSet('only',this.checked)"> 확인 필요한 품목만</label> <label style="font-weight:500;font-size:12px;margin-left:6px"><input type="checkbox" ${SC.skip?'checked':''} onchange="scSet('skip',this.checked)"> 연결 제외 품목도 표시</label> <button class="btn primary sm" onclick="scQcAll('${yr}')" title="연결된 마스터의 자재코드를 계획 코드로 확정하고, 확정 코드와 마스터가 어긋난 품목은 코드 기준으로 다시 연결">🏷 자재코드로 일괄 연결·확정</button> <button class="btn sm" onclick="scSkipZero('${yr}')" title="계획 수량·금액이 0인 미연결 품목을 한 번에 [연결 제외]로 분리">− 수량 없는 미연결 일괄 제외</button>${SC.eq?` <button class="btn sm" onclick="scSet('eq','')">${SC_EQN[SC.eq]||SC.eq} 필터 해제</button>`:''}</div>
       <div style="font-size:12px;color:#475569;line-height:1.7;margin-bottom:6px">체인: 사업계획 품목 → 품목마스터(Q코드) → 원단위 자재코드. 미연결 품목은 설비별로 묶었고, 각 행에서 후보를 골라 바로 연결할 수 있습니다(<b>사업계획 수량·금액과 판매실적(원단위 입고 기준)은 바뀌지 않습니다.</b> 연결은 차월 판매예상(예상실적)의 예상 단가에만 쓰이며, 「차월 판매예상 반영」을 체크한 달에만 판매실적분석의 예상값에 들어갑니다). ${SC.tab==='3'?'<b>2027은 단가를 비교하지 않고</b> 연결과 규격·단중만 확인합니다.':'단가는 이 표에서 제외했습니다.'}</div>
       <table style="border-collapse:collapse;width:100%">${th(['#','사업계획 품명','규격','단중','연결 마스터','마스터 규격','마스터 단중','계획 자재코드','원단위 자재코드·품명',yr+' 수량','상태/메모','처리'])}${rowsHtml||'<tr><td colspan="12"><div class="empty">✔ 확인할 품목이 없습니다.</div></td></tr>'}</table>${hideHtml}`;
@@ -16007,7 +16007,8 @@ function scHtml7(){
     ${card('마스터에 없음',cnt('noM')+'개',cnt('noM'))}${card('원단위에 없음',cnt('noI')+'개',cnt('noI'))}
     ${card('사업계획 품목 없음',cnt('noP')+'개 (입고 있음 '+all.filter(x=>x.fl.some(y=>y[0]==='noP'&&y[2])).length+')',all.some(x=>x.fl.some(y=>y[0]==='noP'&&y[2])))}
     ${card('코드 없는 사업계획 품목',C.noCodePlan.length+'개',C.noCodePlan.length)}${card('코드 없는 마스터',C.noQ.length+'개',C.noQ.length)}${card('원단위 코드 빈칸',C.invBlank.length+'개',C.invBlank.length)}
-    ${card('품명이 서로 다른 품목이 한 코드',cnt('mix')+'개 — 코드 오입력 의심',cnt('mix'))}${card('대장(고객사 품명단가) 미등록',cnt('reg')+'개')}</div>`;
+    ${card('품명이 서로 다른 품목이 한 코드',cnt('mix')+'개 — 코드 오입력 의심',cnt('mix'))}${card('대장(고객사 품명단가) 미등록',cnt('reg')+'개')}</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px"><button class="btn primary" onclick="psOpen('sync')" title="연결이 확정된 사업계획 품목의 품명·규격을 품목마스터와 동일하게 표시합니다(금액·수량 영향 없음)">🔗 계획 품명·규격을 마스터와 동일하게</button><button class="btn" onclick="psOpen('unl')" title="마스터에 연결되지 않은 사업계획 품목을 전부 열어 직접 연결합니다">📋 미연결 계획 품목 전체 열기</button><button class="btn" onclick="psOpen('nop')" title="사업계획에 연결되지 않은 마스터를 전부 열어 연동합니다">📋 계획에 없는 마스터 전체 열기</button></div>`;
   const view=C.arr.filter(x=>SC7.f==='all'||(SC7.f==='issue'&&x.issue)||(SC7.f==='reg'&&x.fl.some(y=>y[0]==='reg'))||(SC7.f==='noP'&&x.fl.some(y=>y[0]==='noP'))||(SC7.f==='noI'&&x.fl.some(y=>y[0]==='noI'))||(SC7.f==='noM'&&x.fl.some(y=>y[0]==='noM'))||(SC7.f==='mix'&&x.fl.some(y=>y[0]==='mix')));
   const q=String(SC7.q||'').toLowerCase();
   const b=(l,fn,t,c)=>`<button class="btn sm" style="font-size:10.5px;padding:1px 6px;white-space:nowrap;${c||''}" onclick="${fn}" title="${t}">${l}</button>`;
@@ -16041,7 +16042,7 @@ function scHtml7(){
 }
 function sc7Filter(v){SC7.q=v;const q=String(v||'').toLowerCase();let n=0;document.querySelectorAll('#scBody tr.sc7r').forEach(r=>{const ok=!q||(r.dataset.h||'').indexOf(q)>=0;r.style.display=ok?'':'none';if(ok)n++;});const e=document.getElementById('sc7n');if(e)e.textContent=n+'건 표시';}
 function scPickPlanForCode(code){
-  const items=[];BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.del)return;const c=planQcInfo(i).c;items.push({v:String(i),no:'🏷',label:'#'+(i+1)+' '+(SC_EQN[it.eq]||it.eq)+' · '+it.name+(it.spec?' '+it.spec:'')+(c?' · 현재 코드 '+c:' · 코드 없음')});});
+  const items=[];BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.del)return;const c=planQcInfo(i).c;items.push({v:String(i),no:'🏷',label:'#'+(i+1)+' '+(SC_EQN[it.eq]||it.eq)+' · '+bpDN(it)+(bpDS(it)?' '+bpDS(it):'')+(c?' · 현재 코드 '+c:' · 코드 없음')});});
   openPicker('🏷 이 자재코드를 지정할 사업계획 품목','자재코드 '+code+' · 선택하면 이 코드를 확정하고 같은 코드의 마스터에 연결합니다',items,'',v=>{if(v==='')return;const r=planQcApply(+v,code);toast(r==='nomaster'?'코드 확정 — 단, 마스터에 이 코드 품목이 없습니다':'코드 '+code+' 확정 · 마스터 연결');planQcDone();});
 }
 function scMakeMasterFor(code){const m=invM.get(code);if(!m)return;if(!confirm('원단위 품목 「'+m.n+'」('+code+')으로 품목마스터를 새로 등록합니다.\n(규격·단중은 비어 있으니 등록 후 품목마스터에서 채워 주세요)'))return;
@@ -16217,7 +16218,7 @@ function lkPriceSrc(p){
     return codes.length?`마스터 ${px}원 ← ${codes.slice(0,3).join(' · ')}${codes.length>3?' 외 '+(codes.length-3)+'건':''} (원단위 입고 단가 기준)`:`마스터 ${px}원 ← 품목마스터 직접 입력${p.since?' ('+p.since+'부터)':''}`;}catch(e){return '';}
 }
 function lkLabel(p){const v=Math.round(prodLivePrice(p));return `${p.name}${p.spec?' · '+p.spec:''} (${v>0?v.toLocaleString()+'원':'단가 미입력'})`;}
-function lkBizName(it){return `${it.name||''}${it.spec!=null&&it.spec!==''?' '+it.spec:''}`;}
+function lkBizName(it){return `${bpDN(it)}${bpDS(it)!=null&&bpDS(it)!==''?' '+bpDS(it):''}`;}
 /* 2026-10-20 (rpt87): 내화물 기준 점검의 '계획 단가'는 2027 사업계획 단가(품목별 보정·V-1 반영 = 사업계획표에 보이는 값). 기본(2026 엑셀) 단가는 참고로만 병기 */
 const LK_PY='2027';
 function lkPlanPx(i){try{const v=bizplanBasePrice(i,LK_PY);if(v>0)return v;}catch(e){}const it=BIZPLAN_ITEMS_SEED[i];return +(it&&it.price)||0;}
@@ -16318,7 +16319,7 @@ function lkRowsB(pool){
     let chk=null;if(lp){const lf=lkMf(lp);chk=lkChk(a,lf,lkScore(a,lf));
       if(!prodSup(lp).own){chk.notes.unshift('타사 납품('+prodSup(lp).cat+') 제품에 연결됨 — 사업계획은 동국R&S 납품 제품만 연결합니다');if(chk.lv==='ok')chk.lv='warn';}
       if(AK['B|'+i]!=null&&AK['B|'+i]===lkAckSig('B',i)){chk.acked=true;chk.lv='ok';}}
-    out.push({skip:!lp&&!!SK['B|'+i],key:'B|'+i,tab:'B',idx:i,chk,cat:lkCatB(it.eq),name:it.name||'',sub:it.spec==null?'':String(it.spec),price:a.price,px26:+it.price||0,amt,linked:!!lp,cur:lp?lkLabel(lp):'',
+    out.push({skip:!lp&&!!SK['B|'+i],key:'B|'+i,tab:'B',idx:i,chk,cat:lkCatB(it.eq),name:bpDN(it)||'',sub:bpDS(it)==null?'':String(bpDS(it)),price:a.price,px26:+it.price||0,amt,linked:!!lp,cur:lp?lkLabel(lp):'',
       cands:(useWeak?r.weak:r.top).map(t=>({id:t.b.id,label:lkLabel(t.b.p),s:t.s,why:useWeak?['유사(참고) — 규격 단어만 겹침'].concat(t.why):t.why,mp:prodLivePrice(t.b.p)})),grade:useWeak?'weak':r.grade,it});
   });
   return out;
@@ -16642,13 +16643,13 @@ function lkManualSel(r){
   return `<div><select class="selbox" style="font-size:11px;max-width:420px" title="후보에 없으면 마스터 전체(${esc(r.cat||'전체')}·공통)에서 직접 선택 — 새로 등록하면 중복이 생길 수 있으니 먼저 여기서 찾아보세요" onchange="lkRelink('${esc(r.key)}',this.value)"><option value="">🔎 마스터에서 직접 선택… (${rows.length}개)</option>${rows.map(p=>`<option value="${esc(p.id)}">${esc(lkLabel(p))}</option>`).join('')}</select></div>`;
 }
 function lkX27(idx){const it=BIZPLAN_ITEMS_SEED[idx];if(!it)return;
-  if(!confirm(`'${it.name}${it.spec?' '+it.spec:''}' 품목을 2027 사업계획에서 제외할까요?\n\n· 2027년 이후 계획에서만 빠집니다(수량 0 · 목록·연결 점검에서 제외).\n· 2026년 계획·실적·전년비 비교는 그대로입니다.\n· 아래 [제외 품목]에서 언제든 복원할 수 있습니다.`))return;
+  if(!confirm(`'${bpDN(it)}${bpDS(it)?' '+bpDS(it):''}' 품목을 2027 사업계획에서 제외할까요?\n\n· 2027년 이후 계획에서만 빠집니다(수량 0 · 목록·연결 점검에서 제외).\n· 2026년 계획·실적·전년비 비교는 그대로입니다.\n· 아래 [제외 품목]에서 언제든 복원할 수 있습니다.`))return;
   bizplanX27Toggle(idx,true);lkRender();}
 function lkX27Box(){
   const ex=[];BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(!it.del&&bizplanX27(i,'2027'))ex.push(i);});
   if(!ex.length)return '';
   return `<details style="margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:12px"><summary style="cursor:pointer;font-weight:800">🗂 2027 사업계획 제외 품목 ${ex.length}개 <span style="font-weight:500;color:#64748b">— 26년 계획에는 있고 27년 계획에는 없는 품목 (26년 자료는 그대로)</span></summary>`
-   +ex.map(i=>{const it=BIZPLAN_ITEMS_SEED[i];return `<div style="margin:3px 0;display:flex;gap:8px;align-items:center"><span style="min-width:44px;color:#64748b">${esc(lkCatB(it.eq))}</span><b>${esc(it.name)}</b><span style="color:#475569">${esc(it.spec==null?'':String(it.spec))}</span><span style="flex:1"></span><button class="btn sm" onclick="bizplanX27Toggle(${i},false);lkRender()">복원</button></div>`;}).join('')+`</details>`;
+   +ex.map(i=>{const it=BIZPLAN_ITEMS_SEED[i];return `<div style="margin:3px 0;display:flex;gap:8px;align-items:center"><span style="min-width:44px;color:#64748b">${esc(lkCatB(it.eq))}</span><b>${esc(bpDN(it))}</b><span style="color:#475569">${esc(bpDS(it)==null?'':String(bpDS(it)))}</span><span style="flex:1"></span><button class="btn sm" onclick="bizplanX27Toggle(${i},false);lkRender()">복원</button></div>`;}).join('')+`</details>`;
 }
 async function lkRelink(key,pid){
   if(!pid)return;const tab=key.charAt(0);
@@ -22628,7 +22629,8 @@ function bizplanApplyItemOv(){
     it.price=(on&&x.price>0)?x.price:b.price;
     it.basis=(on&&x.basis)?x.basis:b.basis;
     it.uwm=(on&&x.uw>0)?undefined:b.uwm;
-    it._ov=on&&Object.keys(x).some(k=>k!=='n'&&k!=='qc'&&k!=='hide');   // 자재코드·숨김만 있는 항목은 '보정' 표시 제외
+    it.dn=(on&&x.dn)?String(x.dn):undefined;it.ds=(on&&'ds' in x&&x.ds!=null&&x.ds!=='')?x.ds:undefined;   // rpt127: 화면 표시용 품명·규격(마스터 기준) — 계산·매핑은 원래 품명·규격 그대로
+    it._ov=on&&Object.keys(x).some(k=>k!=='n'&&k!=='qc'&&k!=='hide'&&k!=='dn'&&k!=='ds');   // 자재코드·숨김만 있는 항목은 '보정' 표시 제외
     it.qc=(on&&x.qc)?String(x.qc):'';   // rpt122: 사업계획 품목의 자재코드(Q코드) — 확정값
     it.del=!!(on&&x.hide);   // 2026-10-22 (rpt118): 기본 품목 삭제(숨김) — 계획 수량이 없는 품목만 [내화물 기준 점검]에서 숨길 수 있음
   });
@@ -22663,7 +22665,7 @@ function bizplanItemsPersist(){
 function bizplanItemOvReset(idx){
   const it=BIZPLAN_ITEMS_SEED[idx];if(!it||it.custom)return;
   if(!confirm(`'${it.name}' 의 규격·단중·단가를 처음(엑셀 이관) 값으로 되돌릴까요?`))return;
-  if(bizplanOv.itemOv){const q=(bizplanOv.itemOv[idx]||{}).qc;delete bizplanOv.itemOv[idx];if(q)bizplanOv.itemOv[idx]={n:it.name,qc:q};}   // 확정 자재코드는 유지
+  if(bizplanOv.itemOv){const o0=bizplanOv.itemOv[idx]||{},q=o0.qc;delete bizplanOv.itemOv[idx];if(q||o0.dn||o0.ds!=null){const nx=bizplanOv.itemOv[idx]={n:it.name};if(q)nx.qc=q;if(o0.dn)nx.dn=o0.dn;if(o0.ds!=null)nx.ds=o0.ds;}}   // 확정 자재코드는 유지
   bizplanItemsPersist();bizplanItemsChanged();
 }
 function bpNzSpec(s){return String(s==null?'':s).toUpperCase().replace(/[\s\-_.]/g,'');}
@@ -22705,7 +22707,7 @@ function bpMasterRender(){
     const prOK=bizplanCurYear==='2026'&&r.ratio>=0.8&&r.ratio<=1.25;
     const pr=r.dPrice?cell(r,'p',true,prOK,num(r.a.price),num(r.mp),(r.ratio>=0.8&&r.ratio<=1.25)?` <small style="color:#64748b">${r.ratio>=1?'+':''}${((r.ratio-1)*100).toFixed(1)}%</small>`:` <span title="마스터 단가가 사업계획 단가와 20% 이상 다릅니다 — 단위(원/kg·원/개)가 다른 품목일 수 있습니다" style="color:#b91c1c;font-size:11px">⚠ ${Math.round((r.ratio-1)*100)}%</span>`):cell(r,'p',false,0,'',num(r.mp));
     return `<tr><td>${r.cand?`<label title="마스터와 아직 연결되지 않은 품목입니다. 체크하면 [${esc(r.grade==='sure'?'확실':'유력')}] 후보와 연결하고 값을 불러옵니다"><input type="checkbox" id="bpm_l_${r.i}" ${r.grade==='sure'?'checked':''}> 연결</label>`:'<span style="color:#16a34a;font-size:11px">연결됨</span>'}</td>
-      <td>${esc(r.it.eq)}</td><td style="font-weight:600">${esc(r.it.name||'')}${r.it._ov?' <span class="tag" style="font-size:10px" title="보정값 사용 중">보정</span>':''}</td>
+      <td>${esc(r.it.eq)}</td><td style="font-weight:600">${esc(bpDN(r.it)||'')}${r.it._ov?' <span class="tag" style="font-size:10px" title="보정값 사용 중">보정</span>':''}</td>
       <td style="font-size:12px">${esc(r.lp.name)} <span style="color:#64748b">${esc(r.lp.spec||'')}</span>${r.cand?` <span class="tag" style="font-size:10px;background:#dbeafe;color:#1d4ed8">${r.grade==='sure'?'확실':'유력'} 후보</span>`:''}</td>
       ${cell(r,'s',r.dSpec,!r.uwBig,esc(r.a.spec||'(없음)'),esc(r.mspec),r.uwBig?' <span title="단중이 3배 이상 다릅니다 — 포장 단위(포대/톤백 등)가 다른 품목에 잘못 연결됐을 수 있어 기본 해제했습니다. 내화물 기준 점검에서 연결을 먼저 확인하세요" style="color:#b91c1c;font-size:11px">⚠ 포장단위?</span>':'')}
       ${cell(r,'u',r.dUw,!r.uwm&&!r.uwBig,num(r.a.uw),num(r.mu),r.uwm?' <span title="이 품목은 월별 단중(엑셀 보정)이 있어 적용하면 월별 값이 단일 단중으로 바뀝니다" style="color:#b91c1c;font-size:11px">⚠ 월별단중</span>':'')}
@@ -23001,7 +23003,7 @@ function bizplanScItemOv(idx,year){
 }
 function bizplanScItemLabel(idx){
   const it=BIZPLAN_ITEMS_SEED[idx];if(!it)return '';
-  return (it.eq||'')+' · '+(it.name||'')+((it.spec!=null&&String(it.spec)!=='')?' · '+it.spec:'')+'  [#'+(idx+1)+']';
+  return (it.eq||'')+' · '+(bpDN(it)||'')+((bpDS(it)!=null&&String(bpDS(it))!=='')?' · '+bpDS(it):'')+'  [#'+(idx+1)+']';
 }
 function bizplanScItemEnsure(){
   const y=bizplanCurYear;if(!bizplanOv.priceScenario[y])bizplanOv.priceScenario[y]={q1:0,q2:0,q3:0,q4:0,on:false};
@@ -23374,13 +23376,13 @@ function renderBizplanPrice(){
   const col=v=>v>0?'#c81e1e':v<0?'#1d4ed8':'#64748b';
   const exRows=ex.map(r=>{const n=sc.items.indexOf(r),it=BIZPLAN_ITEMS_SEED[r.i],bp=bizplanBasePrice(r.i,y),p=+r.q1||0;
     const qs=[1,2,3,4].map(q=>+r['q'+q]||0),one=qs.every(v=>v===qs[0]);
-    return `<tr><td style="padding:5px 8px"><b>${esc(it.name||'')}</b> <span style="color:#64748b">${esc(it.spec==null?'':String(it.spec))}</span> <span style="color:#94a3b8;font-size:11px">${esc(it.eq||'')} #${r.i+1}</span></td>
+    return `<tr><td style="padding:5px 8px"><b>${esc(bpDN(it)||'')}</b> <span style="color:#64748b">${esc(bpDS(it)==null?'':String(bpDS(it)))}</span> <span style="color:#94a3b8;font-size:11px">${esc(it.eq||'')} #${r.i+1}</span></td>
       <td style="padding:5px 8px;text-align:right">${fmt(bp)}</td>
       <td style="padding:5px 8px">${one?`<input type="number" step="0.1" min="-10" max="10" class="selbox" style="width:80px" value="${p}" onchange="bpPxExSet(${n},this.value)"${dis}> %`:'<span style="color:#b45309">분기별 상이 (품목 탭에서 수정)</span>'}</td>
       <td style="padding:5px 8px;text-align:right;font-weight:700;color:${col(p)}">${one?fmt(bp*(1+p/100)):''}</td>
       <td style="padding:5px 8px;text-align:center">${p===0&&one?'<span style="background:#e2e8f0;border-radius:10px;padding:1px 8px;font-size:11px">단가 유지</span>':''}</td>
       <td style="padding:5px 8px">${ed?`<button class="btn sm" onclick="bpPxExDel(${n})">삭제</button>`:''}</td></tr>`;}).join('');
-  const resRows=rows.slice(0,60).map(r=>{const d=r.ts.amt-r.tb.amt;return `<tr style="${r.ex?'background:#fffbeb':''}"><td style="padding:4px 8px">${esc(r.it.name||'')} <span style="color:#64748b">${esc(r.it.spec==null?'':String(r.it.spec))}</span>${r.ex?' <span style="font-size:10.5px;color:#b45309">제외</span>':''}</td><td style="padding:4px 8px;text-align:right">${fmt(r.bp)}</td><td style="padding:4px 8px;text-align:right;color:${col(r.pct||0)};font-weight:700">${pc(r.pct)}</td><td style="padding:4px 8px;text-align:right">${m1(r.tb.amt)}</td><td style="padding:4px 8px;text-align:right">${m1(r.ts.amt)}</td><td style="padding:4px 8px;text-align:right;color:${col(d)}">${d?(d>0?'+':'')+(Math.round(d/1e5)/10).toLocaleString():'-'}</td></tr>`;}).join('');
+  const resRows=rows.slice(0,60).map(r=>{const d=r.ts.amt-r.tb.amt;return `<tr style="${r.ex?'background:#fffbeb':''}"><td style="padding:4px 8px">${esc(bpDN(r.it)||'')} <span style="color:#64748b">${esc(bpDS(r.it)==null?'':String(bpDS(r.it)))}</span>${r.ex?' <span style="font-size:10.5px;color:#b45309">제외</span>':''}</td><td style="padding:4px 8px;text-align:right">${fmt(r.bp)}</td><td style="padding:4px 8px;text-align:right;color:${col(r.pct||0)};font-weight:700">${pc(r.pct)}</td><td style="padding:4px 8px;text-align:right">${m1(r.tb.amt)}</td><td style="padding:4px 8px;text-align:right">${m1(r.ts.amt)}</td><td style="padding:4px 8px;text-align:right;color:${col(d)}">${d?(d>0?'+':'')+(Math.round(d/1e5)/10).toLocaleString():'-'}</td></tr>`;}).join('');
   el.innerHTML=`<div style="max-width:1100px">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 8px"><b style="font-size:16px">💲 단가 설정</b><span style="font-size:12.5px;color:var(--muted)">${y}년 · 구매금액 = 수량 × 기준단가 × (1 + 조정률) · 기준단가는 사업계획 품목표 단가(품목마스터와 별개)</span>
       <span style="flex:1"></span>${ed?'':'<span style="font-size:12px;color:#c2410c">🔒 조회 전용 — 사업소장·관리직만 수정</span>'}</div>
@@ -23513,7 +23515,7 @@ function bizplanFilteredIdx(){
     if(bizplanX27(idx,bizplanCurYear))return;
     if(eq&&it.eq!==eq)return;
     {const lf=document.getElementById('bizplanLinkFilter');if(lf&&lf.value==='none'&&bizplanItemLinkState(idx,bizplanCurYear)!=='none')return;}
-    if(q&&!((it.name||'').toLowerCase().includes(q)||String(it.spec!=null?it.spec:'').toLowerCase().includes(q)))return;
+    if(q&&!((it.name||'').toLowerCase().includes(q)||bpDN(it).toLowerCase().includes(q)||String(it.spec!=null?it.spec:'').toLowerCase().includes(q)||String(bpDS(it)!=null?bpDS(it):'').toLowerCase().includes(q)))return;
     out.push(idx);
   });
   return out;
@@ -23535,11 +23537,11 @@ function bizplanItemRowHtml(idx){
   const tot=bizplanItemTotal(idx);
   const sc=bizplanScenario(bizplanCurYear);
   const dsum=bizplanItemDivSummary(idx,bizplanCurYear);
-  const specTxt=it.spec!=null?esc(String(it.spec)):'';
+  const specTxt=bpDS(it)!=null?esc(String(bpDS(it))):'';
   const priceTxt=bpPriceCell(idx,bizplanCurYear);
   const lst2=bizplanItemLinkState(idx,bizplanCurYear);
   return `<tr id="bizrow_${idx}"${lst2==='none'?' style="background:#fef08a"':''}>
-    <td>${esc(it.eq)}</td><td>${esc(it.name||'')}${planQcTag(idx)}${lst2==='none'?' <span class="tag" style="font-size:10px;background:#fde047;color:#713f12">미연결</span>':''}${it.custom?` <span class="tag" style="font-size:10px" title="직접 추가한 품목">추가</span> <button class="btn sm" style="padding:0 5px" title="품목 정보 수정" onclick="bizplanItemDlg({idx:${idx}})">✎</button><button class="btn sm" style="padding:0 5px" title="품목 삭제(목록에서 숨김)" onclick="bizplanItemDelete(${idx})">✕</button>`:` ${it._ov?`<span class="tag" style="font-size:10px" title="규격·단중·단가 보정값 사용 중">보정</span> `:''}<button class="btn sm" style="padding:0 5px" title="규격·단중·단가 수정" onclick="bizplanItemDlg({idx:${idx}})">✎</button>${it._ov?`<button class="btn sm" style="padding:0 5px" title="처음 값으로 되돌리기" onclick="bizplanItemOvReset(${idx})">↺</button>`:''}`}</td><td>${specTxt}</td>
+    <td>${esc(it.eq)}</td><td>${esc(bpDN(it)||'')}${planQcTag(idx)}${lst2==='none'?' <span class="tag" style="font-size:10px;background:#fde047;color:#713f12">미연결</span>':''}${it.custom?` <span class="tag" style="font-size:10px" title="직접 추가한 품목">추가</span> <button class="btn sm" style="padding:0 5px" title="품목 정보 수정" onclick="bizplanItemDlg({idx:${idx}})">✎</button><button class="btn sm" style="padding:0 5px" title="품목 삭제(목록에서 숨김)" onclick="bizplanItemDelete(${idx})">✕</button>`:` ${it._ov?`<span class="tag" style="font-size:10px" title="규격·단중·단가 보정값 사용 중">보정</span> `:''}<button class="btn sm" style="padding:0 5px" title="규격·단중·단가 수정" onclick="bizplanItemDlg({idx:${idx}})">✎</button>${it._ov?`<button class="btn sm" style="padding:0 5px" title="처음 값으로 되돌리기" onclick="bizplanItemOvReset(${idx})">↺</button>`:''}`}</td><td>${specTxt}</td>
     <td class="n">${priceTxt}${sc.on?(bizplanScItemOv(idx,bizplanCurYear)?' <small style="color:#c2410c">(개별)</small>':' <small style="color:#1d4ed8">(시나리오)</small>'):''}</td><td class="n">${it.uw||'-'}</td>
     <td class="n" id="bizdv_${idx}" style="color:#c2410c" title="${esc(dsum.title)}">${dsum.pct?dsum.pct.toFixed(1)+'%':'-'}</td>
     ${cells.join('')}
@@ -23570,11 +23572,11 @@ function bizplanTriRender(idxs){
   idxs.forEach((idx,n)=>{
     const it=BIZPLAN_ITEMS_SEED[idx], bg=(n%2)?'#f4f7fb':'#ffffff';
     const dsum=bizplanItemDivSummary(idx,year), sc=bizplanScenario(year);
-    const specTxt=it.spec!=null?esc(String(it.spec)):'';
+    const specTxt=bpDS(it)!=null?esc(String(bpDS(it))):'';
     const lst=bizplanItemLinkState(idx,year), nb=(lst==='none')?'#fef08a':bg;
     const lTag=lst==='none'?` <span class="tag" style="font-size:10px;background:#fde047;color:#713f12;cursor:pointer" title="물량표와 연결되지 않은 품목 — 클릭하면 연결 화면으로 이동" onclick="bizplanTab('sched')">미연결</span>`:(lst==='manual'?` <span class="tag" style="font-size:10px" title="수기 유지로 확정">수기</span>`:'');
     const lab=`<td rowspan="3" style="${stk(0,42,bg)};border-bottom:2px solid #cbd5e1;vertical-align:top;font-weight:700">${esc(it.eq)}</td>
-      <td rowspan="3" style="${stk(42,150,nb)};border-bottom:2px solid #cbd5e1;vertical-align:top;font-weight:600;white-space:normal">${esc(it.name||'')}${planQcTag(idx)}${lTag}${it.custom?` <span class="tag" style="font-size:10px">추가</span> <button class="btn sm" style="padding:0 5px" onclick="bizplanItemDlg({idx:${idx}})">✎</button><button class="btn sm" style="padding:0 5px" onclick="bizplanItemDelete(${idx})">✕</button>`:` ${it._ov?`<span class="tag" style="font-size:10px" title="규격·단중·단가 보정값 사용 중">보정</span> `:''}<button class="btn sm" style="padding:0 5px" title="규격·단중·단가 수정" onclick="bizplanItemDlg({idx:${idx}})">✎</button>${it._ov?`<button class="btn sm" style="padding:0 5px" title="처음 값으로 되돌리기" onclick="bizplanItemOvReset(${idx})">↺</button>`:''}`}</td>
+      <td rowspan="3" style="${stk(42,150,nb)};border-bottom:2px solid #cbd5e1;vertical-align:top;font-weight:600;white-space:normal">${esc(bpDN(it)||'')}${planQcTag(idx)}${lTag}${it.custom?` <span class="tag" style="font-size:10px">추가</span> <button class="btn sm" style="padding:0 5px" onclick="bizplanItemDlg({idx:${idx}})">✎</button><button class="btn sm" style="padding:0 5px" onclick="bizplanItemDelete(${idx})">✕</button>`:` ${it._ov?`<span class="tag" style="font-size:10px" title="규격·단중·단가 보정값 사용 중">보정</span> `:''}<button class="btn sm" style="padding:0 5px" title="규격·단중·단가 수정" onclick="bizplanItemDlg({idx:${idx}})">✎</button>${it._ov?`<button class="btn sm" style="padding:0 5px" title="처음 값으로 되돌리기" onclick="bizplanItemOvReset(${idx})">↺</button>`:''}`}</td>
       <td rowspan="3" style="${stk(192,86,nb)};border-bottom:2px solid #cbd5e1;vertical-align:top;white-space:normal">${specTxt}</td>
       <td rowspan="3" class="n" style="background:${bg};border-bottom:2px solid #cbd5e1;vertical-align:top">${bpPriceCell(idx,year)}${sc.on?(bizplanScItemOv(idx,year)?'<br><small style="color:#c2410c">(개별)</small>':'<br><small style="color:#1d4ed8">(시나리오)</small>'):''}</td>
       <td rowspan="3" class="n" style="background:${bg};border-bottom:2px solid #cbd5e1;vertical-align:top">${it.uw||'-'}</td>
@@ -23627,7 +23629,7 @@ function downloadBizplanTriExcel(){
   let t=`<table><tr><th>설비</th><th>품명</th><th>규격</th><th>단가</th><th>단중(kg)</th><th>다원화제외%</th><th>구분</th>${labs}<th>합계(제외 후)</th></tr>`;
   const mt=Array.from({length:12},()=>({q:0,w:0,a:0}));
   BIZPLAN_ITEMS_SEED.forEach((it,idx)=>{ if(it.del)return;
-    const ds=bizplanItemDivSummary(idx,year), pre=`<td>${esc(it.eq)}</td><td>${esc(it.name||'')}</td><td>${it.spec!=null?esc(String(it.spec)):''}</td><td>${bizplanBasePrice(idx,year)||''}</td><td>${it.uw||''}</td><td>${ds.pct?ds.pct.toFixed(1)+'%':''}</td>`;
+    const ds=bizplanItemDivSummary(idx,year), pre=`<td>${esc(it.eq)}</td><td>${esc(bpDN(it)||'')}</td><td>${bpDS(it)!=null?esc(String(bpDS(it))):''}</td><td>${bizplanBasePrice(idx,year)||''}</td><td>${it.uw||''}</td><td>${ds.pct?ds.pct.toFixed(1)+'%':''}</td>`;
     const cs=[];for(let m=1;m<=12;m++)cs.push(bizplanItemCalc(idx,m,year));
     cs.forEach((c,i)=>{mt[i].q+=c.qty;mt[i].w+=c.wt;mt[i].a+=c.amt;});
     const sum=k=>cs.reduce((a,c)=>a+c[k],0), r=(v,d)=>v?Math.round(v/(d||1)):'';
@@ -23726,13 +23728,26 @@ function bizplanItemDlg(pre){
   const isEdit=pre.idx!=null, it=isEdit?BIZPLAN_ITEMS_SEED[pre.idx]:null;
   const d=isEdit?it:Object.assign({eq:(document.getElementById('bizplanEqFilter')||{}).value||'LD',name:'',spec:'',uw:'',price:'',basis:'wt'},pre);
   const eqSel=`<label style="display:block;font-size:12px;color:#475569;margin-top:9px">설비<select id="bidEq" class="selbox" style="width:100%;margin-top:2px">${[['EAF','전기로(EAF)'],['LD','래들(LD)'],['TD','턴디쉬(TD)']].map(([k,l])=>`<option value="${k}"${d.eq===k?' selected':''}>${l}</option>`).join('')}</select></label>`;
+  const pickSel=isEdit?'':(()=>{try{
+    const L=prodData.filter(x=>x.use!==0&&prodSup(x).own&&String(x.name||'').trim()).slice().sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.name).localeCompare(String(b.name))||String(a.spec||'').localeCompare(String(b.spec||'')));
+    const lk=new Set();Object.keys(NFA._pl||{}).forEach(k=>{const it=BIZPLAN_ITEMS_SEED[+k];if(it&&!it.del)lk.add(NFA._pl[k]);});
+    return `<label style="display:block;font-size:12px;color:#475569;margin-top:9px">품목마스터에서 선택 <span style="color:#2563eb">(규격별 · 선택하면 아래 칸이 자동으로 채워지고 마스터와 연결됩니다)</span><select id="bidPick" class="selbox" style="width:100%;margin-top:2px" onchange="bizplanPickMaster(this.value)"><option value="">— 직접 입력 —</option>${L.map(x=>`<option value="${esc(x.id)}">${esc((x.cat||'')+' · '+x.name+' '+(x.spec||''))}${lk.has(x.id)?'  ✓계획 연결됨':''}</option>`).join('')}</select></label>`;}catch(e){return '';}})();
   const el=_bpDlgShell('bizItemDlg',isEdit?'품목 수정':'품목 추가',
-    eqSel+_bpDlgField('bidName','품명',d.name,'예) AMC-B(매-신동)')+_bpDlgField('bidSpec','규격',d.spec,'예) B300 (없으면 비움)')
+    pickSel+eqSel+_bpDlgField('bidName','품명',d.name,'예) AMC-B(매-신동)')+_bpDlgField('bidSpec','규격',d.spec,'예) B300 (없으면 비움)')
     +_bpDlgField('bidUw','단중(kg) — 1개(포대)당 무게',d.uw,'예) 18.1','number')+_bpDlgField('bidPrice',(isEdit&&!it.custom&&bizplanCurYear!=='2026')?'단가(원) — '+bizplanCurYear+'년 계획 단가':'단가(원)',(isEdit&&!it.custom)?bizplanBasePrice(pre.idx,bizplanCurYear):d.price,'예) 1814','number')+_bpBasisSel('bidBasis',d.basis),
     'bizplanItemDlgSave()', isEdit?bpMasterHint(pre.idx):'저장하면 동국제강 탭 품목표에 추가되고, 월별 수량을 입력하거나 시공계획(물량표) 연동에 매핑할 수 있습니다.');
   if(isEdit&&!it.custom){['bidName','bidEq'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=true;});}
   el.dataset.idx=isEdit?pre.idx:'';el.dataset.mapkey=pre.mapKey||'';
   setTimeout(()=>{const n=document.getElementById('bidName');if(n)n.focus();},30);
+}
+function bizplanPickMaster(pid){
+  const dlg=document.getElementById('bizItemDlg');if(!dlg)return;dlg.dataset.pid=pid||'';
+  const p=pid?prodById(pid):null;if(!p)return;
+  const g=id=>document.getElementById(id);
+  let nm=p.name;try{const c=pmPlanCands(p);if(c.length)nm=BIZPLAN_ITEMS_SEED[c[0]].name;}catch(e){}
+  if(PM_EQ[p.cat])g('bidEq').value=PM_EQ[p.cat];
+  g('bidName').value=nm;g('bidSpec').value=p.spec||'';g('bidUw').value=(+p.uw||'')||'';
+  g('bidPrice').value=Math.round(+prodLivePrice(p)||0)||'';g('bidBasis').value=(p.unit==='ea')?'qty':'wt';
 }
 function bizplanItemDlgSave(){
   const g=id=>document.getElementById(id), dlg=g('bizItemDlg');if(!dlg)return;
@@ -23747,6 +23762,8 @@ function bizplanItemDlgSave(){
     if(dup>=0&&!confirm('같은 설비·품명·규격의 품목이 이미 있습니다. 그래도 추가할까요?'))return;
     BIZPLAN_ITEMS_SEED.push({eq,name,spec:spec||null,uw,price,basis,m:{},custom:true});idx=BIZPLAN_ITEMS_SEED.length-1;
   }
+  {const pk=dlg.dataset.pid,M=pk?prodById(pk):null;   // 마스터에서 골랐으면 자재코드·연결을 함께 저장
+   if(M&&idxS===''){const c=String(M.qcode||'').trim();BIZPLAN_ITEMS_SEED[idx].qc=c;if(name!==M.name)BIZPLAN_ITEMS_SEED[idx].dn=M.name;NFA._pl=NFA._pl||{};NFA._pl[idx]=M.id;if(NFA._pa)delete NFA._pa[idx];try{nfaSave();}catch(e){}}}
   bizplanCustomSave();
   if(mk){const m=bizplanSchedBomMap();String(mk).split('\u241E').forEach(k=>{m[k]=idx;});bizplanSchedSaveMap(m);}
   dlg.remove();
@@ -23756,7 +23773,7 @@ function bizplanItemDlgSave(){
 }
 function bizplanItemDelete(idx){
   const it=BIZPLAN_ITEMS_SEED[idx];if(!it||!it.custom)return;
-  if(!confirm(`'${it.name}${it.spec?' '+it.spec:''}' 품목을 삭제할까요?\n(목록·합계에서 빠집니다. 입력해 둔 수량은 계산에 쓰이지 않습니다.)`))return;
+  if(!confirm(`'${bpDN(it)}${bpDS(it)?' '+bpDS(it):''}' 품목을 삭제할까요?\n(목록·합계에서 빠집니다. 입력해 둔 수량은 계산에 쓰이지 않습니다.)`))return;
   it.del=true;bizplanCustomSave();bizplanItemsChanged();
 }
 function bizplanItemsChanged(){
@@ -23783,7 +23800,7 @@ function bizplanUnlinkedPanelHtml(year,allRows,unRowsN){
     return `<optgroup label="같은 설비 물량표 행">${same.map(u=>mk(u,false)).join('')}</optgroup><optgroup label="다른 설비 물량표 행 (같은 제품이면 연결 가능)">${oth.map(u=>mk(u,true)).join('')}</optgroup>`;};
   const optCache={};
   const body=un.map(i=>{const it=BIZPLAN_ITEMS_SEED[i];const opts=optCache[it.eq]||(optCache[it.eq]=rowOpt(it.eq));
-    return `<tr style="background:#fef08a"><td>${esc(it.eq)}</td><td>${esc(it.name||'')}</td><td>${esc(it.spec==null?'':String(it.spec))}</td>
+    return `<tr style="background:#fef08a"><td>${esc(it.eq)}</td><td>${esc(bpDN(it)||'')}</td><td>${esc(bpDS(it)==null?'':String(bpDS(it)))}</td>
       <td><select class="selbox" style="max-width:380px" onchange="if(this.value)bizplanLinkRowToItem(this.value,${i})"><option value="">물량표 행 선택 → 연결 (● = 미연결 행)</option>${opts}</select></td>
       <td style="white-space:nowrap"><button class="btn sm" style="padding:0 6px" title="물량표와 연결하지 않는 품목(수기 입력 유지)으로 확정하면 노란색이 풀립니다" onclick="setBizplanItemManual(${i},true)">수기 유지</button></td></tr>`;}).join('');
   const manList=man?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#64748b">수기 유지로 확정한 품목 ${man}개 (해제하면 다시 노란색 · "기준" = 초기 기준값)</summary>${BIZPLAN_ITEMS_SEED.map((it,i)=>(!it.del&&bizplanIsManual(i))?`<div style="font-size:12px;margin:2px 0">${esc(it.eq)} · ${esc(it.name||'')} ${esc(it.spec==null?'':String(it.spec))}${bizplanDefManualSet()[bizplanItemKey(i)]&&!Object.prototype.hasOwnProperty.call(bizplanManualSet(),bizplanItemKey(i))?' <span class="tag" style="font-size:10px">기준</span>':''} <button class="btn sm" style="padding:0 6px" onclick="setBizplanItemManual(${i},false)">해제</button></div>`:'').join('')}</details>`:'';
@@ -23819,8 +23836,8 @@ function bizplanDivTargetOptionsHtml(sel){
   let h='<optgroup label="묶음">'+BIZPLAN_DIV_PRESETS.map(p=>`<option value="${p.k}"${p.k===sel?' selected':''}>${esc(p.label)}</option>`).join('')+'</optgroup>';
   const seen={};const nm=[];
   BIZPLAN_ITEMS_SEED.forEach(it=>{if(it.del)return;if(!seen[it.name]){seen[it.name]=1;nm.push(it);}});
-  h+='<optgroup label="품명 단위">'+nm.map(it=>{const v='n:'+it.name;return `<option value="${esc(v)}"${v===sel?' selected':''}>${esc(it.eq+' · '+it.name)}</option>`;}).join('')+'</optgroup>';
-  h+='<optgroup label="개별 품목(규격)">'+BIZPLAN_ITEMS_SEED.map((it,i)=>{if(it.del)return '';const v='i:'+i;return `<option value="${v}"${v===sel?' selected':''}>${esc(it.eq+' · '+it.name+' · '+(it.spec!=null?it.spec:''))}</option>`;}).join('')+'</optgroup>';
+  h+='<optgroup label="품명 단위">'+nm.map(it=>{const v='n:'+it.name;return `<option value="${esc(v)}"${v===sel?' selected':''}>${esc(it.eq+' · '+bpDN(it))}</option>`;}).join('')+'</optgroup>';
+  h+='<optgroup label="개별 품목(규격)">'+BIZPLAN_ITEMS_SEED.map((it,i)=>{if(it.del)return '';const v='i:'+i;return `<option value="${v}"${v===sel?' selected':''}>${esc(it.eq+' · '+bpDN(it)+' · '+(bpDS(it)!=null?bpDS(it):''))}</option>`;}).join('')+'</optgroup>';
   return h;
 }
 function bizplanDivRuleAmt(r){
@@ -23895,7 +23912,7 @@ function renderBizplanDivPartInfo(){
   const vs=[];c.rules.forEach(r=>{if(r.target==='g:ldwear'&&r.vendor&&!vs.includes(r.vendor))vs.push(r.vendor);});
   const byPart={};pm.rows.forEach(x=>{(byPart[x.part||'etc']=byPart[x.part||'etc']||[]).push(x);});
   const labels=BIZPLAN_LD_PARTS.concat([{k:'etc',label:'기타(노즐·콘 등)'}]);
-  const itemTxt=x=>{const it=x.idx>=0?BIZPLAN_ITEMS_SEED[x.idx]:null;return it?`${esc(it.name)}${it.spec?' '+esc(it.spec):''}`:`<span style="color:#b45309">${esc((x.nm||'')+' '+(x.spec||''))} (미연결)</span>`;};
+  const itemTxt=x=>{const it=x.idx>=0?BIZPLAN_ITEMS_SEED[x.idx]:null;return it?`${esc(bpDN(it))}${bpDS(it)?' '+esc(bpDS(it)):''}`:`<span style="color:#b45309">${esc((x.nm||'')+' '+(x.spec||''))} (미연결)</span>`;};
   const body=labels.map(L=>{
     const rs=byPart[L.k]||[];if(!rs.length&&L.k==='etc')return '';
     const pcts=vs.map(v=>{const t=c.rules.filter(r=>r.on!==false&&r.target==='g:ldwear'&&r.vendor===v&&r.part===L.k).reduce((a,r)=>a+(+r.pct||0),0);return `<td class="n">${t?t.toLocaleString(undefined,{maximumFractionDigits:1})+'%':'-'}</td>`;}).join('');
@@ -23993,8 +24010,8 @@ function downloadBizplanExcel(){
     if(it.del)return;
     const tot=bizplanItemTotal(idx,year);
     const mc=[],ma=[];for(let m=1;m<=12;m++){mc.push(bizplanItemQty(idx,m,year)||'');ma.push(Math.round(bizplanItemCalc(idx,m,year).amt)||'');}
-    const specTxt=it.spec!=null?esc(String(it.spec)):'';
-    t+=`<tr><td>${esc(it.eq)}</td><td>${esc(it.name||'')}</td><td>${specTxt}</td><td>${bizplanBasePrice(idx,year)||''}</td><td>${it.uw||''}</td><td>${(()=>{const d=bizplanItemDivSummary(idx,year);return d.pct?d.pct.toFixed(1)+'% ('+d.title+')':'';})()}</td>${mc.map(v=>`<td>${v}</td>`).join('')}${ma.map(v=>`<td>${v}</td>`).join('')}<td>${Math.round(tot.divQty)||''}</td><td>${Math.round(tot.qty)||''}</td><td>${Math.round(tot.wt)||''}</td><td>${Math.round(tot.amt)||''}</td></tr>`;
+    const specTxt=bpDS(it)!=null?esc(String(bpDS(it))):'';
+    t+=`<tr><td>${esc(it.eq)}</td><td>${esc(bpDN(it)||'')}</td><td>${specTxt}</td><td>${bizplanBasePrice(idx,year)||''}</td><td>${it.uw||''}</td><td>${(()=>{const d=bizplanItemDivSummary(idx,year);return d.pct?d.pct.toFixed(1)+'% ('+d.title+')':'';})()}</td>${mc.map(v=>`<td>${v}</td>`).join('')}${ma.map(v=>`<td>${v}</td>`).join('')}<td>${Math.round(tot.divQty)||''}</td><td>${Math.round(tot.qty)||''}</td><td>${Math.round(tot.wt)||''}</td><td>${Math.round(tot.amt)||''}</td></tr>`;
   });
   t+=`</table>`;downloadXls(year+'사업계획_동국제강_'+todayStr(),t);
 }
@@ -24016,7 +24033,7 @@ function bizplanQcode(tab,idx){
 function bizplanQcodeEdit(tab,idx){
   const seed=tab==='posco'?BIZPLAN_POSCO_SEED:BIZPLAN_MARKET_SEED, it=seed[idx];if(!it)return;
   const cur=bizplanQcode(tab,idx);
-  const v=prompt('Q코드를 입력하세요 — '+it.name+' (예: Q1112067, 비우면 삭제)',cur);if(v===null)return;
+  const v=prompt('Q코드를 입력하세요 — '+bpDN(it)+' (예: Q1112067, 비우면 삭제)',cur);if(v===null)return;
   const q=String(v).trim().toUpperCase();
   if(q&&!/^Q\d{5,9}$/.test(q)&&!confirm('Q + 숫자 형식이 아닙니다('+q+'). 그대로 저장할까요?'))return;
   if(q){for(let i=0;i<seed.length;i++){if(i!==idx&&!seed[i].del&&bizplanQcode(tab,i)===q){if(!confirm('같은 Q코드가 이미 \''+seed[i].name+'\' 품목에 있습니다. 그래도 저장할까요?'))return;break;}}}
@@ -24100,7 +24117,7 @@ function bizplanExtDlgSave(){
 }
 function bizplanExtDelete(tab,idx){
   const seed=tab==='posco'?BIZPLAN_POSCO_SEED:BIZPLAN_MARKET_SEED, it=seed[idx];if(!it||!it.custom)return;
-  if(!confirm(`'${it.name}' 품목을 삭제할까요?`))return;
+  if(!confirm(`'${bpDN(it)}' 품목을 삭제할까요?`))return;
   it.del=true;bizplanCustomSave();renderBizplanVendor(tab);renderBizplanYoy();
 }
 function bizplanExtItemEdit(tab,idx){
@@ -24323,7 +24340,7 @@ function bizplanDivTargetLabel(t){
   if(!t)return '';
   const p=BIZPLAN_DIV_PRESETS.find(x=>x.k===t);if(p)return p.label.replace(/\(.*\)\s*$/,'').trim();
   if(t.startsWith('n:'))return t.slice(2);
-  if(t.startsWith('i:')){const it=BIZPLAN_ITEMS_SEED[+t.slice(2)];return it?it.name:t;}
+  if(t.startsWith('i:')){const it=BIZPLAN_ITEMS_SEED[+t.slice(2)];return it?bpDN(it):t;}
   return t;
 }
 // 자동 산출기준 문구: 생산량·다원화 규칙을 현재 입력값에서 그대로 읽어 만든다.
@@ -25288,7 +25305,7 @@ function bizplanX27Toggle(idx,on){
   __bpX27C=null;
   try{if(typeof fbOnKv==='function')fbOnKv();}catch(e){}
   bizplanItemsChanged();
-  try{toast(on?'2027 사업계획에서 제외했습니다: '+it.name+(it.spec?' '+it.spec:''):'2027 사업계획에 복원했습니다: '+it.name+(it.spec?' '+it.spec:''));}catch(e){}
+  try{toast(on?'2027 사업계획에서 제외했습니다: '+bpDN(it)+(bpDS(it)?' '+bpDS(it):''):'2027 사업계획에 복원했습니다: '+bpDN(it)+(bpDS(it)?' '+bpDS(it):''));}catch(e){}
 }
 function bizplanDefLinkMap(){if(__bpDefMapC)return __bpDefMapC;const m={};BIZPLAN_DEF_LINKS.forEach(d=>{m[d[0]+'|'+d[1]+'|'+d[2]+'␟'+d[3]]=d[4];});return __bpDefMapC=m;}
 function bizplanBomRowDefOff(equip,row){
@@ -25626,7 +25643,7 @@ function renderBizplanSched(){
   const mapMan=bizplanSchedBomMap(), manN=Object.keys(mapMan).length;
   const rowSt=u=>bizplanBomRowState(u.equip,u.row);
   const unmatchedN=allRows.filter(u=>rowSt(u)==='none').length;
-  const opts=(eq,cur)=>`<option value="auto">자동 판단</option><option value="-1"${cur===-1?' selected':''}>연동 안 함(수기)</option>`+BIZPLAN_ITEMS_SEED.map((it,i)=>it.eq===eq&&!it.del?`<option value="${i}"${cur===i?' selected':''}>${esc(it.name)} ${esc(String(it.spec==null?'':it.spec))}</option>`:'').join('');
+  const opts=(eq,cur)=>`<option value="auto">자동 판단</option><option value="-1"${cur===-1?' selected':''}>연동 안 함(수기)</option>`+BIZPLAN_ITEMS_SEED.map((it,i)=>it.eq===eq&&!it.del?`<option value="${i}"${cur===i?' selected':''}>${esc(bpDN(it))} ${esc(String(bpDS(it)==null?'':bpDS(it)))}</option>`:'').join('');
   const unRows=allRows.sort((a,b)=>(rowSt(a)==='none'?0:1)-(rowSt(b)==='none'?0:1)).map(u=>{
     const eq=({ladle:'LD',tundish:'TD',eaf:'EAF'})[u.equip];
     const cur=bizplanBomRowItem(u.equip,u.row), st=rowSt(u), isMan=(st==='manual'||st==='off');
@@ -27493,7 +27510,215 @@ document.addEventListener('click',function(e){
   if(e.target.closest('.ddi')&&!e.target.closest('.ddi:disabled'))setTimeout(ddCloseAll,0);
 });
 document.addEventListener('keydown',function(e){if(e.key==='Escape')ddCloseAll();});
-const APP_VERSION = "2026.10.22.rpt125";
+/* ===== 2026-10-22 (rpt126): 품목마스터 규격 → 사업계획·판매실적 원스텝 연동 =====
+   마스터에 새 규격을 넣으면 [📈 계획·실적 연동] 한 번으로
+   ① 사업계획(판매계획) 품목 추가 또는 기존 품목에 규격 보정·연결  ② 자재코드(Q코드) 확정  ③ 원단위(입고실적) 연결 확인·등록 */
+const PM_EQ={래들:'LD',턴디쉬:'TD',전기로:'EAF'};
+function pmPlanLinked(pid){NFA._pl=NFA._pl||{};const r=[];Object.keys(NFA._pl).forEach(k=>{if(NFA._pl[k]===pid){const it=BIZPLAN_ITEMS_SEED[+k];if(it&&!it.del)r.push(+k);}});return r;}
+function pmInvOk(p){const c=String(p.qcode||'').trim();return !!(c&&invM.get(c));}
+function pmPlanChip(p){
+  try{
+    if(!p||p.use===0||!prodSup(p).own)return '';
+    const pl=pmPlanLinked(p.id).length>0,iv=pmInvOk(p);
+    if(pl&&iv)return `<div style="font-size:10px;color:#15803d;white-space:nowrap;margin-top:2px" title="사업계획 품목과 원단위(입고실적)에 모두 연결되어 있습니다">✓ 계획·원단위 연동</div>`;
+    const miss=[pl?'':'사업계획',iv?'':'원단위'].filter(Boolean).join('·');
+    return `<button type="button" class="btn sm primary" style="margin-top:3px;font-size:10px;padding:1px 6px;white-space:nowrap" onclick="pmPlanOpen('${p.id}')" title="${miss}에 아직 연결되지 않았습니다 — 클릭 한 번으로 사업계획 품목 추가·연결, 자재코드, 원단위 연결까지 처리합니다">📈 계획·실적 연동 <span style="opacity:.85">(${miss} 미연결)</span></button>`;
+  }catch(e){return '';}
+}
+function pmPlanCands(p){
+  const k1=lkKey(p.name),k2=lkKey(p.custName||''),qc=String(p.qcode||'').trim(),eq=PM_EQ[p.cat]||'';
+  const out=[];
+  BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.del)return;const k=lkKey(it.name);
+    if((k1&&k===k1)||(k2&&k===k2)||(qc&&String(it.qc||'').trim()===qc))out.push(i);});
+  out.sort((a,b)=>((BIZPLAN_ITEMS_SEED[a].eq===eq?0:1)-(BIZPLAN_ITEMS_SEED[b].eq===eq?0:1))||a-b);
+  return out;
+}
+const pmSpecKey=s=>String(s==null?'':s).trim().toUpperCase().replace(/\s+/g,'');
+function pmPlanOpen(pid){
+  const p=prodById(pid);if(!p)return;
+  if(!String(p.name||'').trim()||p.name==='신규 제품'){alert('먼저 동국R&S 제품명을 입력해 주세요.');return;}
+  // 자재코드가 비어 있으면 고객사 제품명으로 원단위 코드를 먼저 불러온다
+  if(!String(p.qcode||'').trim()&&p.custName){try{const ic=invCodeForCustName(p.custName);if(ic){p.qcode=ic;prodDirty=true;}}catch(e){}}
+  const old=document.getElementById('pmPlanDlg');if(old)old.remove();
+  const cands=pmPlanCands(p).filter(i=>{const lp=(NFA._pl||{})[i],it=BIZPLAN_ITEMS_SEED[i];return !lp||lp===p.id||pmSpecKey(it.spec)===pmSpecKey(p.spec)||!it.spec;}),linked=pmPlanLinked(p.id),eq0=PM_EQ[p.cat]||'LD';   // 이미 다른 규격 마스터에 연결된 계획 행은 후보에서 제외(가로채기 방지)
+  const sameSpec=cands.find(i=>pmSpecKey(BIZPLAN_ITEMS_SEED[i].spec)===pmSpecKey(p.spec));
+  const _all=pmPlanCands(p),baseNm=_all.length?BIZPLAN_ITEMS_SEED[_all[0]].name:p.name;
+  const price=Math.round(+prodLivePrice(p)||0),uw=+p.uw||0,basis=(p.unit==='ea')?'qty':'wt';
+  const dflt=linked.length?'none':(sameSpec!=null?String(sameSpec):'new');
+  const lbl='display:block;font-size:12px;color:#475569;flex:1;min-width:110px';
+  const inp='width:100%;margin-top:2px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px';
+  const rd=(v,txt,sub)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;margin-top:6px;cursor:pointer"><input type="radio" name="pmpSel" value="${v}"${dflt===v?' checked':''} onchange="pmPlanSel()" style="margin-top:3px"><span style="font-size:12.5px;line-height:1.5">${txt}${sub?`<br><span style="font-size:11px;color:#64748b">${sub}</span>`:''}</span></label>`;
+  const candHtml=cands.map(i=>{const it=BIZPLAN_ITEMS_SEED[i],lp=(NFA._pl||{})[i]?prodById(NFA._pl[i]):null;
+    const diff=pmSpecKey(it.spec)!==pmSpecKey(p.spec);
+    return rd(String(i),`기존 계획 품목에 연결 — <b>${esc(bpDN(it))}</b> · 규격 ${esc(bpDS(it)==null||bpDS(it)===''?'(없음)':String(bpDS(it)))} <span style="color:#64748b">[${esc(it.eq)}${it.custom?' · 직접 추가':''}]</span>`,
+      `${lp?'현재 연결: '+esc(lp.name+' '+(lp.spec||''))+(lp.id===p.id?' (이 품목)':' → 이 품목으로 교체'):'현재 마스터 연결 없음'}${diff?` · 규격을 「${esc(p.spec||'(없음)')}」로 보정`:''}`);}).join('');
+  const invCode=String(p.qcode||'').trim(),invHas=invCode&&invM.get(invCode);
+  const el=document.createElement('div');el.id='pmPlanDlg';
+  el.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+  el.dataset.pid=pid;
+  el.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:600px;width:100%;padding:18px 20px;max-height:92vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+    <div style="font-weight:800;font-size:15px">📈 계획·실적 원스텝 연동</div>
+    <div style="font-size:12.5px;margin:6px 0 2px;line-height:1.6"><b>${esc(p.name)}</b> · 규격 <b>${esc(p.spec||'(없음)')}</b> · 단중 ${uw||'-'}kg · 단가 ${price?price.toLocaleString()+'원':'-'} · ${esc(p.cat||'')}${invCode?` · 자재코드 <code>${esc(invCode)}</code>`:' · 자재코드 없음'}</div>
+    <div style="font-size:11.5px;color:#64748b;line-height:1.5">마스터의 이 규격을 <b>사업계획(판매계획)</b>과 <b>판매실적(원단위 입고)</b>에 한 번에 잡습니다. 월별 수량은 연결 후 사업계획 품목표에서 입력하세요.</div>
+    ${linked.length?`<div style="margin-top:8px;padding:6px 10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534">이미 사업계획 ${linked.length}개 품목에 연결되어 있습니다 — 아래에서 다른 곳에 추가로 연결할 수도 있습니다.</div>`:''}
+    <div style="font-weight:800;font-size:13px;margin-top:12px">① 사업계획(판매계획) 품목</div>
+    ${candHtml}${rd('new','새 계획 품목으로 추가',`같은 품명에 이 규격(${esc(p.spec||'없음')})을 별도 행으로 추가`)}${rd('none','계획은 건드리지 않음','원단위·자재코드만 처리')}
+    <div id="pmpNew" style="display:none;margin-top:8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label style="${lbl}">설비<select id="pmpEq" style="${inp}">${[['EAF','전기로(EAF)'],['LD','래들(LD)'],['TD','턴디쉬(TD)']].map(([k,l])=>`<option value="${k}"${eq0===k?' selected':''}>${l}</option>`).join('')}</select></label>
+        <label style="${lbl};flex:2">계획 품명<input id="pmpName" value="${esc(baseNm)}" style="${inp}"></label></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <label style="${lbl}">단중(kg)<input id="pmpUw" type="number" step="any" value="${uw||''}" style="${inp}"></label>
+        <label style="${lbl}">단가(원)<input id="pmpPrice" type="number" step="any" value="${price||''}" style="${inp}"></label>
+        <label style="${lbl}">금액 기준<select id="pmpBasis" style="${inp}"><option value="wt"${basis==='wt'?' selected':''}>중량(원/kg)</option><option value="qty"${basis==='qty'?' selected':''}>수량(원/개)</option></select></label></div>
+    </div>
+    <label id="pmpUwRow" style="display:none;margin-top:8px;font-size:12px"><input type="checkbox" id="pmpUwChk"> 선택한 계획 품목의 단중도 마스터(${uw||'-'}kg)에 맞춤</label>
+    <div style="font-weight:800;font-size:13px;margin-top:14px">② 원단위(판매실적 = 입고량)</div>
+    <div style="font-size:12.5px;margin-top:4px;line-height:1.6">${invHas?`✓ 원단위 <b>${esc(invHas.n)}</b>(<code>${esc(invCode)}</code>)에 이미 연결되어 있습니다. 입고실적은 이 자재코드로 집계됩니다.`:`<label style="cursor:pointer"><input type="checkbox" id="pmpInv" checked> 원단위 품목으로 새로 등록하고 연결 <span style="color:#64748b">(${invCode?'자재코드 '+esc(invCode):'자재코드는 자동 부여, 나중에 실제 코드로 교체 가능'})</span></label>`}</div>
+    <label style="display:block;margin-top:12px;font-size:12px;cursor:pointer"><input type="checkbox" id="pmpGo"> 완료 후 사업계획 품목표 열기(월별 수량 입력)</label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="document.getElementById('pmPlanDlg').remove()">취소</button><button class="btn primary" onclick="pmPlanDo()">⚡ 한 번에 연동</button></div></div>`;
+  document.body.appendChild(el);pmPlanSel();
+}
+function pmPlanSel(){
+  const r=document.querySelector('#pmPlanDlg input[name=pmpSel]:checked'),v=r?r.value:'none';
+  const n=document.getElementById('pmpNew'),u=document.getElementById('pmpUwRow');
+  if(n)n.style.display=v==='new'?'':'none';if(u)u.style.display=(v!=='new'&&v!=='none')?'':'none';
+}
+function pmPlanDo(){
+  const dlg=document.getElementById('pmPlanDlg');if(!dlg)return;
+  const p=prodById(dlg.dataset.pid);if(!p){dlg.remove();return;}
+  const g=id=>document.getElementById(id),r=document.querySelector('#pmPlanDlg input[name=pmpSel]:checked'),sel=r?r.value:'none';
+  const notes=[];let idx=-1;
+  // 원단위 먼저 — 자재코드가 확정돼야 계획 품목에 같은 코드를 넣을 수 있다
+  const ci=g('pmpInv');
+  if(ci&&ci.checked&&!pmInvOk(p)){try{const code=ncMakeInv(p.id,true);notes.push('원단위 등록'+(code?' ('+code+')':''));}catch(e){console.error(e);}}
+  const code=String(p.qcode||'').trim()||(function(){try{const l=invM&&[...invM.values()].find(x=>x&&invMOv[x.c]&&invMOv[x.c].linkedProdId===p.id);return l?l.c:'';}catch(e){return '';}})();
+  if(sel==='new'){
+    const name=g('pmpName').value.trim();if(!name){alert('계획 품명을 입력해 주세요.');return;}
+    const eq=g('pmpEq').value,spec=String(p.spec||'').trim();
+    const uw=+String(g('pmpUw').value).replace(/[^0-9.]/g,'')||0,price=+String(g('pmpPrice').value).replace(/[^0-9.]/g,'')||0,basis=g('pmpBasis').value;
+    const dup=BIZPLAN_ITEMS_SEED.findIndex(x=>!x.del&&x.eq===eq&&x.name===name&&pmSpecKey(x.spec)===pmSpecKey(spec));
+    if(dup>=0){if(!confirm('같은 설비·품명·규격의 계획 품목이 이미 있습니다. 그 품목에 연결할까요?\n(취소하면 아무것도 바꾸지 않습니다)'))return;idx=dup;}
+    else{BIZPLAN_ITEMS_SEED.push({eq,name,spec:spec||null,uw,price,basis,m:{},custom:true,qc:code,dn:(name!==p.name?p.name:undefined)});idx=BIZPLAN_ITEMS_SEED.length-1;bizplanCustomSave();notes.push('계획 품목 추가');}
+  }else if(sel!=='none'){
+    idx=+sel;const it=BIZPLAN_ITEMS_SEED[idx];
+    if(pmSpecKey(bpDS(it))!==pmSpecKey(p.spec)&&String(p.spec||'').trim()){bpSetDisp(idx,{ds:String(p.spec).trim()});notes.push('규격 표시 맞춤');}
+    if(String(bpDN(it))!==String(p.name)){bpSetDisp(idx,{dn:p.name});}
+    const uc=g('pmpUwChk');if(uc&&uc.checked&&(+p.uw||0)>0){bizplanSetItemField(idx,{uw:+p.uw});notes.push('단중 맞춤');}
+  }
+  if(idx>=0){
+    bizplanSetItemField(idx,{qc:code});BIZPLAN_ITEMS_SEED[idx].qc=code;
+    NFA._pl=NFA._pl||{};NFA._pl[idx]=p.id;if(NFA._pa)delete NFA._pa[idx];notes.push('마스터 연결');
+  }
+  try{ncSaveAll();}catch(e){}
+  const go=g('pmpGo')&&g('pmpGo').checked;
+  dlg.remove();
+  try{planQcDone();}catch(e){try{nfaSave();bizplanItemsPersist();bizplanItemsChanged();}catch(e2){}}
+  try{renderProdMaster();}catch(e){}
+  try{if(typeof invRenderAll==='function')invRenderAll();else if(typeof renderInvMaster==='function')renderInvMaster();}catch(e){}
+  toast(notes.length?('✔ '+p.name+' '+(p.spec||'')+' — '+notes.join(' · ')):'변경할 항목이 없습니다');
+  if(go&&idx>=0){try{nav('bizplan');bizplanTab('dk');}catch(e){}}
+}
+/* ===== 2026-10-23 (rpt127): 사업계획 품명·규격을 품목마스터와 동일하게 '표시' + 미연결 전체 연결 ===========
+   ※ 다원화(품명 기준)·물량표 자동 매핑·제외/수기 목록 등은 내부 품명·규격(it.name/it.spec)을 키로 쓰므로 값을 직접 바꾸지 않고,
+     표시용 필드(dn=품명, ds=규격)만 따로 저장합니다 → 금액·수량·연결에는 영향이 없습니다. */
+function bpDN(it){return (it&&it.dn)?it.dn:((it&&it.name)||'');}
+function bpDS(it){if(!it)return null;return (it.ds!=null&&it.ds!=='')?it.ds:it.spec;}
+function bpSetDisp(idx,f){
+  const it=BIZPLAN_ITEMS_SEED[idx];if(!it)return;
+  if(it.custom){
+    if('dn' in f){if(f.dn&&f.dn!==it.name)it.dn=f.dn;else delete it.dn;}
+    if('ds' in f){if(f.ds!=null&&f.ds!==''&&String(f.ds)!==String(it.spec==null?'':it.spec))it.ds=f.ds;else delete it.ds;}
+    return;}
+  bizplanOv.itemOv=bizplanOv.itemOv||{};
+  const x=bizplanOv.itemOv[idx]=bizplanOv.itemOv[idx]||{n:it.name};
+  if('dn' in f){if(f.dn&&f.dn!==it.name)x.dn=f.dn;else delete x.dn;}
+  if('ds' in f){if(f.ds!=null&&f.ds!==''&&String(f.ds)!==String(it.spec==null?'':it.spec))x.ds=f.ds;else delete x.ds;}
+}
+const PS={tab:'sync',q:'',sel:{},selU:{}};
+function psLinkedRows(){
+  const out=[];NFA._pl=NFA._pl||{};
+  Object.keys(NFA._pl).forEach(k=>{const i=+k,it=BIZPLAN_ITEMS_SEED[i],m=prodById(NFA._pl[k]);if(!it||it.del||!m)return;
+    const cn=String(bpDN(it)),cs=String(bpDS(it)==null?'':bpDS(it)),ms=String(m.spec==null?'':m.spec).trim();
+    out.push({i,it,m,cn,cs,mn:String(m.name||''),ms,dn:cn!==String(m.name||''),ds:!!ms&&cs!==ms,msEmpty:!ms&&!!cs});});
+  out.sort((a,b)=>a.i-b.i);return out;
+}
+function psOpen(tab){
+  if(tab)PS.tab=tab;
+  let el=document.getElementById('psDlg');
+  if(!el){el=document.createElement('div');el.id='psDlg';
+    el.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(el);PS.sel={};PS.selU={};}
+  psRender();
+}
+function psClose(){const e=document.getElementById('psDlg');if(e)e.remove();}
+function psTab(t){PS.tab=t;psRender();}
+function psRender(){
+  const el=document.getElementById('psDlg');if(!el)return;
+  const R=psLinkedRows(),D=R.filter(r=>r.dn||r.ds);
+  const unl=[];BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.del)return;const pid=(NFA._pl||{})[i];if(pid&&prodById(pid))return;unl.push(i);});
+  const ownMasters=prodData.filter(p=>p.use!==0&&prodSup(p).own);
+  const linkedIds=new Set(R.map(r=>r.m.id));
+  const noPlan=ownMasters.filter(p=>!linkedIds.has(p.id)).sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.name).localeCompare(String(b.name))||String(a.spec||'').localeCompare(String(b.spec||'')));
+  const tb=(k,l,n)=>`<button class="btn${PS.tab===k?' primary':''}" onclick="psTab('${k}')">${l} <b>${n}</b></button>`;
+  let body='';
+  const th='style="position:sticky;top:0;background:#f1f5f9;padding:5px 7px;border:1px solid #e2e8f0;font-size:11.5px;text-align:left;white-space:nowrap"',td='style="padding:4px 7px;border:1px solid #eef2f6;font-size:12px;vertical-align:top"';
+  const q=PS.q.trim().toLowerCase();
+  if(PS.tab==='sync'){
+    const rows=R.filter(r=>!q||(r.cn+' '+r.cs+' '+r.mn+' '+r.ms).toLowerCase().includes(q));
+    const nShown=rows.filter(r=>r.dn||r.ds).length;
+    body=`<div style="font-size:12.5px;color:#334155;line-height:1.6;margin:6px 0 8px">마스터와 <b>연결이 확정된 사업계획 품목</b>의 품명·규격을 품목마스터와 똑같이 <b>표시</b>합니다. 연결 ${R.length}건 중 <b>표시가 다른 곳 ${D.length}건</b>입니다.<br><span style="color:#64748b;font-size:11.5px">※ 수량·금액·다원화·물량표 연결에는 영향이 없습니다(내부 기준 이름은 그대로 두고 화면에 보이는 이름·규격만 바꿉니다). 되돌리기도 가능합니다.</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><button class="btn primary" onclick="psSyncDo()">✅ 체크한 ${rows.filter(r=>(r.dn||r.ds)&&PS.sel[r.i]!==false).length}건 마스터와 동일하게 표시</button><button class="btn" onclick="psSelAll(true)">전체 선택</button><button class="btn" onclick="psSelAll(false)">전체 해제</button><button class="btn" onclick="psSyncUndo()" title="표시용 품명·규격을 모두 원래 이름으로 되돌립니다">↩ 원래 이름으로 되돌리기</button></div>
+      <div style="max-height:56vh;overflow:auto"><table style="border-collapse:collapse;width:100%"><tr><th ${th}></th><th ${th}>설비</th><th ${th}>현재 사업계획 표시</th><th ${th}>→ 품목마스터</th><th ${th}>변경</th></tr>
+      ${rows.map(r=>{const ch=r.dn||r.ds;return `<tr style="${ch?'':'color:#94a3b8'}"><td ${td}>${ch?`<input type="checkbox" ${PS.sel[r.i]===false?'':'checked'} onchange="PS.sel[${r.i}]=this.checked;psRender()">`:''}</td><td ${td}>${esc(r.it.eq)}<br><span style="font-size:10px;color:#94a3b8">#${r.i+1}</span></td><td ${td}><b>${esc(r.cn)}</b> ${esc(r.cs)}</td><td ${td}><b>${esc(r.mn)}</b> ${esc(r.ms||'')}${r.msEmpty?' <span style="color:#b45309;font-size:10.5px">(마스터 규격 비어 있음 — 규격은 그대로)</span>':''}</td><td ${td}>${ch?[r.dn?'품명':'',r.ds?'규격':''].filter(Boolean).join('·'):'동일'}</td></tr>`;}).join('')||`<tr><td ${td} colspan="5">연결된 품목이 없습니다.</td></tr>`}</table></div>`;
+  }else if(PS.tab==='unl'){
+    const items=unl.filter(i=>{const it=BIZPLAN_ITEMS_SEED[i];return !q||(bpDN(it)+' '+bpDS(it)).toLowerCase().includes(q);});
+    const pool=lkPool(true);
+    body=`<div style="font-size:12.5px;color:#334155;line-height:1.6;margin:6px 0 8px">마스터에 연결되지 않은 <b>사업계획 품목 ${unl.length}건 전체</b>입니다. 목록에서 마스터를 고르고 [연결]을 누르면 바로 연결됩니다(자재코드도 함께 확정). 후보는 ★로 위에 표시했습니다.</div>
+      <div style="max-height:56vh;overflow:auto"><table style="border-collapse:collapse;width:100%"><tr><th ${th}>설비</th><th ${th}>사업계획 품목</th><th ${th}>단중</th><th ${th}>단가</th><th ${th}>2026/2027 수량</th><th ${th}>연결할 마스터</th><th ${th}></th></tr>
+      ${items.map(i=>{const it=BIZPLAN_ITEMS_SEED[i];let q26=0,q27=0;try{q26=bizplanItemTotal(i,'2026').qty||0;q27=bizplanItemTotal(i,'2027').qty||0;}catch(e){}
+        let top=[];try{top=lkRank({name:it.name||'',spec:it.spec==null?'':String(it.spec),uw:+it.uw||0,price:+it.price||0,cat:lkCatB(it.eq)},pool,5).top.map(x=>x.b.id);}catch(e){}
+        const rest=ownMasters.filter(p=>!top.includes(p.id)).sort((a,b)=>String(a.name).localeCompare(String(b.name))||String(a.spec||'').localeCompare(String(b.spec||'')));
+        const opt=(p,star)=>`<option value="${esc(p.id)}"${PS.selU[i]===p.id?' selected':''}>${star?'★ ':''}${esc((p.cat||'')+' · '+p.name+' '+(p.spec||''))} (${Math.round(+prodLivePrice(p)||0).toLocaleString()}원${(+p.uw?' · '+p.uw+'kg':'')})${linkedIds.has(p.id)?' · 이미 연결됨':''}</option>`;
+        return `<tr><td ${td}>${esc(it.eq)}<br><span style="font-size:10px;color:#94a3b8">#${i+1}</span></td><td ${td}><b>${esc(bpDN(it))}</b> ${esc(bpDS(it)==null?'':String(bpDS(it)))}${it.custom?' <span class="tag" style="font-size:10px">추가</span>':''}</td><td ${td} align="right">${it.uw||''}</td><td ${td} align="right">${Math.round(+it.price||0).toLocaleString()}</td><td ${td} align="right">${Math.round(q26).toLocaleString()} / ${Math.round(q27).toLocaleString()}</td>
+          <td ${td}><select class="selbox" style="max-width:380px;font-size:12px" onchange="PS.selU[${i}]=this.value"><option value="">— 선택 —</option>${top.map(id=>opt(prodById(id),true)).join('')}${rest.map(p=>opt(p,false)).join('')}</select></td>
+          <td ${td} style="white-space:nowrap"><button class="btn sm primary" onclick="psLinkOne(${i})">연결</button> <button class="btn sm" onclick="lkMake('B','B|${i}')" title="마스터에 없는 품목이면 이 계획 품목으로 마스터를 새로 등록하고 연결">＋마스터 등록</button></td></tr>`;}).join('')||`<tr><td ${td} colspan="7">✔ 미연결 사업계획 품목이 없습니다.</td></tr>`}</table></div>`;
+  }else{
+    const items=noPlan.filter(p=>!q||((p.name||'')+' '+(p.spec||'')+' '+(p.custName||'')).toLowerCase().includes(q));
+    body=`<div style="font-size:12.5px;color:#334155;line-height:1.6;margin:6px 0 8px">동국R&amp;S 납품 마스터 중 <b>사업계획 품목에 연결되지 않은 ${noPlan.length}건 전체</b>입니다. [📈 계획·실적 연동]을 누르면 사업계획 품목 추가·연결과 원단위 연결까지 한 번에 처리합니다.</div>
+      <div style="max-height:56vh;overflow:auto"><table style="border-collapse:collapse;width:100%"><tr><th ${th}>설비</th><th ${th}>품명</th><th ${th}>규격</th><th ${th}>자재코드</th><th ${th}>단중</th><th ${th}>단가</th><th ${th}></th></tr>
+      ${items.map(p=>`<tr><td ${td}>${esc(p.cat||'')}</td><td ${td}><b>${esc(p.name)}</b></td><td ${td}>${esc(p.spec||'')}</td><td ${td}>${esc(p.qcode||'')}</td><td ${td} align="right">${p.uw||''}</td><td ${td} align="right">${Math.round(+prodLivePrice(p)||0).toLocaleString()}</td><td ${td}><button class="btn sm primary" onclick="psPlanOne('${esc(p.id)}')">📈 계획·실적 연동</button></td></tr>`).join('')||`<tr><td ${td} colspan="7">✔ 모두 연결되어 있습니다.</td></tr>`}</table></div>`;
+  }
+  el.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:1100px;width:100%;padding:16px 18px;max-height:94vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-weight:800;font-size:16px">🔗 사업계획 ↔ 품목마스터 연결 센터</div><span style="flex:1"></span><input class="search" style="width:190px" placeholder="품명·규격 검색" value="${esc(PS.q)}" onchange="PS.q=this.value;psRender()"><button class="btn" onclick="psClose()">닫기 ✕</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${tb('sync','① 연결된 품목 · 품명·규격 마스터와 동일하게',D.length)}${tb('unl','② 미연결 사업계획 품목',unl.length)}${tb('nop','③ 계획에 없는 마스터',noPlan.length)}</div>${body}</div>`;
+}
+function psSelAll(v){psLinkedRows().forEach(r=>{if(r.dn||r.ds)PS.sel[r.i]=v;});psRender();}
+function psSyncDo(){
+  const rows=psLinkedRows().filter(r=>(r.dn||r.ds)&&PS.sel[r.i]!==false);
+  if(!rows.length){toast('변경할 항목이 없습니다');return;}
+  if(!confirm('연결된 사업계획 품목 '+rows.length+'건의 품명·규격을 품목마스터와 동일하게 표시합니다.\n(수량·금액·연결은 바뀌지 않으며, 언제든 되돌릴 수 있습니다)'))return;
+  rows.forEach(r=>{const f={};if(r.dn)f.dn=r.mn;if(r.ds)f.ds=r.ms;bpSetDisp(r.i,f);});
+  try{bizplanItemsPersist();}catch(e){}try{nfaSave();}catch(e){}try{flashSave();}catch(e){}
+  try{bizplanItemsChanged();}catch(e){}try{spRenderAll();}catch(e){}
+  toast('✔ '+rows.length+'건을 품목마스터 품명·규격으로 표시했습니다');psRender();
+}
+function psSyncUndo(){
+  let n=0;BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.dn||(it.custom?it.ds:(((bizplanOv.itemOv||{})[i]||{}).ds))!=null&&(it.custom?it.ds:(((bizplanOv.itemOv||{})[i]||{}).ds))!=='')n++;});
+  if(!n){toast('되돌릴 항목이 없습니다');return;}
+  if(!confirm('표시용 품명·규격 '+n+'건을 원래 이름으로 되돌릴까요?'))return;
+  BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.custom){delete it.dn;delete it.ds;}else{const x=(bizplanOv.itemOv||{})[i];if(x){delete x.dn;delete x.ds;}}});
+  try{bizplanItemsPersist();}catch(e){}try{bizplanItemsChanged();}catch(e){}try{spRenderAll();}catch(e){}
+  toast('원래 이름으로 되돌렸습니다');psRender();
+}
+function psLinkOne(i){
+  const pid=PS.selU[i];if(!pid){toast('연결할 마스터를 먼저 선택하세요');return;}
+  const used=Object.keys(NFA._pl||{}).find(k=>NFA._pl[k]===pid&&+k!==i&&BIZPLAN_ITEMS_SEED[+k]&&!BIZPLAN_ITEMS_SEED[+k].del);
+  if(used!==undefined&&!confirm('이 마스터는 이미 사업계획 #'+(+used+1)+' 품목에 연결되어 있습니다. 그래도 이 품목도 같은 마스터에 연결할까요?'))return;
+  scLink(i,pid);delete PS.selU[i];psRender();
+}
+function psPlanOne(pid){pmPlanOpen(pid);const w=setInterval(()=>{if(!document.getElementById('pmPlanDlg')){clearInterval(w);try{psRender();}catch(e){}}},400);}
+const APP_VERSION = "2026.10.23.rpt127";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -34693,7 +34918,7 @@ function nfaPriceBlock(q,D){
       const ratio=r.pprice>0?vs[0]/r.pprice:1;if(ratio>1.5||ratio<0.67)warn=' <span title="계획 단가와 1.5배 이상 차이 — 단위(원/kg ↔ 원/개) 확인" style="color:#c81e1e">⚠단위확인</span>';}
     const manV=arr.map(o=>(NFA[o.ym]&&NFA[o.ym].pr&&nfaHas(NFA[o.ym].pr[r.i]))?NFA[o.ym].pr[r.i]:null);
     const man=manV.every(v=>v!=null&&v===manV[0])?manV[0]:null,anyMan=manV.some(v=>v!=null);
-    t+=`<tr><td>${r.eq}</td><td style="font-weight:600">${esc(it.name||'')}</td><td>${esc(it.spec==null?'':String(it.spec))}</td><td class="n">${f1(r.fq)}</td><td class="n">${Math.round(r.pprice).toLocaleString()}</td>`
+    t+=`<tr><td>${r.eq}</td><td style="font-weight:600">${esc(bpDN(it))}</td><td>${esc(bpDS(it)==null?'':String(bpDS(it)))}</td><td class="n">${f1(r.fq)}</td><td class="n">${Math.round(r.pprice).toLocaleString()}</td>`
       +`<td><select class="selbox" style="max-width:230px;font-size:11.5px" onchange="nfaSetLink(${r.i},this.value)"><option value="">연결 안 함</option>${opts(r.eq).map(([id,lb])=>`<option value="${id}"${id===pid?' selected':''}>${lb}</option>`).join('')}</select>${(NFA._pa||{})[r.i]&&pid?` <span title="프로그램이 자동으로 연결했습니다(유력·후보). 맞으면 그대로 두고, 아니면 다시 선택하세요 — 직접 고르면 표시가 사라집니다." onclick="nfaSetLink(${r.i},'${pid}')" style="cursor:pointer;font-size:10px;background:#fef3c7;color:#b45309;border-radius:4px;padding:1px 5px;white-space:nowrap">🔎 자동·검토 ✔확인</span>`:''}</td>`
       +`<td class="n">${mp}${warn}</td>`
       +`<td class="n"><input type="number" step="any" min="0" class="iinp${anyMan?' '+yel:''}" style="width:84px" value="${man!=null?man:''}" placeholder="${Math.round(r.pprice)}" onchange="nfaSetPrice(${r.i},this.value)">${anyMan&&man==null?'<div style="font-size:10px;color:#94a3b8">월별 상이</div>':''}</td>`
