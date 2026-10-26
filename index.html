@@ -3120,6 +3120,7 @@ service cloud.firestore {
         <input type="number" class="selbox inp-yel" id="inv_prod" style="width:96px" onchange="setInvProd()">
         <input class="search" id="inv_search" placeholder="품명·규격·설비 검색" oninput="renderInvMonth()">
         <select class="selbox" id="inv_grp" onchange="renderInvMonth()"><option value="">전체 설비</option></select>
+        <select class="selbox" id="inv_msort" onchange="invMsortSet(this.value)" title="표시 순서 — 업체별 우선: 동국R&S → 원진 → KR → 조선내화 → 오성 순으로 묶고, 각 업체 안에서 설비(전기로·래들·턴디쉬) 순"><option value="vend">정렬: 업체별 우선</option><option value="grp">정렬: 설비별</option></select>
         <button class="btn" onclick="carryPrev()" title="10월부터 전월재고는 전월 월말실재고에서 자동 연결됩니다. 수기로 고친 값을 모두 자동 연결로 되돌립니다">↩ 전월재고 자동연결 초기화</button>
         <button class="btn" onclick="sxOpen(document.getElementById('inv_ym').value)" title="월말재고 ↔ 재고량 시트 연동 현황 (전체화면)">🧭 월말재고 연동 센터</button>
         <button class="btn" onclick="invConfOpen()">✅ 확인 → 저장</button>
@@ -15307,23 +15308,23 @@ function stkVzRender(force){
   if(stkVz.f==='no')list=list.filter(m=>!map[m.c]);else if(stkVz.f==='ok')list=list.filter(m=>map[m.c]);
   const tail=x=>String(x||'').replace(/^.*?,\s*/,'');
   if(blkA){list=list.map(m=>{const a=lkScore({name:blkA.label,spec:''},{name:m.n,spec:''}),c=lkScore({name:blkA.label,spec:''},{name:tail(m.n),spec:''});return{m,s:Math.max(a.s,c.s),ok:a.nameOK||c.nameOK};}).sort((a,c)=>(c.ok-a.ok)||(c.s-a.s)).map(x=>({m:x.m,rec:x.ok&&x.s>=28}));}
-  else list=list.slice().sort((a,c)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(c.g);return(ia<0?9:ia)-(ib<0?9:ib);}).map(m=>({m,rec:false}));
+  else list=list.slice().sort((a,c)=>{const v=invVendIdx(invMonthVend(a))-invVendIdx(invMonthVend(c));if(v)return v;const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(c.g);return(ia<0?9:ia)-(ib<0?9:ib);}).map(m=>({m,rec:false}));
   let lastG=null,lh='';
   list.forEach(it=>{const m=it.m;
-    if(!blkA&&m.g!==lastG){lastG=m.g;lh+=`<div class="vz-gh">${esc(m.g)}</div>`;}
+    if(!blkA&&invMonthVend(m)!==lastG){lastG=invMonthVend(m);lh+=`<div class="vz-gh">▣ ${esc(lastG)}</div>`;}
     const ex=map[m.c],st=stOf(m),v=ex?M.ev(ex):null;
     let stt;
     if(!ex)stt='<span class="st no">미연동 — 월별 원단위에서 직접 입력</span>';
     else{const ba=stkVzBlockOf((String(ex).match(/[A-Z]{1,2}\d+/)||[''])[0],anchors);
       stt=`<span class="st ${st}">${st==='bad'?'⚠ ':'✓ '}시트 ${esc(ex)}${ba?' · '+esc(ba.label):''} = ${v!=null&&isFinite(v)?stkFmt(v):'?'} ${esc(m.u)}${st==='bad'?' (월말재고와 다름)':''}</span>`;}
-    lh+=`<div class="vz-it${m.c===stkVz.code?' on':''}" onclick="stkVzPick('${m.c}')"><b>${esc(m.n)}</b> <span style="color:var(--muted)">${blkA?'['+esc(m.g)+'] ':''}(${esc(m.u)})</span>${it.rec?' <span style="background:#fef08a;color:#854d0e;font-size:10px;font-weight:800;padding:0 4px;border-radius:3px">추천</span>':''}<div>${stt}</div></div>`;});
+    lh+=`<div class="vz-it${m.c===stkVz.code?' on':''}" onclick="stkVzPick('${m.c}')"><b>${esc(m.n)}</b> <span style="color:var(--muted)">[${esc(m.g)}] (${esc(m.u)})</span>${it.rec?' <span style="background:#fef08a;color:#854d0e;font-size:10px;font-weight:800;padding:0 4px;border-radius:3px">추천</span>':''}<div>${stt}</div></div>`;});
   if(!list.length)lh='<div style="padding:14px;color:var(--muted);font-size:12px">해당하는 품목이 없습니다.</div>';
   b.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><b style="font-size:15px">🔗 재고량 시트 ↔ 월별 원단위 연동 (${esc(ym)})</b>
     <span style="font-size:12px;color:var(--muted)">① 왼쪽에서 원단위 품목 선택 → ② 오른쪽 시트에서 값 칸을 눌러 선택(여러 칸을 누르면 합산) → ③ [연동하기]</span><span style="flex:1"></span>
     <button class="btn sm" onclick="stkVzClose();stkMapOpenSheet()" title="기존 수식 입력 표">수식 표로 보기</button><button class="btn sm" onclick="stkVzClose()">닫기</button></div>
    ${stkHas(ym)?'':`<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:5px 9px;font-size:12px;margin-bottom:6px">⚠ ${esc(ym)} 재고량 시트가 아직 없습니다. 연동은 저장되지만 월말재고에는 시트를 만든 뒤 반영됩니다. <button class="btn sm primary" onclick="stkStart().then(()=>stkVzRender())">▶ 전월 값으로 ${esc(ym)} 시트 시작</button></div>`}
    <div class="vz-wrap"><div class="vz-l"><div style="padding:6px;border-bottom:1px solid #e2e8f0">
-      <div style="display:flex;gap:4px;margin-bottom:5px">${[['all','전체'],['no','미연동'],['ok','연동됨']].map(x=>`<button class="btn sm${stkVz.f===x[0]?' primary':''}" onclick="stkVz.f='${x[0]}';stkVzRender()">${x[1]} ${cnt[x[0]]}</button>`).join('')}</div>
+      <div style="display:flex;gap:4px;margin-bottom:5px">${[['all','전체'],['no','미연동'],['ok','연동됨']].map(x=>`<button class="btn sm${stkVz.f===x[0]?' primary':''}" onclick="stkVz.f='${x[0]}';stkVzRender()">${x[1]} ${cnt[x[0]]}</button>`).join('')}<button class="btn sm" style="margin-left:auto" onclick="stkVzAuto()" title="시트에 같은 이름의 품명이 확실히 있는 미연동 품목만 골라 한 번에 연결합니다">⚡ 자동 연결</button></div>
       <input class="search" id="stkVzQ" placeholder="품명·설비 검색" value="${esc(stkVz.q)}" oninput="stkVz.q=this.value;stkVzRender()" style="width:100%">
       ${blkA?`<div style="margin-top:5px;font-size:11.5px;background:#fef9c3;border-radius:5px;padding:3px 6px">시트 품명 <b>${esc(blkA.label||'(품명 없음)')}</b> 기준으로 정렬 <button class="btn sm" onclick="stkVz.blk='';stkVzRender()">해제</button></div>`:''}</div>
      <div class="vz-list" id="stkVzList">${lh}</div></div>
@@ -15333,6 +15334,21 @@ function stkVzRender(force){
   const nl=document.getElementById('stkVzList'),nr=document.getElementById('stkVzR');if(nl)nl.scrollTop=sl;if(nr&&!force){nr.scrollTop=srT;nr.scrollLeft=srL;}
   if(document.activeElement&&document.activeElement.id==='stkVzQ'){}
   const qi=document.getElementById('stkVzQ');if(qi&&stkVz.q&&!stkVz.__noFocus){qi.focus();qi.setSelectionRange(qi.value.length,qi.value.length);}
+}
+async function stkVzAuto(){
+  const ym=stkYm(),map=stkMapAll(),anchors=stkVzAnchors(ym),tail=x=>String(x||'').replace(/^.*?,\s*/,''),hits=[];
+  INV_MASTER.filter(m=>m.c&&!map[m.c]).forEach(m=>{
+    const sc=anchors.map(a=>{const x=lkScore({name:a.label,spec:''},{name:m.n,spec:''}),y=lkScore({name:a.label,spec:''},{name:tail(m.n),spec:''});return{a,s:Math.max(x.s,y.s),ok:x.nameOK||y.nameOK};}).filter(x=>x.ok&&x.s>=28).sort((a,b)=>b.s-a.s);
+    if(!sc.length)return;const top=sc[0];if(top.s<60||(sc.length>1&&top.s-sc[1].s<15))return;
+    const d=stkLkDefault(stkLkCands(top.a.ref),m.u);if(!d)return;
+    if((m.u==='EA'&&d.type==='중량')||(m.u==='KG'&&d.type==='수량'))return;
+    hits.push({m,a:top.a,d});});
+  const left=INV_MASTER.filter(m=>m.c&&!map[m.c]).length-hits.length;
+  if(!hits.length){alert('자동으로 연결할 수 있는 품목이 없습니다.\n\n미연동 품목은 시트에 같은 이름의 품명이 없거나 비슷한 이름이 여러 개라 직접 골라야 합니다.\n(왼쪽에서 품목을 누르면 추천 칸이 표시됩니다)');return;}
+  const M=stkCtx(ym);
+  if(!confirm('시트에서 같은 이름의 품명을 찾은 '+hits.length+'개 품목을 연결합니다.\n\n'+hits.map(h=>'· ['+h.m.g+'] '+h.m.n+' ← 시트 "'+h.a.label+'" '+h.d.ex+' ('+h.d.type+' '+stkFmt(M.ev(h.d.ex))+')').join('\n')+'\n\n나머지 '+left+'개는 직접 연결하거나 월별 화면에서 직접 입력합니다. 연결할까요?'))return;
+  for(const h of hits)await stkMapSet(h.m.c,h.d.ex);
+  stkVz.note='✔ '+hits.length+'개 자동 연결 완료';stkVzRender();try{stkRender();}catch(e){}toast('자동 연결 '+hits.length+'건 완료');
 }
 function stkVzPick(code){
   const ym=stkYm(),map=stkMapAll(),m=INV_MASTER.find(x=>x.c===code);if(!m)return;
@@ -17723,6 +17739,12 @@ function invVendBadge(code){
 }
 const iN=n=>Math.round(n).toLocaleString();
 const iU=n=>(Math.abs(n)>=100?n.toFixed(0):n.toFixed(2));
+/* 2026-10-26 (rpt143): 월별 원단위 표시 순서 — 업체별 우선(동국R&S → 원진 → KR → 조선내화 → 오성 → 기타 → 형강가열로), 업체 안에서는 설비 순 */
+const INV_VORD=['동국R&S','원진','KR','조선내화','오성','기타','형강가열로'];
+function invMsortMode(){try{return localStorage.getItem('dgrns_inv_msort')==='grp'?'grp':'vend';}catch(e){return 'vend';}}
+function invMsortSet(v){try{localStorage.setItem('dgrns_inv_msort',v==='grp'?'grp':'vend');}catch(e){}renderInvMonth();}
+function invMonthVend(m){const l=invVendLabel(m.c);return l==='직매출'?'동국R&S':l;}
+function invVendIdx(v){const i=INV_VORD.indexOf(v);return i<0?5:i;}
 function renderInvMonth(){
   const ym=document.getElementById('inv_ym').value||'2026-09';
   const PI=getProdInfo(ym);
@@ -17739,13 +17761,17 @@ function renderInvMonth(){
   let items=INV_MASTER.filter(m=>!gf||m.g===gf).filter(m=>!q||(m.n||'').toLowerCase().includes(q)||(m.g||'').toLowerCase().includes(q));
   // 그룹 정렬
   items.sort((a,b)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(b.g);return (ia<0?9:ia)-(ib<0?9:ib);});
-  items.sort((a,b)=>(invRhf(a)?1:0)-(invRhf(b)?1:0));   // 형강가열로는 맨 아래 별도 구역
+  const vm=invMsortMode()==='vend';{const ms=document.getElementById('inv_msort');if(ms&&ms.value!==(vm?'vend':'grp'))ms.value=vm?'vend':'grp';}
+  if(vm)items.sort((a,b)=>invVendIdx(invMonthVend(a))-invVendIdx(invMonthVend(b)));   // 업체별 우선(업체 안에서는 위의 설비 순 유지 — 정렬은 안정 정렬)
+  else items.sort((a,b)=>(invRhf(a)?1:0)-(invRhf(b)?1:0));   // 형강가열로는 맨 아래 별도 구역
+  const keyOf=m=>vm?invMonthVend(m):m.g,cntK={};items.forEach(m=>{const k=keyOf(m);cntK[k]=(cntK[k]||0)+1;});
   let body='',lastG=null,gSum={amt:0},tot={amt:0,useKg:0},totDone=false;
   const totRow=()=>{body+=`<tr style="background:#eef2f6;font-weight:800"><td colspan="7">합계 (형강가열로 제외)</td><td></td><td class="n"></td><td class="n">${prod?iU(tot.amt/prod):'-'}</td></tr>`;totDone=true;};
   const flushG=()=>{if(lastG!=null)body+=`<tr class="grp-row"><td colspan="7">${esc(lastG)} 소계${lastG===INV_RHF?' (매출 기록용 · 원단위 제외)':''}</td><td></td><td class="n"></td><td class="n">${lastG===INV_RHF?'-':(prod?iU(gSum.amt/prod):'-')}</td></tr>`;};
   items.forEach(m=>{const it=invItem(m.c);const code=m.c;const pr=invPriceAt(code,ym);
-    if(m.g!==lastG){flushG();lastG=m.g;gSum={amt:0};
-      if(invRhf(m)){if(!totDone)totRow();body+=`<tr><td colspan="10" style="background:#ffedd5;font-weight:800;padding:7px 10px;color:#1e293b">🔥 형강가열로 — 제강 원가(원단위)와 무관 · 입고·사용 기록과 매출 기록용</td></tr>`;}}
+    {const K=keyOf(m);if(K!==lastG){flushG();lastG=K;gSum={amt:0};
+      if(invRhf(m)){if(!totDone)totRow();body+=`<tr><td colspan="10" style="background:#ffedd5;font-weight:800;padding:7px 10px;color:#1e293b">🔥 형강가열로 — 제강 원가(원단위)와 무관 · 입고·사용 기록과 매출 기록용</td></tr>`;}
+      else if(vm){body+=`<tr><td colspan="10" style="background:${K==='동국R&S'?'#dbeafe':'#e5e7eb'};font-weight:800;padding:6px 10px;color:#1e293b">▣ ${esc(K)} <span style="font-weight:500;font-size:11.5px">${cntK[K]}품목 · ${K==='동국R&S'?'일반 + 직매출 (동국R&S 매출 포함)':'타사 공급 (동국R&S 매출 미포함)'}</span></td></tr>`;}}}
     const prev=invPrev(code,ym),inq=invIn(code,ym),end=invEnd(code,ym),use=invUse(code,ym);
     const amt=use*pr;gSum.amt+=amt;if(!invRhf(m))tot.amt+=amt;
     const qOv=invRhf(m)?0:use/(prod||1),aOv=invRhf(m)?0:amt/(prod||1);
@@ -29293,7 +29319,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.26.rpt142";
+const APP_VERSION = "2026.10.26.rpt143";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
