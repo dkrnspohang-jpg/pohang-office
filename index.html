@@ -15247,7 +15247,12 @@ function stkVzOpen(blk){
   ov.classList.add('show');stkVzRender(true);
   if(stkVz.blk)setTimeout(()=>stkVzScroll(stkVz.blk),80);
 }
-function stkVzClose(){const ov=document.getElementById('stkVzOverlay');if(ov)ov.classList.remove('show');try{stkRender();}catch(e){}}
+function stkVzOpenItem(code,ym){   // 월별 원단위 화면에서: 이 품목을 고른 상태로 연동 작업대 열기
+  const x=document.getElementById('stk_ym');if(x&&ym)x.value=ym;
+  stkVzOpen('');stkVz.f='all';stkVzPick(code);
+  setTimeout(()=>{const el=document.querySelector('#stkVzList .vz-it.on');if(el)el.scrollIntoView({block:'center'});},80);
+}
+function stkVzClose(){const ov=document.getElementById('stkVzOverlay');if(ov)ov.classList.remove('show');try{stkRender();}catch(e){}try{if(typeof invSub!=='undefined'&&invSub==='month'&&typeof renderInvMonth==='function')renderInvMonth();}catch(e){}}
 function stkVzRefresh(){const ov=document.getElementById('stkVzOverlay');if(ov&&ov.classList.contains('show'))stkVzRender();}
 function stkVzScroll(ref){
   const box=document.getElementById('stkVzR');if(!box)return;const el=box.querySelector('[data-ref="'+ref+'"],[data-blk="'+ref+'"]');if(!el)return;
@@ -15316,6 +15321,7 @@ function stkVzRender(force){
   b.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><b style="font-size:15px">🔗 재고량 시트 ↔ 월별 원단위 연동 (${esc(ym)})</b>
     <span style="font-size:12px;color:var(--muted)">① 왼쪽에서 원단위 품목 선택 → ② 오른쪽 시트에서 값 칸을 눌러 선택(여러 칸을 누르면 합산) → ③ [연동하기]</span><span style="flex:1"></span>
     <button class="btn sm" onclick="stkVzClose();stkMapOpenSheet()" title="기존 수식 입력 표">수식 표로 보기</button><button class="btn sm" onclick="stkVzClose()">닫기</button></div>
+   ${stkHas(ym)?'':`<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:5px 9px;font-size:12px;margin-bottom:6px">⚠ ${esc(ym)} 재고량 시트가 아직 없습니다. 연동은 저장되지만 월말재고에는 시트를 만든 뒤 반영됩니다. <button class="btn sm primary" onclick="stkStart().then(()=>stkVzRender())">▶ 전월 값으로 ${esc(ym)} 시트 시작</button></div>`}
    <div class="vz-wrap"><div class="vz-l"><div style="padding:6px;border-bottom:1px solid #e2e8f0">
       <div style="display:flex;gap:4px;margin-bottom:5px">${[['all','전체'],['no','미연동'],['ok','연동됨']].map(x=>`<button class="btn sm${stkVz.f===x[0]?' primary':''}" onclick="stkVz.f='${x[0]}';stkVzRender()">${x[1]} ${cnt[x[0]]}</button>`).join('')}</div>
       <input class="search" id="stkVzQ" placeholder="품명·설비 검색" value="${esc(stkVz.q)}" oninput="stkVz.q=this.value;stkVzRender()" style="width:100%">
@@ -17749,7 +17755,7 @@ function renderInvMonth(){
       <td class="n">${iN(pr)}</td><td>${esc(it.u)}</td>
       <td class="n"><input type="number" class="iinp"${invPrevAttr(code,ym)}${invLockAttr(ym)} value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
       <td class="n">${invInDaily(code,ym)!=null?`<a href="#" onclick="invInEdit('${code}','${ym}');return false" title="일별 입고 내역 보기·수정 (입고량 탭의 일별 합계: ${esc(invInData.filter(r=>r.code===code&&(r.ymd||'').slice(0,7)===ym&&(+r.qty||0)>0).map(r=>r.ymd.slice(5)+' '+r.qty).join(', '))})" style="color:#1d4ed8;font-weight:700;text-decoration:underline dotted">${iN(inq)}</a> <span style="font-size:9px;color:#1d4ed8;cursor:pointer" onclick="invInEdit('${code}','${ym}')">일별✎</span>`:`<input type="number" class="iinp inp-yel"${invLockAttr(ym)} value="${inq}" onchange="setInvField('${code}','${ym}','in',this.value)">`}</td>
-      <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 '+esc(stkMapAll()[code])+' 에서 가져옴 — 눌러서 시트 위치로 이동" style="font-size:10px;cursor:pointer;color:#15803d;font-weight:700" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗'+esc(stkMapAll()[code])+'</span>':''}</td>
+      <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 '+esc(stkMapAll()[code])+' 에서 가져옴 — 눌러서 시트 위치로 이동" style="font-size:10px;cursor:pointer;color:#15803d;font-weight:700" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗'+esc(stkMapAll()[code])+'</span>':(invConfLocked(ym)?'':'<span title="이 품목의 월말재고를 재고량 시트의 칸과 연결합니다 — 연결하면 시트에서 입력한 값이 자동으로 들어옵니다" style="display:inline-block;margin-left:3px;padding:0 6px;border:1px dashed #94a3b8;border-radius:10px;font-size:10.5px;color:#475569;background:#fff;cursor:pointer;white-space:nowrap" onclick="stkVzOpenItem(\''+code+'\',\''+ym+'\')">＋시트 연동</span>')}</td>
       <td class="n"><input type="number" class="iinp" style="font-weight:700;color:#c2410c"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
       <td class="n">${prod&&!invRhf(m)?iU(qOv):'-'}</td><td class="n">${prod&&!invRhf(m)?iU(aOv):'-'}</td></tr>`;});
   flushG();
@@ -25487,6 +25493,32 @@ function bizplanVendorSalesTableHtml(M,kind){ // kind 'w'(중량 톤) | 'a'(금�
   h+=`<tr style="font-size:12px"><td style="padding-left:20px">증감(계획−${_bpBL().yy})</td>${M.tot.map((x,i)=>{const v=x[kind]-M.tot25[i][kind];return `<td class="n" style="${_bpcol(v)}">${_bpsg(v,d)}</td>`;}).join('')}<td class="n" style="font-weight:700;${_bpcol(sum(M.tot)-sum(M.tot25))}">${_bpsg(sum(M.tot)-sum(M.tot25),d)}</td></tr>`;
   return h+'</tbody>';
 }
+/* 2026-10-26 (rpt141): 같은 달의 중량(톤)·금액(백만원)을 나란히 — 월별 2칸(중량|금액)으로 묶어 한 표에 표시 */
+function bizplanVendorSalesPairHtml(M){
+  const D=1,fm=v=>v?_bpf(v,Math.abs(v)<1?2:D):'-';
+  const sum=(a,k)=>a.reduce((s,x)=>s+x[k],0);
+  const BL='border-left:2px solid #cbd5e1;',AT='background-image:linear-gradient(rgba(16,185,129,.08),rgba(16,185,129,.08));';
+  const cells=(arr,st)=>arr.map(x=>`<td class="n" style="${BL}${st||''}">${fm(x.w)}</td><td class="n" style="${AT}${st||''}">${fm(x.a)}</td>`).join('')
+    +`<td class="n" style="${BL}font-weight:700;${st||''}">${fm(sum(arr,'w'))}</td><td class="n" style="${AT}font-weight:700;${st||''}">${fm(sum(arr,'a'))}</td>`;
+  const row=(label,arr,st,indent)=>`<tr${st?` style="${st}"`:''}><td style="${indent?'padding-left:20px;':''}white-space:nowrap">${label}</td>${cells(arr)}</tr>`;
+  let h=`<thead><tr><th rowspan="2" style="min-width:190px;vertical-align:middle">구분</th>${Array.from({length:12},(_,i)=>`<th colspan="2" style="text-align:center;${BL}">${i+1}월</th>`).join('')}<th colspan="2" style="text-align:center;${BL}">연 합계</th></tr>
+    <tr>${Array.from({length:13},()=>`<th class="n" style="${BL}font-size:11px">중량<br><span style="font-weight:400">(톤)</span></th><th class="n" style="font-size:11px;background:#d1fae5">금액<br><span style="font-weight:400">(백만원)</span></th>`).join('')}</tr></thead><tbody>`;
+  h+=row('<b>동국제강</b> (다원화 제외 후)',M.dk.m,'background:#eef4fb');
+  h+=row(_bpBL().short,M.dk.a25,'color:#64748b;font-size:12px',true);
+  M.groups.forEach(g=>{
+    h+=`<tr style="background:#eef2f7"><td colspan="27"><b>${g.label}</b></td></tr>`;
+    g.custs.forEach(c=>{h+=row(esc(c.label),c.m,'',true);});
+    h+=row('<b>'+g.label+' 소계</b>',g.sub,'background:#f6f8fa');
+    h+=row(_bpBL().short,g.a25,'color:#64748b;font-size:12px',true);
+  });
+  h+=row('<b>합계</b> (동국제강+포스코+시중)',M.tot,'background:#dde4ec;font-weight:700');
+  h+=row(_bpBL().short+' 합계',M.tot25,'color:#64748b;font-size:12px',true);
+  const dcell=(v,bl)=>`<td class="n" style="${bl?BL:AT}${_bpcol(v)}">${_bpsg(v,D)}</td>`;
+  h+=`<tr style="font-size:12px"><td style="padding-left:20px">증감(계획−${_bpBL().yy})</td>${M.tot.map((x,i)=>dcell(x.w-M.tot25[i].w,true)+dcell(x.a-M.tot25[i].a,false)).join('')}${dcell(sum(M.tot,'w')-sum(M.tot25,'w'),true).replace('class="n"','class="n" data-b="1"')}${dcell(sum(M.tot,'a')-sum(M.tot25,'a'),false)}</tr>`;
+  return h+'</tbody>';
+}
+function bizplanVsView(){try{return localStorage.getItem('dgrns_bp_vsview')==='split'?'split':'pair';}catch(e){return 'pair';}}
+function bizplanVsViewSet(v){try{localStorage.setItem('dgrns_bp_vsview',v);}catch(e){}renderBizplanVendorSales();}
 function bizplanDivVendorTableHtml(M,kind){
   const sum=a=>a.reduce((s,x)=>s+x[kind],0);
   const row=(label,arr,st)=>`<tr${st?` style="${st}"`:''}><td style="white-space:nowrap">${label}</td>${arr.map(x=>`<td class="n">${x[kind]?_bpf(x[kind],1):'-'}</td>`).join('')}<td class="n" style="font-weight:700">${_bpf(sum(arr),1)}</td></tr>`;
@@ -25498,16 +25530,21 @@ function bizplanDivVendorTableHtml(M,kind){
 }
 function renderBizplanVendorSales(){
   const el=document.getElementById('bizplan-vendorsales');if(!el)return;
-  const M=bizplanVendorSalesModel();
+  const M=bizplanVendorSalesModel(),vv=bizplanVsView();
   const note=M.vend.length?'':'<div class="empty" style="margin:6px 0">다원화 제외액이 없습니다. 동국제강 탭의 "다원화사 공급 제외" 규칙에 비율을 입력하면 업체별 배분이 여기에 표시됩니다.</div>';
   el.innerHTML=`
   <div class="toolrow" style="margin-bottom:6px"><span class="subhead" style="margin:0">업체별 판매계획 — ${M.year}년 · ${esc(bizplanVerCur(M.year))} <span class="hint">고객사별 월별 판매계획과 ${_bpBL().full} 비교입니다. 포스코·시중은 원본 시트 값, 동국제강은 품목 수량·다원화 입력이 즉시 반영됩니다.</span></span>
-    <span style="flex:1"></span><button class="btn sm" onclick="downloadBizplanVendorSalesExcel()">📥 엑셀 저장</button></div>
-  <div style="font-weight:700;margin:8px 0 4px">① 월별 중량 (톤)</div>
+    <span style="flex:1"></span><span style="font-size:12px;color:var(--muted)">보기</span>
+    <button class="btn sm${vv==='pair'?' primary':''}" onclick="bizplanVsViewSet('pair')" title="같은 달의 중량(톤)과 금액(백만원)을 나란히 한 표로 봅니다">월별 중량·금액 나란히</button>
+    <button class="btn sm${vv==='split'?' primary':''}" onclick="bizplanVsViewSet('split')" title="중량표와 금액표를 따로 봅니다">중량표·금액표 분리</button>
+    <button class="btn sm" onclick="downloadBizplanVendorSalesExcel()">📥 엑셀 저장</button></div>
+  ${vv==='pair'?`<div style="font-weight:700;margin:8px 0 4px">① 월별 중량(톤) · 금액(백만원) — 같은 달 나란히</div>
+  <div class="tablewrap"><table class="bomtbl" style="min-width:2000px">${bizplanVendorSalesPairHtml(M)}</table></div>`
+  :`<div style="font-weight:700;margin:8px 0 4px">① 월별 중량 (톤)</div>
   <div class="tablewrap"><table class="bomtbl" style="min-width:1250px">${bizplanVendorSalesTableHtml(M,'w')}</table></div>
   <div style="font-weight:700;margin:14px 0 4px">② 월별 금액 (백만원)</div>
-  <div class="tablewrap"><table class="bomtbl" style="min-width:1250px">${bizplanVendorSalesTableHtml(M,'a')}</table></div>
-  <div style="font-weight:700;margin:14px 0 4px">③ 다원화사(공급업체)별 배분 — 제강 총수요에서 동국R&S 몫을 뺀 부분</div>${note}
+  <div class="tablewrap"><table class="bomtbl" style="min-width:1250px">${bizplanVendorSalesTableHtml(M,'a')}</table></div>`}
+  <div style="font-weight:700;margin:14px 0 4px">${vv==='pair'?'②':'③'} 다원화사(공급업체)별 배분 — 제강 총수요에서 동국R&S 몫을 뺀 부분</div>${note}
   <div class="tablewrap"><table class="bomtbl" style="min-width:1250px">${bizplanDivVendorTableHtml(M,'a')}</table></div>
   <div style="font-size:11.5px;color:var(--muted);margin-top:4px">※ 위 표 금액 단위는 백만원 · 중량(톤) 기준 표는 엑셀 저장 파일에 함께 들어갑니다. ${_bpBL().short}${M.year==='2026'?'은 원본 엑셀 월별 예상실적(동국제강/포스코/외부)':'은 직전 연도 사업계획(현재 버전)의 월별 값'}입니다.</div>`;
 }
@@ -29256,7 +29293,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.26.rpt140";
+const APP_VERSION = "2026.10.26.rpt142";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
