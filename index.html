@@ -326,7 +326,31 @@
   table.stk tbody tr td.sum{background:#fef9c3;font-weight:800;text-align:right}
   table.stk tbody tr td.ovr{background:#fed7aa}
   table.stk tbody tr td.stk-lkc{position:relative;outline:2px solid #16a34a;outline-offset:-2px}
-  table.stk tbody tr td.stk-lkc::after{content:'→원단위';position:absolute;left:1px;top:0;font-size:9px;line-height:11px;font-weight:800;color:#fff;background:#16a34a;padding:0 3px;border-radius:0 0 3px 0;pointer-events:none}
+  table.stk tbody tr td.stk-lkc::after{content:attr(data-lk);position:absolute;left:1px;top:0;max-width:calc(100% - 3px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;line-height:11px;font-weight:800;color:#fff;background:#16a34a;padding:0 3px;border-radius:0 0 3px 0;pointer-events:none}
+  /* 2026-10-26 (rpt140): 연동 작업대 — 시트 칸을 눌러 월별 원단위 품목과 연결 */
+  #stkVzBody{width:min(1500px,96vw);padding:14px 16px;max-width:none}
+  .vz-wrap{display:flex;gap:10px;height:64vh;min-height:360px}
+  .vz-l{width:330px;flex:none;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .vz-list{overflow:auto;flex:1}
+  .vz-gh{position:sticky;top:0;background:#f1f5f9;font-size:11px;font-weight:800;color:#475569;padding:3px 8px;border-bottom:1px solid #e2e8f0;z-index:1}
+  .vz-it{padding:5px 8px;border-bottom:1px solid #eef1f5;cursor:pointer;font-size:12px;line-height:1.35}
+  .vz-it:hover{background:#f8fafc}
+  .vz-it.on{background:#dbeafe;outline:2px solid #2563eb;outline-offset:-2px}
+  .vz-it .st{font-size:11px;margin-top:1px}
+  .vz-it .st.ok{color:#047857}.vz-it .st.no{color:#b91c1c}.vz-it .st.bad{color:#b45309}
+  .vz-r{flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:0}
+  table.stkvz{zoom:.8}
+  table.stkvz td.vzc{cursor:pointer}
+  table.stkvz td.vzc:hover{outline:2px solid #f59e0b;outline-offset:-2px}
+  table.stkvz td.vz-sel{background:#fdba74 !important;outline:3px solid #ea580c;outline-offset:-3px;font-weight:800;position:relative}
+  table.stkvz td.vz-sel::before{content:'선택';position:absolute;right:1px;top:0;font-size:9px;line-height:11px;color:#fff;background:#ea580c;padding:0 3px;border-radius:0 0 0 3px}
+  table.stkvz td.vz-lk{position:relative;outline:2px solid #16a34a;outline-offset:-2px}
+  table.stkvz td.vz-lk::after{content:attr(data-lk);position:absolute;left:1px;top:0;max-width:calc(100% - 3px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;line-height:11px;font-weight:800;color:#fff;background:#16a34a;padding:0 3px;border-radius:0 0 3px 0;pointer-events:none}
+  table.stkvz td.vz-blk{box-shadow:inset 0 0 0 9999px rgba(250,204,21,.22)}
+  table.stkvz td.vz-nm{cursor:pointer}
+  table.stkvz .vz-bt{font-size:10px;font-weight:800;margin-top:1px}
+  table.stkvz .vz-bt.on{color:#15803d}table.stkvz .vz-bt.off{color:#b91c1c}
+  .vz-foot{margin-top:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.6}
   /* 재고량 시트 병합·연동 (2026-10-19) */
   table.stk td.mgc{cursor:cell;user-select:none}
   table.stk td.stk-sel{background:#bfdbfe !important;outline:2px solid #2563eb;outline-offset:-2px}
@@ -3961,7 +3985,8 @@ service cloud.firestore {
       <img id="photoCropImg" style="max-width:560px;max-height:60vh;display:block;user-select:none;pointer-events:none">
       <div id="photoCropSelBox" style="display:none;position:absolute;border:2px dashed #1d4ed8;background:rgba(29,78,216,.15);pointer-events:none"></div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
+      <span style="display:inline-flex;gap:6px;margin-right:auto"><button class="btn" onclick="photoCropRotate(-90)" title="사진을 왼쪽(반시계)으로 90° 돌립니다">↶ 왼쪽 90°</button><button class="btn" onclick="photoCropRotate(90)" title="사진을 오른쪽(시계)으로 90° 돌립니다">↷ 오른쪽 90°</button><button class="btn" onclick="photoCropRotate(180)" title="사진을 180° 돌립니다">⟲ 180°</button></span>
       <button class="btn" onclick="photoCropCancel()">취소</button>
       <button class="btn" onclick="photoCropApply(true)">전체 사용</button>
       <button class="btn primary" onclick="photoCropApply(false)">선택 영역 자르기</button>
@@ -4444,6 +4469,18 @@ function photoCropMouseMove(e){
   __photoUpdateSel();
 }
 function photoCropMouseUp(e){}
+/* 2026-10-26 (rpt140): 사진 자르기 창에 회전 기능 — 90°(좌/우)·180° 회전한 사진을 다시 화면에 올려 놓고, 회전된 사진 기준으로 영역 선택·자르기 */
+function photoCropRotate(deg){
+  const img=document.getElementById('photoCropImg');if(!img||!img.src)return;
+  const w0=img.naturalWidth,h0=img.naturalHeight;if(!w0||!h0)return;
+  const q=((deg%360)+360)%360,swap=(q===90||q===270),sc=Math.min(1,2400/Math.max(w0,h0));
+  const w=Math.round(w0*sc),h=Math.round(h0*sc);
+  const cv=document.createElement('canvas');cv.width=swap?h:w;cv.height=swap?w:h;
+  const cx=cv.getContext('2d');cx.translate(cv.width/2,cv.height/2);cx.rotate(q*Math.PI/180);cx.drawImage(img,-w/2,-h/2,w,h);
+  __photoSel=null;document.getElementById('photoCropSelBox').style.display='none';
+  img.onload=()=>{__photoCropNatural={w:img.naturalWidth,h:img.naturalHeight};};
+  img.src=cv.toDataURL('image/jpeg',0.95);
+}
 function __photoUpdateSel(){
   if(!__photoSel)return;const b=document.getElementById('photoCropSelBox');
   const x=Math.min(__photoSel.x0,__photoSel.x),y=Math.min(__photoSel.y0,__photoSel.y);
@@ -14998,7 +15035,8 @@ function stkTableHtml(ym,mode){
       if(hasOv&&kind==='f')cls.push('ovr');
       const lkr=LKR[ref];
       if(lkr)cls.push('stk-lkc');
-      const lkT=lkr?'\n🔗 월별 원단위 재고로 넘어가는 칸 → '+lkr.map(x=>x.n+' (식: '+x.ex+')').join(' / '):'';
+      const lkT=lkr?'\n🔗 월별 원단위 재고로 넘어가는 칸 → '+lkr.map(x=>'['+((INV_MASTER.find(m=>m.c===x.code)||{}).g||'')+'] '+x.n+' (식: '+x.ex+')').join(' / ')+'\n(눌러서 보는 것은 [🔗 연동 설정] 화면)':'';
+      const lkA=lkr?` data-lk="${esc(lkr.length===1?'→ '+stkLkShort(lkr[0].n):'→ 원단위 '+lkr.length+'건')}"`:'';
       let disp;
       if(txt)disp=String(rawV==null?'':rawV);
       else{const v=M.V(ref);disp=(rawV==null||rawV==='')&&kind==='i'?'':stkFmt(v);}
@@ -15012,14 +15050,14 @@ function stkTableHtml(ym,mode){
       }
       if(nm){
         const items=LK.items(ref),big=mg&&mg.rs>=2;
-        const chips=big?(items.length?items.map(it=>`<span class="stk-lk on" title="${esc(it.n+' · '+it.ex+' · '+it.u)}" onclick="stkLkOpen('${ref}')">🔗 ${esc(stkLkShort(it.n))}</span>`).join(''):`<span class="stk-lk off" onclick="stkLkOpen('${ref}')">＋ 월별 원단위 연동</span>`)
-          :`<span class="stk-lk sm ${items.length?'on':'off'}" title="${items.length?esc(items.map(it=>it.n+' ('+it.ex+')').join('\n')):'월별 원단위 품목 연동'}" onclick="stkLkOpen('${ref}')">${items.length?'🔗':'＋'}</span>`;
+        const chips=big?(items.length?items.map(it=>`<span class="stk-lk on" title="${esc(it.n+' · '+it.ex+' · '+it.u)}" onclick="stkVzOpen('${ref}')">🔗 ${esc(stkLkShort(it.n))}</span>`).join(''):`<span class="stk-lk off" onclick="stkVzOpen('${ref}')">＋ 월별 원단위 연동</span>`)
+          :`<span class="stk-lk sm ${items.length?'on':'off'}" title="${items.length?esc(items.map(it=>it.n+' ('+it.ex+')').join('\n')):'월별 원단위 품목 연동'}" onclick="stkVzOpen('${ref}')">${items.length?'🔗':'＋'}</span>`;
         const main=ro?(inner||`<span${hasLab?'':` data-ref="${ref}"`}>${esc(disp)}</span>`):`<input class="stk-i tx stk-nmi${hasLab?' ov':''}" data-nm="${ref}" value="${esc(disp)}" placeholder="품명 입력" title="클릭해서 품명을 직접 입력·수정 (병합한 칸에 입력 → 모든 달에 공통 적용)" autocomplete="off" onfocus="this.select()" onchange="stkNmSet('${ref}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}else if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">`;
         h+=`<td${sp} class="${cls.join(' ')} stk-nm${big?' big':''}"><div class="stk-nw"><div class="stk-nt">${main}</div><div class="stk-nc">${chips}</div></div></td>`;
         continue;
       }
-      if(inner){h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkT?` title="${esc(lkT.trim())}"`:''}>${inner}</td>`;}
-      else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}" ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT)}"`:''}>${esc(disp)}</td>`;}
+      if(inner){h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${lkT?` title="${esc(lkT.trim())}"`:''}>${inner}</td>`;}
+      else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA} ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT)}"`:''}>${esc(disp)}</td>`;}
     }
     h+='</tr>';
   });
@@ -15183,8 +15221,172 @@ function stkGo(ym,code){
   const ex=stkMapAll()[code]||'';const m=/[A-Z]{1,2}\d+/.exec(ex);
   setTimeout(()=>{if(!m)return;const el=document.querySelector('#stk_wrap [data-ref="'+m[0]+'"]');if(el){try{el.scrollIntoView({block:'center',inline:'center'});}catch(e){}if(el.tagName==='INPUT')el.focus();else{el.style.outline='3px solid #f59e0b';}}},60);
 }
-/* ---- 연동 설정(자재코드 ↔ 시트 셀 수식) ---- */
-function stkMapOpen(){
+/* ---- 2026-10-26 (rpt140) 연동 작업대: 왼쪽 월별 원단위 품목 ↔ 오른쪽 재고량 시트 — 시트 칸을 눌러 선택해 연결(수식 입력 불필요) ---- */
+let stkVz={code:'',sel:[],f:'all',q:'',blk:'',note:''};
+function stkVzSimple(ex){return /^[A-Z]{1,2}\d+(\+[A-Z]{1,2}\d+)*$/.test(String(ex||'').trim());}
+function stkVzAnchors(ym){
+  const rec=stkRec(ym)||{ov:{}},ov=rec.ov||{},MG=stkMerges(),cells=INV_STK.cells,LAB=stkMgStore().lab,out=[],seen={};
+  stkRowsList().forEach(r=>{for(let c=1;c<=20;c++){const ref=stkColL(c)+r;if(MG.cover.has(ref)||seen[ref])continue;
+    const base=cells[ref],hasOv=ov[ref]!==undefined,lab=LAB[ref],mg=MG.anc[ref];
+    if(!stkIsNm(ref,base,hasOv,ov,mg,lab))continue;seen[ref]=1;
+    out.push({ref,label:stkNmLabel(ref,ym),g:stkGrp(ref)});}});
+  return out;
+}
+function stkVzInG(g,p){return p&&p.c>=g.c1&&p.c<=g.c2&&p.r>=g.r1&&p.r<=g.rEnd;}
+function stkVzBlockOf(ref,anchors){const p=stkRefP(ref);return anchors.find(a=>stkVzInG(a.g,p))||null;}
+function stkVzType(ref){   // 시트 칸의 성격(수량/중량) — 단위 불일치 경고용
+  const p=stkRefP(ref);if(!p)return '';const c=stkColL(p.c),r=p.r;
+  if(r>=70)return(c==='D'||c==='I')?'수량':((c==='E'||c==='J')?'중량':'');
+  return(c==='E'||c==='J')?'수량':((c==='F'||c==='K')?'중량':'');
+}
+function stkVzOpen(blk){
+  let ov=document.getElementById('stkVzOverlay');
+  if(!ov){ov=document.createElement('div');ov.id='stkVzOverlay';ov.className='qdoc-overlay';ov.style.zIndex='400';ov.innerHTML='<div class="qdoc" id="stkVzBody"></div>';document.body.appendChild(ov);}
+  stkVz.code='';stkVz.sel=[];stkVz.note='';stkVz.blk=(typeof blk==='string'&&blk)?blk:'';
+  if(stkVz.blk){stkVz.f='no';stkVz.q='';}
+  ov.classList.add('show');stkVzRender(true);
+  if(stkVz.blk)setTimeout(()=>stkVzScroll(stkVz.blk),80);
+}
+function stkVzClose(){const ov=document.getElementById('stkVzOverlay');if(ov)ov.classList.remove('show');try{stkRender();}catch(e){}}
+function stkVzRefresh(){const ov=document.getElementById('stkVzOverlay');if(ov&&ov.classList.contains('show'))stkVzRender();}
+function stkVzScroll(ref){
+  const box=document.getElementById('stkVzR');if(!box)return;const el=box.querySelector('[data-ref="'+ref+'"],[data-blk="'+ref+'"]');if(!el)return;
+  const br=box.getBoundingClientRect(),er=el.getBoundingClientRect();
+  box.scrollTop=Math.max(0,box.scrollTop+(er.top-br.top)-br.height/3);box.scrollLeft=Math.max(0,box.scrollLeft+(er.left-br.left)-br.width/4);
+}
+function stkVzTable(ym,anchors){
+  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{}),ov=rec.ov||{},MG=stkMerges(),cells=INV_STK.cells,rows=stkRowsList(),LAB=stkMgStore().lab;
+  const LK=stkLkEntries(),LKR=stkLkRefMap(ym),mm=+ym.slice(5),selS=new Set(stkVz.sel);
+  const bg=stkVz.blk?(anchors.find(a=>a.ref===stkVz.blk)||{}).g:null;
+  let h='<table class="stk stkvz"><colgroup>'+STK_COLW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup><tbody>',prev=0;
+  rows.forEach(r=>{
+    if(prev&&r-prev>1)h+='<tr class="gap"><td colspan="20"></td></tr>';prev=r;
+    const sumRow=['B','H'].some(c=>cells[c+r]&&cells[c+r][1]==='계'),hdRow=(r<=3||r===70||r===71);
+    h+='<tr>';
+    for(let c=1;c<=20;c++){
+      const ref=stkColL(c)+r;if(MG.cover.has(ref))continue;
+      const mg=MG.anc[ref],sp=mg?` colspan="${mg.cs}" rowspan="${mg.rs}"`:'';
+      const base=cells[ref],isSlot=STK_SLOTS.has(ref),hasOv=ov[ref]!==undefined,labOv=LAB[ref],hasLab=labOv!==undefined&&labOv!=='';
+      const nm=stkIsNm(ref,base,hasOv,ov,mg,labOv);
+      if(!base&&!isSlot&&!hasOv&&!hasLab&&!nm){h+=`<td${sp}></td>`;continue;}
+      const kind=base?base[0]:'i';let rawV=M.raw(ref);if(hasLab)rawV=labOv;
+      const txt=hasLab||(kind==='s'&&!hasOv)||(typeof rawV==='string'&&rawV[0]!=='='&&isNaN(parseFloat(rawV.replace(/,/g,''))));
+      if(ref==='A1')rawV=`${mm}월 내화물 재고량 산출`;
+      const cls=[];
+      if(hdRow||ref==='A1')cls.push('hd');else if(txt)cls.push('lb');else if(kind==='n')cls.push('sn');else if(kind==='f')cls.push(sumRow?'sum':'fc');
+      let disp;if(txt)disp=String(rawV==null?'':rawV);else{const v=M.V(ref);disp=(rawV==null||rawV==='')&&kind==='i'?'':stkFmt(v);}
+      const p=stkRefP(ref);if(bg&&stkVzInG(bg,p))cls.push('vz-blk');
+      if(nm){const items=LK.items(ref);
+        h+=`<td${sp} class="${cls.join(' ')} vz-nm" data-blk="${ref}" title="이 품명을 기준으로 연결할 품목 찾기">${esc(disp)}<div class="vz-bt ${items.length?'on':'off'}">${items.length?'🔗 '+items.length+'건 연동':'＋ 미연동'}</div></td>`;continue;}
+      const clickable=!txt&&ref!=='A1'&&!hdRow&&(isSlot||kind==='f');
+      const lkr=LKR[ref];
+      if(clickable){cls.push('n','vzc');if(selS.has(ref))cls.push('vz-sel');
+        const others=(lkr||[]).filter(x=>x.code!==stkVz.code);
+        let at='';if(others.length){cls.push('vz-lk');at=` data-lk="${esc(others.length===1?'→ '+stkLkShort(others[0].n):'→ 원단위 '+others.length+'건')}" title="${esc('이미 연동됨: '+others.map(x=>x.n).join(' / '))}"`;}
+        h+=`<td${sp} class="${cls.join(' ')}" data-vz="${ref}" data-ref="${ref}"${at}>${esc(disp)}</td>`;continue;}
+      h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}" data-ref="${ref}">${esc(disp)}</td>`;
+    }
+    h+='</tr>';});
+  return h+'</tbody></table>';
+}
+function stkVzRender(force){
+  const b=document.getElementById('stkVzBody');if(!b)return;
+  const ym=stkYm(),map=stkMapAll(),M=stkCtx(ym),anchors=stkVzAnchors(ym);
+  const oldL=document.getElementById('stkVzList'),oldR=document.getElementById('stkVzR');
+  const sl=oldL?oldL.scrollTop:0,srT=oldR?oldR.scrollTop:0,srL=oldR?oldR.scrollLeft:0;
+  const blkA=stkVz.blk?anchors.find(a=>a.ref===stkVz.blk):null;
+  const q=(stkVz.q||'').trim().toUpperCase();
+  const stOf=m=>{const ex=map[m.c];if(!ex)return 'no';const v=M.ev(ex);if(isNaN(v))return 'bad';return Math.abs(invEnd(m.c,ym)-v)<1e-6?'ok':'bad';};
+  let list=INV_MASTER.filter(m=>m.c&&(!q||(m.n+' '+m.g).toUpperCase().includes(q)));
+  const cnt={all:list.length,no:list.filter(m=>!map[m.c]).length,ok:list.filter(m=>map[m.c]).length};
+  if(stkVz.f==='no')list=list.filter(m=>!map[m.c]);else if(stkVz.f==='ok')list=list.filter(m=>map[m.c]);
+  const tail=x=>String(x||'').replace(/^.*?,\s*/,'');
+  if(blkA){list=list.map(m=>{const a=lkScore({name:blkA.label,spec:''},{name:m.n,spec:''}),c=lkScore({name:blkA.label,spec:''},{name:tail(m.n),spec:''});return{m,s:Math.max(a.s,c.s),ok:a.nameOK||c.nameOK};}).sort((a,c)=>(c.ok-a.ok)||(c.s-a.s)).map(x=>({m:x.m,rec:x.ok&&x.s>=28}));}
+  else list=list.slice().sort((a,c)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(c.g);return(ia<0?9:ia)-(ib<0?9:ib);}).map(m=>({m,rec:false}));
+  let lastG=null,lh='';
+  list.forEach(it=>{const m=it.m;
+    if(!blkA&&m.g!==lastG){lastG=m.g;lh+=`<div class="vz-gh">${esc(m.g)}</div>`;}
+    const ex=map[m.c],st=stOf(m),v=ex?M.ev(ex):null;
+    let stt;
+    if(!ex)stt='<span class="st no">미연동 — 월별 원단위에서 직접 입력</span>';
+    else{const ba=stkVzBlockOf((String(ex).match(/[A-Z]{1,2}\d+/)||[''])[0],anchors);
+      stt=`<span class="st ${st}">${st==='bad'?'⚠ ':'✓ '}시트 ${esc(ex)}${ba?' · '+esc(ba.label):''} = ${v!=null&&isFinite(v)?stkFmt(v):'?'} ${esc(m.u)}${st==='bad'?' (월말재고와 다름)':''}</span>`;}
+    lh+=`<div class="vz-it${m.c===stkVz.code?' on':''}" onclick="stkVzPick('${m.c}')"><b>${esc(m.n)}</b> <span style="color:var(--muted)">${blkA?'['+esc(m.g)+'] ':''}(${esc(m.u)})</span>${it.rec?' <span style="background:#fef08a;color:#854d0e;font-size:10px;font-weight:800;padding:0 4px;border-radius:3px">추천</span>':''}<div>${stt}</div></div>`;});
+  if(!list.length)lh='<div style="padding:14px;color:var(--muted);font-size:12px">해당하는 품목이 없습니다.</div>';
+  b.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><b style="font-size:15px">🔗 재고량 시트 ↔ 월별 원단위 연동 (${esc(ym)})</b>
+    <span style="font-size:12px;color:var(--muted)">① 왼쪽에서 원단위 품목 선택 → ② 오른쪽 시트에서 값 칸을 눌러 선택(여러 칸을 누르면 합산) → ③ [연동하기]</span><span style="flex:1"></span>
+    <button class="btn sm" onclick="stkVzClose();stkMapOpenSheet()" title="기존 수식 입력 표">수식 표로 보기</button><button class="btn sm" onclick="stkVzClose()">닫기</button></div>
+   <div class="vz-wrap"><div class="vz-l"><div style="padding:6px;border-bottom:1px solid #e2e8f0">
+      <div style="display:flex;gap:4px;margin-bottom:5px">${[['all','전체'],['no','미연동'],['ok','연동됨']].map(x=>`<button class="btn sm${stkVz.f===x[0]?' primary':''}" onclick="stkVz.f='${x[0]}';stkVzRender()">${x[1]} ${cnt[x[0]]}</button>`).join('')}</div>
+      <input class="search" id="stkVzQ" placeholder="품명·설비 검색" value="${esc(stkVz.q)}" oninput="stkVz.q=this.value;stkVzRender()" style="width:100%">
+      ${blkA?`<div style="margin-top:5px;font-size:11.5px;background:#fef9c3;border-radius:5px;padding:3px 6px">시트 품명 <b>${esc(blkA.label||'(품명 없음)')}</b> 기준으로 정렬 <button class="btn sm" onclick="stkVz.blk='';stkVzRender()">해제</button></div>`:''}</div>
+     <div class="vz-list" id="stkVzList">${lh}</div></div>
+    <div class="vz-r" id="stkVzR" onclick="stkVzClick(event)">${stkVzTable(ym,anchors)}</div></div>
+   <div class="vz-foot" id="stkVzFoot"></div>`;
+  stkVzFoot();
+  const nl=document.getElementById('stkVzList'),nr=document.getElementById('stkVzR');if(nl)nl.scrollTop=sl;if(nr&&!force){nr.scrollTop=srT;nr.scrollLeft=srL;}
+  if(document.activeElement&&document.activeElement.id==='stkVzQ'){}
+  const qi=document.getElementById('stkVzQ');if(qi&&stkVz.q&&!stkVz.__noFocus){qi.focus();qi.setSelectionRange(qi.value.length,qi.value.length);}
+}
+function stkVzPick(code){
+  const ym=stkYm(),map=stkMapAll(),m=INV_MASTER.find(x=>x.c===code);if(!m)return;
+  stkVz.code=code;stkVz.sel=[];stkVz.note='';stkVz.__noFocus=true;
+  const anchors=stkVzAnchors(ym),ex=map[code];let focusRef='';
+  if(ex){
+    if(stkVzSimple(ex)){stkVz.sel=String(ex).split('+');}
+    else stkVz.note='현재 수식: '+ex+' (시트 칸을 눌러 새로 고르면 이 수식을 대체합니다)';
+    const ba=stkVzBlockOf((String(ex).match(/[A-Z]{1,2}\d+/)||[''])[0],anchors);focusRef=(String(ex).match(/[A-Z]{1,2}\d+/)||[''])[0];
+    if(ba)stkVz.blk=ba.ref;
+  }else{
+    const tail=x=>String(x||'').replace(/^.*?,\s*/,'');
+    const sc=anchors.map(a=>{const x=lkScore({name:a.label,spec:''},{name:m.n,spec:''}),y=lkScore({name:a.label,spec:''},{name:tail(m.n),spec:''});return{a,s:Math.max(x.s,y.s),ok:x.nameOK||y.nameOK};}).filter(x=>x.ok&&x.s>=28).sort((a,b)=>b.s-a.s);
+    if(sc.length){const top=sc[0].a;stkVz.blk=top.ref;const cands=stkLkCands(top.ref),d=stkLkDefault(cands,m.u);
+      if(d&&stkVzSimple(d.ex)){stkVz.sel=d.ex.split('+');stkVz.note='추천: 시트 품명 "'+top.label+'" · '+d.label+' — 맞으면 [연동하기], 아니면 다른 칸을 눌러 고르세요';}
+      else stkVz.note='추천 품명: "'+top.label+'" — 연결할 칸을 눌러 선택하세요';
+      focusRef=stkVz.sel[0]||top.ref;}
+    else{stkVz.blk='';stkVz.note='시트에서 같은 이름의 품명을 찾지 못했습니다 — 연결할 값 칸을 직접 눌러 선택하세요';}
+  }
+  stkVzRender(true);stkVz.__noFocus=false;
+  if(focusRef)setTimeout(()=>stkVzScroll(focusRef),60);
+}
+function stkVzClick(e){
+  const nm=e.target.closest('td[data-blk]');
+  if(nm){stkVz.blk=nm.getAttribute('data-blk');stkVz.f=stkVz.code?stkVz.f:'no';stkVz.__noFocus=true;stkVzRender();stkVz.__noFocus=false;return;}
+  const td=e.target.closest('td[data-vz]');if(!td)return;
+  if(!stkVz.code){toast('먼저 왼쪽에서 연결할 원단위 품목을 고르세요');return;}
+  const ref=td.getAttribute('data-vz'),i=stkVz.sel.indexOf(ref);
+  if(i>=0)stkVz.sel.splice(i,1);else stkVz.sel.push(ref);
+  stkVz.note='';stkVz.__noFocus=true;stkVzRender();stkVz.__noFocus=false;
+}
+function stkVzFoot(){
+  const box=document.getElementById('stkVzFoot');if(!box)return;
+  const ym=stkYm(),m=INV_MASTER.find(x=>x.c===stkVz.code);
+  if(!m){box.innerHTML='왼쪽에서 <b>원단위 품목</b>을 고르세요. 시트에서 <span style="background:#fef08a;font-weight:800;padding:0 4px;border-radius:3px">＋ 미연동</span> 품명을 누르면 그 품명과 비슷한 품목을 추천해 드립니다. 초록 테두리 칸은 이미 다른 품목과 연결된 칸입니다.';return;}
+  const M=stkCtx(ym),ex=stkVz.sel.join('+'),cur=stkMapAll()[m.c],v=ex?M.ev(ex):null;
+  const tp=[...new Set(stkVz.sel.map(stkVzType).filter(Boolean))];
+  const warn=((m.u==='EA'&&tp.length===1&&tp[0]==='중량')||(m.u==='KG'&&tp.length===1&&tp[0]==='수량'))?`<div style="color:#b45309">⚠ 품목 단위(${esc(m.u)})와 선택한 칸(${tp[0]})이 맞지 않을 수 있습니다 — ${m.u==='KG'?'중량':'수량'} 칸을 고르세요</div>`:'';
+  box.innerHTML=`<div><b>[${esc(m.g)}] ${esc(m.n)}</b> (${esc(m.u)}) ← ${stkVz.sel.length?stkVz.sel.map(r=>`<span style="background:#fed7aa;border-radius:4px;padding:0 5px;font-weight:700">${esc(r)} <span style="font-weight:400">${esc(stkVzType(r))} ${esc(stkFmt(M.V(r)))}</span> <a href="javascript:stkVzUnsel('${r}')" style="color:#b91c1c;text-decoration:none">×</a></span>`).join(' + '):'<span style="color:#b91c1c">연결할 시트 칸을 눌러 선택하세요</span>'}
+    ${v!=null&&isFinite(v)?` = <b>${stkFmt(v)} ${esc(m.u==='KG'?'kg':m.u)}</b> <span style="color:var(--muted)">(현재 월말재고 ${stkFmt(invEnd(m.c,ym))})</span>`:''}</div>
+    ${cur&&cur!==ex?`<div style="color:#475569">현재 연동: 시트 ${esc(cur)} — [연동하기]를 누르면 바뀝니다</div>`:''}${stkVz.note?`<div style="color:#92400e">${esc(stkVz.note)}</div>`:''}${warn}
+    <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn primary" ${stkVz.sel.length?'':'disabled'} onclick="stkVzApply()">${cur?'연동 변경':'연동하기'}</button>
+      <button class="btn" onclick="stkVz.sel=[];stkVz.note='';stkVzRender()">선택 지우기</button>${cur?`<button class="btn danger" onclick="stkVzUnlink()">연동 해제</button>`:''}</div>`;
+}
+function stkVzUnsel(r){const i=stkVz.sel.indexOf(r);if(i>=0)stkVz.sel.splice(i,1);stkVz.__noFocus=true;stkVzRender();stkVz.__noFocus=false;}
+async function stkVzApply(){
+  const m=INV_MASTER.find(x=>x.c===stkVz.code);if(!m||!stkVz.sel.length)return;
+  const ex=stkVz.sel.join('+'),old=stkMapAll()[m.c],tp=[...new Set(stkVz.sel.map(stkVzType).filter(Boolean))];
+  if((m.u==='EA'&&tp.length===1&&tp[0]==='중량')||(m.u==='KG'&&tp.length===1&&tp[0]==='수량')){if(!confirm(`품목 단위(${m.u})와 선택한 값(${tp[0]})이 맞지 않을 수 있습니다. 그대로 연동할까요?`))return;}
+  if(old&&old!==ex&&!confirm(`"${m.n}"은(는) 이미 ${old} 에 연동되어 있습니다.\n${ex} 로 바꿀까요?`))return;
+  await stkMapSet(m.c,ex);stkVz.note='✔ 연동 완료 — 월말재고에 반영되었습니다';stkVzRender();try{stkRender();}catch(e){}toast(`"${m.n}" 연동 완료 (시트 ${ex})`);
+}
+async function stkVzUnlink(){
+  const m=INV_MASTER.find(x=>x.c===stkVz.code);if(!m)return;
+  if(!confirm(`"${m.n}" 연동을 해제할까요?\n(월별 원단위에서 직접 입력하는 방식으로 돌아갑니다)`))return;
+  await stkMapSet(m.c,'');stkVz.sel=[];stkVz.note='연동을 해제했습니다';stkVzRender();try{stkRender();}catch(e){}
+}
+/* ---- 연동 설정(자재코드 ↔ 시트 셀 수식) — 기존 수식 표 ---- */
+function stkMapOpen(){stkVzOpen('');}
+function stkMapOpenSheet(){
   let ov=document.getElementById('stkMapOverlay');
   if(!ov){ov=document.createElement('div');ov.id='stkMapOverlay';ov.className='qdoc-overlay';ov.innerHTML='<div class="qdoc" style="max-width:860px;padding:18px" id="stkMapBody"></div>';document.body.appendChild(ov);}
   ov.classList.add('show');stkMapRender();
@@ -15209,7 +15411,7 @@ async function stkMapSet(code,val){
   if(val){const x=stkCtx(stkYm()).ev(val);if(isNaN(x)){toast('수식을 확인하세요 (예: F64+F63)');stkMapRender();return;}}
   const o=stkMapOv();if(val===(INV_STK.map[code]||''))delete o[code];else o[code]=val;
   try{localStorage.setItem(STK_MAP_KEY,JSON.stringify(o));}catch(e){}
-  flashSave();await stkSync(stkYm(),true);stkMapRender();try{stkBanner(stkYm());}catch(e){}
+  flashSave();await stkSync(stkYm(),true);stkMapRender();try{stkBanner(stkYm());}catch(e){}try{stkVzRefresh();}catch(e){}
 }
 function stkExcel(){const ym=stkYm();if(!stkHas(ym)){toast('시트가 없습니다');return;}downloadXls('재고량_'+ym,stkTableHtml(ym,'xls'));}
 
@@ -15444,7 +15646,7 @@ async function stkNmAfter(ref,v){
     const sc=INV_MASTER.filter(m=>m.c&&!map[m.c]).map(m=>{
       const a=lkScore({name:v,spec:''},{name:m.n,spec:''}),b=lkScore({name:v,spec:''},{name:tail(m.n),spec:''});
       return{m,s:Math.max(a.s,b.s),ok:a.nameOK||b.nameOK};}).filter(x=>x.ok&&x.s>=28).sort((a,b)=>b.s-a.s);
-    const openDlg=()=>{stkLkOpen(ref);const q=document.getElementById('stkLkQ');if(q){q.value=v;stkLkOpts();}};
+    const openDlg=()=>{stkVzOpen(ref);};
     if(!sc.length){openDlg();return;}
     const strong=sc.filter(x=>x.s>=45);const top=(strong.length===1?strong[0]:(sc.length===1?sc[0]:null));
     if(!top){openDlg();return;}
@@ -17547,7 +17749,7 @@ function renderInvMonth(){
       <td class="n">${iN(pr)}</td><td>${esc(it.u)}</td>
       <td class="n"><input type="number" class="iinp"${invPrevAttr(code,ym)}${invLockAttr(ym)} value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
       <td class="n">${invInDaily(code,ym)!=null?`<a href="#" onclick="invInEdit('${code}','${ym}');return false" title="일별 입고 내역 보기·수정 (입고량 탭의 일별 합계: ${esc(invInData.filter(r=>r.code===code&&(r.ymd||'').slice(0,7)===ym&&(+r.qty||0)>0).map(r=>r.ymd.slice(5)+' '+r.qty).join(', '))})" style="color:#1d4ed8;font-weight:700;text-decoration:underline dotted">${iN(inq)}</a> <span style="font-size:9px;color:#1d4ed8;cursor:pointer" onclick="invInEdit('${code}','${ym}')">일별✎</span>`:`<input type="number" class="iinp inp-yel"${invLockAttr(ym)} value="${inq}" onchange="setInvField('${code}','${ym}','in',this.value)">`}</td>
-      <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 연동" style="font-size:10px;cursor:pointer" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗</span>':''}</td>
+      <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 '+esc(stkMapAll()[code])+' 에서 가져옴 — 눌러서 시트 위치로 이동" style="font-size:10px;cursor:pointer;color:#15803d;font-weight:700" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗'+esc(stkMapAll()[code])+'</span>':''}</td>
       <td class="n"><input type="number" class="iinp" style="font-weight:700;color:#c2410c"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
       <td class="n">${prod&&!invRhf(m)?iU(qOv):'-'}</td><td class="n">${prod&&!invRhf(m)?iU(aOv):'-'}</td></tr>`;});
   flushG();
@@ -29054,7 +29256,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.26.rpt139";
+const APP_VERSION = "2026.10.26.rpt140";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
