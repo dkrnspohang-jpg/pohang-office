@@ -401,6 +401,10 @@
   .vz-foot{margin-top:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.6}
   /* 재고량 시트 병합·연동 (2026-10-19) */
   table.stk td.mgc{cursor:cell;user-select:none}
+  table.stk td.stk-rg{position:sticky;left:0;z-index:3;background:#e2e8f0!important;color:#475569;font-size:10.5px;text-align:center!important;cursor:pointer;min-width:34px;padding:0 2px!important}
+  table.stk td.stk-rg.stk-rsel{background:#facc15!important;color:#111;font-weight:800}
+  table.stk tbody tr td.stk-rsel{box-shadow:inset 0 0 0 999px rgba(250,204,21,.16)}
+  table.stk tbody tr td.stk-rsel-b{box-shadow:inset 0 0 0 999px rgba(59,130,246,.2)}
   table.stk td.stk-sel{background:#bfdbfe !important;outline:2px solid #2563eb;outline-offset:-2px}
   table.stk td.stk-nm{padding:0 2px;white-space:normal}
   table.stk td.stk-nm .stk-nw{display:flex;align-items:center;gap:3px;min-height:23px}
@@ -3150,6 +3154,7 @@ service cloud.firestore {
         <input type="month" class="selbox" id="stk_ym" onchange="stkRender()">
         <label style="font-size:12px"><input type="checkbox" id="stk_edit" onchange="stkRender()"> ✏️ 양식 수정(품명·단중·소계 수식)</label>
         <button class="btn" id="stk_mgbtn" onclick="stkMgToggle()" title="품명 칸을 엑셀처럼 병합">🧩 병합 편집</button>
+        <button class="btn" id="stk_rowbtn" onclick="stkRowToggle()" title="품목(줄)을 추가·삭제합니다 — 아래 줄의 수식·병합·연동 칸이 자동으로 이동">📐 줄 추가·삭제</button>
         <button class="btn primary" onclick="sxOpen(stkYm())" title="엑셀 원단위 파일과 대조한 연동 현황 · 연결/수정/확인 (전체화면)">🧭 연동 센터</button>
         <button class="btn" onclick="stkMapOpen()">🔗 연동 설정</button>
         <button class="btn" onclick="stkSyncNow()">월말재고로 반영</button>
@@ -3157,6 +3162,7 @@ service cloud.firestore {
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="stk_info"></span>
       </div>
       <div id="stk_mgbar"></div>
+      <div id="stk_rowbar"></div>
       <div id="stk_banner"></div>
       <div class="stk-wrap" id="stk_wrap"></div>
     </div>
@@ -14985,6 +14991,7 @@ const INV_STK={"cells":{"A1":["s","09월 내화물 재고량 산출"],"A2":["s",
 const STK_KEY='dgrns_invstock',STK_MAP_KEY='dgrns_invstock_map';
 const STK_SLOTS=new Set(INV_STK.slots);
 const STK_COLW=[96,78,58,66,76,92,112,96,64,76,92,56,56,56,56,56,60,14,64,80];
+let STK_BOT=70,STK_MAXR=97;const STK_EXTRA=new Set();
 function stkColN(s){let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n;}
 function stkColL(n){let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;}
 function stkAll(){try{const o=JSON.parse(localStorage.getItem(STK_KEY)||'{}');return(o&&typeof o==='object')?o:{};}catch(e){return {};}}
@@ -15044,28 +15051,30 @@ function stkMerges(){
 }
 function stkRowsList(){
   if(stkRowsList._c)return stkRowsList._c;
-  const has={};Object.keys(INV_STK.cells).forEach(k=>{has[+/\d+/.exec(k)[0]]=1;});INV_STK.slots.forEach(k=>{has[+/\d+/.exec(k)[0]]=1;});
-  const rows=[];for(let r=1;r<=97;r++)if(has[r])rows.push(r);
+  const has={};Object.keys(INV_STK.cells).forEach(k=>{has[+/\d+/.exec(k)[0]]=1;});INV_STK.slots.forEach(k=>{has[+/\d+/.exec(k)[0]]=1;});STK_EXTRA.forEach(r=>{has[r]=1;});
+  const rows=[];for(let r=1;r<=STK_MAXR;r++)if(has[r])rows.push(r);
   return stkRowsList._c=rows;
 }
 /* 표 HTML 생성 — mode 'view'(입력 칸 포함) | 'xls'(값만) */
 function stkTableHtml(ym,mode){
   const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{}),ov=rec.ov||{};
-  const view=mode==='view',mgm=view&&stkMgMode;
+  const view=mode==='view',mgm=view&&stkMgMode,rowm=view&&stkRowMode&&!stkMgMode;
   const edit=view&&stkEditOn()&&!mgm,ro=view&&invConfLocked(ym);
   const MG=stkMerges(),cells=INV_STK.cells,rows=stkRowsList(),LAB=stkMgStore().lab;
   const LK=view&&!mgm?stkLkEntries():null;
   const LKR=(view&&!mgm&&stkLkMark)?stkLkRefMap(ym):{};
   const mm=+ym.slice(5);
-  let h=view?'<table class="stk"><colgroup>'+STK_COLW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup><tbody>':'<table border="1"><tbody>';
+  let h=view?'<table class="stk"><colgroup>'+(rowm?'<col style="width:34px">':'')+STK_COLW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup><tbody>':'<table border="1"><tbody>';
   let prev=0;
   rows.forEach(r=>{
-    if(prev&&r-prev>1)h+=view?`<tr class="gap"><td colspan="20"></td></tr>`:'';
+    if(prev&&r-prev>1)h+=view?`<tr class="gap"><td colspan="${rowm?21:20}"></td></tr>`:'';
     prev=r;
     const sumRow=['B','H'].some(c=>cells[c+r]&&cells[c+r][1]==='계');
-    const hdRow=(r<=3||r===70||r===71);
-    h+='<tr>';
+    const hdRow=(r<=3||r===STK_BOT||r===STK_BOT+1);
+    h+='<tr>'+(rowm?`<td class="stk-rg" data-r="${r}" title="클릭: 이 줄 선택">${r}</td>`:'');
+    let pendC=0,pendLen=0;const flush=()=>{if(rowm&&pendC&&h.length>pendLen)h=h.slice(0,pendLen)+h.slice(pendLen).replace('<td',`<td data-rc="${r},${pendC}"`);};
     for(let c=1;c<=20;c++){
+      flush();pendLen=h.length;pendC=c;
       const ref=stkColL(c)+r;
       if(MG.cover.has(ref))continue;
       const mg=MG.anc[ref];const sp=mg?` colspan="${mg.cs}" rowspan="${mg.rs}"`:'';
@@ -15111,7 +15120,7 @@ function stkTableHtml(ym,mode){
       if(inner){h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${lkT?` title="${esc(lkT.trim())}"`:''}>${inner}</td>`;}
       else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA} ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT)}"`:''}>${esc(disp)}</td>`;}
     }
-    h+='</tr>';
+    flush();h+='</tr>';
   });
   return h+'</tbody></table>';
 }
@@ -15134,6 +15143,7 @@ function stkRender(){
   const rec=stkRec(ym),locked=invConfLocked(ym);
   wrap.innerHTML=stkTableHtml(ym,'view');
   stkMgBind();stkBanner(ym);if(stkMgMode)stkSelPaint();else stkMgBar();
+  stkRowBind();stkRowBar();
 }
 function stkMismatch(ym){
   const M=stkCtx(ym),map=stkMapAll(),out=[];
@@ -15288,7 +15298,7 @@ function stkVzInG(g,p){return p&&p.c>=g.c1&&p.c<=g.c2&&p.r>=g.r1&&p.r<=g.rEnd;}
 function stkVzBlockOf(ref,anchors){const p=stkRefP(ref);return anchors.find(a=>stkVzInG(a.g,p))||null;}
 function stkVzType(ref){   // 시트 칸의 성격(수량/중량) — 단위 불일치 경고용
   const p=stkRefP(ref);if(!p)return '';const c=stkColL(p.c),r=p.r;
-  if(r>=70)return(c==='D'||c==='I')?'수량':((c==='E'||c==='J')?'중량':'');
+  if(r>=STK_BOT)return(c==='D'||c==='I')?'수량':((c==='E'||c==='J')?'중량':'');
   return(c==='E'||c==='J')?'수량':((c==='F'||c==='K')?'중량':'');
 }
 function stkVzOpen(blk){
@@ -15318,7 +15328,7 @@ function stkVzTable(ym,anchors){
   let h='<table class="stk stkvz"><colgroup>'+STK_COLW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup><tbody>',prev=0;
   rows.forEach(r=>{
     if(prev&&r-prev>1)h+='<tr class="gap"><td colspan="20"></td></tr>';prev=r;
-    const sumRow=['B','H'].some(c=>cells[c+r]&&cells[c+r][1]==='계'),hdRow=(r<=3||r===70||r===71);
+    const sumRow=['B','H'].some(c=>cells[c+r]&&cells[c+r][1]==='계'),hdRow=(r<=3||r===STK_BOT||r===STK_BOT+1);
     h+='<tr>';
     for(let c=1;c<=20;c++){
       const ref=stkColL(c)+r;if(MG.cover.has(ref))continue;
@@ -15516,7 +15526,7 @@ function stkSelPaint(){
     td.classList.toggle('stk-sel',on);});
   stkMgBar();
 }
-function stkMgToggle(){stkMgMode=!stkMgMode;stkSel=null;stkRender();stkMgBar();}
+function stkMgToggle(){stkMgMode=!stkMgMode;if(stkMgMode)stkRowMode=false;stkSel=null;stkRender();stkMgBar();}
 function stkMgBar(){
   const bar=document.getElementById('stk_mgbar');if(!bar)return;
   const bt=document.getElementById('stk_mgbtn');if(bt){bt.classList.toggle('primary',stkMgMode);bt.textContent=stkMgMode?'🧩 병합 편집 중 (끝내기)':'🧩 병합 편집';}
@@ -15586,8 +15596,8 @@ function stkMgBind(){
 /* ---- 품명 칸 판별 · 그룹(품명이 걸친 행) ---- */
 function stkIsNm(ref,base,hasOv,ov,mg,lab){
   const q=stkRefP(ref);if(!q)return false;const c=stkColL(q.c),r=q.r;
-  if(r<=3||r===70||r===71)return false;
-  if(!(c==='A'||c==='G'||(c==='F'&&r>=72)))return false;
+  if(r<=3||r===STK_BOT||r===STK_BOT+1)return false;
+  if(!(c==='A'||c==='G'||(c==='F'&&r>=STK_BOT+2)))return false;
   if(lab!==undefined&&lab!=='')return true;
   const v=hasOv?ov[ref]:(base?base[1]:undefined);
   if(mg)return !(base&&(base[0]==='n'||base[0]==='f'));
@@ -15595,9 +15605,9 @@ function stkIsNm(ref,base,hasOv,ov,mg,lab){
 }
 function stkGrp(ref){
   const q=stkRefP(ref),cells=INV_STK.cells,mg=stkMerges().anc[ref];
-  const r1=q.r,r2=r1+(mg?mg.rs:1)-1,bot=r1>=70,right=q.c>=7||(q.c===6&&bot);
+  const r1=q.r,r2=r1+(mg?mg.rs:1)-1,bot=r1>=STK_BOT,right=q.c>=7||(q.c===6&&bot);
   const c1=right?(bot?6:7):1,c2=right?20:(bot?5:6);
-  const last=mg&&mg.rs>=2?Math.min(r2+1,97):r2;
+  const last=mg&&mg.rs>=2?Math.min(r2+1,STK_MAXR):r2;
   const sumRows=[];
   for(let r=r1;r<=last;r++){for(let c=c1;c<=c2;c++){const b=cells[stkColL(c)+r];if(b&&b[0]==='s'&&b[1]==='계'){sumRows.push(r);break;}}}
   return{c1,c2,r1,r2,rEnd:Math.max(r2,sumRows.length?sumRows[sumRows.length-1]:r2),right,bot,sumRows};
@@ -29186,6 +29196,309 @@ async function lxPxDoChange(){
 const STK_XL_REF={"U12100002":"I80","U12100003":"I81","U12100004":"I83","U12100006":"I76","U12100008":"I75","U12100012":"I82","U12100014":"F61","U12100016":"F60","U12110021":"E85","U12110036":"F50","U12120008":"I74","U12120009":"I72","U12120018":"F64+F63","U12120019":"J47","U12120021":"J39","U12120022":"J48","U12120030":"J41","U12120031":"J42","U12120032":"J43","U12120033":"J44","U12120034":"J45","U12120071":"E77","U12120075":"D84","U12120076":"I73","U12120077":"I78","U12120078":"I77","U12120081":"F62","U12120091":"F53","U12120105":"I88","U12120123":"E81","U12120138":"E82","U12120139":"E83","U12120168":"J58","U12120201":"E78","U12120206":"J59","U12120216":"D86","U12110007":"J63","U12110020":"J97","U12110045":"E97","U12120014":"J64","U12120089":"K62","U12120107":"E72","U12120112":"E80","U12120188":"E73","U12120190":"E74","U12120217":"E76","U12120219":"E79","U12120235":"F65","U12120256":"E75","U12100015":"F55","U12100030":"K37","U12100031":"K38","U12100033":"F57","U12110001":"F36","U12110002":"F45","U12110003":"F40","U12110010":"F23","U12110023":"F48","U12110034":"F49","U12110043":"F29","U12110049":"K17","U12110050":"K8","U12110054":"K23","U12110055":"K29","U12110056":"K33","U12110068":"K13","U12110105":"K36","U12110106":"K54+K55","U12120011":"J53","U12120017":"K60","U12120036":"J49","U12120038":"J51","U12120043":"J50","U12120046":"J52","U12120053":"E51","U12120068":"J56","U12120096":"F54","U12120143":"E52","U12120234":"J57","U12120099":"I79","U12100027":"I85","U12100028":"I86","U12100036":"I87","U12120257":"I84","U12120255":"J40"};
 const STK_XL_MAN=["U12110028", "U12110029", "U12110030", "U12110031", "U12110032", "U12110033", "U12120173", "U12120248"];
 const SX_CONF_KEY='dgrns_stkx_conf';
+
+/* ===== 재고량 시트 줄 삽입·삭제·내용 지우기 (2026-10-27, rpt146) =====
+   · [📐 줄 추가·삭제] : 시트에서 칸을 눌러 줄을 고른 뒤 [⬆ 위에 / ⬇ 아래에 줄 삽입] · [＋ 새 품목] · [🗑 줄 삭제] · [🧽 줄 내용 지우기]
+   · 엑셀의 '행 삽입/삭제'와 같음 — 아래 줄의 수식(SUM 범위 포함)·병합·월별 원단위 연동 칸(F55 → F56 …)·엑셀 대조 칸·모든 달의 입력값이 자동으로 한 줄씩 밀리거나 당겨짐
+   · 양식(줄 구조)은 모든 달에 공통 적용되며 localStorage 'dgrns_invstock_layout' 에 저장(원본 양식과 다른 부분만이 아니라 현재 양식 전체)
+   · 실행 전 상태를 최대 15회까지 [↩ 되돌리기]로 복원 */
+const STK_LAY_KEY='dgrns_invstock_layout';
+const STK_MIG=[];
+const STK_PRISTINE=JSON.stringify({cells:INV_STK.cells,merges:INV_STK.merges,slots:INV_STK.slots,map:INV_STK.map,xl:STK_XL_REF});
+let stkRowMode=false,stkRowSel={r:0,c:1},stkRowGrp=true,stkRowAutoEdit=false,stkUndoStk=[];
+function stkLayApply(L){
+  INV_STK.cells=L.cells;INV_STK.merges=L.merges||[];INV_STK.slots=L.slots||[];INV_STK.map=L.map||{};
+  STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
+  STK_EXTRA.clear();(L.extra||[]).forEach(r=>STK_EXTRA.add(+r));
+  STK_BOT=+L.bot||70;STK_MAXR=+L.maxr||97;
+  Object.keys(STK_XL_REF).forEach(k=>delete STK_XL_REF[k]);Object.assign(STK_XL_REF,L.xl||{});
+  STK_MIG.length=0;(L.mig||[]).forEach(x=>STK_MIG.push(x));
+  stkMerges._c=null;stkRowsList._c=null;
+}
+function stkLayPristine(){const o=JSON.parse(STK_PRISTINE);o.extra=[];o.bot=70;o.maxr=97;o.mig=[];return o;}
+function stkLayLoad(){
+  let L=null;try{L=JSON.parse(localStorage.getItem(STK_LAY_KEY)||'null');}catch(e){}
+  if(!L||L.v!==1||!L.cells)return false;
+  stkLayApply(L);return true;
+}
+function stkLayObj(){return{v:1,cells:INV_STK.cells,merges:INV_STK.merges,slots:INV_STK.slots,map:INV_STK.map,extra:[...STK_EXTRA].sort((a,b)=>a-b),bot:STK_BOT,maxr:STK_MAXR,xl:STK_XL_REF,mig:STK_MIG.slice()};}
+function stkLaySave(){
+  INV_STK.slots=[...new Set(INV_STK.slots)];STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
+  try{localStorage.setItem(STK_LAY_KEY,JSON.stringify(stkLayObj()));}catch(e){}
+  stkMerges._c=null;stkRowsList._c=null;try{flashSave();}catch(e){}
+}
+/* ---- 참조 이동 엔진 ---- */
+const STK_REFRE=/SUM\(\s*([A-Z]{1,2})(\d+)\s*:\s*([A-Z]{1,2})(\d+)\s*\)|(^|[^A-Za-z0-9])([A-Z]{1,2})(\d+)\b/g;
+function stkTx(expr,m){
+  return String(expr).replace(STK_REFRE,(s,a,b,c,d,pre,col,row)=>{
+    if(a){const r=m.rg(stkColN(a),Math.min(+b,+d),stkColN(c),Math.max(+b,+d));return r?`SUM(${a}${r[0]}:${c}${r[1]})`:'0';}
+    const nr=m.pt(+row,stkColN(col));return nr==null?pre+'0':pre+col+nr;}).replace(/\+\(0\*0\)/g,'').replace(/\(0\*0\)\+/g,'').replace(/\+0\*0(?![\d.])/g,'');
+}
+function stkMapIns(N,n,ext){return{
+  pt:r=>r>=N?r+n:r,
+  rg:(c1,r1,c2,r2)=>{const e=!!ext&&c1>=ext.c1&&c2<=ext.c2&&r2===N-1;return[r1>=N?r1+n:r1,(r2>=N||e)?r2+n:r2];},
+  bot:r=>r>=N?r+n:r,maxr:v=>v+n,rows:true};}
+function stkMapDel(N,n){const E=N+n-1;return{
+  pt:r=>r<N?r:(r<=E?null:r-n),
+  rg:(c1,r1,c2,r2)=>{const a=r1<N?r1:(r1<=E?N:r1-n),b=r2<N?r2:(r2<=E?N-1:r2-n);return a>b?null:[a,b];},
+  bot:r=>r<N?r:(r<=E?N:r-n),maxr:v=>v-n,rows:true};}
+function stkMapClr(R){   // R={r1,r2,c1,c2} — 줄은 그대로 두고 이 범위의 칸만 지움
+  const inR=(r,c)=>r>=R.r1&&r<=R.r2&&c>=R.c1&&c<=R.c2;
+  return{pt:(r,c)=>(c&&inR(r,c))?null:r,
+    rg:(c1,r1,c2,r2)=>(r1>=R.r1&&r2<=R.r2&&c1>=R.c1&&c2<=R.c2)?null:[r1,r2],
+    bot:r=>r,maxr:v=>v,rows:false,inR};}
+function stkMkTools(m){
+  const kref=ref=>{const q=stkRefP(ref);if(!q)return ref;const nr=m.pt(q.r,q.c);return nr==null?null:stkColL(q.c)+nr;};
+  const tv=v=>(typeof v==='string'&&v[0]==='=')?'='+stkTx(v.slice(1),m):v;
+  const mex=ex=>{ex=String(ex==null?'':ex).trim();if(!ex)return '';
+    if(stkVzSimple(ex))return ex.split('+').map(x=>kref(x.trim())).filter(Boolean).join('+');
+    const r=stkTx(ex,m);return /[A-Z]{1,2}\d+/.test(r)?r:'';};
+  const kmg=key=>{const p=String(key).split(':'),a=stkRefP(p[0]),b=stkRefP(p[1]);if(!a||!b)return null;
+    const r=m.rg(a.c,a.r,b.c,b.r);if(!r)return null;if(a.c===b.c&&r[0]===r[1])return null;
+    return stkColL(a.c)+r[0]+':'+stkColL(b.c)+r[1];};
+  return{kref,tv,mex,kmg};
+}
+/* 이동 전 영향 미리보기 — 연동이 풀리는 품목·수식이 바뀌는 품목 */
+function stkImpact(m){
+  const T=stkMkTools(m),map=stkMapAll(),out=[];
+  Object.keys(map).forEach(code=>{const it=INV_MASTER.find(x=>x.c===code);if(!it)return;const old=String(map[code]),nw=T.mex(old);
+    if(nw!==old)out.push({code,n:it.n,old,nw});});
+  return out;
+}
+/* 구조 + 저장된 모든 데이터를 한 번에 이동 */
+function stkTxAll(m){
+  const T=stkMkTools(m),kref=T.kref,tv=T.tv,mex=T.mex,kmg=T.kmg;
+  const cells={};Object.keys(INV_STK.cells).forEach(k=>{const nk=kref(k);if(nk==null)return;const c=INV_STK.cells[k];cells[nk]=[c[0],tv(c[1])];});
+  INV_STK.cells=cells;
+  INV_STK.slots=INV_STK.slots.map(kref).filter(Boolean);
+  INV_STK.merges=INV_STK.merges.map(kmg).filter(Boolean);
+  const nmap={};Object.keys(INV_STK.map).forEach(c=>{const e=mex(INV_STK.map[c]);if(e)nmap[c]=e;});INV_STK.map=nmap;
+  if(m.rows){const ex=[...STK_EXTRA].map(r=>m.pt(r,0)).filter(r=>r!=null);STK_EXTRA.clear();ex.forEach(r=>STK_EXTRA.add(r));}
+  STK_BOT=m.bot(STK_BOT);STK_MAXR=m.maxr(STK_MAXR);
+  Object.keys(STK_XL_REF).forEach(c=>{const e=mex(STK_XL_REF[c]);if(e)STK_XL_REF[c]=e;else delete STK_XL_REF[c];});
+  STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
+  // 저장된 월별 입력값
+  const all=stkAll();Object.keys(all).forEach(ym=>{const rec=all[ym];if(!rec||!rec.ov)return;const ov={};
+    Object.keys(rec.ov).forEach(k=>{const nk=kref(k);if(nk==null)return;ov[nk]=tv(rec.ov[k]);});rec.ov=ov;});
+  stkSaveAll(all);
+  // 연동 수식 덮어쓴 값
+  const mo=stkMapOv(),mo2={};Object.keys(mo).forEach(c=>{const v=mo[c];if(v===''){mo2[c]='';return;}const e=mex(v);mo2[c]=e;});
+  Object.keys(mo2).forEach(c=>{if(mo2[c]===(INV_STK.map[c]||''))delete mo2[c];else if(mo2[c]===''&&INV_STK.map[c]===undefined)delete mo2[c];});
+  try{localStorage.setItem(STK_MAP_KEY,JSON.stringify(mo2));}catch(e){}
+  // 병합·품명
+  const s=stkMgStore();s.add=s.add.map(kmg).filter(Boolean);s.del=s.del.map(kmg).filter(Boolean);
+  const lab={};Object.keys(s.lab).forEach(k=>{const nk=kref(k);if(nk!=null)lab[nk]=s.lab[k];});s.lab=lab;stkMgSave(s);
+  // 연동 센터 확인 기록
+  const cf=sxConfAll();Object.keys(cf).forEach(ym=>{Object.keys(cf[ym]||{}).forEach(c=>{const k=cf[ym][c];if(k&&k.ex!==undefined)k.ex=mex(k.ex);});});sxConfSave(cf);
+  stkMerges._c=null;stkRowsList._c=null;
+}
+/* ---- 되돌리기 ---- */
+const STK_UKEYS=[STK_KEY,STK_MAP_KEY,STK_MG_KEY,SX_CONF_KEY,STK_LAY_KEY];
+function stkUndoPush(label){const s={label,kv:{}};STK_UKEYS.forEach(k=>{s.kv[k]=localStorage.getItem(k);});stkUndoStk.push(s);if(stkUndoStk.length>15)stkUndoStk.shift();}
+function stkUndo(){
+  const s=stkUndoStk.pop();if(!s){toast('되돌릴 작업이 없습니다');return;}
+  STK_UKEYS.forEach(k=>{try{if(s.kv[k]==null){if(k===STK_LAY_KEY)return;localStorage.setItem(k,'{}');}else localStorage.setItem(k,s.kv[k]);}catch(e){}});
+  if(s.kv[STK_LAY_KEY]==null){stkLayApply(stkLayPristine());stkLaySave();}else stkLayLoad();
+  stkMerges._c=null;stkRowsList._c=null;
+  toast('되돌렸습니다: '+s.label);
+  stkRender();try{stkSyncSoon(stkYm());}catch(e){}
+}
+/* ---- 블록(왼쪽/오른쪽) · 줄 판정 ---- */
+function stkBlk(r,c){const bot=r>=STK_BOT,right=c>=7||(c===6&&bot);
+  return{right,bot,c1:right?(bot?6:7):1,c2:right?20:(bot?5:6),
+    qc:right?(bot?'I':'J'):(bot?'D':'E'),wc:right?(bot?'J':'K'):(bot?'E':'F'),uc:right?(bot?'H':'I'):'C',nc:right?(bot?'F':'G'):'A'};}
+function stkHdRow(r){return r<=3||r===STK_BOT||r===STK_BOT+1;}
+function stkBlkHas(r,b){for(let c=b.c1;c<=b.c2;c++){const k=stkColL(c)+r;if(INV_STK.cells[k]||STK_SLOTS.has(k))return true;}return false;}
+function stkBlkSum(r,b){for(let c=b.c1;c<=b.c2;c++){const x=INV_STK.cells[stkColL(c)+r];if(x&&x[1]==='계')return true;}return false;}
+function stkSpecRow(r,b){return !stkHdRow(r)&&stkBlkHas(r,b)&&!stkBlkSum(r,b);}
+function stkRowOk(r,quiet){
+  if(!r||stkHdRow(r)||stkRowsList().indexOf(r)<0){if(!quiet)toast('표 제목/머리글 줄은 사용할 수 없습니다 — 데이터 줄의 칸을 먼저 눌러 선택하세요');return false;}
+  return true;
+}
+/* 새 줄의 칸 만들기 (선택한 블록 칸만, 기준 줄 S의 모양을 따라감) */
+function stkBuildRows(rows,S,b,o){
+  const cells=INV_STK.cells,slots=INV_STK.slots;
+  rows.forEach(rr=>{
+    for(let c=b.c1;c<=b.c2;c++){
+      const col=stkColL(c),sref=col+S,src=cells[sref],nref=col+rr;
+      if(STK_SLOTS.has(sref)||(src&&src[0]==='i')){if(slots.indexOf(nref)<0)slots.push(nref);continue;}
+      if(!src)continue;
+      const v=src[1];
+      if(src[0]==='f'&&typeof v==='string'){
+        if(/SUM\(/.test(v))continue;
+        const rs=[...String(v).matchAll(/[A-Z]{1,2}(\d+)/g)].map(x=>+x[1]);
+        if(rs.length&&rs.every(x=>x===S))cells[nref]=['f','='+stkTx(v.slice(1),{pt:r=>r===S?rr:r,rg:(a1,b1,c2,d1)=>[b1,d1]})];
+        continue;
+      }
+      if(v==='계')continue;
+      cells[nref]=['s',''];
+    }
+    STK_EXTRA.add(rr);
+  });
+  // 그룹 수식(병합된 중량 칸 한 곳에 규격별 '수량×단중' 을 더하는 식)이면 새 줄의 항을 끝에 붙임
+  if(o.grp){
+    for(const rr of rows){
+      if(cells[b.wc+rr])continue;
+      for(let r=S;r>=Math.max(4,S-10);r--){
+        const a=cells[b.wc+r];
+        if(a&&a[0]==='f'&&typeof a[1]==='string'&&!/SUM\(/.test(a[1])&&(a[1].indexOf(b.qc+S)>=0||a[1].indexOf(b.uc+S)>=0)){
+          a[1]=a[1]+`+(${b.qc}${rr}*${b.uc}${rr})`;break;}
+      }
+    }
+  }
+  if(o.item){rows.forEach(rr=>{if(!cells[b.wc+rr])cells[b.wc+rr]=['f',`=${b.qc}${rr}*${b.uc}${rr}`];});}
+}
+/* 줄 삽입 핵심: N 행 앞에 n줄 */
+function stkInsertCore(N,n,S,b,grp,item){
+  const specAbove=stkSpecRow(N-1,b);
+  const ext=(grp&&specAbove)?{c1:b.c1,c2:b.c2}:null;
+  stkTxAll(stkMapIns(N,n,ext));
+  const rows=[];for(let i=0;i<n;i++)rows.push(N+i);
+  stkBuildRows(rows,S>=N?S+n:S,b,{grp:!!ext,item:!!item});
+  return rows;
+}
+function stkPatternRow(R,b){   // 새 줄의 모양을 따라갈 기준 줄 (소계 줄이면 바로 위 일반 줄)
+  if(!stkBlkSum(R,b)&&stkBlkHas(R,b))return R;
+  const list=stkRowsList();let i=list.indexOf(R);
+  for(i=i-1;i>=0;i--){const r=list[i];if(r<4||(R>=STK_BOT)!==(r>=STK_BOT))break;if(stkSpecRow(r,b))return r;}
+  return R;
+}
+function stkRowCount(){const e=document.getElementById('stk_rown');const n=Math.floor(+(e&&e.value)||1);return Math.max(1,Math.min(10,n));}
+function stkRowInsert(where){
+  const R=stkRowSel.r;if(!stkRowOk(R))return;
+  const n=stkRowCount(),b=stkBlk(R,stkRowSel.c),N=where==='above'?R:R+1;
+  if(STK_MAXR+n>400){toast('줄이 너무 많아졌습니다');return;}
+  stkUndoPush(`줄 삽입 (${R}행 ${where==='above'?'위':'아래'} ${n}줄)`);
+  const S=stkPatternRow(R,b);
+  const rows=stkInsertCore(N,n,S,b,stkRowGrp,false);
+  stkLaySave();stkRowSel={r:rows[0],c:stkRowSel.c};stkRowDone(`${rows[0]}${n>1?'~'+rows[n-1]:''}행에 새 줄을 넣었습니다 — 규격·단중·수량을 입력하세요 (아래 줄의 수식·연동 칸은 자동으로 한 줄씩 밀렸습니다)`);
+}
+function stkRowNewItem(){
+  const R=stkRowSel.r;if(!stkRowOk(R))return;
+  const k=stkRowCount(),b=stkBlk(R,stkRowSel.c);
+  if(STK_MAXR+k>400){toast('줄이 너무 많아졌습니다');return;}
+  stkUndoPush(`새 품목 추가 (${R}행 아래 ${k}줄)`);
+  const S=stkPatternRow(R,b),N=R+1;
+  const rows=stkInsertCore(N,k,S,b,false,true);
+  const nc=b.nc,top=rows[0];
+  INV_STK.cells[nc+top]=['s',''];
+  if(k>=2){const s=stkMgStore(),key=`${nc}${top}:${nc}${rows[k-1]}`;stkMgAdd(s,key);stkMgSave(s);}
+  stkLaySave();stkRowSel={r:top,c:stkRowSel.c};
+  stkRowDone(`새 품목 줄 ${k}개를 ${R}행 아래에 추가했습니다 — 품명을 입력하고 규격·단중·수량을 채우세요`);
+  setTimeout(()=>{try{if(k>=2)stkNmPrompt(nc+top);}catch(e){}},120);
+}
+function stkRowDelete(){
+  const R=stkRowSel.r;if(!stkRowOk(R))return;
+  const n=stkRowCount(),E=R+n-1;
+  for(let r=R;r<=E;r++)if(stkHdRow(r)||(R<STK_BOT)!==(r<STK_BOT)){toast('머리글 줄이나 다른 구역에 걸치는 범위는 삭제할 수 없습니다');return;}
+  const b=stkBlk(R,stkRowSel.c),m=stkMapDel(R,n),imp=stkImpact(m);
+  const others=[];
+  for(let r=R;r<=E;r++)for(let c=1;c<=20;c++){if(c>=b.c1&&c<=b.c2)continue;const k=stkColL(c)+r,x=INV_STK.cells[k];if(x&&x[1]!==''&&x[1]!=null&&x[0]!=='f')others.push(k+' '+x[1]);}
+  let nov=0;const all=stkAll();Object.keys(all).forEach(ym=>{const ov=(all[ym]||{}).ov||{};Object.keys(ov).forEach(k=>{const q=stkRefP(k);if(q&&q.r>=R&&q.r<=E&&ov[k]!=null)nov++;});});
+  let msg=`${R}${n>1?'~'+E:''}행을 삭제합니다 (엑셀의 '행 삭제'와 같음 — 이 줄의 왼쪽·오른쪽 모든 칸이 지워지고 아래 줄이 올라옵니다).`;
+  if(others.length)msg+=`\n\n⚠ 선택한 블록 밖에도 데이터가 있어 함께 삭제됩니다:\n  `+others.slice(0,8).join('\n  ')+(others.length>8?`\n  … 외 ${others.length-8}칸`:'')+`\n(다른 쪽 칸은 두고 이 블록만 비우려면 [🧽 줄 내용 지우기]를 쓰세요)`;
+  if(imp.length)msg+=`\n\n월별 원단위 연동 ${imp.length}건이 바뀝니다:\n  `+imp.slice(0,8).map(x=>`${x.n}: ${x.old} → ${x.nw||'연동 해제'}`).join('\n  ')+(imp.length>8?`\n  … 외 ${imp.length-8}건`:'');
+  if(nov)msg+=`\n\n저장된 입력값 ${nov}칸(모든 달)이 함께 삭제됩니다.`;
+  msg+='\n\n계속할까요? ([↩ 되돌리기]로 복원할 수 있습니다)';
+  if(!confirm(msg))return;
+  stkUndoPush(`줄 삭제 (${R}${n>1?'~'+E:''}행)`);
+  stkTxAll(m);stkLaySave();
+  const list=stkRowsList();stkRowSel={r:list.find(r=>r>=R&&!stkHdRow(r))||list[list.length-1]||0,c:stkRowSel.c};
+  stkRowDone(`${R}${n>1?'~'+E:''}행을 삭제했습니다`+(imp.length?` (연동 ${imp.length}건 변경)`:''));
+}
+function stkRowClear(){
+  const R=stkRowSel.r;if(!stkRowOk(R))return;
+  const n=stkRowCount(),E=R+n-1,b=stkBlk(R,stkRowSel.c);
+  for(let r=R;r<=E;r++)if(stkHdRow(r)){toast('머리글 줄은 지울 수 없습니다');return;}
+  const m=stkMapClr({r1:R,r2:E,c1:b.c1,c2:b.c2}),imp=stkImpact(m);
+  let msg=`${R}${n>1?'~'+E:''}행의 ${b.right?'오른쪽':'왼쪽'} 블록(${stkColL(b.c1)}~${stkColL(b.c2)}열) 칸만 지웁니다 (다른 블록과 줄 구조는 그대로).`;
+  if(imp.length)msg+=`\n\n월별 원단위 연동 ${imp.length}건이 풀리거나 바뀝니다:\n  `+imp.slice(0,8).map(x=>`${x.n}: ${x.old} → ${x.nw||'연동 해제'}`).join('\n  ');
+  msg+='\n\n계속할까요? ([↩ 되돌리기]로 복원할 수 있습니다)';
+  if(!confirm(msg))return;
+  stkUndoPush(`줄 내용 지우기 (${R}${n>1?'~'+E:''}행)`);
+  // 병합: 범위 안에서 시작해 범위 밖으로 안 나가는 병합 제거(stkTxAll 의 kmg), 품명 라벨도 제거
+  stkTxAll(m);
+  const s=stkMgStore();Object.keys(s.lab).forEach(k=>{if(m.inR){const q=stkRefP(k);if(q&&m.inR(q.r,q.c))delete s.lab[k];}});stkMgSave(s);
+  stkLaySave();
+  stkRowDone(`${R}${n>1?'~'+E:''}행의 ${b.right?'오른쪽':'왼쪽'} 블록 칸을 지웠습니다`+(imp.length?` (연동 ${imp.length}건 변경)`:''));
+}
+function stkRowDone(msg){
+  try{stkVz.sel=[];}catch(e){}
+  stkRender();stkRowPaint();stkRowBar();
+  toast(msg);
+  try{stkSyncSoon(stkYm());}catch(e){}
+  try{if(typeof invSub!=='undefined'&&invSub==='month')renderInvMonth();}catch(e){}
+  setTimeout(()=>{try{const td=document.querySelector('#stk_wrap td.stk-rg[data-r="'+stkRowSel.r+'"]');if(td)td.scrollIntoView({block:'center'});}catch(e){}},50);
+}
+/* ---- 화면 ---- */
+function stkRowToggle(){
+  stkRowMode=!stkRowMode;
+  if(stkRowMode){stkMgMode=false;try{stkMgBar();}catch(e){}
+    const e=document.getElementById('stk_edit');if(e&&!e.checked){e.checked=true;stkRowAutoEdit=true;}}
+  else{const e=document.getElementById('stk_edit');if(e&&stkRowAutoEdit){e.checked=false;}stkRowAutoEdit=false;}
+  stkRender();stkRowBar();
+}
+let stkRowH=null;
+function stkRowBind(){
+  const wrap=document.getElementById('stk_wrap');if(!wrap)return;
+  if(stkRowH){wrap.removeEventListener('click',stkRowH,true);wrap.removeEventListener('focusin',stkRowH,true);}
+  stkRowH=e=>{
+    if(!stkRowMode)return;
+    const td=e.target&&e.target.closest?e.target.closest('td.stk-rg,td[data-rc]'):null;if(!td)return;
+    let r,c;
+    if(td.classList.contains('stk-rg')){r=+td.dataset.r;c=stkRowSel.c||1;}
+    else{const p=td.dataset.rc.split(',');r=+p[0];c=+p[1];}
+    if(r===stkRowSel.r&&c===stkRowSel.c)return;
+    stkRowSel={r,c};stkRowPaint();stkRowBar();
+  };
+  wrap.addEventListener('click',stkRowH,true);wrap.addEventListener('focusin',stkRowH,true);
+  stkRowPaint();
+}
+function stkRowPaint(){
+  const wrap=document.getElementById('stk_wrap');if(!wrap)return;
+  wrap.querySelectorAll('.stk-rsel,.stk-rsel-b').forEach(x=>x.classList.remove('stk-rsel','stk-rsel-b'));
+  if(!stkRowMode||!stkRowSel.r)return;
+  const r=stkRowSel.r,b=stkBlk(r,stkRowSel.c);
+  wrap.querySelectorAll('td.stk-rg[data-r="'+r+'"]').forEach(x=>x.classList.add('stk-rsel'));
+  wrap.querySelectorAll('td[data-rc]').forEach(td=>{const p=td.dataset.rc.split(',');if(+p[0]===r){td.classList.add(+p[1]>=b.c1&&+p[1]<=b.c2?'stk-rsel-b':'stk-rsel');}});
+}
+function stkRowBar(){
+  const bar=document.getElementById('stk_rowbar'),bt=document.getElementById('stk_rowbtn');
+  if(bt){bt.classList.toggle('primary',stkRowMode);bt.textContent=stkRowMode?'📐 줄 편집 중 (끝내기)':'📐 줄 추가·삭제';}
+  if(!bar)return;
+  if(!stkRowMode){bar.innerHTML='';return;}
+  const R=stkRowSel.r,ok=R&&stkRowOk(R,true),b=ok?stkBlk(R,stkRowSel.c):null;
+  const nOld=document.getElementById('stk_rown');const nv=nOld?nOld.value:'1';
+  const dis=ok?'':'disabled';
+  bar.innerHTML=`<div style="background:#fefce8;border:1px solid #facc15;border-radius:8px;padding:8px 12px;margin:2px 0 8px;font-size:12.5px;line-height:1.8">
+    <b>📐 줄 추가·삭제</b> — 줄을 넣거나 뺄 곳의 <b>칸을 누르거나 왼쪽 줄 번호</b>를 누르세요. 엑셀의 행 삽입/삭제와 같아서 <b>아래 줄의 수식·병합·월별 원단위 연동 칸·모든 달의 입력값이 자동으로 한 줄씩 이동</b>합니다. (양식 변경은 모든 달에 공통 적용)
+    <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="min-width:200px">선택: <b>${ok?R+'행 · '+(b.right?'오른쪽':'왼쪽')+' 블록('+stkColL(b.c1)+'~'+stkColL(b.c2)+'열)':'없음'}</b></span>
+      <label>줄 수 <input type="number" id="stk_rown" class="selbox" style="width:54px" min="1" max="10" value="${esc(nv)}"></label>
+      <button class="btn sm primary" ${dis} onclick="stkRowInsert('below')" title="선택한 줄 아래에 새 줄을 넣고, 같은 규격 묶음이면 합계 수식에 새 줄을 자동으로 포함합니다">⬇ 아래에 줄 삽입</button>
+      <button class="btn sm" ${dis} onclick="stkRowInsert('above')">⬆ 위에 줄 삽입</button>
+      <button class="btn sm" ${dis} onclick="stkRowNewItem()" title="선택한 줄 아래에 새 품목(품명 칸 병합 + 줄별 중량 수식)을 만듭니다">＋ 새 품목 추가</button>
+      <label title="체크하면 새 줄이 위·아래 줄과 같은 묶음일 때 병합 칸·소계 SUM 범위·중량 합계식에 자동으로 포함됩니다"><input type="checkbox" ${stkRowGrp?'checked':''} onchange="stkRowGrp=this.checked"> 같은 묶음에 포함(소계·병합 자동 확장)</label>
+      <span style="flex:1"></span>
+      <button class="btn sm" ${dis} onclick="stkRowClear()" title="이 블록(왼쪽/오른쪽)의 칸만 비움 — 다른 쪽 칸·줄 구조는 그대로">🧽 줄 내용 지우기</button>
+      <button class="btn sm danger" ${dis} onclick="stkRowDelete()" title="줄 전체 삭제 (엑셀 행 삭제와 동일)">🗑 줄 삭제</button>
+      <button class="btn sm" ${stkUndoStk.length?'':'disabled'} onclick="stkUndo()" title="${stkUndoStk.length?esc(stkUndoStk[stkUndoStk.length-1].label):''}">↩ 되돌리기${stkUndoStk.length?' ('+stkUndoStk.length+')':''}</button>
+    </div></div>`;
+}
+/* 2026-10-27: CA-160 에 B250(250kg) 규격 줄을 미리 추가 — 중량 식에 새 줄 항이 자동 포함되며 수량만 입력하면 됩니다(한 번만 실행) */
+function stkLayMigrate(){
+  const ID='rpt146_ca160_b250';if(STK_MIG.indexOf(ID)>=0)return;
+  const c=INV_STK.cells,ok=c.B55&&c.B55[1]==='CA-160'&&c.C55&&c.C55[1]===1000&&c.C56&&c.C56[1]===25&&c.B57&&c.B57[1]==='CA-180M'&&c.F55&&/C56\*E56/.test(String(c.F55[1]));
+  if(!ok){if(localStorage.getItem(STK_LAY_KEY)){STK_MIG.push(ID);stkLaySave();}return;}
+  try{
+    const b=stkBlk(55,3);
+    stkInsertCore(56,1,55,b,true,false);
+    INV_STK.cells.C56=['n',250];
+    STK_MIG.push(ID);stkLaySave();
+  }catch(e){console.warn('stkLayMigrate',e);}
+}
+stkLayLoad();stkLayMigrate();
+
 const SX={ym:'',f:'',g:'',q:'',sel:new Set()};
 function sxConfAll(){try{const o=JSON.parse(localStorage.getItem(SX_CONF_KEY)||'{}');return(o&&typeof o==='object')?o:{};}catch(e){return {};}}
 function sxConfSave(o){try{localStorage.setItem(SX_CONF_KEY,JSON.stringify(o));}catch(e){}try{flashSave();}catch(e){}}
@@ -29516,7 +29829,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.26.rpt145";
+const APP_VERSION = "2026.10.27.rpt146";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -30720,6 +31033,7 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     try{fieldIssueSt=loadFieldIssue();}catch(e){}
     try{sgPrice=loadSgPrice();}catch(e){}
     try{sgSize=loadSgSize();}catch(e){}
+    try{stkLayLoad();}catch(e){}
     syncLog('↓ 설정/마스터');
   }catch(e){syncLog('수신 오류 kv: '+e.message);}
   fbApplying=false;fbRerender();}
