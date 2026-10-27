@@ -14467,6 +14467,7 @@ function invAutoCat(m){
   return '';
 }
 function invAutoCatAll(manual){
+  if(!manual&&!Object.keys(invMOv||{}).length&&typeof fbOn!=='undefined'&&!window.__kvFirstApplied)return 0;   // rpt149: 팀 설정 수신 전(빈 PC)에는 만들지 않음
   let n=0;
   INV_MASTER.forEach(m=>{if(invCatValid(m))return;const c=invAutoCat(m);if(!c)return;
     invMOv[m.c]=Object.assign(invMOv[m.c]||{},{costCat:c,catAuto:true});n++;});
@@ -28850,6 +28851,7 @@ function lxRender(){
   el.innerHTML=`<div style="background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 16px">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:17px">🔗 연동 센터</b><span style="font-size:12px;color:#64748b">품목마스터 기준 · 연동은 자재코드 기준 · 한 페이지에서 연동 / 누락 / 단가 확인 · 삭제</span><span style="flex:1"></span>
       <button class="btn primary" onclick="lxAuto()" title="자재코드 기준으로 원단위·사업계획을 자동 매칭하고 검증합니다 (확인 후 실행, 되돌리기 저장점 기록)">⚡ 1차 자동 매칭·검증</button>
+      <button class="btn primary" onclick="lxPriceAll()" title="원단위 품목을 모두 품목마스터에 연결하고 단가를 마스터 기준으로 맞춥니다 (사업계획 단가는 건드리지 않음 · 되돌리기 저장점 기록)">💲 마스터 단가로 원단위 전부 연동</button>
       <button class="btn" onclick="lxPrice27All()" title="마스터와 다른 계획 단가를 한 번에 검토합니다 — 체크한 항목을 ① 계획 단가 유지로 확인 완료 하거나 ② 마스터 단가로 변경">✓ ${esc(PL)} 계획 단가 확인·확정</button>
       <button class="btn" onclick="lxRestoreOpen()" title="이 화면에서 삭제(숨김)한 사업계획 품목을 되살립니다">↩ 삭제 복원</button>
       <button class="btn" onclick="ccAuditXls()">📋 엑셀</button><button class="btn" onclick="lxClose()">닫기 ✕</button></div>
@@ -29109,6 +29111,63 @@ function lxAutoPlan(){
       if(r.grade==='sure'&&r.top[0])A.planSure.push({i,pid:r.top[0].b.id});}catch(e){}
   });
   return A;
+}
+
+/* ===== rpt149 (2026-10-27): 💲 마스터 단가로 원단위 전부 연동 =====
+   · 원단위 품목 ↔ 품목마스터(같은 자재코드) 연결이 빠진 것을 모두 연결 → 단가는 마스터(분기 시점) 기준으로 읽힘
+   · 연결 품목에 남아 있던 엑셀 '10월 적용단가' 시점 단가(2026-10)는 정리 — 연결이 다시 끊겨도 엑셀 단가로 되돌아가지 않게
+   · 사업계획 단가는 건드리지 않음(확정한 V-1 유지) · 단위가 다른 품목(kg↔개 등 단가 20배 이상 차이)·일부러 연동을 끊은 품목은 제외 */
+async function lxPriceAll(){
+  if(!requireAdmin())return;
+  const ym=curYm();
+  const mq={};prodData.forEach(p=>{if(p.use===0)return;const q=String(p.qcode||'').trim();if(q)(mq[q]=mq[q]||[]).push(p);});
+  const todo=[],skip=[],noauto=[],nomaster=[];
+  let already=0;
+  for(const [c,m] of invM){
+    const it=invItem(c),ex=invMOv[c]||{},cands=mq[c]||[];
+    if(it.linkedProdId){already++;continue;}
+    if(!cands.length){nomaster.push({c,n:m.n});continue;}
+    if(ex.noAuto){noauto.push({c,n:m.n});continue;}
+    const priced=cands.filter(p=>prodLivePrice(p)>0);
+    const pick=priced[0]||cands[0];
+    const mp=Math.round(prodPriceAtYm(pick.id,ym,'inv')||0),cp=Math.round(invPriceAt(c,ym)||0);
+    if(mp<=0){skip.push({c,n:m.n,why:'마스터 단가 없음'});continue;}
+    if(cp>0&&(mp/cp>20||mp/cp<0.05)){skip.push({c,n:m.n,why:'단위 상이 추정(원단위 '+cp.toLocaleString()+' · 마스터 '+mp.toLocaleString()+')'});continue;}
+    todo.push({c,n:m.n,pid:pick.id,cp,mp,src:invPriceSrc(c,ym)});
+  }
+  const chg=todo.filter(x=>Math.abs(x.mp-x.cp)>=1);
+  const forced=Object.keys(invPriceForce).filter(c=>invPriceForce[c]&&invPriceForce[c][ym]!=null);
+  const lines=chg.slice(0,25).map(x=>'  · '+x.n.slice(0,24)+' : '+x.cp.toLocaleString()+' → '+x.mp.toLocaleString()+'원 ('+((x.mp/(x.cp||1)-1)*100).toFixed(1)+'%)').join('\n');
+  const msg='💲 마스터 단가로 원단위 전부 연동 ('+ym+' 기준)\n\n'
+    +'  · 이미 연동된 원단위: '+already+'건 (변경 없음)\n'
+    +'  · 새로 연결할 원단위: '+todo.length+'건 → 단가가 바뀌는 품목 '+chg.length+'건\n'
+    +(lines?lines+(chg.length>25?'\n  … 외 '+(chg.length-25)+'건':'')+'\n':'')
+    +(skip.length?'  · 제외(직접 확인): '+skip.length+'건 — '+skip.map(x=>x.n.slice(0,16)+' ['+x.why+']').join(', ')+'\n':'')
+    +(noauto.length?'  · 일부러 연동을 끊어 둔 품목 '+noauto.length+'건은 그대로 둡니다\n':'')
+    +(nomaster.length?'  · 마스터에 같은 코드가 없는 원단위 '+nomaster.length+'건은 연결할 수 없습니다\n':'')
+    +(forced.length?'  · 이 달 직접 수정(강제수정) 단가 '+forced.length+'건은 그대로 유지됩니다\n':'')
+    +'\n사업계획 단가는 변경하지 않습니다. 실행 전 되돌리기 저장점이 자동 기록됩니다. 계속할까요?';
+  if(!todo.length&&!already){alert('연결할 원단위 품목이 없습니다.');return;}
+  if(!confirm(msg))return;
+  try{await undoSnap('마스터 단가 기준 원단위 일괄 연동','bulk');}catch(e){}
+  todo.forEach(x=>{const o=invMOv[x.c]=invMOv[x.c]||{};o.linkedProdId=x.pid;delete o.noAuto;});
+  saveInvMOv();
+  let nh=0;
+  Object.keys(invPriceHist).forEach(c=>{
+    if(!invItem(c).linkedProdId)return;
+    const a=invPriceHist[c]||[];
+    const b=a.filter(h=>!(h.ym==='2026-10'&&typeof INV_PRICE10!=='undefined'&&INV_PRICE10[c]===h.p));
+    if(b.length!==a.length){nh+=a.length-b.length;if(b.length)invPriceHist[c]=b;else delete invPriceHist[c];}
+  });
+  if(nh)saveInvPriceHist();
+  window.__mhMap=null;
+  LX.res='✔ 원단위 마스터 연동 '+todo.length+'건 추가 (총 연동 '+(already+todo.length)+'건) · 단가 변경 '+chg.length+'건 · 엑셀 시점 단가 정리 '+nh+'건\n'
+    +(skip.length?'제외: '+skip.map(x=>x.n+' ['+x.why+']').join(' / ')+'\n':'')
+    +(nomaster.length?'마스터에 같은 코드 없음: '+nomaster.map(x=>x.n).join(' / ')+'\n':'')
+    +'사업계획 단가는 그대로입니다. 문제가 있으면 [↩ 되돌리기]로 이전 상태로 돌아갈 수 있습니다.';
+  try{renderProdMaster();}catch(e){}try{if(typeof invRenderAll==='function')invRenderAll();}catch(e){}
+  try{renderInflow();}catch(e){}try{if(document.getElementById('isp-month')&&document.getElementById('isp-month').classList.contains('active'))renderInvMonth();}catch(e){}
+  lxRender();toast('마스터 단가 기준 연동 완료 — 연결 '+todo.length+'건 · 단가 변경 '+chg.length+'건');
 }
 async function lxAuto(){
   const A=lxAutoPlan();
@@ -29874,7 +29933,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.27.rpt148";
+const APP_VERSION = "2026.10.27.rpt149";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -31192,6 +31251,12 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
       // 로컬이 더 최신으로 기록된 키는 건너뛰어 보존(이 PC가 방금 수정한 내용이 되돌아가지 않게),
       // 그 외(원격이 같거나 더 최신·시각 기록이 없는 구버전 데이터)는 기존처럼 반영
       if(k==='dgrns_dia'){try{diaLastGood(JSON.parse(localStorage.getItem('dgrns_dia')||'{}'));}catch(e){}} // 팀 공유가 덮어쓰기 직전 내용 보관
+      /* rpt149: 팀에서 온 원단위 연동(invmaster)/포스코 마스터가 이 PC보다 크게 적으면(비어 있거나 오래된 PC가 올린 경우) 덮어쓰지 않는다 */
+      if(!force&&(k==='dgrns_invmaster'||k==='dgrns_posco_master')){try{
+        const cnt=t=>{const o=JSON.parse(t||'{}')||{};return k==='dgrns_invmaster'?Object.values(o).filter(x=>x&&x.linkedProdId).length:Object.keys(o).length;};
+        const lc=cnt(localStorage.getItem(k)),rc=cnt(kv[k]);
+        if(lc>=10&&rc<lc*0.5){console.warn('팀 자료가 더 적어 덮어쓰지 않음',k,lc,rc);try{toast((k==='dgrns_invmaster'?'원단위 연동':'포스코 마스터')+': 팀 공유 자료가 이 PC보다 크게 적어 덮어쓰지 않았습니다');}catch(e){}return;}
+      }catch(e){}}
       if(k==='dgrns_dia'&&!force){try{ // 팀에서 온 모식도가 이 PC보다 크게 적으면(비어 있는 PC가 올린 경우 등) 덮어쓰지 않고 이 PC 것을 지킨다
         const lc=Object.keys(JSON.parse(localStorage.getItem('dgrns_dia')||'{}')).length,rc=Object.keys(JSON.parse(kv[k]||'{}')).length;
         if(lc>0&&rc<lc*0.5){console.warn('모식도: 팀 자료가 더 적어 덮어쓰지 않음',lc,rc);try{toast('팀 공유의 모식도가 이 PC보다 크게 적어 덮어쓰지 않았습니다');}catch(e){}return;}
@@ -31213,6 +31278,12 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     try{sgPrice=loadSgPrice();}catch(e){}
     try{sgSize=loadSgSize();}catch(e){}
     try{stkLayLoad();}catch(e){}
+    /* rpt149: 아래 값들은 메모리에 따로 들고 있어서, 새로 받은 값으로 다시 읽지 않으면 이 PC가 다음에 저장할 때 오래된 내용으로 팀 값을 덮어쓸 수 있었음 */
+    try{invMOv=invMasterOv();}catch(e){}
+    try{invPriceHist=loadInvPriceHist();}catch(e){}
+    try{invPriceForce=JSON.parse(localStorage.getItem('dgrns_invforce')||'{}');}catch(e){}
+    try{poscoMaster=loadPoscoMaster();}catch(e){}
+    window.__kvFirstApplied=true;
     syncLog('↓ 설정/마스터');
   }catch(e){syncLog('수신 오류 kv: '+e.message);}
   fbApplying=false;fbRerender();}
