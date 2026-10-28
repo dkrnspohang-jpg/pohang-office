@@ -903,7 +903,8 @@
   .dps .p-h{font-size:13.5px;font-weight:800;color:#1d4ed8;margin:0 0 4px;border-left:3px solid #1d4ed8;padding-left:6px}
   .dps .p-h .p-sub{font-weight:400;color:#64748b;font-size:11px}
   .dps table{width:100%!important;min-width:0!important;border-collapse:collapse;table-layout:fixed;font-size:12.5px}
-  .dps th,.dps td{border:1px solid #d7dee6;padding:3px 4px;text-align:center;overflow-wrap:anywhere}
+  .dps th,.dps td{border:1px solid #d7dee6;padding:var(--dp,3px) 4px;text-align:center;overflow-wrap:anywhere}
+  .dps td.pdc{white-space:nowrap;overflow-wrap:normal;font-size:11.5px;letter-spacing:-.3px}
   .dps th{background:#eef2f6;font-weight:700;font-size:11.5px;color:#334155}
   .dps td.l{text-align:left}
   .dps .p-legend{display:flex;gap:9px;flex-wrap:wrap;font-size:11px;color:#64748b;margin-top:4px}
@@ -8308,7 +8309,17 @@ function diaLink(no,date){
   const endRec=isEnd?td:camp.find(x=>END_EVT.includes(x.type));
   const U=endRec?ladleUse(endRec):ladleUse({type:'사용',no,date:td.date});
   const build=U.b||(startRec?startRec.date:'');
-  const start=U.s||td._campStart||build;
+  let start=U.s||td._campStart||build;
+  /* rpt155: 사용 시작일이 따로 없고 이 캠페인의 첫 기록이 콘보수·S/L보수라면, 시작일을 그 보수일이 아니라 직전 해체일 다음날로 잡아
+     첫 구간(콘보수)의 기간이 '시작~콘보수일'로 나오게 한다(래들 수명관리에서 사용일자를 직접 입력하면 그 값이 우선). */
+  if(!U.s&&!build){try{
+    const firstRec=camp.slice().sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0))[0];
+    if(firstRec&&NON_ACCUM.includes(firstRec.type)){
+      const pe=ladleData.filter(x=>x.no===no&&END_EVT.includes(x.type)&&x.date<firstRec.date).map(x=>x.date).sort().pop();
+      if(pe){const d0=new Date(pe+'T00:00:00');d0.setDate(d0.getDate()+1);
+        const ns=d0.getFullYear()+'-'+String(d0.getMonth()+1).padStart(2,'0')+'-'+String(d0.getDate()).padStart(2,'0');
+        if(ns<firstRec.date)start=ns;}}
+  }catch(e){}}
   const endDay=isEnd?(U.e||td.date):td.date;
   const recs=camp.filter(x=>NON_ACCUM.includes(x.type)&&(x.date<td.date||(x.date===td.date&&(x.seq||0)<=(td.seq||0))))
     .sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0));
@@ -8494,6 +8505,21 @@ function renderLadleDia(){
      </div>`;
 }
 /* ── 해체 모식도 인쇄 (정적 인쇄 시트 → A4 가로 1장 자동 맞춤) ── */
+/* rpt155: 해체일지 1장을 용지 가로·세로에 딱 맞춘다 — 가로는 배율, 남는 세로는 칸 간격을 늘려 채움(아래 여백 없음), 넘치면 배율을 줄임 */
+function diaFitSheet(sh,aw,ah){
+  sh.style.zoom='1';sh.style.removeProperty('--dp');sh.style.minHeight='';sh.style.display='';sh.style.flexDirection='';
+  const ft=sh.querySelector('.p-foot');if(ft)ft.style.marginTop='';
+  const SF=0.985,h=sh.offsetHeight||1,zw=aw/1000*SF;
+  let z=Math.min(zw,ah/h*SF);
+  if(ah/h*SF>zw){
+    z=zw;const th=ah/z;let lo=3,hi=18,best=3;
+    for(let i=0;i<9;i++){const mid=(lo+hi)/2;sh.style.setProperty('--dp',mid.toFixed(2)+'px');if(sh.offsetHeight<=th){best=mid;lo=mid;}else hi=mid;}
+    sh.style.setProperty('--dp',best.toFixed(2)+'px');
+    sh.style.minHeight=th.toFixed(1)+'px';sh.style.display='flex';sh.style.flexDirection='column';
+    if(ft)ft.style.marginTop='auto';
+  }
+  sh.style.zoom=z.toFixed(4);
+}
 function diaPrintHtml(){
   const ch=+diaCur.ch||0, dv=ch||1, L=diaLimits();
   const tdRec=ladleData.find(r=>r.no===diaCur.no&&r.date===diaCur.date&&DIA_EVT.includes(r.type));
@@ -8504,11 +8530,14 @@ function diaPrintHtml(){
   const warn=[];
   /* ① PP-CONE */
   let t1=`<div class="p-h">① PP-CONE <span class="p-sub">(규격−잔존)÷구간CH</span></div>
-    <table><colgroup><col style="width:21%"><col style="width:21%"><col style="width:10%"><col style="width:13%"><col style="width:13%"><col style="width:22%"></colgroup>
+    <table><colgroup><col style="width:17%"><col style="width:29%"><col style="width:9%"><col style="width:12%"><col style="width:12%"><col style="width:21%"></colgroup>
     <thead><tr><th>구분</th><th>기간·규격</th><th>CH</th><th>#1</th><th>#2</th><th>용손율</th></tr></thead><tbody>`;
+  /* rpt155: 기간은 래들 수명관리 보수일 기준(콘보수·S/L보수 일자)으로 다시 계산해 한 날짜만 저장된 칸을 '시작~끝'으로 보여 준다(저장값은 바꾸지 않음) */
+  let pdLink=null;try{const LL=diaLink(diaCur.no,diaCur.date);if(LL&&LL.segs&&LL.segs.length===diaCur.segs.length)pdLink=LL.segs;}catch(e){}
+  const pdOf=(g,i)=>{const a=String(g.pd||'');const b=pdLink&&pdLink[i]&&pdLink[i].lab===g.lab?String(pdLink[i].pd||''):'';return (b&&b.indexOf('~')>=0&&a.indexOf('~')<0)?b:a;};
   diaCur.segs.forEach((g,i)=>{
     const SZ=ppSz(g);const C=ppCalc(diaCur.segs,i), r1=C.r1, r2=C.r2;
-    t1+=`<tr><td class="l">${esc(g.lab||'')}${g.recy?'<div style="font-size:9px;color:#475569">(콘 재활용)</div>':''}</td><td>${esc(g.pd||'')}<div style="font-size:9px;color:#475569">규격 ${SZ}</div></td><td>${+g.ch||0}</td><td>${g.recy?'':(+g.p1||0)}</td><td>${g.recy?'':(+g.p2||0)}</td>
+    t1+=`<tr><td class="l">${esc(g.lab||'')}${g.recy?'<div style="font-size:9px;color:#475569">(콘 재활용)</div>':''}</td><td class="pdc">${esc(pdOf(g,i))}<div style="font-size:9px;color:#475569">규격 ${SZ}</div></td><td>${+g.ch||0}</td><td>${g.recy?'':(+g.p1||0)}</td><td>${g.recy?'':(+g.p2||0)}</td>
       <td style="white-space:nowrap;font-size:11px">${C.recy?'재활용':`<b style="color:${r1==null?'#64748b':eroColor(r1)}">${ppFmt(r1)}</b>/<b style="color:${r2==null?'#64748b':eroColor(r2)}">${ppFmt(r2)}</b>${C.chain>(+g.ch||0)?`<div style="font-size:9px;color:#475569">÷${C.chain}CH</div>`:''}`}</td></tr>`;});
   t1+=`</tbody></table>`;
   /* ② 점검 */
@@ -8558,9 +8587,8 @@ function diaPrintPrep(){
   host.innerHTML=diaPrintHtml();
   /* A4 가로(여백 7mm) 인쇄영역 ≈ 1069×740px 에 맞춰 배율 계산 : 화면 밖에서 먼저 측정 */
   host.style.cssText='display:block;position:absolute;left:-12000px;top:0;visibility:hidden;width:1000px';
-  const sh=host.firstElementChild, h=sh.offsetHeight||1;
-  const z=Math.min(1069/1000,738/h)*0.985;
-  sh.style.zoom=z.toFixed(4);
+  const sh=host.firstElementChild;
+  diaFitSheet(sh,1069,738);
   host.style.cssText='';
   let st=document.getElementById('diaPageCss');
   if(!st){st=document.createElement('style');st.id='diaPageCss';document.head.appendChild(st);}
@@ -25582,7 +25610,7 @@ function dtkListPages(rows,label){
   const n2=rows.filter(x=>x.st===2).length,n1=rows.filter(x=>x.st===1).length,n0=rows.filter(x=>x.st===0).length,nm=rows.filter(x=>x.miss>0).length;
   const lifeA=rows.filter(x=>x.pat!=='SLCHK'&&(+x.r.daily||0)>0).map(x=>+x.r.daily),avg=lifeA.length?Math.round(lifeA.reduce((p,q)=>p+q,0)/lifeA.length*10)/10:'-';
   const cards=`<div class="dtk-cards"><div class="hl"><small>조회 대상</small><b>${rows.length}</b> 건</div><div><small>작성 완료</small><b>${n2}</b> 건</div><div><small>작성중</small><b>${n1}</b> 건</div><div><small>미작성</small><b>${n0}</b> 건</div><div><small>⚠ 확인 필요</small><b>${nm}</b> 건</div><div><small>평균 해체수명</small><b>${avg}</b> CH</div></div>`;
-  const per=11,pages=[];
+  const per=26,pages=[];   // rpt155: 한 페이지에 최대 26건(넘으면 다음 쪽) — 줄 간격은 dtkFit이 자동 조정
   const stTxt=st=>st===2?'<span style="background:#16a34a;color:#fff;border-radius:10px;padding:2px 9px;font-weight:700;font-size:11px">작성완료</span>':st===1?'<span style="background:#e0f2fe;color:#0369a1;border-radius:10px;padding:2px 9px;font-weight:700;font-size:11px">작성중</span>':'<span style="background:#fff7ed;color:#c2410c;border:1px solid #fb923c;border-radius:10px;padding:1px 8px;font-weight:700;font-size:11px">미작성</span>';
   const pt=p=>{const o=DTK_PAT[p]||DTK_PAT.NONE;return `<span style="background:${o[1]};color:${o[2]};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">${o[0]}</span>`;};
   const np=Math.max(1,Math.ceil(desc.length/per));
@@ -25592,7 +25620,7 @@ function dtkListPages(rows,label){
       const rm=q=>q?Math.round(q.rem):'-',rt=q=>q?`<b style="color:${eroColor(q.rate)}">${q.rate.toFixed(2)}</b>`:'-';
       return `<tr><td style="white-space:nowrap"><b>${esc(x.date)}</b></td><td><b>${esc(noLabel(x.no))}</b></td><td>${vendorTag(x.r.vendor)}</td><td>${pt(x.pat)}</td><td class="n">${diaLife(x.no,x.r)||'-'}</td><td style="font-size:11px;white-space:nowrap">${esc(dqSegText(x.no,x.date))}</td><td>${stTxt(x.st)}</td><td class="n">${z?rm(z.sl):'-'}</td><td class="n">${z?rt(z.sl):'-'}</td><td class="n">${z?rm(z.ml):'-'}</td><td class="n">${z?rt(z.ml):'-'}</td></tr>`;}).join('')
       ||'<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:30px">해당 기간의 해체·SL보수 건이 없습니다</td></tr>';
-    pages.push(`<div class="dtk-pg"><div class="dtk-lh">${esc(label)} 래들 해체 목록${np>1?` <span style="font-size:14px;font-weight:600;color:#64748b">(${i+1}/${np})</span>`:''}</div>${i===0?cards:''}
+    pages.push(`<div class="dtk-pg dtk-list"><div class="dtk-lh">${esc(label)} 래들 해체 목록${np>1?` <span style="font-size:14px;font-weight:600;color:#64748b">(${i+1}/${np})</span>`:''}</div>${i===0?cards:''}
       <table class="dtk-tbl"><thead><tr><th>일자</th><th>래들</th><th>업체</th><th>구분</th><th class="n">수명(CH)</th><th>구간</th><th>작성</th><th class="n">S/L 최소잔존</th><th class="n">S/L 용손율</th><th class="n">M/L 최소잔존</th><th class="n">M/L 용손율</th></tr></thead><tbody>${body}</tbody></table></div>`);
   }
   return pages;
@@ -25619,8 +25647,17 @@ function dtkDiaPages(rows,minSt){
 }
 function dtkFit(root){
   root.querySelectorAll('.dtk-pg>.dps').forEach(sh=>{
-    sh.style.zoom='1';const h=sh.offsetHeight||1;
-    sh.style.zoom=Math.min(1050/1000,716/h)*0.985;sh.style.margin='4px 5px';
+    diaFitSheet(sh,1050,716);sh.style.margin='4px 5px';
+  });
+  /* rpt155: 래들 해체 목록 — 한 페이지에 그 달 건수가 모두 들어가도록 줄 간격·글자 크기를 자동 조정 */
+  root.querySelectorAll('.dtk-pg.dtk-list').forEach(pg=>{
+    const tb=pg.querySelector('.dtk-tbl');if(!tb)return;
+    const lim=728-16,cells=tb.querySelectorAll('th,td');
+    const set=(pd,f)=>{tb.style.fontSize=f+'px';cells.forEach(c=>{c.style.paddingTop=c.style.paddingBottom=pd+'px';});};
+    const bot=()=>tb.offsetTop+tb.offsetHeight;
+    let f=12.5,pd=7;set(pd,f);
+    if(bot()>lim){while(bot()>lim&&pd>2){pd-=0.5;set(pd,f);}while(bot()>lim&&f>8){f-=0.25;set(pd,f);}}
+    else{while(pd<15){set(pd+0.5,f);if(bot()>lim){set(pd,f);break;}pd+=0.5;}}
   });
 }
 function dtkBuild(){
@@ -30019,7 +30056,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.28.rpt154";
+const APP_VERSION = "2026.10.28.rpt155";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
