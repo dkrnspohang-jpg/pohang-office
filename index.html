@@ -25440,12 +25440,12 @@ function piSheetRender(){
   const q=(piSt.q||'').toLowerCase();
   let ents=piVendorItems(v);
   ents.forEach(e=>{e.pr=piPriceMonth(e,ym);e.fp=!isP&&piPov()[ym+'|'+e.k]!=null;e.sl=isP?(e.mi!=null?(poscoSnapKeyForYm(ym)?poscoPeriodLabel(poscoSnapKeyForYm(ym)):'현재(편집중)'):''):'';e.dq=0;e.mq=0;e.ma=0;e.mw=0;e.days=new Set();if(isP){const o=piGrpOv()[String(e.item||'').trim()];if(o)e.grp=o;e.gch=!!o;}});
-  const un={n:0,a:0,w:0};
+  const un={n:0,a:0,w:0,q:0};
   piData.forEach(r=>{
     if(isP?r.div!=='포스코':(r.div!=='시중'||(r.vendor||'')!==v))return;
     if(String(r.date).slice(0,7)!==ym)return;
     const e=ents.find(x=>piRowMatch(r,v,x));
-    if(!e){un.n++;un.a+=piAmount(r);un.w+=piKg(r);return;}
+    if(!e){un.n++;un.a+=piAmount(r);un.w+=piKg(r);un.q+=(+r.qty||0);return;}
     const qn=+r.qty||0;e.mq+=qn;e.ma+=piAmount(r);e.mw+=piKg(r);if(qn>0)e.days.add(r.date);if(r.date===d)e.dq+=qn;});
   // 정렬·분류
   const ORD=['J-16','A-19','SE-MC','RHCT-AM'];
@@ -25457,11 +25457,14 @@ function piSheetRender(){
   if(isP)ents.sort((a,b)=>{const ga=a.grp==='기존'?0:1,gb=b.grp==='기존'?0:1;if(ga!==gb)return ga-gb;const ia=ORD.indexOf(a.item),ib=ORD.indexOf(b.item);return ((ia<0?9:ia)-(ib<0?9:ib))||String(a.item).localeCompare(b.item)||String(a.spec).localeCompare(b.spec);});
   piSt.ents=ents;
   const N=x=>Math.round(x).toLocaleString();
-  let body='',curG=null,S={d:0,m:0,w:0},T={d:0,m:0,w:0,n:0,dn:0};
-  const flush=()=>{if(curG!==null)body+=`<tr style="background:#f1f5f9;font-weight:800"><td colspan="6" style="text-align:right">${esc(curG)} 소계</td><td class="n">${S.d?N(S.d):'-'}</td><td></td><td class="n">${S.m?N(S.m):'-'}</td><td class="n">${S.w?N(S.w):'-'}</td><td colspan="2"></td></tr>`;S={d:0,m:0,w:0};};
+  let body='',curG=null,S={d:0,m:0,w:0,q:{}},T={d:0,m:0,w:0,n:0,dn:0,q:{}};
+  /* rpt154: 월 누적입고 수량 소계 — 단위(EA/KG)가 섞이면 단위별로 나눠 표시 */
+  const qAdd=(o,u,n)=>{if(n)o[u]=(o[u]||0)+n;};
+  const qStr=o=>{const k=Object.keys(o).filter(u=>o[u]);return k.length?k.map(u=>N(o[u])+(k.length>1?' '+u:'')).join(' / '):'-';};
+  const flush=()=>{if(curG!==null)body+=`<tr style="background:#f1f5f9;font-weight:800"><td colspan="6" style="text-align:right">${esc(curG)} 소계</td><td class="n">${S.d?N(S.d):'-'}</td><td class="n" style="color:#1d4ed8">${qStr(S.q)}</td><td class="n">${S.m?N(S.m):'-'}</td><td class="n">${S.w?N(S.w):'-'}</td><td colspan="2"></td></tr>`;S={d:0,m:0,w:0,q:{}};};
   ents.forEach((e,i)=>{
     const g=gk(e);if(g!==curG){flush();curG=g;body+=`<tr><td colspan="12" style="background:${isP?(e.grp==='기존'?'#dbeafe':'#ffedd5'):'#e5e7eb'};font-weight:800;padding:7px 10px;color:${isP?(e.grp==='기존'?'#1e40af':'#9a3412'):'#1e293b'}">${esc(g)} <span style="font-weight:600;font-size:11px;opacity:.8">· ${gn[g]||0}건</span></td></tr>`;}
-    const da=e.dq*e.pr;S.d+=da;S.m+=e.ma;S.w+=e.mw;T.d+=da;T.m+=e.ma;T.w+=e.mw;if(e.mq>0)T.n++;if(e.dq>0)T.dn++;
+    const da=e.dq*e.pr;S.d+=da;S.m+=e.ma;S.w+=e.mw;T.d+=da;T.m+=e.ma;T.w+=e.mw;{const uu=e.unit==='ea'?'EA':'KG';qAdd(S.q,uu,e.mq);qAdd(T.q,uu,e.mq);}if(e.mq>0)T.n++;if(e.dq>0)T.dn++;
     const badge=isP?`<select class="bsel" style="font-size:11px;font-weight:800;border:1px solid ${e.grp==='기존'?'#93c5fd':'#fdba74'};background:${e.grp==='기존'?'#dbeafe':'#ffedd5'};color:${e.grp==='기존'?'#1d4ed8':'#c2410c'}${e.gch?';outline:2px solid #f59e0b':''}" title="${e.gch?'직접 지정한 분류(품목 전체에 적용) · 기본값으로 되돌리려면 기본 분류를 선택':'기존/신규 분류 변경(품목 전체에 적용)'}" onchange="piSetGrp('${esc(e.item)}',this.value)"><option${e.grp==='기존'?' selected':''}>기존</option><option${e.grp!=='기존'?' selected':''}>신규</option></select>`:'<span style="font-size:10.5px;color:var(--muted)">'+esc(v)+'</span>';
     const un_=e.unit==='ea'?'EA':'KG';
     body+=`<tr>
@@ -25478,8 +25481,8 @@ function piSheetRender(){
       <td style="font-size:11px;color:var(--muted)">${e.days.size?e.days.size+'일':'-'}</td>
       <td><button class="btn sm danger" style="padding:1px 7px" onclick="piItemDel(${i})" title="이 품목을 시트에서 삭제 (입고 기록은 유지)">🗑 삭제</button></td></tr>`;});
   flush();
-  body+=un.n?`<tr style="background:#fff7ed"><td colspan="6" style="text-align:right;color:#9a3412">※ 품목 미지정 입고 ${un.n}건 (월별 요약·입고 내역 탭에서 확인)</td><td></td><td></td><td class="n">${N(un.a)}</td><td class="n">${N(un.w)}</td><td colspan="2"></td></tr>`:'';
-  body+=ents.length?`<tr style="background:#dbeafe;font-weight:800"><td colspan="6">★ ${esc(v)} 합계</td><td class="n">${N(T.d)}</td><td></td><td class="n">${N(T.m+un.a)}</td><td class="n">${N(T.w+un.w)}</td><td colspan="2"></td></tr>`:`<tr><td colspan="12"><div class="empty">품목이 없습니다. [＋ 품목 추가]로 ${esc(v)} 품목을 등록하세요.</div></td></tr>`;
+  body+=un.n?`<tr style="background:#fff7ed"><td colspan="6" style="text-align:right;color:#9a3412">※ 품목 미지정 입고 ${un.n}건 (월별 요약·입고 내역 탭에서 확인)</td><td></td><td class="n">${un.q?N(un.q):'-'}</td><td class="n">${N(un.a)}</td><td class="n">${N(un.w)}</td><td colspan="2"></td></tr>`:'';
+  body+=ents.length?`<tr style="background:#dbeafe;font-weight:800"><td colspan="6">★ ${esc(v)} 합계</td><td class="n">${N(T.d)}</td><td class="n" style="color:#1d4ed8" title="시트에 있는 품목의 수량 합계 (품목 미지정 입고 제외)">${qStr(T.q)}</td><td class="n">${N(T.m+un.a)}</td><td class="n">${N(T.w+un.w)}</td><td colspan="2"></td></tr>`:`<tr><td colspan="12"><div class="empty">품목이 없습니다. [＋ 품목 추가]로 ${esc(v)} 품목을 등록하세요.</div></td></tr>`;
   document.getElementById('pi_sbody').innerHTML=body;
   document.getElementById('pi_scount').textContent=ents.length+' 품목';
   // 카드 + 사업계획 비교
@@ -30016,7 +30019,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.28.rpt153";
+const APP_VERSION = "2026.10.28.rpt154";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
