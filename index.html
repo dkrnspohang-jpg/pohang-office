@@ -807,6 +807,19 @@
     padding:10px 18px;border-radius:22px;font-size:13px;z-index:80;opacity:0;transition:opacity .25s;pointer-events:none}
   .toast.show{opacity:1}
   .hidden{display:none!important}
+  /* rpt153: 홈 화면 결재 대기 알림 배너 */
+  .apprBan{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;border-radius:12px;background:#fff1f2;border:2px solid #e11d48;color:#881337;cursor:pointer;animation:apprPulse 1.8s ease-in-out infinite}
+  .apprBan .abn{font-size:34px;font-weight:900;line-height:1;color:#e11d48;min-width:44px;text-align:center}
+  .apprBan .abn small{font-size:14px;font-weight:700;margin-left:2px}
+  .apprBan .abt{flex:1;min-width:200px}
+  .apprBan .abt b{font-size:15px}
+  .apprBan .abl{font-size:12px;margin-top:4px;line-height:1.55;color:#9f1239}
+  .apprBan .abl i{font-style:normal;font-weight:800;color:#be123c}
+  .apprBan .abg{background:#e11d48;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:800;font-size:13px;cursor:pointer}
+  .apprBan.late{background:#e11d48;color:#fff;border-color:#9f1239}.apprBan.late .abn{color:#fff}.apprBan.late .abl,.apprBan.late .abl i{color:#ffe4e6}.apprBan.late .abg{background:#fff;color:#be123c}
+  .apprBan.mvb{padding:12px 13px;margin:0 0 10px;gap:10px}.apprBan.mvb .abn{font-size:30px}.apprBan.mvb .abg{width:100%;padding:11px}
+  @keyframes apprPulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,72,.45)}50%{box-shadow:0 0 0 9px rgba(225,29,72,0)}}
+  @media (prefers-reduced-motion:reduce){.apprBan{animation:none}}
   /* 일정 달력 */
   .cal-wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
   .cal-main{flex:1;min-width:520px}
@@ -1700,6 +1713,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
 
   <!-- ===== 홈 · 일정 ===== -->
   <section id="v-home" class="hidden">
+    <div id="homeApprBanner"></div>
     <div class="cards" id="homeCards"></div>
     <div class="cal-wrap">
       <div class="cal-main">
@@ -2233,6 +2247,16 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <div class="toolrow">
         <select class="selbox" id="lv_fEmp" onchange="renderLeave();renderLeaveCards()"></select>
         <select class="selbox" id="lv_fYear" onchange="renderLeave();renderLeaveCards()"></select>
+        <select class="selbox" id="lv_fType" onchange="renderLeave()" title="휴가 종류별로 모아봅니다"></select>
+        <button class="btn" id="lv_btnJuhyu" onclick="lvOnlyJuhyu()" title="주휴만 모아 보기 (다시 누르면 전체 종류)">주휴만</button>
+        <select class="selbox" id="lv_fPer" onchange="lvPerChange()" title="기간 조회 — 1주일 단위 또는 월별 단위"><option value="">기간: 연간(위 연도)</option><option value="week">1주일 단위</option><option value="month">월별 단위</option></select>
+        <span id="lv_perBox" style="display:none;align-items:center;gap:4px">
+          <button class="btn sm" onclick="lvPerMove(-1)" title="이전">◀</button>
+          <input type="date" class="selbox" id="lv_fDate" onchange="renderLeave()">
+          <button class="btn sm" onclick="lvPerMove(1)" title="다음">▶</button>
+          <button class="btn sm" onclick="lvPerToday()" title="오늘이 속한 기간">오늘</button>
+          <b id="lv_perLbl" style="font-size:12px;color:var(--accent);white-space:nowrap"></b>
+        </span>
         <select class="selbox" id="lv_fStatus" onchange="renderLeave()"></select>
         <button class="btn" onclick="downloadLeave()">📥 엑셀</button>
         <button class="btn adm-only" onclick="openApprCfg()" title="결재 단계를 설정합니다">⚙️ 결재선 설정</button>
@@ -9824,7 +9848,7 @@ function downloadTundishExcel(){
 let calY,calM,selDate=null,schEditId=null;
 async function loadSchedule(){try{scheduleData=await txAll('schedule');}catch(e){scheduleData=[];}}
 function renderHome(){if(calY==null){const t=new Date();calY=t.getFullYear();calM=t.getMonth();selDate=todayStr();document.getElementById('sch_date').value=selDate;}
-  renderCalendar();renderScheduleDay();renderHomeCards();syncScheduleWho();}
+  renderCalendar();renderScheduleDay();renderHomeCards();syncScheduleWho();try{renderApprBanner();}catch(e){}}
 const SCH_TYPES={'휴가':'#dc2626','주간보수':'#2563eb','회의':'#16a34a','외근':'#f97316','출장':'#7c3aed','회식':'#eab308','기타':'#64748b'};
 const TEAM=['강경묵 부장','서승수 과장','정현주 사원'];
 function schColor(t){return SCH_TYPES[t]||'#64748b';}
@@ -17725,7 +17749,9 @@ function renderInflow(){
   const tD=S.main.d+S.direct.d+S.out.d,tM=S.main.m+S.direct.m+S.out.m,sD=S.main.d+S.direct.d,sM=S.main.m+S.direct.m;   // 제강 매출합계(형강가열로 별도)
   const tot=(lab,dv,mv,bg)=>`<tr style="background:${bg};font-weight:800"><td colspan="6">${lab}</td><td class="n">${iN(dv)}</td><td></td><td class="n">${iN(mv)}</td><td></td></tr>`;
   document.getElementById('inflowBody').innerHTML=items.length?body
-    +tot('★ 매출합계 (포함 + 직매출) — 매출 마감 기준',sD,sM,'#dbeafe')
+    +tot('★ 매출합계 (직매출 제외 · 일반)',S.main.d,S.main.m,'#e0f2fe')
+    +tot('🏷 직매출 (별도)',S.direct.d,S.direct.m,'#ede9fe')
+    +tot('★ 동국R&S 마감금액 (매출합계 + 직매출) — 매출 마감 기준',sD,sM,'#dbeafe')
     +tot('전체 합계 (미포함 포함 · 원단위 기준 · 형강가열로 제외)',tD,tM,'#eef2f6')
     +(S.rhf.m||S.rhf.d?tot('🔥 형강가열로 매출 (원단위 제외 · 별도 기록)',S.rhf.d,S.rhf.m,'#ffedd5')+tot('★ 총 매출 (제강 매출합계 + 형강가열로)',sD+S.rhf.d,sM+S.rhf.m,'#dbeafe'):'')
     :`<tr><td colspan="10"><div class="empty">품목이 없습니다.</div></td></tr>`;
@@ -17733,8 +17759,8 @@ function renderInflow(){
   const cb=(l,v,u,hl,sub)=>`<div class="costbox${hl?' hl':''}"><div class="cb-lab">${l}</div><div class="cb-val">${v}<small> ${u}</small></div>${sub?`<div style="font-size:10.5px;opacity:.85;margin-top:2px">${sub}</div>`:''}</div>`;
   const mn=(+ym.slice(5))+'월',M=x=>(x/1e6).toFixed(1);
   document.getElementById('inflowCards').innerHTML=
-    cb(d+' 입고금액 (매출합계)',M(sD),'백만원',true,`미포함 ${M(S.out.d)} · 전체 ${M(tD)}`)
-    +cb(mn+' 누적 매출합계',M(sM),'백만원',false,`일반 ${M(S.main.m)} + 직매출 ${M(S.direct.m)}`)
+    cb(d+' 입고금액 (동국R&S 마감)',M(sD),'백만원',true,`미포함 ${M(S.out.d)} · 전체 ${M(tD)}`)
+    +cb(mn+' 누적 동국R&S 마감금액',M(sM),'백만원',false,`매출합계(직매출 제외) ${M(S.main.m)} + 직매출 ${M(S.direct.m)}`)
     +cb(mn+' 누적 미포함(타사)',M(S.out.m),'백만원',false,Object.keys(OC).filter(c=>OC[c].m).map(c=>c+' '+M(OC[c].m)).join(' · ')||'-')
     +cb(mn+' 누적 전체(원단위 기준)',M(tM),'백만원',false,'형강가열로 제외')
     +cb(mn+' 누적 형강가열로(매출 기록)',M(S.rhf.m),'백만원',false,'원단위·제강 원가 미포함')
@@ -17786,10 +17812,12 @@ function renderInflowRange(){
   const body=rows.map(r=>{tot+=r.amt;return `<tr${r.sec==='out'?' style="background:#f8fafc;color:#475569"':''}><td style="white-space:nowrap">${esc(r.ymd)}</td><td>${invVendBadge(r.code)}</td><td style="font-size:10.5px;color:var(--muted)">${esc(r.g)}</td><td style="text-align:left" title="${esc(r.n)}">${esc(r.n)}</td><td class="n">${iN(r.qty)}</td><td class="n">${iN(r.pr)}</td><td class="n">${iN(r.amt)}</td></tr>`;}).join('');
   // 업체별 소계(현재 표시 중인 행 기준) + 우리 매출/타사
   const by={};rows.forEach(r=>{const o=by[r.vend]=by[r.vend]||{n:0,a:0,sec:r.sec};o.n++;o.a+=r.amt;});
-  const ours=rows.filter(r=>r.sec==='main'||r.sec==='direct').reduce((s,r)=>s+r.amt,0),oth=rows.filter(r=>r.sec==='out').reduce((s,r)=>s+r.amt,0),rh=rows.filter(r=>r.sec==='rhf').reduce((s,r)=>s+r.amt,0);
+  const mainA=rows.filter(r=>r.sec==='main').reduce((s,r)=>s+r.amt,0),dirA=rows.filter(r=>r.sec==='direct').reduce((s,r)=>s+r.amt,0),ours=mainA+dirA,oth=rows.filter(r=>r.sec==='out').reduce((s,r)=>s+r.amt,0),rh=rows.filter(r=>r.sec==='rhf').reduce((s,r)=>s+r.amt,0);
   const sub=Object.keys(by).sort((a,b)=>by[b].a-by[a].a).map(k=>`<tr style="background:#f8fafc;font-size:11.5px"><td colspan="6" style="text-align:right;color:#475569">${esc(k)} ${by[k].n}건 소계</td><td class="n">${iN(by[k].a)}</td></tr>`).join('');
   document.getElementById('inflowRangeBody').innerHTML=body?body+sub
-    +`<tr style="background:#dbeafe;font-weight:800"><td colspan="6">★ 동국R&amp;S 매출합계 (일반+직매출)</td><td class="n">${iN(ours)}</td></tr>`
+    +`<tr style="background:#e0f2fe;font-weight:800"><td colspan="6">★ 매출합계 (직매출 제외 · 일반)</td><td class="n">${iN(mainA)}</td></tr>`
+    +`<tr style="background:#ede9fe;font-weight:800"><td colspan="6">🏷 직매출 (별도)</td><td class="n">${iN(dirA)}</td></tr>`
+    +`<tr style="background:#dbeafe;font-weight:800"><td colspan="6">★ 동국R&amp;S 마감금액 (매출합계 + 직매출)</td><td class="n">${iN(ours)}</td></tr>`
     +(oth?`<tr style="background:#e5e7eb;font-weight:800"><td colspan="6">타사 입고 (매출 미포함)</td><td class="n">${iN(oth)}</td></tr>`:'')
     +(rh?`<tr style="background:#ffedd5;font-weight:800"><td colspan="6">형강가열로</td><td class="n">${iN(rh)}</td></tr>`:'')
     +`<tr style="background:#eef2f6;font-weight:800"><td colspan="6">합계 (표시 중인 전체)</td><td class="n">${iN(tot)}</td></tr>`:`<tr><td colspan="7"><div class="empty">해당 기간에 입고 기록이 없습니다.</div></td></tr>`;
@@ -17801,7 +17829,7 @@ function renderInflowRange(){
   const chip=(lab,sub,v,hl)=>`<div onclick="irVend('${v}')" style="cursor:pointer;border:2px solid ${cur===v?'#2563eb':'#e2e8f0'};background:${hl?'#eff6ff':'#fff'};border-radius:10px;padding:5px 12px"><div style="font-size:11px;color:#64748b">${lab}</div><div style="font-weight:800;font-size:14px">${sub}</div></div>`;
   const ordr=Object.keys(B).sort((a,b)=>B[b].a-B[a].a);
   const s=document.getElementById('ir_sum');
-  if(s)s.innerHTML=all.length?chip('전체',iN(aOurs+aOut+all.filter(r=>r.sec==='rhf').reduce((x,r)=>x+r.amt,0))+'원','',false)+chip('★ 동국R&S 매출',iN(aOurs)+'원','ours',true)+chip('타사 합계',iN(aOut)+'원','out',false)
+  if(s)s.innerHTML=all.length?chip('전체',iN(aOurs+aOut+all.filter(r=>r.sec==='rhf').reduce((x,r)=>x+r.amt,0))+'원','',false)+chip('★ 동국R&S 마감금액',iN(aOurs)+'원','ours',true)+chip('타사 합계',iN(aOut)+'원','out',false)
     +ordr.map(k=>chip(k+' · '+B[k].n+'건',iN(B[k].a)+'원',k==='동국R&S'?'cat:일반':k==='직매출'?'cat:직매출':k==='형강가열로'?'rhf':'cat:'+k,false)).join(''):'';
 }
 function downloadInflowRange(){
@@ -29988,7 +30016,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.27.rpt150";
+const APP_VERSION = "2026.10.28.rpt153";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -32893,10 +32921,43 @@ function refreshAttend(){
   if(curView==='attend')initAttend();else if(curView==='approve')initApprove();
   updateApprBadge();
 }
+/* rpt153: 내 결재 대기 — 홈 화면(PC·모바일) 눈에 띄는 배너 + 브라우저 탭 제목·앱 아이콘 배지 */
+function apprWaitList(){
+  if(!meEmp())return {wait:[],conf:0};
+  const all=[...leaveData.map(d=>({k:'leave',d})),...otData.map(d=>({k:'ot',d}))];
+  const wait=all.filter(x=>{try{return canApprove(x.d);}catch(e){return false;}});
+  const conf=all.filter(x=>{try{return !canApprove(x.d)&&canConfirm(x.d);}catch(e){return false;}}).length;
+  const t0=new Date(todayStr()+'T00:00:00').getTime();
+  wait.forEach(x=>{const a=String(x.d.at||'').slice(0,10);x.days=a?Math.max(0,Math.round((t0-new Date(a+'T00:00:00').getTime())/864e5)):0;});
+  wait.sort((a,b)=>b.days-a.days);
+  return {wait,conf};
+}
+function apprBannerHtml(mob){
+  const {wait,conf}=apprWaitList();if(!wait.length&&!conf)return '';
+  const nL=wait.filter(x=>x.k==='leave').length,nO=wait.length-nL,maxD=wait.length?wait[0].days:0;
+  const late=maxD>=3;
+  const go=mob?"mvOpen('appr')":"nav('approve')";
+  const item=x=>{const d=x.d,who=x.k==='leave'?d.name:otWho(d),what=x.k==='leave'?(d.type+' '+String(d.start||'').slice(5)+(d.end&&d.end!==d.start?'~'+String(d.end).slice(5):'')+' ('+d.days+'일)'):('잔업 '+String(d.date||'').slice(5)+' '+(d.hours||'')+'h');
+    return `<i>${esc(who)}</i> ${esc(what)}${x.days>=1?' · '+x.days+'일 경과':' · 오늘 상신'}`;};
+  const lines=wait.slice(0,mob?3:5).map(item).join('<br>')+(wait.length>(mob?3:5)?`<br>외 ${wait.length-(mob?3:5)}건…`:'');
+  const head=wait.length
+    ?`<b>🔔 내가 결재할 문서가 있습니다</b> <span style="font-size:12px">휴가원 ${nL}건 · 잔업 ${nO}건${late?' · <b>'+maxD+'일 이상 미결재 건 있음</b>':''}</span>`
+    :`<b>📝 확인(시스템 입력) 대기 문서가 있습니다</b>`;
+  return `<div class="apprBan${late?' late':''}${mob?' mvb':''}" onclick="${go}" role="button" title="누르면 결재함으로 이동합니다">
+    <div class="abn">${wait.length||conf}<small>건</small></div>
+    <div class="abt">${head}${lines?`<div class="abl">${lines}</div>`:''}${conf&&wait.length?`<div class="abl">그 외 확인 대기 ${conf}건</div>`:''}</div>
+    <button class="abg" onclick="event.stopPropagation();${go}">✍️ 결재하러 가기</button></div>`;
+}
+function renderApprBanner(){const b=document.getElementById('homeApprBanner');if(b)b.innerHTML=apprBannerHtml(false);}
+function apprTitleBadge(n){
+  try{if(window.__baseTitle==null)window.__baseTitle=document.title.replace(/^\(\d+\)\s*/,'');document.title=(n?'('+n+') ':'')+window.__baseTitle;}catch(e){}
+  try{if(navigator.setAppBadge){if(n)navigator.setAppBadge(n);else navigator.clearAppBadge&&navigator.clearAppBadge();}}catch(e){}
+}
 function updateApprBadge(){
   const b=document.getElementById('apprBadge');if(!b)return;
   const n=[...leaveData,...otData].filter(d=>canApprove(d)||canConfirm(d)).length;
   b.hidden=!n;b.textContent=n;try{topnavMirror();}catch(e){}
+  try{renderApprBanner();apprTitleBadge(n);}catch(e){}
 }
 /* ---- 휴가원 ---- */
 function fillSel(id,arr,cur,allLabel){
@@ -32972,6 +33033,7 @@ function initAttend(){
   fillSel('lv_emp',empOptions(),me||'');
   fillSel('ot_emp',otEmpOptions(),me||'');
   fillSel('lv_type',LEAVE_TYPES,document.getElementById('lv_type').value||'연차');
+  fillSel('lv_fType',LEAVE_TYPES,(document.getElementById('lv_fType')||{}).value||'','전체 종류');
   const ys=attendYears(),cy=todayStr().slice(0,4);
   fillSel('lv_fYear',ys,document.getElementById('lv_fYear').value||cy);
   fillSel('ot_fYear',ys,document.getElementById('ot_fYear').value||cy);
@@ -33057,17 +33119,41 @@ function renderLeaveCards(){
     +cd('연중휴가 잔여',rem(yg2-st.yUsed-st.yPend),'일',true)
     +cd('근속',tenureTxt(emp,y),'')+cd('근무형태',(emp.wtype||'-')+(emp.team?' '+emp.team:''),'');
 }
+/* rpt152: 휴가원 종류별(주휴만) · 기간(1주일/월) 조회 */
+function lvYmd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function lvParse(s){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):new Date();}
+function lvPeriod(){   // → {from,to,label} 또는 null(연간)
+  const mode=(document.getElementById('lv_fPer')||{}).value||'';if(!mode)return null;
+  const el=document.getElementById('lv_fDate');if(el&&!el.value)el.value=todayStr();
+  const d=lvParse(el?el.value:todayStr());
+  if(mode==='week'){const wd=(d.getDay()+6)%7;const a=new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd),b=new Date(a.getFullYear(),a.getMonth(),a.getDate()+6);
+    return {from:lvYmd(a),to:lvYmd(b),label:lvYmd(a)+' ~ '+lvYmd(b)+' (월~일)'};}
+  const a=new Date(d.getFullYear(),d.getMonth(),1),b=new Date(d.getFullYear(),d.getMonth()+1,0);
+  return {from:lvYmd(a),to:lvYmd(b),label:d.getFullYear()+'년 '+(d.getMonth()+1)+'월'};
+}
+function lvPerChange(){const m=document.getElementById('lv_fPer').value;const bx=document.getElementById('lv_perBox');if(bx)bx.style.display=m?'inline-flex':'none';
+  const el=document.getElementById('lv_fDate');if(m&&el&&!el.value)el.value=todayStr();renderLeave();}
+function lvPerMove(n){const m=document.getElementById('lv_fPer').value;if(!m)return;const el=document.getElementById('lv_fDate');const d=lvParse(el.value||todayStr());
+  const nd=m==='week'?new Date(d.getFullYear(),d.getMonth(),d.getDate()+7*n):new Date(d.getFullYear(),d.getMonth()+n,1);el.value=lvYmd(nd);renderLeave();}
+function lvPerToday(){const el=document.getElementById('lv_fDate');if(el)el.value=todayStr();renderLeave();}
+function lvOnlyJuhyu(){const t=document.getElementById('lv_fType');t.value=(t.value==='주휴')?'':'주휴';renderLeave();}
 function leaveFiltered(){
   const fy=document.getElementById('lv_fYear').value,fe=document.getElementById('lv_fEmp').value,fs=document.getElementById('lv_fStatus').value;
+  const ft=(document.getElementById('lv_fType')||{}).value||'',per=lvPeriod();
   let rows=myDocs(leaveData).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||'')||(b.seq||0)-(a.seq||0));
-  if(fy)rows=rows.filter(r=>String(r.start||'').slice(0,4)===fy);
+  if(per)rows=rows.filter(r=>{const st=String(r.start||'').slice(0,10),en=String(r.end||r.start||'').slice(0,10)||st;return st<=per.to&&en>=per.from;});   // 기간과 하루라도 겹치면 표시
+  else if(fy)rows=rows.filter(r=>String(r.start||'').slice(0,4)===fy);
+  if(ft)rows=rows.filter(r=>r.type===ft);
   if(fe)rows=rows.filter(r=>r.empId===fe);
   if(fs)rows=rows.filter(r=>r.status===fs);
   return rows;
 }
 function renderLeave(){
   const rows=leaveFiltered();
-  document.getElementById('lv_count').textContent=rows.length+'건';
+  {const per=lvPeriod(),L=document.getElementById('lv_perLbl');if(L)L.textContent=per?per.label:'';
+   const jb=document.getElementById('lv_btnJuhyu');if(jb){const on=((document.getElementById('lv_fType')||{}).value==='주휴');jb.classList.toggle('primary',on);}
+   const dsum=rows.reduce((a,r)=>a+(+r.days||0),0);
+   document.getElementById('lv_count').textContent=rows.length+'건'+(rows.length?' · 합계 '+(+dsum.toFixed(1))+'일':'');}
   const b=document.getElementById('leaveBody');
   if(!rows.length){b.innerHTML='<tr><td colspan="10"><div class="empty">휴가원이 없습니다.</div></td></tr>';return;}
   b.innerHTML=rows.map(r=>`<tr>
@@ -33088,7 +33174,7 @@ function renderLeave(){
     </div></td></tr>`).join('');
 }
 function downloadLeave(){
-  const rows=myDocs(leaveData);
+  const rows=(((document.getElementById('lv_fType')||{}).value)||((document.getElementById('lv_fPer')||{}).value))?leaveFiltered():myDocs(leaveData);   // rpt152: 종류·기간을 고르면 보이는 내용만
   let t='<table><tr class="hd"><th>상신일</th><th>성명</th><th>소속</th><th>종류</th><th>시작</th><th>종료</th><th>일수</th><th>대근자</th><th>사유</th><th>상태</th><th>주임</th><th>계장</th><th>기성</th><th>사업소장</th><th>확인(관리직)</th></tr>';
   rows.forEach(r=>{const s=r.steps||{};t+=`<tr><td>${esc(r.at||'')}</td><td>${esc(r.name)}</td><td>${esc(r.dept||'')}</td><td>${esc(r.type)}</td><td>${esc(r.start)}</td><td>${esc(r.end||'')}</td><td>${r.days}</td><td>${esc(r.subName||'')}</td><td>${esc(r.reason||'')}</td><td>${esc(ST_LABEL[r.status]||'')}</td><td>${esc((s.jun||{}).by||'')}</td><td>${esc((s.gye||{}).by||'')}</td><td>${esc((s.gis||s.fm||{}).by||'')}</td><td>${esc((s.bos||s.off||{}).by||'')}</td><td>${esc((r.conf||{}).by||'')}</td></tr>`;});
   downloadXls('휴가원',t+'</table>');
@@ -34431,7 +34517,7 @@ function mvHome(){
   mvHead(me.name+' 님',ROLE_LABEL[role]+(me.rank?' · '+me.rank:'')+(me.team?' · '+me.team:''));
   /* 2026-09-21: '교대 인수인계' 버튼을 모바일 간편 홈 화면에서 제거(사용자 요청).
      PC 화면 사이드바 및 모바일의 [PC 화면] 전체 메뉴 전환에서는 기존처럼 그대로 접근 가능. */
-  document.getElementById('mvBody').innerHTML=mvInAppNote()+
+  document.getElementById('mvBody').innerHTML=mvInAppNote()+apprBannerHtml(true)+
     `<div class="mv-stat">
       <div class="s rem"><span>연차 잔여</span><b>${+(g-st.used-st.pend).toFixed(1)}</b><small>부여 ${g}일</small></div>
       <div class="s rem"><span>약정연차</span><b>${+(sg-stH.sUsed-stH.sPend).toFixed(1)}</b><small>상반기 ${sg} · 하반기 ${sg}</small></div>
