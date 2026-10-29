@@ -5617,7 +5617,7 @@ const LADLE_BOM_SEED=[
    ['1단 , 15단','PGT-BT','LW211(160H)',7.56,256,2033],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
-   ['FB','AMC-FB','LW251FBP',11.12,144,1247],
+   ['FB','AMC-FB','LW251FS',11.12,144,1247],
    ['FB C/T','CA-160','B250',250,1,687],
   ]},
  {code:'RECY1',name:'중수리 (1단 재활용 패턴)',group:'기타',baseCH:0,order:2,
@@ -5647,7 +5647,7 @@ const LADLE_BOM_SEED=[
    ['15단','PGT-BT','LW211(160H)',7.56,128,2033],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
-   ['FB','AMC-FB','LW251FBP',11.12,144,1247],
+   ['FB','AMC-FB','LW251FS',11.12,144,1247],
    ['FB C/T','CA-160','B250',250,1,687],
   ]},
  {code:'PERM_ALL',name:'영구장 전체 축조',group:'영구장',baseCH:0,order:3,
@@ -5725,7 +5725,7 @@ const LADLE_BOM_SEED=[
    ['CA-160','CA-160','B25',25,3,687],
    ['CA-160','CA-160','B250',250,1,687],
    ['CA-180M','CA-180M','B1000',1000,2.3,1528],
-   ['FB','AMC-FB','LW251FBP',11.01,142,1247],
+   ['FB','AMC-FB','LW251FS',11.01,142,1247],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
   ]},
@@ -5751,7 +5751,7 @@ const LADLE_BOM_SEED=[
    ['CA-160','CA-160','B25',25,3,687],
    ['CA-160','CA-160','B250',250,1,687],
    ['CA-180M','CA-180M','B1000',1000,2.3,1528],
-   ['FB','AMC-FB','LW251FBP',11.01,142,1247],
+   ['FB','AMC-FB','LW251FS',11.01,142,1247],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
   ]},
@@ -5781,7 +5781,7 @@ const LADLE_BOM_SEED=[
    ['CA-160','CA-160','B25',25,3,687],
    ['CA-160','CA-160','B250',250,1,687],
    ['CA-180M','CA-180M','B1000',1000,2.3,1528],
-   ['FB','AMC-FB','LW251FBP',11.01,142,1247],
+   ['FB','AMC-FB','LW251FS',11.01,142,1247],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
   ]},
@@ -5811,7 +5811,7 @@ const LADLE_BOM_SEED=[
    ['CA-160','CA-160','B25',25,3,687],
    ['CA-160','CA-160','B250',250,1,687],
    ['CA-180M','CA-180M','B1000',1000,2.3,1528],
-   ['FB','AMC-FB','LW251FBP',11.01,142,1247],
+   ['FB','AMC-FB','LW251FS',11.01,142,1247],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
   ]},
@@ -5841,7 +5841,7 @@ const LADLE_BOM_SEED=[
    ['CA-160','CA-160','B25',25,3,687],
    ['CA-160','CA-160','B250',250,1,687],
    ['CA-180M','CA-180M','B1000',1000,2.3,1528],
-   ['FB','AMC-FB','LW251FBP',11.01,142,1247],
+   ['FB','AMC-FB','LW251FS',11.01,142,1247],
    ['FB','AMC-FB','LW25-5FS',6.53,2,1247],
    ['FB','AMC-FB','LW25FS',5.8,2,1247],
   ]},
@@ -5865,7 +5865,7 @@ const PROD_SEED=[
  {cat:'래들',name:'AMC-BS',mix:'BS',spec:'LW90',uw:4.88,price:1584,gubun:'상품'},
  {cat:'래들',name:'AMC-BS',mix:'BS',spec:'LW95',uw:4.88,price:1584,gubun:'상품'},
  {cat:'래들',name:'AMC-FB',kind:'내화물',mix:'FBP',spec:'LW25-5FS',uw:6.53,price:1247,gubun:'상품'},
- {cat:'래들',name:'AMC-FB',kind:'내화물',mix:'FBP',spec:'LW251FBP',uw:11.01,price:1247,gubun:'상품'},
+ {cat:'래들',name:'AMC-FB',kind:'내화물',mix:'FBP',spec:'LW251FS',uw:11.01,price:1247,gubun:'상품'},
  {cat:'래들',name:'AMC-FB',kind:'내화물',mix:'FBP',spec:'LW25FS',uw:5.8,price:1247,gubun:'상품'},
  {cat:'턴디쉬',name:'AMC-T3',kind:'내화물',mix:'T3',spec:'T3 90T(450*450)',uw:58.68,price:2480,gubun:'상품'},
  {cat:'턴디쉬',name:'AMC-TD',kind:'내화물',mix:'TDH5',spec:'LW150',uw:9.3,price:1931,gubun:'상품'},
@@ -5980,10 +5980,19 @@ let prodDel=loadProdDel();
 function saveProdDel(){try{localStorage.setItem('dgrns_prod_del',JSON.stringify([...prodDel]));}catch(e){}}
 // (제품명+규격) 중복 제거 — 단가>0 항목을 우선 유지(원가 참조 보존)
 function dedupProd(arr){
+  /* 2026-10-29 (rpt164): 남길 품목을 고를 때 '현재 단가'뿐 아니라 시점(분기) 확정단가가 있는 쪽도 우선한다.
+     (예전에는 현재 단가가 0이면 확정단가가 있는 품목이 중복 정리에서 지워져 단가가 빠져 보이는 일이 있었음)
+     지워지는 쪽에 확정단가가 있고 남는 쪽에 없으면 남는 품목의 같은 시점에 옮겨 담는다. */
+  let sn={};try{sn=JSON.parse(localStorage.getItem('dgrns_pricesnaps'))||{};}catch(e){sn={};}
+  const eff=p=>{if((+p.price||0)>0)return 2;for(const k in sn){const pr=sn[k]&&sn[k].prices;if(pr&&(+pr[p.id]||0)>0)return 1;}return 0;};
   const keep={};
   arr.forEach(p=>{const k=(p.name||'')+'|'+(p.spec||'');const cur=keep[k];
     if(!cur)keep[k]=p;
-    else if((+p.price||0)>0&&!((+cur.price||0)>0))keep[k]=p;});
+    else if(eff(p)>eff(cur))keep[k]=p;});
+  let snCh=false;
+  arr.forEach(p=>{const w=keep[(p.name||'')+'|'+(p.spec||'')];if(!w||w===p)return;
+    for(const k in sn){const pr=sn[k]&&sn[k].prices;if(!pr)continue;const v=+pr[p.id]||0;if(v>0&&!(+pr[w.id]>0)){pr[w.id]=v;snCh=true;}}});
+  if(snCh){try{localStorage.setItem('dgrns_pricesnaps',JSON.stringify(sn));}catch(e){}}
   const ids=new Set(Object.values(keep).map(p=>p.id));
   return arr.filter(p=>ids.has(p.id));
 }
@@ -5997,6 +6006,10 @@ function loadProd(){
     arr=PROD_SEED.map((x,i)=>seedProdObj(x,'p'+(i+1)));changed=true;
     try{localStorage.setItem('dgrns_prodmaster_v2','1');}catch(e){}
   }
+  /* 2026-10-29 (rpt162): 신동 정기발주 엑셀 기준 규격 통일 — AMC-FB LW251FBP(배합 FBP) → LW251FS
+     (엑셀의 AMC-FB / LW251FS / FBP 와 동일 품목: 단중 11.01). 시드 병합보다 먼저 이름을 바꿔 중복 생성을 막는다. */
+  try{if(arr){const o=arr.find(p=>p.name==='AMC-FB'&&p.spec==='LW251FBP'&&(p.mix||'')==='FBP');
+    if(o&&!arr.some(p=>p.name==='AMC-FB'&&p.spec==='LW251FS')){o.spec='LW251FS';changed=true;}}}catch(e){}
   if(!arr){arr=PROD_SEED.filter(x=>!tomb.has((x.name||'')+'|'+(x.spec||''))).map((x,i)=>seedProdObj(x,'p'+(i+1)));changed=true;}
   else{
     let maxn=arr.reduce((m,p)=>{const n=+String(p.id).replace(/\D/g,'');return n>m?n:m;},0);
@@ -6008,14 +6021,14 @@ function loadProd(){
   if(changed){try{localStorage.setItem('dgrns_prod',JSON.stringify(arr));}catch(e){}}
   return arr;}
 let prodData=loadProd();
-function saveProd(){try{localStorage.setItem('dgrns_prod',JSON.stringify(prodData));}catch(e){}}
+function saveProd(){try{localStorage.setItem('dgrns_prod',JSON.stringify(prodData));}catch(e){}try{plUpdateSoon();}catch(e){}}
 function prodById(id){return prodData.find(p=>p.id===id)||null;}
 function prodLabel(p){return p?`${p.name} · ${p.spec}`:'';}
 /* ===== 분기별 단가 스냅샷(시점별 원가 조회·변동 비교) =====
    priceSnaps={'2026-Q3':{date,label,prices:{pcode:단가}}}, pricePeriod=현재 조회 시점('' = 현재/편집중) */
 function loadSnaps(){try{const s=JSON.parse(localStorage.getItem('dgrns_pricesnaps'));if(s&&typeof s==='object')return s;}catch(e){}return {};}
 let priceSnaps=loadSnaps();
-function saveSnaps(){try{localStorage.setItem('dgrns_pricesnaps',JSON.stringify(priceSnaps));}catch(e){}try{nfClear();}catch(e){}}
+function saveSnaps(){try{localStorage.setItem('dgrns_pricesnaps',JSON.stringify(priceSnaps));}catch(e){}try{nfClear();}catch(e){}try{plUpdateSoon();}catch(e){}}
 let pricePeriod=(function(){try{return localStorage.getItem('dgrns_priceperiod')||'';}catch(e){return '';}})();
 function setPricePeriod(v){pricePeriod=v||'';try{localStorage.setItem('dgrns_priceperiod',pricePeriod);}catch(e){}
   if(curView==='prodm')renderProdMaster();
@@ -6028,9 +6041,56 @@ function snapPeriods(){return Object.keys(priceSnaps).sort();} // 오름차순(�
 function periodLabel(pk){return pk?(priceSnaps[pk]&&priceSnaps[pk].label)||pk:'현재(편집중)';}
 // 특정 시점의 제품 단가: period=''(현재/라이브) 또는 스냅샷 키
 function priceAt(id,period){
-  if(!period)return +((prodById(id)||{}).price||0);
-  const s=priceSnaps[period];if(s&&s.prices&&s.prices[id]!=null)return +s.prices[id]||0;
-  return +((prodById(id)||{}).price||0); // 스냅샷에 없으면 현재값
+  /* 2026-10-29 (rpt164): 단가가 0·누락으로 비어 보이지 않도록 대체 순서를 둔다(값이 있으면 항상 그 값 그대로).
+     ① 그 시점 확정단가 → ② 현재(라이브) 단가 → ③ 그 시점 이전의 가장 최근 확정단가 → ④ 그 시점 이후의 가장 가까운 확정단가.
+     사용자가 확정해 둔 값을 바꾸지 않고, 0·빈칸일 때만 마지막으로 확정한 값을 대신 보여준다. */
+  if(period){const s=priceSnaps[period];if(s&&s.prices){const v=+s.prices[id]||0;if(v>0)return v;}}
+  const live=+((prodById(id)||{}).price||0);if(live>0)return live;
+  const ks=snapPeriods(),pick=k=>{const s=priceSnaps[k];const v=s&&s.prices?(+s.prices[id]||0):0;return v>0?v:0;};
+  const before=period?ks.filter(k=>k<period):ks,after=period?ks.filter(k=>k>period):[];
+  for(let i=before.length-1;i>=0;i--){const v=pick(before[i]);if(v)return v;}
+  for(let i=0;i<after.length;i++){const v=pick(after[i]);if(v)return v;}
+  return 0;
+}
+/* ===== 2026-10-29 (rpt164): 단가확정 보호 장부(dgrns_pricelock) =====
+   확정·입력한 단가(0보다 큰 값)를 이 PC에 따로 기억해 두었다가, 프로그램 업데이트·팀 동기화·중복 정리 등으로
+   현재 값이 0이나 빈칸이 되면 시작할 때(그리고 동기화 직후) 마지막 확정값으로 자동 복원한다.
+   · 값이 있는 칸은 절대 바꾸지 않는다(0·누락만 채움) · 사용자가 직접 0으로 지운 칸은 장부에서도 지운다.
+   · 삭제한 확정분기(시점)는 되살리지 않는다 · 장부는 팀 동기화 대상이 아니라 이 PC에만 둔다(다른 PC의 영향을 받지 않음). */
+let _plT=null;
+function plLoad(){try{const o=JSON.parse(localStorage.getItem('dgrns_pricelock'));if(o&&typeof o==='object'&&o.v===1){o.live=o.live||{};o.snap=o.snap||{};o.k=o.k||{};o.log=o.log||[];return o;}}catch(e){}return {v:1,live:{},snap:{},k:{},log:[]};}
+function plSave(L){try{localStorage.setItem('dgrns_pricelock',JSON.stringify(L));}catch(e){}}
+function plUpdateNow(){
+  try{
+    const L=plLoad();
+    (prodData||[]).forEach(p=>{L.k[p.id]=(p.name||'')+'|'+(p.spec||'');const v=+p.price||0;if(v>0)L.live[p.id]=v;});
+    Object.keys(priceSnaps||{}).forEach(pk=>{const sn=priceSnaps[pk];if(!sn||!sn.prices)return;const m=L.snap[pk]=L.snap[pk]||{};
+      Object.keys(sn.prices).forEach(id=>{const v=+sn.prices[id]||0;if(v>0)m[id]=v;});});
+    plSave(L);
+  }catch(e){console.warn('plUpdateNow',e);}
+}
+function plUpdateSoon(){clearTimeout(_plT);_plT=setTimeout(plUpdateNow,1200);}
+function plForgetLive(id){try{const L=plLoad();delete L.live[id];plSave(L);}catch(e){}}
+function plForgetSnap(pk,id){try{const L=plLoad();if(L.snap[pk])delete L.snap[pk][id];plSave(L);}catch(e){}}
+function plForgetPeriod(pk){try{const L=plLoad();delete L.snap[pk];plSave(L);}catch(e){}}
+function plFindProd(L,id){return prodById(id)||(L.k[id]?prodData.find(p=>((p.name||'')+'|'+(p.spec||''))===L.k[id]):null)||null;}
+function plRestore(silent){
+  let nS=0,nL=0;const det=[];
+  try{
+    const L=plLoad();
+    Object.keys(L.snap).forEach(pk=>{const sn=priceSnaps[pk];if(!sn)return; /* 삭제된 시점은 되살리지 않음 */
+      sn.prices=sn.prices||{};
+      Object.keys(L.snap[pk]).forEach(id=>{const v=+L.snap[pk][id]||0;if(!(v>0))return;const pr=plFindProd(L,id);if(!pr)return;
+        if(!(+sn.prices[pr.id]>0)){sn.prices[pr.id]=v;nS++;det.push(pk+'|'+(pr.name||'')+'|'+(pr.spec||'')+'|'+v);}});});
+    if(nS)saveSnaps();
+    Object.keys(L.live).forEach(id=>{const v=+L.live[id]||0;if(!(v>0))return;const pr=plFindProd(L,id);if(!pr)return;
+      if(!(+pr.price>0)&&!prodLivePrice(pr)){pr.price=v;nL++;det.push('현재|'+(pr.name||'')+'|'+(pr.spec||'')+'|'+v);}});
+    if(nL)saveProd();
+    if(nS||nL){const L2=plLoad();L2.log=(L2.log||[]).concat([{t:new Date().toISOString(),s:nS,l:nL,d:det.slice(0,60)}]).slice(-30);plSave(L2);
+      console.warn('단가확정 복원',nS,nL,det);
+      if(!silent){try{toast('단가확정 값 '+(nS+nL)+'건이 비어 있어 마지막 확정값으로 되살렸습니다');}catch(e){}}}
+  }catch(e){console.warn('plRestore',e);}
+  return nS+nL;
 }
 function activePrice(id){return priceAt(id,pricePeriod);}
 // 2026-09-28: "YYYY-MM"→분기키("YYYYQ#") 변환 — quarterToYm()의 역함수. 원단위(월별) 계산에서
@@ -6176,7 +6236,7 @@ function periodOptions(sel){let h=`<option value=""${sel===''?' selected':''}>�
 function cmpOptions(sel){let h=`<option value=""${sel===''?' selected':''}>변동 대비: 없음</option>`;
   snapPeriods().forEach(pk=>{h+=`<option value="${pk}"${pk===sel?' selected':''}>대비: ${esc(periodLabel(pk))}</option>`;});return h;}
 function syncPeriodSelectors(){
-  if(pricePeriod&&!priceSnaps[pricePeriod]){pricePeriod='';try{localStorage.setItem('dgrns_priceperiod','');}catch(e){}}
+  if(pricePeriod&&!priceSnaps[pricePeriod]){pricePeriod='';} /* 2026-10-29 (rpt164): 저장된 선택은 지우지 않는다(시점이 동기화로 잠깐 비어도 다음 실행 때 그대로 복귀) */
   if(cmpPeriod&&!priceSnaps[cmpPeriod])cmpPeriod='';
   ['pm_period','bomPeriod','costPeriod','cost_tundish_period','cost_eaf_period'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=periodOptions(pricePeriod);});
   ['pm_cmp','costCmp','cost_tundish_cmp','cost_eaf_cmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=cmpOptions(cmpPeriod);});
@@ -6207,13 +6267,13 @@ let _snapAutoSaveT=null;
 function editSnapPrice(period,id,v){
   try{const _o=((priceSnaps[period]||{}).prices||{})[id];pcNote(id,period,_o!=null?_o:priceAt(id,period));}catch(e){}
   const s=priceSnaps[period]=priceSnaps[period]||{date:todayStr(),label:quarterLabel(period),prices:{}};
-  s.prices[id]=+v||0;
+  s.prices[id]=+v||0;if(!(+v>0))plForgetSnap(period,id);
   clearTimeout(_snapAutoSaveT);_snapAutoSaveT=setTimeout(saveSnaps,500);
 }
 function delSnap(){if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}
   const pk=pricePeriod;if(!pk){toast('삭제할 확정분기를 먼저 선택하세요');return;}
   if(!confirm(`[${periodLabel(pk)}] 확정단가를 삭제할까요?`))return;
-  delete priceSnaps[pk];saveSnaps();setPricePeriod('');syncPeriodSelectors();renderProdMaster();toast('삭제되었습니다');
+  delete priceSnaps[pk];plForgetPeriod(pk);saveSnaps();setPricePeriod('');syncPeriodSelectors();renderProdMaster();toast('삭제되었습니다');
 }
 // 행 값 해석: 제품 참조(pcode) 우선, 없으면 행 내부값(레거시)
 function rowProd(r){return r.pcode?prodById(r.pcode):null;}
@@ -6915,12 +6975,114 @@ function renderProdMaster(){
 // 상단 "💾 저장*" 표시(수동 저장)는 그대로 유지해 사용자가 저장 시점을 확인할 수 있게 함.
 let _prodAutoSaveT=null;
 function prodAutoSave(){clearTimeout(_prodAutoSaveT);_prodAutoSaveT=setTimeout(()=>{saveProd();},600);}
-function editProd(i,k,v){if(k==='price'&&prodData[i]){try{pcNote(prodData[i].id,'',+prodData[i].price||0);}catch(e){}}
+function editProd(i,k,v){const _oldSpec=(k==='spec'&&prodData[i])?(prodData[i].spec||''):null;if(k==='price'&&prodData[i]){try{pcNote(prodData[i].id,'',+prodData[i].price||0);}catch(e){}}
   if(prodData[i])prodData[i]._ed=1;prodData[i][k]=(k==='uw'||k==='price'||k==='use')?(+v||0):v;prodDirty=true;
+  if(k==='price'&&prodData[i]&&!(+v>0))plForgetLive(prodData[i].id);
   if(k==='price'&&prodData[i]){const cs=priceSnaps[currentQuarterKey()];if(cs&&cs.prices){cs.prices[prodData[i].id]=+v||0;saveSnaps();}} // 현재 분기 시점이 있으면 라이브 수정과 동기
   const s=document.getElementById('pm_save');if(s)s.textContent='💾 저장*';
   prodAutoSave();
-  if(prodData[i]&&(k==='qcode'||k==='name'||k==='spec'||k==='custName'))try{ccSyncSoon(prodData[i].id);}catch(e){}}
+  if(prodData[i]&&(k==='qcode'||k==='name'||k==='spec'||k==='custName'))try{ccSyncSoon(prodData[i].id);}catch(e){}
+  if(_oldSpec!==null&&prodData[i])try{bomSpecCascadeSoon(prodData[i].id,_oldSpec);}catch(e){}}
+/* 2026-10-29 (rpt162): 축조 물량표(래들·턴디쉬·전기로)의 규격을 품목마스터와 연동 —
+   마스터 규격을 바꾸면 그 품목(pcode)을 쓰는 모든 물량표 행의 규격이 함께 바뀐다.
+   (행 규격이 이전 마스터 규격과 같은 행만 — (160H) 처럼 직접 구분해 둔 행은 건드리지 않음) */
+const _specCasBase={},_specCasT={};
+function bomSpecCascadeSoon(pid,oldSpec){
+  if(!(pid in _specCasBase))_specCasBase[pid]=oldSpec;
+  clearTimeout(_specCasT[pid]);
+  _specCasT[pid]=setTimeout(async()=>{
+    const base=_specCasBase[pid];delete _specCasBase[pid];
+    const p=prodById(pid);if(!p)return;
+    const n=await bomSpecCascade(pid,base,p.spec||'',true);
+    if(n)toast('물량표 '+n+'개 행의 규격도 '+(p.spec||'(빈칸)')+' 으로 함께 바꿨습니다');
+  },900);
+}
+async function bomSpecCascade(pid,oldSpec,newSpec,force){
+  oldSpec=oldSpec||'';newSpec=newSpec||'';
+  if(oldSpec===newSpec&&!force)return 0;
+  /* 2026-10-29 (rpt164): force=마스터에서 직접 고친 경우 — 이 품목을 쓰는 모든 물량표 행의 규격을 새 마스터 규격으로(행에 따로 적힌 옛 표기 포함) */
+  const hit=r=>r.pcode===pid&&(force?((r.spec||'')!==''&&(r.spec||'')!==newSpec):(r.spec||'')===oldSpec);
+  let n=0;const touched=new Set();
+  (bomData||[]).forEach(b=>(b.rows||[]).forEach(r=>{
+    if(hit(r)){r.spec=newSpec;touched.add(b);n++;}}));
+  let dr=0;
+  try{if(bomDraft)bomDraft.forEach(r=>{if(hit(r)){r.spec=newSpec;dr++;}});}catch(e){}
+  for(const b of touched){try{await putRec('bomstd',b);}catch(e){}}
+  if(n){try{flashSave();}catch(e){}}
+  if((n||dr)&&document.getElementById('ladleBomBody')){try{if(!bomDirty)renderLadleBom();else drawBomRows();}catch(e){}}
+  return n;
+}
+/* 불러올 때마다(멱등) — 마스터 규격이 LW251FS 로 바뀐 AMC-FB 의 옛 물량표 행(LW251FBP)을 맞춘다 */
+async function bomSpecReconcile(){
+  try{const p=prodData.find(x=>x.name==='AMC-FB'&&x.spec==='LW251FS'&&(x.mix||'')==='FBP');
+    if(p)await bomSpecCascade(p.id,'LW251FBP','LW251FS');}catch(e){console.warn('bomSpecReconcile',e);}
+  try{const n=await bomRelinkExactSpec();
+    if(n)try{toast('물량표 '+n+'개 행을 규격에 맞는 품목마스터로 다시 연결했습니다 (예: (160H) 규격)');}catch(e){}}catch(e){console.warn('bomRelinkExactSpec',e);}
+  try{const r=await bomSpecNormalize();
+    if(r&&(r.spec||r.bu||r.rel))try{toast('물량표 규격을 품목마스터 기준으로 맞췄습니다 (규격 '+r.spec+'행'+(r.rel?' · 규격 통합 '+r.rel+'행':'')+(r.bu?' · 구분 오타 '+r.bu+'행':'')+')');}catch(e){}}catch(e){console.warn('bomSpecNormalize',e);}
+}
+/* 2026-10-29 (rpt164): 물량표 규격은 품목마스터가 기준 — 마스터에 연결된 행의 규격(행에 따로 적힌 값)이 마스터 규격과 다르면 마스터 규격으로 맞춘다(멱등).
+   예) CA-180M 행의 규격 칸 'CA-180M' → B1000 · MAGGUN-85S 'B2000' → B1880 · AMC-B 'LW300 1/2' → LW300-1/2 · ASC-NS 'S/N W/B' → SN-6.
+   · 괄호가 들어간 규격(예: LW21 (160H))은 시공 조건 표기일 수 있어 건드리지 않는다(rpt163이 정확한 마스터가 있으면 재연결).
+   · 규격 통합 규칙(MERGE): CA-180M 은 B1000 만 사용 → B500 마스터·표기를 쓰는 행은 B1000 마스터로 재연결.
+   · 구분(사용부위) 오타 MAGGGUN → MAGGUN 도 함께 바로잡는다.
+   · 물량표 행의 지정 키(품명·규격·구분)가 바뀌므로 사업계획 연결 지정·확정은 새 키로 옮겨 그대로 유지한다(lkTidyAll 과 동일).
+   · 품명·단중·단가는 건드리지 않는다. */
+const BOM_SPEC_MERGE=[{name:'CA-180M',from:'B500',to:'B1000'}];
+async function bomSpecNormalize(){
+  const nz=x=>String(x==null?'':x).replace(/\s+/g,'').toUpperCase();
+  const out={spec:0,bu:0,rel:0};const touched=new Set(),moves=[];
+  const fix=(r,eq,b)=>{
+    const k0=eq?bizplanBomKey4(eq,r):null,l0=eq?eq+'|'+r.nm+'|'+r.spec:null;let ch=false;
+    if(r.pcode){
+      let M=prodById(r.pcode);
+      if(M){
+        const mg=BOM_SPEC_MERGE.find(g=>g.name===M.name&&(nz(M.spec)===nz(g.from)||nz(r.spec)===nz(g.from)));
+        if(mg){const T=prodData.find(x=>x.name===mg.name&&nz(x.spec)===nz(mg.to));
+          if(T&&T.id!==M.id){r.pcode=T.id;M=T;out.rel++;ch=true;}}
+        const rs=String(r.spec==null?'':r.spec).trim(),ms=String(M.spec==null?'':M.spec).trim();
+        if(rs&&ms&&rs!==ms&&rs.indexOf('(')<0){r.spec=ms;out.spec++;ch=true;}
+        else if(mg&&rs&&nz(rs)===nz(mg.from)){r.spec=ms;ch=true;}
+      }
+    }
+    const nb=lkBuFix(r.bu);if(nb!==String(r.bu==null?'':r.bu)){r.bu=nb;out.bu++;ch=true;}
+    if(ch&&eq){moves.push([k0,bizplanBomKey4(eq,r)],[l0,eq+'|'+r.nm+'|'+r.spec]);touched.add(b);}
+    return ch;};
+  (bomData||[]).forEach(b=>(b.rows||[]).forEach(r=>{fix(r,b.equip,b);}));
+  try{if(bomDraft)bomDraft.forEach(r=>{fix(r,null,null);});}catch(e){}
+  if(!touched.size&&!out.spec&&!out.bu&&!out.rel)return out;
+  if(moves.length){
+    try{
+      const m=Object.assign({},bizplanSchedBomMap()),ak=lkAckMap(),has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+      const still=new Set();(bomData||[]).forEach(b=>{(b.rows||[]).forEach(r=>{still.add(bizplanBomKey4(b.equip,r));still.add(b.equip+'|'+r.nm+'|'+r.spec);});});
+      moves.forEach(([o,n])=>{if(o===n)return;
+        if(has(m,o)){if(!has(m,n))m[n]=m[o];if(!still.has(o))delete m[o];}
+        if(has(ak,'C|'+o)){if(!has(ak,'C|'+n))ak['C|'+n]=ak['C|'+o];if(!still.has(o))delete ak['C|'+o];}});
+      bizplanSchedSaveMap(m);lkAckSave(ak);bizplanSchedClear();
+    }catch(e){console.warn('bomSpecNormalize keys',e);}
+  }
+  for(const b of touched){try{await putRec('bomstd',b);}catch(e){}}
+  try{flashSave();}catch(e){}
+  if(document.getElementById('ladleBomBody')){try{if(!bomDirty)renderLadleBom();else drawBomRows();}catch(e){}}
+  return out;
+}
+/* 2026-10-29 (rpt163): 물량표 행의 규격이 연결된 마스터 규격과 다른데, 같은 품명·그 규격의 마스터가 정확히 1개 있으면
+   그 마스터로 다시 연결한다(멱등). 예) PGT-BT (160H) 4종 28행이 일반 규격(LW21 등) 마스터에 잘못 연결 → 단중 과다 계산. */
+async function bomRelinkExactSpec(){
+  let n=0;const touched=new Set();
+  const fix=r=>{
+    if(!r.pcode)return false;const p=prodById(r.pcode);if(!p)return false;
+    const rs=String(r.spec||'').trim();if(!rs||rs===String(p.spec||'').trim())return false;
+    const c=prodData.filter(x=>x.name===p.name&&String(x.spec||'').trim()===rs&&x.id!==p.id);
+    if(c.length!==1)return false;
+    r.pcode=c[0].id;return true;};
+  (bomData||[]).forEach(b=>(b.rows||[]).forEach(r=>{if(fix(r)){touched.add(b);n++;}}));
+  try{if(bomDraft)bomDraft.forEach(r=>fix(r));}catch(e){}
+  for(const b of touched){try{await putRec('bomstd',b);}catch(e){}}
+  if(n){try{flashSave();}catch(e){}
+    if(document.getElementById('ladleBomBody')){try{if(!bomDirty)renderLadleBom();}catch(e){}}}
+  return n;
+}
 // 2026-09-28: 고객사 자재코드(내부 필드명은 하위호환을 위해 qcode 유지) = 고객사 제품명(custName) 단위로 공유되는 코드.
 // 고객사 입장에서는 배합·규격이 달라도 자재코드가 같으면 같은 품목으로 취급한다.
 // - 고객사 제품명을 선택하면, 같은 제품명을 이미 쓰고 있는 다른 규격 행의 자재코드를 자동으로 따라온다.
@@ -30893,7 +31055,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.29.rpt161";
+const APP_VERSION = "2026.10.29.rpt164";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -30925,6 +31087,7 @@ const SHINDONG_KEYS=new Set([
  "AMC-BS|LW90",
  "AMC-BS|LW95",
  "AMC-FB|LW25-5FS",
+ "AMC-FB|LW251FS",
  "AMC-FB|LW251FBP",
  "AMC-FB|LW25FS",
  "AMC-T3|T3 90T(450*450)",
@@ -30978,7 +31141,7 @@ const STOCK_SEED=[
  {supplier:"신동내화",prodId:"p8",name:"AMC-BS",spec:"LW90",unit:"EA",target:0,cur:1680,onOrder:0,expUse:336,orderQty:0,note:"",upd:"2026-09"},
  {supplier:"신동내화",prodId:"p9",name:"AMC-BS",spec:"LW95",unit:"EA",target:0,cur:5040,onOrder:0,expUse:2688,orderQty:4368,note:"",upd:"2026-09"},
  {supplier:"신동내화",prodId:"p10",name:"AMC-FB",spec:"LW25-5FS",unit:"EA",target:0,cur:50,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
- {supplier:"신동내화",prodId:"p11",name:"AMC-FB",spec:"LW251FBP",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
+ {supplier:"신동내화",prodId:"p11",name:"AMC-FB",spec:"LW251FS",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
  {supplier:"신동내화",prodId:"p12",name:"AMC-FB",spec:"LW25FS",unit:"EA",target:0,cur:0,onOrder:0,expUse:0,orderQty:0,note:"",upd:"2026-09"},
  {supplier:"신동내화",prodId:"p13",name:"AMC-T3",spec:"T3 90T(450*450)",unit:"EA",target:0,cur:80,onOrder:40,expUse:7,orderQty:0,note:"",upd:"2026-09"},
  {supplier:"신동내화",prodId:"p14",name:"AMC-TD",spec:"LW150",unit:"EA",target:0,cur:4416,onOrder:1920,expUse:1800,orderQty:1920,note:"",upd:"2026-09"},
@@ -32163,7 +32326,7 @@ async function fbPushStore(store){
 // 돌아가있다"). 키별 마지막 수정시각(kvTimes)을 같이 주고받아 fbApplyKv에서 "그 키"만 최신 여부를
 // 비교해 반영하도록 병합 — ladle 등 배열형 스토어의 merge 로직과 같은 원리.
 const FB_KV_TIMES_KEY='dgrns_kvtimes';
-const FB_KV_SKIP=['dgrns_workprog_ui','dgrns_tb_ui','dgrns_fbcfg','dgrns_clientid','dgrns_role','dgrns_viewlock','dgrns_wk','dgrns_navmode','dgrns_sidenav_hide','dgrns_sidenav_open','dgrns_priceperiod','dgrns_me','dgrns_skin',FB_KV_TIMES_KEY];
+const FB_KV_SKIP=['dgrns_workprog_ui','dgrns_tb_ui','dgrns_fbcfg','dgrns_clientid','dgrns_role','dgrns_viewlock','dgrns_wk','dgrns_navmode','dgrns_sidenav_hide','dgrns_sidenav_open','dgrns_priceperiod','dgrns_pricelock','dgrns_me','dgrns_skin',FB_KV_TIMES_KEY];
 let kvTimes={};try{kvTimes=JSON.parse(localStorage.getItem(FB_KV_TIMES_KEY)||'{}');}catch(e){kvTimes={};}
 function kvTimesSave(){try{(window.rawSetItem||localStorage.setItem.bind(localStorage))(FB_KV_TIMES_KEY,JSON.stringify(kvTimes));}catch(e){}}
 function kvTouch(k){if(typeof k==='string'&&k.indexOf('dgrns_')===0&&k!==FB_KV_TIMES_KEY){kvTimes[k]=Date.now();kvTimesSave();}}
@@ -32217,7 +32380,7 @@ async function fbReloadStore(store){
     setTimeout(()=>{autoCleanBareLadleNos().then(()=>{try{fbRerender();}catch(e){}}).catch(()=>{});},50);}
   else if(store==='tundish'){tundishData=await txAll('tundish');}
   else if(store==='schedule'){scheduleData=await txAll('schedule');}
-  else if(store==='bomstd'){bomData=await txAll('bomstd');}
+  else if(store==='bomstd'){bomData=await txAll('bomstd');try{await bomSpecReconcile();}catch(e){}}
   else if(store==='eaf'){eafData=await txAll('eaf');try{eafNormTon();}catch(e){}}
   else if(store==='inv'){invData=await txAll('inv');}
   else if(store==='invin'){invInData=await txAll('invin');}
@@ -32265,6 +32428,7 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     // 파생 메모리 재로딩
     try{prodData=loadProd();}catch(e){}
     try{priceSnaps=loadSnaps();}catch(e){}
+    try{plRestore();}catch(e){}
     try{prodDel=loadProdDel();}catch(e){}
     try{ladleSLpat=loadSLpat();}catch(e){}
     try{ladleExcl=loadLadleExcl();}catch(e){}
@@ -37222,7 +37386,7 @@ function permPreview(){
     try{await ensureLadle2026Import();}catch(e){}
     try{clearAllDiaOnce();}catch(e){}
     try{await autoCleanBareLadleNos();}catch(e){}
-    await migrateVendor();try{await migrateBoardAbs();}catch(e){console.warn('migrateBoardAbs',e);}await loadSchedule();await loadBom();await loadEaf();await loadInv();
+    await migrateVendor();try{await migrateBoardAbs();}catch(e){console.warn('migrateBoardAbs',e);}await loadSchedule();await loadBom();await bomSpecReconcile();try{plRestore();plUpdateSoon();}catch(e){}await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
     try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();await ensureStockPgtFm7c();}catch(e){stockData=[];}
     await loadAttend();await loadHo();await loadPlanActual();
