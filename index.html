@@ -30893,7 +30893,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.29.rpt160";
+const APP_VERSION = "2026.10.29.rpt161";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -31505,7 +31505,7 @@ function renderStock(sup){
 
   const hint=document.getElementById('stockHint_'+sfx);
   if(hint)hint.textContent=sup==='신동내화'
-    ?'내화물 기본정보에 등록된 품목 중 신동내화가 취급하는 품목만 대상입니다. [📥 신동 엑셀 반영]으로 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 이 목록에 있는 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다(다른 영업소 품목은 건드리지 않음).'
+    ?'내화물 기본정보에 등록된 품목 중 신동내화가 취급하는 품목만 대상입니다. [📥 신동 엑셀 반영]은 정기 발주 검토 엑셀(전체 영업소 통합본)에서 품명·규격·배합비가 모두 같은 행을 찾아 현재고·기발주·예상사용량을 갱신합니다(배합비가 다르면 다른 품목으로 보며, 다른 영업소 품목은 건드리지 않음).'
     :'베수비우스(Slide Gate) 품목입니다. 09/08 기준 재고관리 자료를 참고해 초기값을 반영했고, 내화물 기본정보와 모두 연동되어 있습니다.';
 
   const tb=document.getElementById('stockBody_'+sfx);if(!tb)return;
@@ -31889,42 +31889,80 @@ async function importStockXlsx(input){
     const grid=await xlsxParseFirstSheet(f);
     const row1=grid[1]||{},row2=grid[2]||{};
     const nameCol=xlsxFindCol(row1,'품명'),specCol=xlsxFindCol(row1,'규격');
+    const mixCol=xlsxFindCol(row1,'배합비');
     const expUseCol=xlsxFindCol(row1,'예상사용'),curColX=xlsxFindCol(row1,'상품재고'),onOrderCol=xlsxFindCol(row1,'기발주');
     if(nameCol<0||specCol<0||expUseCol<0||curColX<0||onOrderCol<0){
       alert('엑셀 머리글을 인식하지 못했습니다.\n신동내화 정기 발주 검토 엑셀(품명·규격·예상사용·상품재고·기발주 항목이 있는 형식)이 맞는지 확인해 주세요.');
       input.value='';return;
     }
+    /* 2026-10-29 (rpt161): 같은 품명·규격이라도 배합비가 다르면 서로 다른 품목(예: AMC-B LW250 은 DB8B / ECO-AMB-04 / S1 …)
+       → 품명·규격·배합비 3개 기준으로 매칭한다(예전에는 품명·규격이 같은 모든 행을 합산해 값이 크게 틀어졌음).
+       · 완전히 같은 값의 중복 행(같은 품명·규격·배합비)은 한 번만 반영 */
+    const norm=v=>String(v==null?'':v).replace(/\s+/g,'').toUpperCase();
     const rowNos=Object.keys(grid).map(Number).sort((a,b)=>a-b);
-    const sums={};
+    const byKey={},byNS={};let readRows=0,dupSkip=0;
     for(const rNo of rowNos){
       if(rNo<3)continue;
       const r=grid[rNo];const nm=r[nameCol];if(nm==null||String(nm).trim()==='')continue;
-      const sp=r[specCol];const key=String(nm).trim()+'|'+(sp==null?'':String(sp).trim());
-      const s=sums[key]||(sums[key]={expUse:0,cur:0,onOrder:0});
-      s.expUse+=(+r[expUseCol]||0);s.cur+=(+r[curColX]||0);s.onOrder+=(+r[onOrderCol]||0);
+      const sp=r[specCol];const ns=String(nm).trim()+'|'+(sp==null?'':String(sp).trim());
+      const mxRaw=mixCol>0&&r[mixCol]!=null?String(r[mixCol]).trim():'';
+      const v={expUse:+r[expUseCol]||0,cur:+r[curColX]||0,onOrder:+r[onOrderCol]||0};
+      const key=ns+'|'+norm(mxRaw);readRows++;
+      const old=byKey[key];
+      if(old){
+        if(old.expUse===v.expUse&&old.cur===v.cur&&old.onOrder===v.onOrder){if(v.expUse||v.cur||v.onOrder)dupSkip++;continue;}
+        old.expUse+=v.expUse;old.cur+=v.cur;old.onOrder+=v.onOrder;   // 값이 다른 같은 키 → 합산
+      }else{byKey[key]=Object.assign({mix:mxRaw},v);}
+      const a=byNS[ns]||(byNS[ns]={expUse:0,cur:0,onOrder:0,mixes:[],all:[]});
+      a.expUse+=v.expUse;a.cur+=v.cur;a.onOrder+=v.onOrder;
+      if(a.all.indexOf(mxRaw||'(배합없음)')<0)a.all.push(mxRaw||'(배합없음)');
+      if(v.expUse||v.cur||v.onOrder)a.mixes.push({mix:mxRaw,cur:v.cur,expUse:v.expUse,onOrder:v.onOrder});
     }
     const mine=stockData.filter(r=>r.supplier==='신동내화');
-    let upd=0,same=0;const missList=[];
+    let upd=0,same=0;const missList=[],mixBad=[],noMix=[];const plan=[];
     for(const r of mine){
-      const key=stockName(r)+'|'+stockSpec(r);
-      const s=sums[key];
-      if(!s){missList.push(stockName(r)+(stockSpec(r)?' · '+stockSpec(r):''));continue;}
+      const ns=stockName(r)+'|'+stockSpec(r),mx=norm(stockMix(r));
+      const label=stockName(r)+(stockSpec(r)?' · '+stockSpec(r):'');
+      let s=null;
+      if(mixCol>0&&mx){
+        s=byKey[ns+'|'+mx]||null;
+        const ag=byNS[ns];
+        if(!s){
+          if(ag||Object.keys(byKey).some(k=>k.startsWith(ns+'|'))){
+            const cands=ag?ag.mixes.map(m=>(m.mix||'(배합없음)')+' 재고'+m.cur).join(', '):'';
+            mixBad.push(label+' · 배합 '+(stockMix(r)||'-')+' → 엑셀 배합: '+(cands||('값은 모두 0 (등록된 배합: '+(ag?ag.all.join(', '):'-')+')')));
+          }else missList.push(label);
+          continue;
+        }
+        /* 우리 배합 행은 전부 0인데 같은 규격의 다른 배합에 값이 있으면 → 배합이 바뀐 것으로 보고 건너뜀 */
+        if(!s.expUse&&!s.cur&&!s.onOrder&&byNS[ns]&&byNS[ns].mixes.length){
+          mixBad.push(label+' · 배합 '+(stockMix(r)||'-')+' 은 엑셀에서 0 → 값 있는 배합: '+byNS[ns].mixes.map(m=>(m.mix||'(없음)')+' 재고'+m.cur).join(', '));
+          continue;
+        }
+      }else{
+        s=byNS[ns]||null;
+        if(!s){missList.push(label);continue;}
+        noMix.push(label);
+      }
       if(r.cur===s.cur&&r.onOrder===s.onOrder&&r.expUse===s.expUse){same++;continue;}
-      upd++;
+      upd++;plan.push([r,s]);
     }
-    const msg=`엑셀에서 ${Object.keys(sums).length}개 품목(전체 영업소)을 읽었습니다.\n\n`
+    const msg=`엑셀에서 ${readRows}개 행(품명·규격·배합비 기준)을 읽었습니다.\n\n`
       +`· 우리 품목 중 갱신될 항목 : ${upd}건\n`
       +`· 값 변동 없음 : ${same}건\n`
+      +(mixBad.length?`· 배합비가 엑셀과 달라 건너뛴 항목(값 유지) : ${mixBad.length}건\n`:'')
+      +(noMix.length?`· 배합 미입력 → 품명·규격 전체 합산으로 반영 : ${noMix.length}건 (기본정보에 배합을 입력하세요)\n`:'')
       +(missList.length?`· 이번 엑셀에 없는 항목(값 유지) : ${missList.length}건\n`:'')
+      +(dupSkip?`· 같은 값의 중복 행 제외 : ${dupSkip}건\n`:'')
       +`\n다른 영업소 품목은 건드리지 않습니다. 현재고·기발주·예상사용량을 갱신할까요?\n(발주량·적정재고는 그대로 유지됩니다)`;
     if(!confirm(msg)){input.value='';return;}
-    for(const r of mine){
-      const key=stockName(r)+'|'+stockSpec(r);const s=sums[key];if(!s)continue;
+    for(const [r,s] of plan){
       r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;r.upd=todayStr();
       await putRec('stock',r);
     }
     flashSave();renderStock('신동내화');
-    toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(missList.length?` · ${missList.length}건 자료 없음`:''));
+    toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(mixBad.length?` · 배합 불일치 ${mixBad.length}건`:'')+(missList.length?` · ${missList.length}건 자료 없음`:''));
+    if(mixBad.length)alert('배합비가 엑셀과 맞지 않아 값이 유지된 품목 '+mixBad.length+'건입니다.\n내화물 기본정보의 배합을 엑셀 표기에 맞게 고치신 뒤 다시 반영해 주세요.\n\n'+mixBad.slice(0,15).join('\n')+(mixBad.length>15?`\n… 외 ${mixBad.length-15}건`:''));
     if(missList.length)alert('이번 엑셀에서 찾지 못해 값이 유지된 품목(일부):\n'+missList.slice(0,15).join('\n')+(missList.length>15?`\n… 외 ${missList.length-15}건`:''));
   }catch(err){alert('엑셀을 읽는 중 오류가 발생했습니다: '+err.message);}
   input.value='';
