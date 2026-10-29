@@ -31060,7 +31060,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.29.rpt167";
+const APP_VERSION = "2026.10.29.rpt168";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -32094,6 +32094,8 @@ async function runPriceImport(wb,sheet){
     }),'',
     v=>proceed(+v));
 }
+/* 2026-10-29 (rpt168): 품명 별칭 — 엑셀의 'PGT-FM7C' 와 품목마스터의 'FM7C' 처럼 앞의 'PGT-' 유무만 다른 품명은 같은 품목으로 본다. */
+function sdNm(n){return String(n==null?'':n).trim().replace(/^PGT-/i,'');}
 async function importStockXlsx(input){
   const f=input.files&&input.files[0];if(!f){return;}
   try{
@@ -32117,7 +32119,7 @@ async function importStockXlsx(input){
     for(const rNo of rowNos){
       if(rNo<3)continue;
       const r=grid[rNo];const nm=r[nameCol];if(nm==null||String(nm).trim()==='')continue;
-      const sp=r[specCol];const ns=String(nm).trim()+'|'+(sp==null?'':String(sp).trim());
+      const sp=r[specCol];const ns=sdNm(nm)+'|'+(sp==null?'':String(sp).trim());
       const mxRaw=mixCol>0&&r[mixCol]!=null?String(r[mixCol]).trim():'';
       const v={expUse:+r[expUseCol]||0,cur:+r[curColX]||0,onOrder:+r[onOrderCol]||0,ord:ordCol>0?(+r[ordCol]||0):0};
       const key=ns+'|'+norm(mxRaw);readRows++;
@@ -32125,7 +32127,7 @@ async function importStockXlsx(input){
       if(old){
         if(old.expUse===v.expUse&&old.cur===v.cur&&old.onOrder===v.onOrder&&old.ord===v.ord){if(v.expUse||v.cur||v.onOrder||v.ord)dupSkip++;continue;}
         old.expUse+=v.expUse;old.cur+=v.cur;old.onOrder+=v.onOrder;old.ord+=v.ord;   // 값이 다른 같은 키 → 합산
-      }else{byKey[key]=Object.assign({mix:mxRaw},v);}
+      }else{byKey[key]=Object.assign({mix:mxRaw,nm0:String(nm).trim(),sp0:(sp==null?'':String(sp).trim())},v);}
       const a=byNS[ns]||(byNS[ns]={expUse:0,cur:0,onOrder:0,ord:0,mixes:[],all:[]});
       a.expUse+=v.expUse;a.cur+=v.cur;a.onOrder+=v.onOrder;a.ord+=v.ord;
       if(a.all.indexOf(mxRaw||'(배합없음)')<0)a.all.push(mxRaw||'(배합없음)');
@@ -32134,7 +32136,7 @@ async function importStockXlsx(input){
     const mine=stockData.filter(r=>r.supplier==='신동내화');
     let upd=0,same=0;const missList=[],mixBad=[],noMix=[];const plan=[];
     for(const r of mine){
-      const ns=stockName(r)+'|'+stockSpec(r),mx=norm(stockMix(r));
+      const ns=sdNm(stockName(r))+'|'+stockSpec(r),mx=norm(stockMix(r));
       const label=stockName(r)+(stockSpec(r)?' · '+stockSpec(r):'');
       let s=null;
       if(mixCol>0&&mx){
@@ -32160,7 +32162,24 @@ async function importStockXlsx(input){
       if(r.cur===s.cur&&r.onOrder===s.onOrder&&r.expUse===s.expUse&&(ordCol<0||((+r.orderQty||0)===s.ord&&r.xlsOrd===s.ord))&&(+r.target||0)===Math.round(s.expUse*(STOCK_TARGET_MONTHS['신동내화']||3))){same++;continue;}
       upd++;plan.push([r,s]);
     }
+    /* 2026-10-29 (rpt168): 품목마스터(·물량표에서 쓰는 품목 포함)에 있는데 아직 재고관리 목록에 없는 품목이 엑셀에 있으면 자동으로 편입한다.
+       기준 = 품명(PGT- 별칭 포함)·규격·배합비가 모두 같고, 엑셀 값(예상사용·재고·기발주·발주합계) 중 하나라도 0이 아닌 행 · 사용 안 함(use=0) 품목 제외. */
+    const have=new Set(mine.map(r=>r.prodId).filter(Boolean));
+    const addPlan=[],addAmb=[];
+    for(const pm of prodData){
+      if(have.has(pm.id)||prodUse(pm)===0)continue;
+      const ns2=sdNm(pm.name)+'|'+String(pm.spec||'').trim(),mx2=norm(pm.mix);
+      const anyK=Object.keys(byKey).filter(k=>k.startsWith(ns2+'|'));
+      if(!anyK.length)continue;
+      let s2=null;
+      if(mx2&&byKey[ns2+'|'+mx2])s2=byKey[ns2+'|'+mx2];
+      else if(!mx2&&anyK.length===1)s2=byKey[anyK[0]];
+      else{addAmb.push(pm.name+' · '+pm.spec+' · 배합 '+(pm.mix||'-')+' → 엑셀 배합: '+anyK.map(k=>byKey[k].mix||'(없음)').join(', '));continue;}
+      if(!(s2.expUse||s2.cur||s2.onOrder||s2.ord))continue;
+      addPlan.push([pm,s2]);
+    }
     const msg=`엑셀에서 ${readRows}개 행(품명·규격·배합비 기준)을 읽었습니다.\n\n`
+      +(addPlan.length?`· 품목마스터에 있어 새로 편입할 품목 : ${addPlan.length}건\n    ${addPlan.slice(0,12).map(x=>x[0].name+' '+x[0].spec).join(' / ')}${addPlan.length>12?' 외 '+(addPlan.length-12)+'건':''}\n`:'')
       +`· 우리 품목 중 갱신될 항목 : ${upd}건\n`
       +`· 값 변동 없음 : ${same}건\n`
       +(mixBad.length?`· 배합비가 엑셀과 달라 건너뛴 항목(값 유지) : ${mixBad.length}건\n`:'')
@@ -32169,13 +32188,19 @@ async function importStockXlsx(input){
       +(dupSkip?`· 같은 값의 중복 행 제외 : ${dupSkip}건\n`:'')
       +`\n다른 영업소 품목은 건드리지 않습니다. 현재고·기발주·예상사용량`+(ordCol>0?'·발주량(엑셀 발주합계 수량)':'')+`을 갱신하고 적정재고(예상사용량×3개월)를 다시 계산합니다.`+(ordCol>0?'':`\n(이 엑셀에는 발주합계 열이 없어 발주량은 그대로 유지됩니다)`)+`\n갱신할까요?`;
     if(!confirm(msg)){input.value='';return;}
+    for(const [pm,s2] of addPlan){
+      const nr={id:uid(),supplier:'신동내화',prodId:pm.id,name:pm.name,spec:pm.spec||'',mix:pm.mix||'',unit:pm.unit==='ea'?'EA':'EA',target:0,cur:s2.cur,onOrder:s2.onOrder,expUse:s2.expUse,orderQty:ordCol>0?s2.ord:0,mill:0,batch:0,mfg:0,vNote:'',note:'',upd:todayStr(),seq:Date.now()};
+      if(ordCol>0)nr.xlsOrd=s2.ord;nr.target=sdTarget(nr);
+      stockData.unshift(nr);await putRec('stock',nr);
+    }
     for(const [r,s] of plan){
       r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;if(ordCol>0){r.orderQty=s.ord;r.xlsOrd=s.ord;}r.target=sdTarget(r);r.upd=todayStr();
       await putRec('stock',r);
     }
     flashSave();renderStock('신동내화');
-    toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(mixBad.length?` · 배합 불일치 ${mixBad.length}건`:'')+(missList.length?` · ${missList.length}건 자료 없음`:''));
+    toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(addPlan.length?` · ${addPlan.length}건 신규 편입`:'')+(mixBad.length?` · 배합 불일치 ${mixBad.length}건`:'')+(missList.length?` · ${missList.length}건 자료 없음`:''));
     if(mixBad.length)alert('배합비가 엑셀과 맞지 않아 값이 유지된 품목 '+mixBad.length+'건입니다.\n내화물 기본정보의 배합을 엑셀 표기에 맞게 고치신 뒤 다시 반영해 주세요.\n\n'+mixBad.slice(0,15).join('\n')+(mixBad.length>15?`\n… 외 ${mixBad.length-15}건`:''));
+    if(addAmb.length)alert('품목마스터에 있지만 배합비가 엑셀과 애매해 편입하지 않은 품목 '+addAmb.length+'건입니다. 배합을 확인해 주세요.\n\n'+addAmb.slice(0,15).join('\n'));
     if(missList.length)alert('이번 엑셀에서 찾지 못해 값이 유지된 품목(일부):\n'+missList.slice(0,15).join('\n')+(missList.length>15?`\n… 외 ${missList.length-15}건`:''));
   }catch(err){alert('엑셀을 읽는 중 오류가 발생했습니다: '+err.message);}
   input.value='';
