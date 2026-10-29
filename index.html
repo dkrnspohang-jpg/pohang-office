@@ -2221,6 +2221,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       </select>
       <span class="spacer"></span>
       <button class="btn primary" onclick="addStockRow('신동내화')">＋ 품목 추가</button>
+      <button class="btn primary" onclick="sdPickMaster()" title="내화물 기본정보(품목마스터)에 있는 품목 중 아직 신동 재고표에 없는 품목을 골라 한 번에 추가합니다">＋ 마스터에서 추가</button>
       <button class="btn primary" style="display:none" onclick="saveStockAll('신동내화')" title="칸마다 입력 즉시 자동 저장되지만, 저장 완료를 눈으로 확인하고 싶을 때 누르세요">💾 저장</button>
       <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
       <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
@@ -31061,7 +31062,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.29.rpt169";
+const APP_VERSION = "2026.10.29.rpt170";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -31658,6 +31659,33 @@ function stockRefreshCards(sup){
     +card('재고 부족 임박',`<span style="color:${needCnt?'#dc2626':'inherit'}">${needCnt}</span>`,'개(가용가능일 15일 이하)')
     +card('기본정보 미연동',unlinkedCnt,'개')
     +(sup==='신동내화'?card('예상사용량 없음(재고 있음)',`<span style="color:${all.filter(sdNoUse).length?'#ca8a04':'inherit'}">${all.filter(sdNoUse).length}</span>`,'개 · 노란 품명 확인'):'');
+}
+/* rpt170: 품목마스터에서 신동 재고표로 품목 직접 편입(엑셀 없이도 가능) — 이후 [신동 엑셀 반영]으로 재고·예상사용량이 채워짐 */
+function sdPickMaster(){
+  const have=new Set(stockData.filter(r=>r.supplier==='신동내화').map(r=>r.prodId).filter(Boolean));
+  const list=prodData.filter(pm=>!have.has(pm.id)).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko')||String(a.spec||'').localeCompare(String(b.spec||''),'ko'));
+  let ov=document.getElementById('sdPickOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='sdPickOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;width:min(720px,94vw);max-height:84vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.3)">
+    <div style="padding:14px 18px 8px;font-weight:800;font-size:16px">품목마스터에서 신동 재고표에 추가</div>
+    <div style="padding:0 18px 8px;font-size:12px;color:#64748b">신동 재고표에 아직 없는 마스터 품목 ${list.length}건입니다. 체크한 품목이 추가되며, 추가 후 [📥 신동 엑셀 반영]을 누르면 재고·기발주·예상사용량이 채워집니다.</div>
+    <div style="padding:0 18px 8px;display:flex;gap:8px;align-items:center"><input id="sdPickQ" class="search" placeholder="품명·규격·배합 검색 (예: FM7C)" style="flex:1" oninput="sdPickFilter()"><button class="btn sm" onclick="sdPickAll(true)">보이는 것 전체 선택</button><button class="btn sm" onclick="sdPickAll(false)">선택 해제</button></div>
+    <div id="sdPickList" style="overflow:auto;padding:0 18px;flex:1;min-height:200px;border-top:1px solid #e5e9ef;border-bottom:1px solid #e5e9ef">${list.map(pm=>`<label class="sdpk" data-q="${esc((pm.name||'')+' '+(pm.spec||'')+' '+(pm.mix||'')).toLowerCase()}" style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:13px"><input type="checkbox" value="${esc(pm.id)}"><b style="min-width:110px">${esc(pm.name||'')}</b><span style="min-width:110px">${esc(pm.spec||'')}</span><span style="color:#64748b">${esc(pm.mix||'')}</span><span style="margin-left:auto;font-size:11px;color:#94a3b8">${esc(pm.cat||'')}</span></label>`).join('')||'<div style="padding:30px;text-align:center;color:#94a3b8">추가할 품목이 없습니다</div>'}</div>
+    <div style="padding:12px 18px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="document.getElementById('sdPickOv').remove()">닫기</button><button class="btn primary" onclick="sdPickApply()">선택 품목 추가</button></div></div>`;
+  document.body.appendChild(ov);const q=document.getElementById('sdPickQ');if(q)q.focus();
+}
+function sdPickFilter(){const q=(document.getElementById('sdPickQ').value||'').trim().toLowerCase();document.querySelectorAll('#sdPickList .sdpk').forEach(l=>{l.style.display=(!q||l.dataset.q.includes(q))?'flex':'none';});}
+function sdPickAll(on){document.querySelectorAll('#sdPickList .sdpk').forEach(l=>{if(l.style.display!=='none')l.querySelector('input').checked=on;});}
+async function sdPickApply(){
+  const ids=[...document.querySelectorAll('#sdPickList input:checked')].map(i=>i.value);
+  if(!ids.length){toast('추가할 품목을 선택하세요');return;}
+  const have=new Set(stockData.filter(r=>r.supplier==='신동내화').map(r=>r.prodId).filter(Boolean));let n=0;
+  for(const id of ids){const pm=prodData.find(x=>x.id===id);if(!pm||have.has(id))continue;
+    const nr={id:uid(),supplier:'신동내화',prodId:pm.id,name:pm.name,spec:pm.spec||'',mix:pm.mix||'',unit:'EA',target:0,cur:0,onOrder:0,expUse:0,orderQty:0,mill:0,batch:0,mfg:0,vNote:'',note:'',upd:todayStr(),seq:Date.now()+n};
+    stockData.unshift(nr);await putRec('stock',nr);n++;}
+  const ov=document.getElementById('sdPickOv');if(ov)ov.remove();
+  flashSave();renderStock('신동내화');toast(n+'건 추가 · [📥 신동 엑셀 반영]을 누르면 재고·예상사용량이 채워집니다');
 }
 async function addStockRow(sup){
   const r={id:uid(),supplier:sup,prodId:null,name:'',spec:'',mix:'',code:'',unit:'EA',
