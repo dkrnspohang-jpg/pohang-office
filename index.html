@@ -2304,7 +2304,6 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <button class="subtab" data-sp="ot" onclick="attendTab('ot')">🌙 잔업신청</button>
       <button class="subtab" data-sp="vac" onclick="attendTab('vac')">📅 휴가 관리</button>
       <button class="subtab" data-sp="stat" onclick="attendTab('stat')">📊 근태 현황</button>
-      <button class="subtab adm-only" data-sp="line" onclick="attendTab('line')">✍️ 결재선 관리</button>
     </div>
 
     <!-- 휴가원 -->
@@ -2447,29 +2446,6 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
         <tbody id="otMonthBody"></tbody>
       </table></div>
     </div>
-
-    <!-- 개인별 결재선 관리 -->
-    <div class="subpanel" id="asp-line">
-      <div class="toolrow">
-        <select class="selbox" id="al_dept" onchange="renderApprLine()"></select>
-        <input class="search" id="al_q" placeholder="성명 검색" oninput="renderApprLine()">
-        <button class="btn" onclick="openApprCfg()">⚙️ 기본 결재선</button>
-        <button class="btn" onclick="alBulk()">📋 일괄 지정</button>
-        <button class="btn danger adm-only" onclick="alResetAll()">기본값으로 되돌리기</button>
-        <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="al_count"></span>
-      </div>
-      <div style="font-size:11.5px;color:var(--accent);background:var(--accent-soft);border-radius:9px;padding:9px 12px;margin-bottom:10px">
-        개인마다 결재선을 다르게 지정합니다. <b>[기본]</b> 이면 기본 결재선(⚙️)을 따르고, 단계를 직접 고르면 그 사람 문서만 그 결재선으로 올라갑니다.
-        결재자를 지정하면 <b>그 사람</b>에게 결재가 갑니다(미지정이면 직급·소속 규칙으로 자동).
-      </div>
-      <div class="tablewrap"><table class="bomtbl" style="min-width:1240px">
-        <thead><tr><th style="width:86px">성명</th><th style="width:108px">소속</th><th style="width:66px">직급</th>
-          <th style="width:250px">결재선</th>
-          <th style="width:160px">1차</th><th style="width:160px">2차</th><th style="width:160px">3차</th><th style="width:160px">4차</th>
-          <th style="width:48px">확인</th><th style="width:64px">관리</th></tr></thead>
-        <tbody id="apprLineBody"></tbody>
-      </table></div>
-    </div>
   </section>
 
   <!-- ===== 결재함 ===== -->
@@ -2548,11 +2524,14 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <input class="search" id="em_search" placeholder="성명·직책 검색" oninput="renderEmp()">
       <button class="btn" onclick="downloadEmp()">📥 엑셀</button>
       <button class="btn primary" onclick="openBulkEmp()" title="엑셀·메모장에서 복사한 여러 명을 한 번에 등록">📋 직원 일괄 등록</button>
+      <button class="btn adm-only" onclick="openApprCfg()" title="모든 직원에게 공통으로 적용되는 기본 결재선">⚙️ 기본 결재선</button>
+      <button class="btn adm-only" onclick="openEmpLineBulk()" title="체크한 직원(없으면 현재 목록 전체)에게 같은 결재선을 한 번에 지정">📋 결재선 일괄 지정</button>
+      <button class="btn danger adm-only" onclick="alResetAll()" title="모든 직원의 개인 결재선을 지우고 기본 결재선으로">결재선 전체 기본값으로</button>
       <button class="btn adm-only" onclick="copyEmpSigns()" title="같은 이름 기록·내장 서명명부의 사인 이미지를 사인이 비어 있는 직원에게 복사하고, 미등록자 명단을 보여줍니다">✍️ 사인 일괄 복사</button>
-      <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="em_count"></span>
+      <span class="spacer"></span><button class="btn sm hidden" id="em_selClr" onclick="empSelClear()">선택 해제</button><span style="font-size:12px;color:var(--accent);font-weight:700" id="em_selInfo"></span><span style="font-size:12px;color:var(--muted)" id="em_count"></span>
     </div>
-    <div class="tablewrap"><table style="min-width:1560px">
-      <thead><tr><th style="width:120px">성명</th><th style="width:96px">소속</th><th style="width:78px">직급</th><th style="width:104px">파트(권한)</th><th style="width:272px">결재선</th><th style="width:128px">반/근무</th><th style="width:92px">입사일</th><th class="n" style="width:118px;white-space:nowrap">연차(잔여/부여)</th><th class="n" style="width:126px;white-space:nowrap">연중휴가(잔여/부여)</th><th style="width:96px">사인</th><th style="width:80px">비밀번호</th><th style="width:170px">관리</th></tr></thead>
+    <div class="tablewrap"><table style="min-width:1600px">
+      <thead><tr><th style="width:38px;text-align:center" class="adm-only"><input type="checkbox" id="em_selAll" onchange="empSelAll(this.checked)" title="현재 목록 전체 선택" style="width:15px;height:15px"></th><th style="width:120px">성명</th><th style="width:96px">소속</th><th style="width:78px">직급</th><th style="width:104px">파트(권한)</th><th style="width:272px">결재선</th><th style="width:128px">반/근무</th><th style="width:92px">입사일</th><th class="n" style="width:118px;white-space:nowrap">연차(잔여/부여)</th><th class="n" style="width:126px;white-space:nowrap">연중휴가(잔여/부여)</th><th style="width:96px">사인</th><th style="width:80px">비밀번호</th><th style="width:170px">관리</th></tr></thead>
       <tbody id="empBody"></tbody>
     </table></div>
   </section>
@@ -4364,6 +4343,24 @@ service cloud.firestore {
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" onclick="alClear(elCur);drawEmpLine();renderEmp()">기본값으로</button>
       <button class="btn primary" onclick="closeEmpLine()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 직원 결재선 일괄 지정 -->
+<div class="qdoc-overlay" id="empLineBulkOverlay">
+  <div class="loginbox" style="max-width:540px">
+    <div class="lg-h" id="elb_title">결재선 일괄 지정</div>
+    <div class="lg-s" id="elb_sub"></div>
+    <div id="elb_body" class="pk-list" style="margin-bottom:10px"></div>
+    <label class="ac-chk"><input type="checkbox" id="elb_conf" onchange="elbPrev()">
+      <span><b>관리직 확인란 사용</b><br><small>결재 완료 후 관리직이 [확인] = 회사 시스템 입력 완료</small></span></label>
+    <div id="elb_prev" style="font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:9px;padding:9px 11px;margin:8px 0"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn danger" onclick="elbReset()" title="대상 직원의 개인 결재선을 지우고 기본 결재선을 따르게 합니다">기본값으로 되돌리기</button>
+      <span class="spacer"></span>
+      <button class="btn" onclick="closeEmpLineBulk()">취소</button>
+      <button class="btn primary" onclick="elbApply()">적용</button>
     </div>
   </div>
 </div>
@@ -30896,7 +30893,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.28.rpt159";
+const APP_VERSION = "2026.10.29.rpt160";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -33451,51 +33448,10 @@ function drawEmpLine(){
     +`<br><span style="color:var(--muted)">상신 시작 단계 : <b>${esc(ST_LABEL[startStatus(e)]||'')}</b></span>`;
 }
 function closeEmpLine(){document.getElementById('empLineOverlay').classList.remove('show');elCur=null;}
-/* ══ 개인별 결재선 관리 화면 ══ */
-function initApprLine(){
-  const sel=document.getElementById('al_dept');
-  if(sel&&!sel.dataset.done){
-    sel.innerHTML='<option value="">전체 소속</option>'+DEPTS.map(d=>`<option>${esc(d)}</option>`).join('');
-    sel.dataset.done='1';}
-  renderApprLine();
-}
+/* ══ 개인 결재선 (직원관리에서 설정 · 일괄 지정) ══ */
 function alEmpOpts(cur,exclude){
   return '<option value="">자동</option>'+empData.filter(e=>e.active!==0&&e.id!==exclude).sort(empOrder)
     .map(e=>`<option value="${e.id}"${e.id===cur?' selected':''}>${esc(e.name)} (${esc(normDept(e.dept)||'')}${e.rank?' '+esc(e.rank):''})</option>`).join('');
-}
-function renderApprLine(){
-  const fd=(document.getElementById('al_dept')||{}).value||'';
-  const q=((document.getElementById('al_q')||{}).value||'').trim().toLowerCase();
-  let list=empData.filter(e=>e.active!==0).sort(empOrder);
-  if(fd)list=list.filter(e=>normDept(e.dept)===fd);
-  if(q)list=list.filter(e=>(e.name+' '+(e.dept||'')+' '+(e.rank||'')).toLowerCase().includes(q));
-  document.getElementById('al_count').textContent=list.length+'명';
-  const base=apprCfg(), all=apprLineAll();
-  const body=list.map(e=>{
-    const my=apprLineOf(e.id);
-    const steps=my?my.steps:base.steps;
-    const useConf=my?my.conf:base.conf;
-    const who=(my&&my.who)||{};
-    const chk=STEP_ALL.map(k=>`<label style="display:inline-flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap">
-        <input type="checkbox" ${steps.includes(k)?'checked':''} onchange="alSetStep('${e.id}','${k}',this.checked)" style="width:14px;height:14px">${STEP_LABEL[k]}</label>`).join(' ');
-    const slot=i=>{const k=steps[i];
-      if(!k)return '<td style="background:#f8fafc"></td>';
-      return `<td style="min-width:150px">
-        <div style="font-size:10px;color:${my?'#1d4ed8':'#94a3b8'};font-weight:700">${STEP_LABEL[k]}</div>
-        <select style="width:100%;font-size:11px" onchange="alSetWho('${e.id}','${k}',this.value)">${alEmpOpts(who[k]||'',e.id)}</select></td>`;};
-    return `<tr${my?' style="background:#f0f7ff"':''}>
-      <td style="white-space:nowrap"><b>${esc(e.name)}</b></td>
-      <td style="white-space:nowrap;font-size:11.5px">${esc(normDept(e.dept)||'')}${e.team?'<br><span style="color:var(--muted)">'+esc(e.team)+'</span>':''}</td>
-      <td style="white-space:nowrap">${esc(e.rank||'')}</td>
-      <td style="min-width:230px">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${chk}</div>
-        <div style="font-size:10.5px;color:${my?'#1d4ed8':'var(--muted)'};margin-top:3px;font-weight:${my?'700':'400'}">
-          ${my?'개인 지정':'기본 결재선'} · ${steps.length?steps.map(k=>STEP_LABEL[k]).join(' → '):'(없음)'}</div></td>
-      ${slot(0)}${slot(1)}${slot(2)}${slot(3)}
-      <td style="text-align:center"><input type="checkbox" ${useConf?'checked':''} onchange="alSetConf('${e.id}',this.checked)" style="width:15px;height:15px"></td>
-      <td style="text-align:center">${my?`<button class="btn sm" onclick="alClear('${e.id}')" title="기본 결재선으로">기본</button>`:'<span style="font-size:11px;color:var(--muted)">-</span>'}</td>
-    </tr>`;}).join('');
-  document.getElementById('apprLineBody').innerHTML=body||'<tr><td colspan="10"><div class="empty">등록된 직원이 없습니다.</div></td></tr>';
 }
 function alEnsure(id){
   const m=apprLineAll();
@@ -33508,32 +33464,82 @@ function alSetStep(id,k,on){
   const set=new Set(m[id].steps);on?set.add(k):set.delete(k);
   m[id].steps=STEP_ALL.filter(x=>set.has(x));
   if(!on)delete m[id].who[k];
-  apprLineSave(m);renderApprLine();
+  apprLineSave(m);renderEmp();
 }
 function alSetWho(id,k,v){const m=alEnsure(id);if(v)m[id].who[k]=v;else delete m[id].who[k];apprLineSave(m);}
-function alSetConf(id,on){const m=alEnsure(id);m[id].conf=!!on;apprLineSave(m);renderApprLine();}
-function alClear(id){const m=apprLineAll();delete m[id];apprLineSave(m);renderApprLine();toast('기본 결재선으로 되돌렸습니다');}
+function alSetConf(id,on){const m=alEnsure(id);m[id].conf=!!on;apprLineSave(m);renderEmp();}
+function alClear(id){const m=apprLineAll();delete m[id];apprLineSave(m);renderEmp();toast('기본 결재선으로 되돌렸습니다');}
 function alResetAll(){
   if(!confirm('모든 직원의 개인 결재선을 지우고 기본 결재선으로 되돌립니다. 계속할까요?'))return;
-  apprLineSave({});renderApprLine();toast('전체를 기본 결재선으로 되돌렸습니다');
+  apprLineSave({});renderEmp();toast('전체를 기본 결재선으로 되돌렸습니다');
 }
-/* 현재 목록(필터된 직원) 전체에 같은 결재선을 지정 */
-function alBulk(){
-  const fd=(document.getElementById('al_dept')||{}).value||'';
-  let list=empData.filter(e=>e.active!==0);
-  if(fd)list=list.filter(e=>normDept(e.dept)===fd);
-  if(!list.length){toast('대상 직원이 없습니다');return;}
-  const def=apprCfg().steps.map(k=>STEP_LABEL[k]).join(',');
-  const v=prompt('현재 목록 '+list.length+'명에게 같은 결재선을 지정합니다.\n사용할 단계를 쉼표로 입력하세요.\n\n가능: '
-    +STEP_ALL.map(k=>STEP_LABEL[k]).join(', ')+'\n(비우면 취소)',def);
-  if(v==null||!v.trim())return;
-  const want=v.split(',').map(x=>x.trim()).filter(Boolean);
-  const steps=STEP_ALL.filter(k=>want.includes(STEP_LABEL[k])||want.includes(k));
-  if(!steps.length){alert('인식된 단계가 없습니다.');return;}
+/* ── 직원관리 : 선택/목록 일괄 결재선 ── */
+const empSel=new Set(); let empVisIds=[]; let elbTargets=[];
+function empSelToggle(id,on){on?empSel.add(id):empSel.delete(id);empSelUpdate();}
+function empSelAll(on){empVisIds.forEach(id=>on?empSel.add(id):empSel.delete(id));
+  document.querySelectorAll('#empBody .em-sel').forEach(c=>c.checked=on);empSelUpdate();}
+function empSelClear(){empSel.clear();document.querySelectorAll('#empBody .em-sel').forEach(c=>c.checked=false);empSelUpdate();}
+function empSelUpdate(){
+  const n=empVisIds.filter(id=>empSel.has(id)).length;
+  const c=document.getElementById('em_selAll');
+  if(c){c.checked=!!empVisIds.length&&n===empVisIds.length;c.indeterminate=n>0&&n<empVisIds.length;}
+  const t=document.getElementById('em_selInfo');
+  if(t){t.textContent=n?('선택 '+n+'명'):'';}
+  const b=document.getElementById('em_selClr');if(b)b.classList.toggle('hidden',!n);
+}
+function elbRole(){if(!['admin','office'].includes(appRole())){alert('결재선 설정은 사업소장·관리직만 가능합니다.');return false;}return true;}
+function openEmpLineBulk(){
+  if(!elbRole())return;
+  const sel=empVisIds.filter(id=>empSel.has(id));
+  elbTargets=sel.length?sel:empVisIds.slice();
+  if(!elbTargets.length){toast('대상 직원이 없습니다');return;}
+  const names=elbTargets.map(id=>(empData.find(e=>e.id===id)||{}).name||'');
+  document.getElementById('elb_title').textContent='📋 결재선 일괄 지정 · '+elbTargets.length+'명';
+  document.getElementById('elb_sub').innerHTML=(sel.length?'<b>선택한 직원</b>':'<b>현재 목록(필터 적용) 전체</b>')+' : '
+    +esc(names.slice(0,8).join(', '))+(names.length>8?' 외 '+(names.length-8)+'명':'')
+    +'<br>선택한 직원의 기존 개인 결재선은 아래 내용으로 <b>덮어씁니다</b>.';
+  const c=apprCfg();
+  const DESC={jun:'같은 소속·같은 반 주임',gye:'같은 소속 계장·기장',gis:'현장 기성',bos:'사업소장(최종)'};
+  document.getElementById('elb_body').innerHTML=STEP_ALL.map(k=>`<div class="pk-item" style="cursor:default;align-items:flex-start;flex-wrap:wrap">
+      <label style="display:flex;gap:7px;align-items:center;cursor:pointer;min-width:118px">
+        <input type="checkbox" class="elb-st" value="${k}" ${c.steps.includes(k)?'checked':''} onchange="elbPrev()" style="width:16px;height:16px"><b>${STEP_LABEL[k]}</b></label>
+      <span class="sub" style="margin-left:0;flex:1 1 130px">${DESC[k]}</span>
+      <select class="elb-who" data-k="${k}" style="flex:1 1 180px;min-width:150px;font-size:11.5px" onchange="elbPrev()">${alEmpOpts('',null)}</select></div>`).join('');
+  document.getElementById('elb_conf').checked=!!c.conf;
+  elbPrev();
+  document.getElementById('empLineBulkOverlay').classList.add('show');
+}
+function elbRead(){
+  const steps=[...document.querySelectorAll('.elb-st')].filter(x=>x.checked).map(x=>x.value);
+  const who={};document.querySelectorAll('.elb-who').forEach(sl=>{const k=sl.dataset.k;if(steps.includes(k)&&sl.value)who[k]=sl.value;});
+  document.querySelectorAll('.elb-who').forEach(sl=>{sl.disabled=!steps.includes(sl.dataset.k);});
+  return {steps,who,conf:document.getElementById('elb_conf').checked};
+}
+function elbPrev(){
+  const c=elbRead();
+  const line=c.steps.length?c.steps.map(k=>STEP_LABEL[k]+(c.who[k]?' ('+((empData.find(x=>x.id===c.who[k])||{}).name||'')+')':'')).join(' → '):'(없음 · 상신 즉시 결재완료)';
+  document.getElementById('elb_prev').innerHTML='신청 → '+esc(line)+(c.conf?' <b>+ 관리직 확인</b>':'');
+}
+function closeEmpLineBulk(){document.getElementById('empLineBulkOverlay').classList.remove('show');}
+function elbApply(){
+  if(!elbRole())return;
+  const c=elbRead();
+  if(!c.steps.length&&!confirm('결재 단계를 하나도 선택하지 않았습니다.\n상신하면 바로 결재완료가 됩니다. 계속할까요?'))return;
   const m=apprLineAll();
-  list.forEach(e=>{m[e.id]=Object.assign({conf:apprCfg().conf,who:{}},m[e.id]||{},{steps:steps.slice()});});
-  apprLineSave(m);renderApprLine();
-  toast(list.length+'명에게 '+steps.map(k=>STEP_LABEL[k]).join(' → ')+' 결재선을 지정했습니다');
+  elbTargets.forEach(id=>{
+    const who={};Object.keys(c.who).forEach(k=>{if(c.who[k]!==id)who[k]=c.who[k];});
+    m[id]={steps:c.steps.slice(),conf:c.conf,who};});
+  apprLineSave(m);
+  closeEmpLineBulk();renderEmp();
+  try{refreshAttend();}catch(e){}
+  toast(elbTargets.length+'명에게 결재선을 지정했습니다 · 새로 상신하는 문서부터 적용됩니다');
+}
+function elbReset(){
+  if(!elbRole())return;
+  if(!confirm(elbTargets.length+'명의 개인 결재선을 지우고 기본 결재선으로 되돌립니다. 계속할까요?'))return;
+  const m=apprLineAll();elbTargets.forEach(id=>{delete m[id];});
+  apprLineSave(m);closeEmpLineBulk();renderEmp();
+  toast(elbTargets.length+'명을 기본 결재선으로 되돌렸습니다');
 }
 /* 🗑 현재 목록에 보이는 문서 전체 삭제 (사업소장·관리직) */
 async function purgeDocs(kind){
@@ -33906,7 +33912,6 @@ function attendTab(sp){
   document.getElementById('asp-'+sp).classList.add('active');
   if(sp==='stat')renderAttStat();
   if(sp==='vac')renderVac();
-  if(sp==='line')initApprLine();
 }
 function initAttend(){
   updateMeChip();
@@ -34727,10 +34732,12 @@ function renderEmp(){
   if(q)rows=rows.filter(r=>(r.name+' '+(r.pos||'')).toLowerCase().includes(q));
   document.getElementById('em_count').textContent=rows.length+'명';
   const b=document.getElementById('empBody');
-  if(!rows.length){b.innerHTML='<tr><td colspan="12"><div class="empty">등록된 직원이 없습니다. 위에서 등록하세요.</div></td></tr>';return;}
+  empVisIds=rows.map(r=>r.id);
+  if(!rows.length){b.innerHTML='<tr><td colspan="13"><div class="empty">등록된 직원이 없습니다. 위에서 등록하세요.</div></td></tr>';empSelUpdate();return;}
   const y=todayStr().slice(0,4);
   b.innerHTML=rows.map(r=>{const g=annualGrant(r,y),st=leaveStat(r.id,y),yg=yearLeaveGrant(r);
     return `<tr${r.active===0?' style="opacity:.5"':''}>
+    <td class="adm-only" style="text-align:center"><input type="checkbox" class="em-sel" ${empSel.has(r.id)?'checked':''} onchange="empSelToggle('${r.id}',this.checked)" style="width:15px;height:15px"></td>
     <td style="white-space:nowrap"><b>${esc(r.name)}</b> <button class="btn sm" style="padding:1px 5px;font-size:10.5px" onclick="editEmp('${r.id}')" title="정보 수정(휴가갯수 등)">⚙️</button><button class="btn sm" style="padding:1px 5px;font-size:10.5px" onclick="setEmpPw('${r.id}')" title="개인 비밀번호 설정/수정">🔑</button></td>
     <td style="white-space:nowrap">${empQuickSel(r,'dept',DEPTS)}</td>
     <td style="white-space:nowrap">${empQuickSel(r,'rank',RANKS)}${r.pos?`<div style="font-size:10px;color:var(--muted)">${esc(r.pos)}</div>`:''}</td>
@@ -34746,6 +34753,7 @@ function renderEmp(){
     <td><div class="acts"><button class="btn sm" onclick="setEmpPw('${r.id}')" title="파트 로그인용 개인 비밀번호">🔑</button>
       <button class="btn sm" onclick="editEmp('${r.id}')">수정</button>
       <button class="btn sm danger del-rec" onclick="delEmp('${r.id}')">삭제</button></div></td></tr>`;}).join('');
+  empSelUpdate();
 }
 function downloadEmp(){
   let t='<table><tr class="hd"><th>성명</th><th>소속</th><th>직급</th><th>권한</th><th>직책</th><th>근무형태</th><th>반</th><th>입사일</th><th>연차부여</th><th>연차잔여</th><th>연중휴가</th><th>재직</th><th>비고</th></tr>';
