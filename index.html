@@ -2224,24 +2224,28 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <button class="btn primary" style="display:none" onclick="saveStockAll('신동내화')" title="칸마다 입력 즉시 자동 저장되지만, 저장 완료를 눈으로 확인하고 싶을 때 누르세요">💾 저장</button>
       <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
       <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
-      <button class="btn" onclick="autoSetStockTarget('신동내화')" title="예상사용량(월) × 3개월 기준으로 적정재고를 다시 계산합니다">📐 적정재고 자동설정(3개월)</button>
+      <button class="btn" onclick="autoSetStockTarget('신동내화')" title="적정재고는 이제 예상사용량×3개월로 자동 계산됩니다(이 버튼은 한 번에 다시 맞출 때 사용)">📐 적정재고 다시 계산</button>
       <button class="btn" onclick="downloadStockCSV('신동내화')">📤 CSV 내보내기</button>
     </div>
     <div style="font-size:11.5px;color:var(--muted);margin:0 2px 10px" id="stockHint_sd"></div>
     <div class="tablewrap"><table class="bomtbl" id="stockTbl_sd">
       <thead><tr>
         <th style="width:150px">품명</th><th style="width:120px">규격/CODE</th><th style="width:90px">배합</th><th style="width:50px">단위</th>
-        <th class="n" style="width:80px">적정재고</th><th class="n" style="width:80px">현재고</th>
-        <th class="n" style="width:80px">기발주</th><th class="n" style="width:90px">예상사용량</th>
+        <th class="n" style="width:80px" title="예상사용량 × 3개월 — 자동 계산">적정재고<br><span style="font-weight:400;font-size:10px">(예상×3개월)</span></th><th class="n" style="width:80px">현재고</th>
+        <th class="n" style="width:80px">기발주</th>
+        <th class="n" style="width:84px" title="현재고 + 기발주">재고+기발주</th>
+        <th class="n" style="width:90px">예상사용량</th>
+        <th class="n" style="width:78px" title="(현재고+기발주) ÷ 적정재고(예상사용량 3개월분) — 100% 미만이면 3개월분이 안 됨">3개월 충족률</th>
         <th class="n" style="width:80px" title="(현재고+기발주)÷예상사용량×30 (참고용, 자동계산)">가용가능일</th>
-        <th class="n" style="width:90px">발주량(확정)</th>
+        <th class="n" style="width:90px" title="엑셀 '발주합계' 수량을 그대로 반영(직접 수정도 가능)">발주량(확정)</th>
+        <th class="n" style="width:104px" title="현재고 + 기발주 + 발주량(확정) · (적정재고 대비 %)">재고확보<br><span style="font-weight:400;font-size:10px">(발주 포함)</span></th>
         <th style="width:120px">비고</th><th style="width:84px">갱신일</th><th style="width:34px"></th>
       </tr></thead>
       <tbody id="stockBody_sd"></tbody>
       <tfoot id="stockFoot_sd"></tfoot>
     </table></div>
     <div style="font-size:11.5px;color:var(--muted);margin-top:8px">
-      ※ <b>적정재고</b>·<b>발주량(확정)</b>은 직접 입력·검토해서 정합니다. <b>가용가능일</b>은 (현재고+기발주)÷예상사용량×30으로 자동 계산되는 참고값입니다(예상사용량이 없으면 '-').<br>
+      ※ <b>적정재고</b>는 <b>예상사용량×3개월</b>로 자동 계산됩니다. <b>발주량(확정)</b>은 [📥 신동 엑셀 반영] 시 엑셀 <b>발주합계 수량</b>이 그대로 들어갑니다(직접 수정 가능). <b>3개월 충족률</b>=(현재고+기발주)÷적정재고, <b>재고확보</b>=현재고+기발주+발주량(확정). <b>가용가능일</b>은 (현재고+기발주)÷예상사용량×30으로 자동 계산되는 참고값입니다(예상사용량이 없으면 '-').<br>
       ※ 신동내화는 <b>내화물 기본정보</b>에 등록된(우리 사업소가 쓰는) 품목만 관리합니다. 다른 영업소 전용 품목은 대상에서 제외됩니다. 초기 현재고·기발주·예상사용량은 2026년 9월 신동 정기 발주 검토 엑셀을 참고해 반영했습니다.
     </div>
   </section>
@@ -31055,7 +31059,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.29.rpt164";
+const APP_VERSION = "2026.10.29.rpt165";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -31573,8 +31577,19 @@ function stockSfx(sup){return sup==='신동내화'?'sd':'vs';}
 function initStock(sup){renderStock(sup);}
 // 2026-09-23: 입력 중 전체 재렌더 금지(커서 유지) → 모델만 갱신 + 파생셀(가용가능일)만 부분 갱신 + 카드 요약만 갱신.
 // 품목 연결(prodId) 변경 시에만 행 구조가 바뀌므로 그때만 전체 재구성.
+/* 2026-10-29 (rpt165): 신동내화 적정재고 = 예상사용량(월) × 3개월 — 항상 자동 계산(직접 입력 없음).
+   · 예상사용량을 고치거나 엑셀을 반영하면 즉시 다시 계산 · 시작·동기화 때도 어긋난 값을 맞춘다. */
+function sdTarget(r){return Math.round((+r.expUse||0)*(STOCK_TARGET_MONTHS['신동내화']||3));}
+async function ensureSdTarget(){
+  let n=0;
+  for(const r of stockData){if(r.supplier!=='신동내화')continue;const t=sdTarget(r);
+    if((+r.target||0)!==t){r.target=t;try{await putRec('stock',r);}catch(e){}n++;}}
+  if(n){try{flashSave();}catch(e){}if(document.getElementById('stockBody_sd')){try{renderStock('신동내화');}catch(e){}}}
+  return n;
+}
 async function editStock(id,k,v){
   const r=stockData.find(x=>x.id===id);if(!r)return;
+  if(k==='target'&&r.supplier==='신동내화')return; /* 자동 계산 */
   if(k==='prodId'){
     if(v){const p=prodById(v);if(p){r.prodId=v;r.name=p.name;r.spec=p.spec||'';r.mix=p.mix||'';}}
     else{r.prodId=null;}
@@ -31585,9 +31600,19 @@ async function editStock(id,k,v){
   if(k==='target'||k==='cur'||k==='onOrder'||k==='expUse'||k==='orderQty'||k==='mill'||k==='batch'||k==='mfg'){
     r[k]=+v||0;
   }else{r[k]=v;}
+  if(k==='expUse'&&r.supplier==='신동내화'){r.target=sdTarget(r);const te=document.getElementById('stkTgt_sd_'+r.id);if(te)te.value=r.target;}
   r.upd=todayStr();
   await putRec('stock',r);flashSave();
   stockPatchRow(r);
+}
+/* 신동 파생값: 재고+기발주 · 3개월(적정재고) 대비 충족률 · 발주 포함 재고확보 */
+function sdSecured(r){return (+r.cur||0)+(+r.onOrder||0);}
+function sdPct(n,r){const t=sdTarget(r);return t>0?Math.round(n/t*100):null;}
+function sdPctHtml(n,r){const p=sdPct(n,r);if(p===null)return '<span style="color:var(--muted)">-</span>';
+  const col=p<100?'#dc2626':p<=150?'inherit':'#d97706';return `<span style="color:${col};font-weight:600">${p}%</span>`;}
+function sdFootHtml(rows){
+  const so=rows.reduce((t,x)=>t+(+x.orderQty||0),0),sc=rows.reduce((t,x)=>t+sdSecured(x)+(+x.orderQty||0),0);
+  return `<tr style="font-weight:700;background:#f8fafc"><td colspan="11" style="text-align:right">표시된 ${rows.length}개 합계(발주량 · 재고확보)</td><td class="n">${iN(so)}</td><td class="n">${iN(sc)}</td><td colspan="3"></td></tr>`;
 }
 function stockPatchRow(r){
   const sfx=stockSfx(r.supplier);
@@ -31599,9 +31624,17 @@ function stockPatchRow(r){
   const footEl=document.getElementById('stockFoot_'+sfx);
   if(footEl&&r.supplier==='베수비우스'){footEl.innerHTML=vsFootHtml(vsVisibleRows());}
   else if(footEl){
-    const rows=stockData.filter(x=>x.supplier===r.supplier);
-    const sumOrder=rows.reduce((s,x)=>s+(+x.orderQty||0),0);
-    const cell=footEl.querySelector('.n');if(cell)cell.textContent=iN(sumOrder);
+    if(r.supplier==='신동내화'){
+      const g=(i)=>document.getElementById(i+r.id);
+      const a1=g('stkSec_sd_');if(a1)a1.textContent=iN(sdSecured(r));
+      const a2=g('stkPct_sd_');if(a2)a2.innerHTML=sdPctHtml(sdSecured(r),r);
+      const a3=g('stkAll_sd_');if(a3)a3.innerHTML=iN(sdSecured(r)+(+r.orderQty||0))+' <span style="font-weight:400;font-size:10.5px">('+(sdPct(sdSecured(r)+(+r.orderQty||0),r)==null?'-':sdPct(sdSecured(r)+(+r.orderQty||0),r)+'%')+')</span>';
+      footEl.innerHTML=sdFootHtml(stockData.filter(x=>x.supplier===r.supplier));
+    }else{
+      const rows=stockData.filter(x=>x.supplier===r.supplier);
+      const sumOrder=rows.reduce((s,x)=>s+(+x.orderQty||0),0);
+      const cell=footEl.querySelector('.n');if(cell)cell.textContent=iN(sumOrder);
+    }
   }
   stockRefreshCards(r.supplier);
 }
@@ -31629,6 +31662,7 @@ async function autoSetStockTarget(sup){
   const months=sup==='베수비우스'?vsMonths():(STOCK_TARGET_MONTHS[sup]||3);
   const rows=stockData.filter(r=>r.supplier===sup);
   if(!rows.length){toast('품목이 없습니다');return;}
+  if(sup==='신동내화'){const n=await ensureSdTarget();renderStock(sup);toast('신동 적정재고는 예상사용량×'+(STOCK_TARGET_MONTHS['신동내화']||3)+'개월로 자동 계산됩니다'+(n?' ('+n+'건 맞춤)':' (이미 모두 일치)'));return;}
   const targets=rows.filter(r=>(+r.expUse||0)>0);
   if(!targets.length){alert('예상사용량이 입력된 품목이 없어 계산할 수 없습니다.\n먼저 예상사용량을 입력해 주세요.');return;}
   if(!confirm(`${sup} 적정재고를 예상사용량(월) × ${months}개월 기준으로 다시 계산할까요?\n\n대상 ${targets.length}/${rows.length}건 (예상사용량이 없는 품목은 제외)\n기존 적정재고 값은 새 값으로 덮어써집니다.`))return;
@@ -31668,7 +31702,7 @@ function renderStock(sup){
 
   const hint=document.getElementById('stockHint_'+sfx);
   if(hint)hint.textContent=sup==='신동내화'
-    ?'내화물 기본정보에 등록된 품목 중 신동내화가 취급하는 품목만 대상입니다. [📥 신동 엑셀 반영]은 정기 발주 검토 엑셀(전체 영업소 통합본)에서 품명·규격·배합비가 모두 같은 행을 찾아 현재고·기발주·예상사용량을 갱신합니다(배합비가 다르면 다른 품목으로 보며, 다른 영업소 품목은 건드리지 않음).'
+    ?'내화물 기본정보에 등록된 품목 중 신동내화가 취급하는 품목만 대상입니다. [📥 신동 엑셀 반영]은 정기 발주 검토 엑셀(전체 영업소 통합본)에서 품명·규격·배합비가 모두 같은 행을 찾아 현재고·기발주·예상사용량·발주량(발주합계 수량)을 갱신하고 적정재고(예상×3개월)를 다시 계산합니다(배합비가 다르면 다른 품목으로 보며, 다른 영업소 품목은 건드리지 않음).'
     :'베수비우스(Slide Gate) 품목입니다. 09/08 기준 재고관리 자료를 참고해 초기값을 반영했고, 내화물 기본정보와 모두 연동되어 있습니다.';
 
   const tb=document.getElementById('stockBody_'+sfx);if(!tb)return;
@@ -31690,22 +31724,25 @@ function renderStock(sup){
       <td>${specCell}</td>
       <td>${mixCell}</td>
       <td>${esc(stockUnit(r))}</td>
-      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.target||0}" oninput="editStock('${r.id}','target',this.value)"></td>
+      <td class="n"><input type="number" id="stkTgt_sd_${r.id}" readonly tabindex="-1" style="width:100%;text-align:right;background:#f1f5f9;color:#334155" value="${sdTarget(r)}" title="예상사용량 × ${STOCK_TARGET_MONTHS['신동내화']||3}개월 — 자동 계산"></td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.cur||0}" oninput="editStock('${r.id}','cur',this.value)"></td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.onOrder||0}" oninput="editStock('${r.id}','onOrder',this.value)"></td>
+      <td class="n" id="stkSec_sd_${r.id}" style="font-weight:600">${iN(sdSecured(r))}</td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.expUse||0}" oninput="editStock('${r.id}','expUse',this.value)"></td>
+      <td class="n" id="stkPct_sd_${r.id}">${sdPctHtml(sdSecured(r),r)}</td>
       <td class="n" id="stkDays_${sfx}_${r.id}" style="color:${stockDaysColor(r)};font-weight:600">${stockDaysLabel(r)}</td>
       <td class="n"><input type="number" style="width:100%;text-align:right;font-weight:700" value="${r.orderQty||0}" oninput="editStock('${r.id}','orderQty',this.value)"></td>
+      <td class="n" id="stkAll_sd_${r.id}" style="font-weight:700">${iN(sdSecured(r)+(+r.orderQty||0))} <span style="font-weight:400;font-size:10.5px">(${sdPct(sdSecured(r)+(+r.orderQty||0),r)==null?'-':sdPct(sdSecured(r)+(+r.orderQty||0),r)+'%'})</span></td>
       <td><input style="width:100%;font-size:11px" value="${esc(r.note||'')}" oninput="editStock('${r.id}','note',this.value)"></td>
       <td id="stkUpd_${sfx}_${r.id}" style="font-size:10.5px;color:var(--muted)">${esc(r.upd||'')}</td>
       <td><button class="btn danger del-rec sm" onclick="delStockRow('${r.id}')" style="padding:2px 6px">✕</button></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="${sup==='베수비우스'?21:13}" style="text-align:center;color:var(--muted);padding:20px">품목이 없습니다 · [＋ 품목 추가]로 등록하세요</td></tr>`;
+  }).join('')||`<tr><td colspan="${sup==='베수비우스'?21:16}" style="text-align:center;color:var(--muted);padding:20px">품목이 없습니다 · [＋ 품목 추가]로 등록하세요</td></tr>`;
 
   const foot=document.getElementById('stockFoot_'+sfx);
   if(foot&&sup==='베수비우스'){foot.innerHTML=vsFootHtml(rows);}
   else if(foot){const sumOrder=rows.reduce((s,r)=>s+(+r.orderQty||0),0);
-    foot.innerHTML=`<tr style="font-weight:700;background:#f8fafc"><td colspan="8" style="text-align:right">표시된 ${rows.length}개 합계(발주량)</td><td class="n">${iN(sumOrder)}</td><td colspan="3"></td></tr>`;}
+    foot.innerHTML=sdFootHtml(rows);}
 }
 /* ===== 베수비우스(Slide Gate) 발주량 검토 (2026-10-27, rpt148) =====
    · 현재 업체 발송 양식(품명·CODE·월 사용량·제강內 재고·창고재고·기발주·재고+기발주·발주량·제작요청·합계·업체용 비고) 열을 재고관리 화면에 추가
@@ -32054,6 +32091,8 @@ async function importStockXlsx(input){
     const nameCol=xlsxFindCol(row1,'품명'),specCol=xlsxFindCol(row1,'규격');
     const mixCol=xlsxFindCol(row1,'배합비');
     const expUseCol=xlsxFindCol(row1,'예상사용'),curColX=xlsxFindCol(row1,'상품재고'),onOrderCol=xlsxFindCol(row1,'기발주');
+    /* 2026-10-29 (rpt165): 엑셀 '발주합계'(PT수·수량·중량) 의 수량 = 발주량(확정)에 그대로 반영 */
+    let ordCol=-1;{const hc=xlsxFindCol(row1,'발주합계');if(hc>0){for(let c=hc;c<=hc+2;c++){if(String(row2[c]||'').trim()==='수량'){ordCol=c;break;}}if(ordCol<0)ordCol=hc+1;}}
     if(nameCol<0||specCol<0||expUseCol<0||curColX<0||onOrderCol<0){
       alert('엑셀 머리글을 인식하지 못했습니다.\n신동내화 정기 발주 검토 엑셀(품명·규격·예상사용·상품재고·기발주 항목이 있는 형식)이 맞는지 확인해 주세요.');
       input.value='';return;
@@ -32069,15 +32108,15 @@ async function importStockXlsx(input){
       const r=grid[rNo];const nm=r[nameCol];if(nm==null||String(nm).trim()==='')continue;
       const sp=r[specCol];const ns=String(nm).trim()+'|'+(sp==null?'':String(sp).trim());
       const mxRaw=mixCol>0&&r[mixCol]!=null?String(r[mixCol]).trim():'';
-      const v={expUse:+r[expUseCol]||0,cur:+r[curColX]||0,onOrder:+r[onOrderCol]||0};
+      const v={expUse:+r[expUseCol]||0,cur:+r[curColX]||0,onOrder:+r[onOrderCol]||0,ord:ordCol>0?(+r[ordCol]||0):0};
       const key=ns+'|'+norm(mxRaw);readRows++;
       const old=byKey[key];
       if(old){
-        if(old.expUse===v.expUse&&old.cur===v.cur&&old.onOrder===v.onOrder){if(v.expUse||v.cur||v.onOrder)dupSkip++;continue;}
-        old.expUse+=v.expUse;old.cur+=v.cur;old.onOrder+=v.onOrder;   // 값이 다른 같은 키 → 합산
+        if(old.expUse===v.expUse&&old.cur===v.cur&&old.onOrder===v.onOrder&&old.ord===v.ord){if(v.expUse||v.cur||v.onOrder||v.ord)dupSkip++;continue;}
+        old.expUse+=v.expUse;old.cur+=v.cur;old.onOrder+=v.onOrder;old.ord+=v.ord;   // 값이 다른 같은 키 → 합산
       }else{byKey[key]=Object.assign({mix:mxRaw},v);}
-      const a=byNS[ns]||(byNS[ns]={expUse:0,cur:0,onOrder:0,mixes:[],all:[]});
-      a.expUse+=v.expUse;a.cur+=v.cur;a.onOrder+=v.onOrder;
+      const a=byNS[ns]||(byNS[ns]={expUse:0,cur:0,onOrder:0,ord:0,mixes:[],all:[]});
+      a.expUse+=v.expUse;a.cur+=v.cur;a.onOrder+=v.onOrder;a.ord+=v.ord;
       if(a.all.indexOf(mxRaw||'(배합없음)')<0)a.all.push(mxRaw||'(배합없음)');
       if(v.expUse||v.cur||v.onOrder)a.mixes.push({mix:mxRaw,cur:v.cur,expUse:v.expUse,onOrder:v.onOrder});
     }
@@ -32098,7 +32137,7 @@ async function importStockXlsx(input){
           continue;
         }
         /* 우리 배합 행은 전부 0인데 같은 규격의 다른 배합에 값이 있으면 → 배합이 바뀐 것으로 보고 건너뜀 */
-        if(!s.expUse&&!s.cur&&!s.onOrder&&byNS[ns]&&byNS[ns].mixes.length){
+        if(!s.expUse&&!s.cur&&!s.onOrder&&!s.ord&&byNS[ns]&&byNS[ns].mixes.length){
           mixBad.push(label+' · 배합 '+(stockMix(r)||'-')+' 은 엑셀에서 0 → 값 있는 배합: '+byNS[ns].mixes.map(m=>(m.mix||'(없음)')+' 재고'+m.cur).join(', '));
           continue;
         }
@@ -32107,7 +32146,7 @@ async function importStockXlsx(input){
         if(!s){missList.push(label);continue;}
         noMix.push(label);
       }
-      if(r.cur===s.cur&&r.onOrder===s.onOrder&&r.expUse===s.expUse){same++;continue;}
+      if(r.cur===s.cur&&r.onOrder===s.onOrder&&r.expUse===s.expUse&&(ordCol<0||(+r.orderQty||0)===s.ord)&&(+r.target||0)===Math.round(s.expUse*(STOCK_TARGET_MONTHS['신동내화']||3))){same++;continue;}
       upd++;plan.push([r,s]);
     }
     const msg=`엑셀에서 ${readRows}개 행(품명·규격·배합비 기준)을 읽었습니다.\n\n`
@@ -32117,10 +32156,10 @@ async function importStockXlsx(input){
       +(noMix.length?`· 배합 미입력 → 품명·규격 전체 합산으로 반영 : ${noMix.length}건 (기본정보에 배합을 입력하세요)\n`:'')
       +(missList.length?`· 이번 엑셀에 없는 항목(값 유지) : ${missList.length}건\n`:'')
       +(dupSkip?`· 같은 값의 중복 행 제외 : ${dupSkip}건\n`:'')
-      +`\n다른 영업소 품목은 건드리지 않습니다. 현재고·기발주·예상사용량을 갱신할까요?\n(발주량·적정재고는 그대로 유지됩니다)`;
+      +`\n다른 영업소 품목은 건드리지 않습니다. 현재고·기발주·예상사용량`+(ordCol>0?'·발주량(엑셀 발주합계 수량)':'')+`을 갱신하고 적정재고(예상사용량×3개월)를 다시 계산합니다.`+(ordCol>0?'':`\n(이 엑셀에는 발주합계 열이 없어 발주량은 그대로 유지됩니다)`)+`\n갱신할까요?`;
     if(!confirm(msg)){input.value='';return;}
     for(const [r,s] of plan){
-      r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;r.upd=todayStr();
+      r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;if(ordCol>0)r.orderQty=s.ord;r.target=sdTarget(r);r.upd=todayStr();
       await putRec('stock',r);
     }
     flashSave();renderStock('신동내화');
@@ -32384,7 +32423,7 @@ async function fbReloadStore(store){
   else if(store==='eaf'){eafData=await txAll('eaf');try{eafNormTon();}catch(e){}}
   else if(store==='inv'){invData=await txAll('inv');}
   else if(store==='invin'){invInData=await txAll('invin');}
-  else if(store==='stock'){stockData=await txAll('stock');}
+  else if(store==='stock'){stockData=await txAll('stock');try{await ensureSdTarget();}catch(e){}}
   else if(store==='emp'){empData=await txAll('emp');
     /* 2026-09-21: Firebase/가져오기로 직원 명부가 (재)적재된 직후에도 서명 일괄반영을 다시 시도.
        최초 접속처럼 로컬이 비어있던 상태에서 로그인 시점의 loadAttend()가 빈 명단에 대해 먼저
@@ -37388,7 +37427,7 @@ function permPreview(){
     try{await autoCleanBareLadleNos();}catch(e){}
     await migrateVendor();try{await migrateBoardAbs();}catch(e){console.warn('migrateBoardAbs',e);}await loadSchedule();await loadBom();await bomSpecReconcile();try{plRestore();plUpdateSoon();}catch(e){}await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
-    try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();await ensureStockPgtFm7c();}catch(e){stockData=[];}
+    try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();await ensureStockPgtFm7c();try{await ensureSdTarget();}catch(e){}}catch(e){stockData=[];}
     await loadAttend();await loadHo();await loadPlanActual();
   }catch(err){document.getElementById('saveTxt').textContent='저장소 사용불가(미리보기)';document.getElementById('saveDot').style.background='#c2410c';}
   refreshLadle();refreshTundish();
