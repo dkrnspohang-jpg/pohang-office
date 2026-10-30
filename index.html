@@ -3918,7 +3918,7 @@ service cloud.firestore {
       <div class="toolrow" style="margin-top:6px">
         <button class="btn primary" onclick="dtkBizPrint()" title="A4 가로 · 인쇄 창에서 'PDF로 저장' 선택">🖨 인쇄 / PDF 저장</button>
         <button class="btn" onclick="spExportSumFor(dtkP())">📥 엑셀(포항영업소 양식)</button>
-        <button class="btn" onclick="spAutoCmBoth(dtkP())" title="사업계획 대비 실제 판매 수량·물량을 품목별로 비교해 증가·감소 품목을 COMMENT(실적·누적)에 자동 작성합니다">🤖 COMMENT 자동 작성 (사업계획 대비 품목)</button>
+        <button class="btn" onclick="spAutoCmBoth(dtkP())" title="사업계획 대비 생산량·래들 신축/보수 대수·전기로·턴디쉬 사용량 증감을 COMMENT(실적·누적)에 쓰고, 주요 ISSUE는 팀 업무 보드 현황을 설비별로 정리합니다">🤖 COMMENT·ISSUE 자동 작성</button>
         <span class="spacer"></span>
         <button class="btn" onclick="nav('salesperf')" title="요약표·COMMENT·ISSUE·실적 입력">✏ 판매실적분석에서 수정</button>
         <button class="btn" onclick="nav('nextfc')" title="차월·차분기 예상(계획) 입력">🔮 차월·차분기 예상 입력</button>
@@ -31586,80 +31586,83 @@ function spItemCmpRows(y,months,cum){
 }
 const mcN=(v,d)=>{const r=Math.round(v*Math.pow(10,d))/Math.pow(10,d);return r.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});};
 const mcS=(v,d)=>{const r=Math.round(v*Math.pow(10,d))/Math.pow(10,d);return (r>0?'+':'')+r.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});};
+/* 설비·보수 지표 기준 분류 — 품목을 "어떤 보수·조업 지표가 사용량을 좌우하는가"로 묶는다 */
+const MC_CAT={
+  LD_MAIN:{n:'래들 신축·보수(S/L·콘)',ord:1},EAF_PROD:{n:'전기로 벌크재(생산량 연동)',ord:2},TD_FUNC:{n:'턴디쉬 기능성 내화물(형강재)',ord:3},TD_GEN:{n:'턴디쉬 일반 축조재',ord:4},
+  EAF_WK:{n:'앙카허스(전기로 주간보수)',ord:5},EAF_REP:{n:'전기로 신축·마모장·EBT',ord:6},EAF_ELEC:{n:'로저전극(DONG-DC)',ord:7},LD_PERM:{n:'래들 영구장',ord:8},TD_PERM:{n:'턴디쉬 영구장',ord:9},X:{n:'계획 외·미분류',ord:10}};
+function mcEqOf(name,eq){
+  if(eq==='LD'||eq==='TD'||eq==='EAF')return eq;
+  const n=String(name||'');
+  if(/DONG-?DC|ANKER|앙카|SPRAY|MAGGUN|MAGRAM|올리빈|FM7C|SMC-?95|MCT-?18|ACT-?20|EBT|TMB/i.test(n))return 'EAF';
+  if(/HAU-?BS|AMC-?BS|MAC-?W|AMC-?B\b|PGT-?BT|AMC-?FB|CA-?180|CA-?160|ASC-?NS|PP[ -]?CONE/i.test(n))return 'LD';
+  if(/C-?52|롱노즐|SLIDE|GATE|TD |DCM|CNC|댐|DAM|PCB|AR-?MTNP|SES|TUNGUN|형강|S\/N/i.test(n))return 'TD';
+  return '';
+}
+function mcCatOf(name,eq){
+  const n=String(name||''),e=mcEqOf(n,eq);
+  if(/DONG-?DC/i.test(n))return 'EAF_ELEC';
+  if(e==='EAF'){if(/ANKER|앙카/i.test(n))return 'EAF_WK';if(/FM7C|SMC-?95|MCT-?18|ACT-?20|EBT|TMB|SLEEVE|PCB-US/i.test(n))return 'EAF_REP';return 'EAF_PROD';}
+  if(e==='LD'){if(/HAU-?BS|AMC-?BS/i.test(n))return 'LD_PERM';return 'LD_MAIN';}
+  if(e==='TD'){if(/영구|TC-?2|SK-?36|AL MORTAR|탕수연와A|루미보드/i.test(n))return 'TD_PERM';if(/C-?52|롱노즐|SLIDE|GATE|형강|S\/N|PCB-|AR-?MTNP|SES|BEAM|BLOOM|BLANK|NOZZLE|노즐|IMPACT|HOLE/i.test(n))return 'TD_FUNC';return 'TD_GEN';}
+  return 'X';
+}
+function spRojTimeline(y){
+  const Y=String(y),pl=[],ac=[];
+  for(let m=1;m<=12;m++){let P=null,A=null;try{P=bizplanPlanMetrics(m,Y);}catch(e){}try{A=bizplanActual(Y).months[m-1];}catch(e){}
+    if(P&&P.roj>0.05)pl.push(m);if(A&&A.roj>0)ac.push(m);}
+  return {pl,ac};
+}
 function spAutoCmText(p,blk){
   const ms=blk==='cum'?Array.from({length:Math.max.apply(null,spMonths(p))},(_,i)=>i+1):spMonths(p);
   const lab=blk==='cum'?(p.y+'년 1~'+Math.max.apply(null,ms)+'월 누적'):spLabel(p,true);
   const R=spItemCmpRows(p.y,ms,blk==='cum');
   if(!R.length)return null;
   const D0=spItemCmp(p.y,ms),msU=ms.filter(m=>D0.groups.some(g=>g.am[m].a>0));
-  // 요약표(동국제강) 수치 — 요약표와 동일한 계획/실적
-  let pa=0,pw=0,aa=0,aw=0;ms.forEach(m=>{const a=spAct(p.y,m,'dg'),l=spPlan(p.y,m,'dg');pa+=l.a;pw+=l.w;aa+=a.a;aw+=a.w;});
-  const prod=[`- ${lab} 동국제강 제강 판매 실적 ${mcN(aa,1)}백만원 · ${mcN(aw,1)}톤 (사업계획 ${mcN(pa,1)}백만원 · ${mcN(pw,1)}톤 대비 ${mcS(aa-pa,1)}백만원 · ${mcS(aw-pw,1)}톤${pa>0?' / 달성률 '+Math.round(aa/pa*100)+'%':''})`];
-  const up=R.filter(r=>r.da>=0.1||r.dw>=0.5),dn=R.filter(r=>r.da<=-0.1||r.dw<=-0.5);
-  const upX=up.filter(r=>!r.pl);
-  if(msU.length<ms.length)prod.push(`- ※ 품목별 비교는 입고 실적이 집계된 ${msU.join('·')}월 기준 (품목별 입고 내역이 없는 달은 제외)`);
-  prod.push(`- 품목별로는 계획 대비 증가 ${up.length}개(계획 외 출하 ${upX.length}개 포함) · 감소 ${dn.length}개 품목 (사업계획 연결 품목 기준 비교)`);
-  const trTxt=blk==='cum'?'최근 3개월 월평균이 직전 3개월 대비':'직전 3개월 월평균 대비';
-  const trendUp=R.filter(r=>r.trend!=null&&r.trend>=10&&r.aw>=0.5).sort((a,b)=>b.trend-a.trend).slice(0,3);
-  if(trendUp.length)prod.push(`- ${trTxt} 판매량 증가세 품목: ${trendUp.map(r=>r.name+' '+mcS(r.trend,0)+'%').join(' · ')}`);
-  // ── 설비·보수 지표(AI 분석): 품목 증감을 래들 해체·보수 / 전기로 주간보수·전극 교체 / 턴디쉬 대수와 연결 ──
-  const DR=spMtDrivers(p.y,msU),dv=(o,u)=>o?`${mcN1(o.a)}${u}(계획 ${mcN1(o.p)}${u}, ${mcS1(o.a-o.p)})`:'';
-  const EQ=[['LD','래들'],['TD','턴디쉬'],['EAF','전기로']];
-  const E={};EQ.forEach(e=>E[e[0]]={k:e[0],n:e[1],pw:0,aw:0,pa:0,aa:0,rows:[]});E.X={k:'X',n:'계획 외',pw:0,aw:0,pa:0,aa:0,rows:[]};
-  R.forEach(r=>{const e=E[r.eq]||E.X;e.pw+=r.pw;e.aw+=r.aw;e.pa+=r.pa;e.aa+=r.aa;e.rows.push(r);});
-  const eqLine=EQ.map(e=>E[e[0]]).concat(E.X.rows.length?[E.X]:[]).filter(e=>e.rows.length).map(e=>`${e.n}${e.k==='X'?'':'계'} ${mcS1(e.aa-e.pa)}백만원·${mcS1(e.aw-e.pw)}톤`).join(' / ');
-  prod.push(`- 설비별 판매 증감(품목 합산): ${eqLine}`);
-  const dl=[];
-  dl.push(`래들 해체(신축) ${dv(DR.ldnew,'대')}`);if(DR.sl.p||DR.sl.a)dl.push(`S/L보수 ${dv(DR.sl,'건')}`);if(DR.pp.p||DR.pp.a)dl.push(`콘보수 ${dv(DR.pp,'건')}`);if(DR.ldperm.p||DR.ldperm.a)dl.push(`래들 대수리 ${dv(DR.ldperm,'대')}`);
-  dl.push(`턴디쉬 150각 ${dv(DR.td150,'대')} · B/L/BB ${dv(DR.tdsec,'대')}`);if(DR.tdperm.p||DR.tdperm.a)dl.push(`턴디쉬 대수리 ${dv(DR.tdperm,'대')}`);
-  dl.push(`로저전극 교체 ${dv(DR.roj,'회')} · 발코니 ${dv(DR.bal,'회')}`);if(DR.wk.p||DR.wk.a)dl.push(`전기로 주간보수 ${dv(DR.wk,'회')}`);
-  dl.push(`제강 생산량 ${mcN(DR.prodA,0)}톤(계획 ${mcN(DR.prodP,0)}톤, ${mcS(DR.prodA-DR.prodP,0)}톤)`);
-  prod.push(`- 보수·조업 지표: ${dl.join(' · ')}`);
-  // 설비별 원인 해석
-  const nm=(rs,f,k)=>rs.filter(f).sort(k).slice(0,3).map(r=>r.name.replace(/\(.*?\)/g,'').trim()+' '+mcS1(r.dw)+'톤').join(', ');
-  const tag=(v,lab,u)=>({v:v.a-v.p,t:`${lab} ${mcN1(v.a)}${u}(계획 ${mcN1(v.p)}, ${mcS1(v.a-v.p)})`});
-  const drv={
-    LD:[tag(DR.ldnew,'래들 해체(신축)','대'),tag(DR.sl,'S/L보수','건'),tag(DR.pp,'콘보수','건'),tag(DR.ldperm,'래들 대수리','대')].filter((x,i)=>i===0||DR[['ldnew','sl','pp','ldperm'][i]].p||DR[['ldnew','sl','pp','ldperm'][i]].a),
-    TD:[tag(DR.td150,'턴디쉬 150각','대'),tag(DR.tdsec,'턴디쉬 B/L/BB','대'),tag(DR.tdperm,'턴디쉬 대수리','대')].filter((x,i)=>i<2||DR.tdperm.p||DR.tdperm.a),
-    EAF:[tag(DR.wk,'전기로 주간보수','회'),tag(DR.roj,'로저전극 교체','회'),tag(DR.bal,'발코니 보수','회')].filter((x,i)=>i>0||DR.wk.p||DR.wk.a)};
-  const base={LD:DR.ldnew.p,TD:DR.td150.p+DR.tdsec.p},cnt={LD:DR.ldnew.a-DR.ldnew.p,TD:DR.td150.a+DR.tdsec.a-DR.td150.p-DR.tdsec.p};
-  const why=(e,up_)=>{
-    const dwt=e.aw-e.pw,ds=drv[e.k]||[],ps=DR.prodA-DR.prodP;
-    const lst=up_?e.rows.filter(r=>r.dw>0.05):e.rows.filter(r=>r.dw<-0.05);
-    const top=nm(lst,()=>true,(a,b)=>up_?b.dw-a.dw:a.dw-b.dw);
-    if(e.k==='X')return `계획에 없던 품목 출하(${top||'-'}) — 사업계획 반영 여부 확인`;
-    const item=e.k==='LD'?'래들 내장재':e.k==='TD'?'턴디쉬 내화물':'전기로 내화물';
-    const all=ds.map(x=>x.t).join(' · ');
-    // 주 지표(래들=해체 신축 대수, 턴디쉬=150각+B/L/BB 대수, 전기로=전극교체+발코니+주간보수 횟수) 방향이 판매 증감과 같은지
-    const main=e.k==='EAF'?(DR.roj.a-DR.roj.p)+(DR.bal.a-DR.bal.p)+(DR.wk.a-DR.wk.p):cnt[e.k];
-    const same=up_?main>0.05:main<-0.05;
-    const aux=e.k==='LD'?[['S/L보수',DR.sl],['콘보수',DR.pp],['대수리',DR.ldperm]].filter(x=>x[1].p>0&&(up_?x[1].a-x[1].p>0.05:x[1].a-x[1].p<-0.05)):[];
-    let s;
-    if(same)s=`${all} → ${up_?'보수·해체 물량 증가':'보수·해체 물량 감소'}가 ${item}(${top}) 소요 ${up_?'증가':'감소'}의 직접 원인`;
-    else if(aux.length)s=`${all} → 해체 대수는 계획과 방향이 다르나 ${aux.map(x=>x[0]).join('·')} ${up_?'증가':'감소'}로 ${item}(${top}) ${up_?'증가':'감소'}`;
-    else s=`${all} — 해체·보수 대수와 방향이 달라 ${up_?'선구매·재고 확보·납기 앞당김':'출하 시기 이월·재고 소진'} 영향으로 보이며 확인 필요(${top})`;
-    if(e.k==='EAF'){
-      const ank=lst.filter(r=>/ANKER|앙카/i.test(r.name));
-      if(ank.length)s+=` · 앙카허스(DC-25)는 전기로 주간보수·로저전극 교체 때 쓰는 재료로 교체 ${mcN1(DR.roj.a)}회(계획 ${mcN1(DR.roj.p)})${DR.wk.p||DR.wk.a?'·주간보수 '+mcN1(DR.wk.a)+'회(계획 '+mcN1(DR.wk.p)+')':''} ${same?'증감과 연동':'와 방향이 달라 재고·선구매 여부 확인'}`;
-      if(Math.abs(ps)>=1)s+=` · 제강 생산량 ${mcS(ps,0)}톤(조업 CH ${mcS(ps/BIZPLAN_TON_PER_CH,0)}CH)${ps>0?'로 벌크재(SPRAY재·올리빈샌드 등) 소요 증가':'로 벌크재 소요 감소'}`;
-    }else if(base[e.k]>0.05&&Math.abs(cnt[e.k])>=0.05){
-      const per=e.pw/base[e.k],eff=cnt[e.k]*per;
-      s+=` · 대당 계획 소요 ${mcN1(per)}톤 기준 해체 대수 증감 효과 ${mcS1(eff)}톤, 나머지 ${mcS1(dwt-eff)}톤은 보수 물량·재고 등`;
+  const DR=spMtDrivers(p.y,msU),DRall=spMtDrivers(p.y,ms);
+  // ── 1) 제강 생산량: 사업계획 대비 실적 생산량(톤)만 비교 ──
+  const dP=DRall.prodA-DRall.prodP;
+  const prod=[`- ${lab} 제강 생산량 ${mcN(DRall.prodA,0)}톤 (사업계획 ${mcN(DRall.prodP,0)}톤 대비 ${mcS(dP,0)}톤${DRall.prodP>0?' · '+mcS(dP/DRall.prodP*100,1)+'%':''} ${dP>=0?'증가':'감소'})`];
+  // ── 2) 품목 → 설비·보수 지표 분류 ──
+  const C={};Object.keys(MC_CAT).forEach(k=>C[k]={k,rows:[],pw:0,aw:0,pa:0,aa:0});
+  R.forEach(r=>{const k=mcCatOf(r.name,r.eq),c=C[k];c.rows.push(r);c.pw+=r.pw;c.aw+=r.aw;c.pa+=r.pa;c.aa+=r.aa;});
+  Object.values(C).forEach(c=>{c.dw=c.aw-c.pw;c.da=c.aa-c.pa;});
+  const dv=(lab,o,u)=>`${lab} ${mcN1(o.a)}${u}(계획 ${mcN1(o.p)}${u}, ${Math.abs(o.a-o.p)<0.05?'계획 수준':mcS1(o.a-o.p)+u})`;
+  const has=o=>o&&(o.p>0.05||o.a>0.05);
+  const top=(c,up)=>c.rows.filter(r=>up?r.dw>0.05:r.dw<-0.05).sort((a,b)=>up?b.dw-a.dw:a.dw-b.dw).slice(0,2).map(r=>r.name.replace(/\(.*?\)/g,'').replace(/\s+/g,' ').trim()).join('·');
+  const amt=c=>`${mcS1(c.dw)}톤 · ${mcS1(c.da)}백만원`;
+  const cnt=a=>a.reduce((s,o)=>s+(o.a-o.p),0);
+  const RT=spRojTimeline(p.y);
+  const line=(c,up)=>{
+    const t=top(c,up),tt=t?` (주요 품목: ${t})`:'',w=up?'증가':'감소';
+    switch(c.k){
+      case 'LD_MAIN':{const L=[dv('래들 신축',DR.ldnew,'대')];if(has(DR.sl))L.push(dv('S/L보수',DR.sl,'건'));if(has(DR.pp))L.push(dv('콘보수',DR.pp,'건'));
+        const d=DR.ldnew.a-DR.ldnew.p+(DR.sl.p>0?DR.sl.a-DR.sl.p:0)+(DR.pp.p>0?DR.pp.a-DR.pp.p:0),same=up?d>0.05:d<-0.05;
+        return `- 사업계획 대비 ${L.join(' · ')}${same?' '+w:''} → 래들 신축·보수 내화물 사용량 ${amt(c)} ${w}${same?'':' (대수 증감과 방향이 달라 보수 패턴·재고 영향 확인)'}${tt}`;}
+      case 'EAF_PROD':{const same=(up?dP>0:dP<0);
+        return `- 제강 생산량 ${mcS(dP,0)}톤(조업 CH ${mcS(dP/BIZPLAN_TON_PER_CH,0)}CH)${same?(up?' 증가':' 감소')+'에 따른':'과 방향이 달라(재고·사용 시점 확인)'} 전기로 내화물(벌크재) 사용량 ${amt(c)} ${w}${tt}`;}
+      case 'TD_FUNC':{const L=[];if(has(DR.td150))L.push(dv('150각',DR.td150,'대'));if(has(DR.tdsec))L.push(dv('B/L/BB',DR.tdsec,'대'));
+        return `- 턴디쉬 기능성 내화물(형강재) 사용량 ${amt(c)} ${w}${L.length?' — 턴디쉬 '+L.join(' · '):''}${tt}`;}
+      case 'TD_GEN':{const L=[];if(has(DR.td150))L.push(dv('150각',DR.td150,'대'));if(has(DR.tdsec))L.push(dv('B/L/BB',DR.tdsec,'대'));
+        return `- 턴디쉬 일반 축조재 사용량 ${amt(c)} ${w}${L.length?' — 턴디쉬 '+L.join(' · '):''}${tt}`;}
+      case 'EAF_WK':return `- 전기로 주간보수·보수 시점 차이로 앙카허스(DC-25) 사용량 ${amt(c)} ${w}${has(DR.wk)?' ('+dv('주간보수',DR.wk,'회')+')':''}${tt}`;
+      case 'EAF_REP':return `- 전기로 신축·마모장 보수·EBT 내화물 사용량 ${amt(c)} ${w}${has(DR.bal)?' ('+dv('발코니 보수',DR.bal,'회')+')':''}${tt}`;
+      case 'EAF_ELEC':{const lo=Math.min.apply(null,ms)-3,hi=Math.max.apply(null,ms)+3,f=a=>a.filter(m=>m>=lo&&m<=hi);
+        return `- 로저전극 교체 사업계획 ${f(RT.pl).length?f(RT.pl).join('·')+'월':'해당 없음'} / 실제 ${f(RT.ac).length?f(RT.ac).join('·')+'월':'해당 없음'} (기간 내 ${dv('교체',DR.roj,'회')}) 교체 시점 차이로 전극(DONG-DC) 사용량 ${amt(c)} ${w}${tt}`;}
+      case 'LD_PERM':{const d=DR.ldperm.a-DR.ldperm.p,same=up?d>0.05:d<-0.05;
+        return `- 래들 영구장 보수 ${dv('',DR.ldperm,'대').trim()}${same?(up?' 증가로':' 감소로'):' —'} 영구장 내화물 사용량 ${amt(c)} ${w}${same?'':' (대수와 방향이 달라 보수 시점·재고 확인)'}${tt}`;}
+      case 'TD_PERM':{const d=DR.tdperm.a-DR.tdperm.p,same=up?d>0.05:d<-0.05;
+        return `- 턴디쉬 영구장 보수 ${dv('',DR.tdperm,'대').trim()}${same?(up?' 증가로':' 감소로'):' —'} 영구장 내화물 사용량 ${amt(c)} ${w}${same?'':' (대수와 방향이 달라 보수 시점·재고 확인)'}${tt}`;}
+      default:return `- 사업계획에 없던/미분류 품목 사용량 ${amt(c)} ${w} — 사업계획 반영 여부 확인${tt}`;
     }
-    return s;
   };
-  const eqRows=EQ.map(e=>E[e[0]]).concat(E.X.rows.length?[E.X]:[]).filter(e=>e.rows.length);
-  const mk=(e,up_)=>`- ${e.n}${e.k==='X'?' 품목':'계'} ${mcS1(e.aa-e.pa)}백만원 / ${mcS1(e.aw-e.pw)}톤 (계획 ${mcN1(e.pw)}톤 → 실적 ${mcN1(e.aw)}톤): ${why(e,up_)}`;
-  const incE=eqRows.filter(e=>e.aa-e.pa>=0.1||e.aw-e.pw>=0.5).sort((a,b)=>(b.aa-b.pa)-(a.aa-a.pa)).map(e=>mk(e,true));
-  const decE=eqRows.filter(e=>e.aa-e.pa<=-0.1||e.aw-e.pw<=-0.5).sort((a,b)=>(a.aa-a.pa)-(b.aa-b.pa)).map(e=>mk(e,false));
-  const q=r=>r.qtyOk&&(r.pq||r.aq)?` / 수량 ${mcN(r.aq,0)}${r.unit==='ST'?'SET':r.unit}(계획 ${mcN(r.pq,0)}, ${mcS(r.aq-r.pq,0)})`:'';
-  const tr=r=>r.trend!=null&&Math.abs(r.trend)>=10?` · ${trTxt} ${mcS(r.trend,0)}%${r.trend>0?' 증가세':' 감소세'}`:'';
-  const line=r=>`  · ${r.name}${r.unplanned?' (사업계획 외 출하)':''} : ${mcN(r.aw,1)}톤(계획 ${mcN(r.pw,1)}톤, ${mcS(r.dw,1)}톤${r.pw>0?' · '+mcS(r.dw/r.pw*100,0)+'%':''})${q(r)} · ${mcS(r.da,1)}백만원${tr(r)}`;
-  const inc=incE.concat(up.sort((a,b)=>b.da-a.da||b.dw-a.dw).slice(0,4).map(line));
-  const dec=decE.concat(dn.sort((a,b)=>a.da-b.da||a.dw-b.dw).slice(0,4).map(r=>line(r)+(r.aw===0&&r.pw>0?' — 출하 없음':'')));
-  return {prod:prod.join('\n'),inc:(incE.length||up.length?inc:['- 해당 사항 없음']).join('\n'),dec:(decE.length||dn.length?dec:['- 해당 사항 없음']).join('\n'),rows:R,lab,DR,E};
+  const ord=Object.values(C).sort((a,b)=>MC_CAT[a.k].ord-MC_CAT[b.k].ord);
+  const sig=c=>Math.abs(c.da)>=0.5||Math.abs(c.dw)>=0.5;
+  const inc=ord.filter(c=>sig(c)&&(c.da>0||(c.da===0&&c.dw>0))).map(c=>line(c,true));
+  const dec=ord.filter(c=>sig(c)&&c.da<0).map(c=>line(c,false));
+  const note=msU.length<ms.length?`- ※ 설비·품목 비교는 품목별 입고 실적이 집계된 ${msU.join('·')}월 기준`:'';
+  return {prod:prod.join('\n'),inc:(inc.length?inc:['- 해당 사항 없음']).concat(note&&inc.length?[note]:[]).join('\n'),dec:(dec.length?dec:['- 해당 사항 없음']).join('\n'),rows:R,lab,DR,C};
 }
-const mcN1=v=>mcN(v,1).replace(/\.0$/,''),mcS1=v=>mcS(v,1).replace(/\.0$/,'');
+const mcN1=v=>mcN(v,0),mcS1=v=>mcS(v,0);   // 2026-10-30: 대수·금액·중량 모두 정수(반올림)
 function spMtDrivers(y,months){
   const D={ldnew:{p:0,a:0},sl:{p:0,a:0},pp:{p:0,a:0},ldperm:{p:0,a:0},td150:{p:0,a:0},tdsec:{p:0,a:0},tdperm:{p:0,a:0},roj:{p:0,a:0},bal:{p:0,a:0},wk:{p:0,a:0},prodP:0,prodA:0};
   months.forEach(m=>{let o=null;try{o=spMtMonth(y,m);}catch(e){}if(!o)return;Object.keys(D).forEach(k=>{if(o[k]){D[k].p+=+o[k].p||0;D[k].a+=+o[k].a||0;}});D.prodP+=spProdPlan(y,m)||0;D.prodA+=spProdAct(y,m)||0;});
@@ -31678,8 +31681,49 @@ async function spAutoCmBoth(p){   // 월말 보고자료 화면: 당월(기간) 
   if(!a&&!b){toast('사업계획·입고 실적 데이터가 없어 자동 작성할 수 없습니다');return;}
   const cm=spCmGet(p),has=['cur','cum'].some(k=>cm[k]&&(cm[k].prod||cm[k].inc||cm[k].dec));
   if(has&&!confirm('실적·누적 실적 COMMENT에 이미 입력된 내용이 있습니다.\n사업계획 대비 품목별 자동 작성 내용으로 바꾸시겠습니까?'))return;
-  await spMut(spAnchorId(p),rr=>{rr.cm=rr.cm||{};if(a)rr.cm.cur={prod:a.prod,inc:a.inc,dec:a.dec};if(b)rr.cm.cum={prod:b.prod,inc:b.inc,dec:b.dec};});
-  toast('실적·누적 COMMENT를 사업계획 대비 품목 증감으로 자동 작성했습니다');spRenderAll();try{dtkRender();}catch(e){}
+  const iss=spBoardIssues(p),hasI=spIssues(p).some(o=>o.t||o.x);
+  const doI=iss.length&&(!hasI||confirm('이미 입력된 주요 ISSUE도 팀 업무 보드 현황(설비별)으로 바꾸시겠습니까?'));
+  await spMut(spAnchorId(p),rr=>{rr.cm=rr.cm||{};if(a)rr.cm.cur={prod:a.prod,inc:a.inc,dec:a.dec};if(b)rr.cm.cum={prod:b.prod,inc:b.inc,dec:b.dec};if(doI)rr.issues=iss;});
+  toast('실적·누적 COMMENT'+(doI?'와 주요 ISSUE':'')+'를 자동 작성했습니다');spRenderAll();try{dtkRender();}catch(e){}
+}
+
+/* ===== 주요 ISSUE 사항 — 팀 업무 보드 현황을 설비(분류)별로 정리 ===== */
+function spBoardIssues(p){
+  try{tbLoad();}catch(e){return [];}
+  const ms=spMonths(p),mn=Math.min.apply(null,ms),mx=Math.max.apply(null,ms),pad=m=>String(m).padStart(2,'0');
+  const from=p.y+'-'+pad(mn)+'-01',to=p.y+'-'+pad(mx)+'-31',today=todayStr();
+  const ST={doing:'진행',wait:'접수',done:'완료'},ord={doing:0,wait:1,done:2};
+  const gOf=l=>l.k==='posco'?'포스코':l.k==='mkt'?'시중':(l.g==='동국제강'?'제강':'기타');
+  const rows=[];
+  tbLanes().forEach(l=>{
+    if(l.k==='inter'||l.k==='safe'||l.k==='field')return;   // 영업 보고용 — 내부 업무·안전·현장은 제외
+    const cs=tbCards.filter(c=>!c.del&&c.ln===l.k&&(c.st!=='done'||((c.dn||'').slice(0,10)>=from&&(c.dn||'').slice(0,10)<=to)));
+    if(!cs.length)return;
+    cs.sort((a,b)=>(ord[a.st]-ord[b.st])||((b.pr||0)-(a.pr||0))||(((a.due||'9999')<(b.due||'9999'))?-1:1));
+    const n=k=>cs.filter(c=>c.st===k).length;
+    const x=cs.map(c=>{
+      const last=(c.lg||[]).filter(g=>!g.s).slice(-1)[0],late=tbIsLate(c)?tbDays(today,c.due):0;
+      const pr=c.pr===2?'[긴급] ':c.pr===1?'[중요] ':'';
+      let t=`- [${ST[c.st]||'접수'}] ${pr}${c.t}${c.cu?' ('+c.cu+')':''}`;
+      const d=[];
+      if(last&&last.x){const tx=String(last.x).replace(/\s+/g,' ');d.push('최근 '+String(last.d||'').slice(5,10).replace('-','/')+' '+(tx.length>60?tx.slice(0,60)+'…':tx));}
+      if(c.st==='done'&&c.dn)d.push('완료 '+c.dn.slice(5,10).replace('-','/'));
+      else if(c.due)d.push('기한 '+c.due.slice(5).replace('-','/')+(late>0?' · '+late+'일 지연':''));
+      if(c.hold)d.push('보류'+(c.hr?': '+c.hr:''));
+      const ow=tbOwners(c).filter(o=>o!=='포항사업소');if(ow.length)d.push('담당 '+ow.join(','));
+      return t+(d.length?' — '+d.join(' · '):'');
+    }).join('\n');
+    rows.push({g:gOf(l),t:l.n+' (진행 '+n('doing')+' · 접수 '+n('wait')+(n('done')?' · 완료 '+n('done'):'')+')',x});
+  });
+  return rows;
+}
+async function spIssueFromBoard(p0){
+  const p=p0||spCur(),rows=spBoardIssues(p);
+  if(!rows.length){toast('팀 업무 보드에 정리할 업무가 없습니다');return;}
+  const cur=spIssues(p);
+  if(cur.some(o=>(o.t||o.x))&&!confirm('이미 입력된 주요 ISSUE가 있습니다.\n팀 업무 보드 현황(설비별)으로 바꾸시겠습니까?'))return;
+  await spMut(spAnchorId(p),rr=>{rr.issues=rows;});
+  toast('팀 업무 보드 현황을 설비별 ISSUE '+rows.length+'건으로 정리했습니다');spRenderAll();try{if(typeof curView!=='undefined'&&curView==='dtkrpt')dtkRender();}catch(e){}
 }
 function spAutoCmBasis(p){
   const ms=spMonths(p),R=spItemCmpRows(p.y,ms);
@@ -38399,9 +38443,44 @@ function spProdAct(y,m){
   try{return getProd(spYm(y,m))||0;}catch(e){return 0;}
 }
 // ── 차월 예상 ────────────────────────────────────────
+/* 2026-10-30 (rpt176): 포스코·시중 업체별 차월 예상 — r.fc.vend[k][업체]={a,w}. 입력한 업체는 그 값, 입력 안 한 업체는 사업계획 값으로 합산 */
+function spVendSeed(k){return k==='rt'?BIZPLAN_MARKET_SEED:BIZPLAN_POSCO_SEED;}
+function spVendList(k){
+  const vn=k==='po1'?'포스코(기존)':k==='po2'?'포스코퓨처엠':null,L=[];
+  try{spVendSeed(k).forEach(it=>{if(it.del||(vn&&it.vendor!==vn))return;if(!L.includes(it.vendor))L.push(it.vendor);});}catch(e){}
+  try{((NFA._vend||{})[k]||[]).forEach(v=>{if(!L.includes(v))L.push(v);});}catch(e){}
+  return L;
+}
+function spVendPlan(y,m,k,v){try{const t=bizplanVendorSeedMonthly(spVendSeed(k),m-1,String(y),v);return {a:t.a/1e6,w:t.w/1000};}catch(e){return {a:0,w:0};}}
+function spVendFc(y,m,k){
+  const r=spRecGet(spYm(y,m)),vd=r&&r.fc&&r.fc.vend&&r.fc.vend[k];if(!vd)return null;
+  const has=v=>v!=null&&v!=='';let any=false,a=0,w=0;
+  spVendList(k).forEach(v=>{const p=spVendPlan(y,m,k,v),e=vd[v]||{};if(has(e.a)||has(e.w))any=true;a+=has(e.a)?+e.a:p.a;w+=has(e.w)?+e.w:p.w;});
+  return any?{a:a,w:w}:null;
+}
+async function nfVendSet(y,m,k,idx,f,val){
+  const v=spVendList(k)[idx];if(v==null)return;
+  await spMut(spYm(y,m),r=>{r.fc=r.fc||{};r.fc.vend=r.fc.vend||{};const vk=r.fc.vend[k]=r.fc.vend[k]||{};const e=vk[v]=vk[v]||{};
+    e[f]=(val===''?null:+val);if(!(e.a!=null&&e.a!=='')&&!(e.w!=null&&e.w!=='')){delete vk[v];}
+    if(!Object.keys(vk).length)delete r.fc.vend[k];
+    if(!Object.keys(r.fc.vend).length)delete r.fc.vend;
+    if(r.fc[k]){r.fc[k].a=null;r.fc[k].w=null;}});   // 업체별로 입력하면 합계 직접 입력값은 비움(마지막에 입력한 쪽이 우선)
+  spRenderAll();
+}
+function nfVendAdd(k){
+  const nm=(prompt('추가할 업체명을 입력하세요 ('+(k==='rt'?'시중':k==='po1'?'포스코-기존':'포스코-신규')+')\n사업계획에 없는 업체는 계획 0 에서 시작합니다.')||'').trim();
+  if(!nm)return;NFA._vend=NFA._vend||{};NFA._vend[k]=NFA._vend[k]||[];
+  if(spVendList(k).includes(nm)){toast('이미 있는 업체입니다');return;}
+  NFA._vend[k].push(nm);nfaSave();spRenderAll();toast(nm+' 업체를 추가했습니다 — 예상 금액·중량을 입력하세요');
+}
+function nfVendClear(y,t,n){
+  if(!confirm(spLabel({y:y,t:t,n:n})+' 포스코·시중 업체별 예상 입력값을 모두 지웁니다(사업계획 값으로 복귀).'))return;
+  (async()=>{for(const m of spMonths({y:y,t:t,n:n})){await spMut(spYm(y,m),r=>{if(r.fc)delete r.fc.vend;});}spRenderAll();toast('업체별 예상 입력을 지웠습니다');})();
+}
 function spFc(y,m,k){
   const r=spRecGet(spYm(y,m)),f=r&&r.fc&&r.fc[k],pl=spPlan(y,m,k);
   const has=v=>v!=null&&v!=='';
+  if(k==='po1'||k==='po2'||k==='rt'){const vv=spVendFc(y,m,k);if(vv)return {a:vv.a,w:vv.w,src:'수정(업체별)',pa:pl.a,pw:pl.w};}
   if(f&&(has(f.a)||has(f.w)))return {a:has(f.a)?+f.a:pl.a,w:has(f.w)?+f.w:pl.w,src:'수정',pa:pl.a,pw:pl.w};
   const py=m>1?y:y-1,pm=m>1?m-1:12,pr=spRecGet(spYm(py,pm)),lg=pr&&pr[k];
   if(lg&&(+lg.fa>0||+lg.fw>0))return {a:+lg.fa>0?+lg.fa:pl.a,w:+lg.fw>0?+lg.fw:pl.w,src:'수정(전월 입력)',pa:pl.a,pw:pl.w};
@@ -38411,7 +38490,7 @@ function spFc(y,m,k){
 }
 function spProdFc(y,m){const r=spRecGet(spYm(y,m)),v=r&&r.fc&&r.fc.prod;if(v!=null&&v!=='')return {v:+v,src:'수정'};return {v:spProdPlan(y,m),src:'사업계획'};}
 async function spSetFc(y,m,k,f,val){
-  await spMut(spYm(y,m),r=>{r.fc=r.fc||{};if(k==='prod'){r.fc.prod=(val===''?null:+val);}else{r.fc[k]=r.fc[k]||{};r.fc[k][f]=(val===''?null:+val);}});
+  await spMut(spYm(y,m),r=>{r.fc=r.fc||{};if(k==='prod'){r.fc.prod=(val===''?null:+val);}else{r.fc[k]=r.fc[k]||{};r.fc[k][f]=(val===''?null:+val);if(r.fc.vend&&r.fc.vend[k]){delete r.fc.vend[k];if(!Object.keys(r.fc.vend).length)delete r.fc.vend;}}});
   spRenderAll();
 }
 async function spResetFc(y,t,n){
@@ -38733,7 +38812,7 @@ function spRenderSum(){
   const ta=(blk,fld,val,ph)=>`<textarea style="width:100%;min-height:62px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;font-family:inherit" placeholder="${ph}" onchange="spSetCm('${blk}','${fld}',this.value)">${esc(val)}</textarea>`;
   const col=(blk,title)=>`<div style="flex:1;min-width:250px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="font-size:12.5px;font-weight:800;margin-bottom:6px;color:#1d4ed8">${title}</div>`
     +(blk==='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="nfWriteComments(spNext(spCur()))" title="사업계획 대비 평균 수명·가동 래들 패턴으로 증감 분석 문구를 자동 작성합니다">🤖 자동 작성</button></div>`:'')
-    +(blk!=='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="spAutoCm('${blk}')" title="사업계획 대비 실제 판매 수량·물량을 품목별로 비교해 증가·감소 품목을 자동 작성합니다">🤖 자동 작성 (사업계획 대비 품목)</button></div>`:'')
+    +(blk!=='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="spAutoCm('${blk}')" title="사업계획 대비 실제 판매 수량·물량을 품목별로 비교해 증가·감소 품목을 자동 작성합니다">🤖 자동 작성 (사업계획 대비)</button></div>`:'')
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted)">● 제강 생산량</div>${ta(blk,'prod',cm[blk].prod,'- 생산량 +0톤 증가 …')}`
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:6px">● 증가요인</div>${ta(blk,'inc',cm[blk].inc,'- 래들 S/L 보수 물량 증가 +00백 …')}`
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:6px">● 감소요인</div>${ta(blk,'dec',cm[blk].dec,'- 열간보수재 다원화 비율 조정 -00백 …')}</div>`;
@@ -38743,7 +38822,7 @@ function spRenderSum(){
     +`<td><input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px" value="${esc(o.t||'')}" onchange="spIssueSet(${i},'t',this.value)"></td>`
     +`<td><textarea style="width:100%;min-height:40px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px;font-family:inherit" onchange="spIssueSet(${i},'x',this.value)">${esc(o.x||'')}</textarea></td>`
     +`<td><button class="btn sm" onclick="spIssueDel(${i})">✕</button></td></tr>`;});
-  it+=`</table><div style="margin-top:6px"><button class="btn sm" onclick="spIssueAdd()">＋ ISSUE 행 추가</button></div>`;
+  it+=`</table><div style="margin-top:6px"><button class="btn sm" onclick="spIssueAdd()">＋ ISSUE 행 추가</button> <button class="btn sm primary" onclick="spIssueFromBoard()" title="팀 업무 보드의 진행·접수 업무와 이번 기간 완료 업무를 설비(분류)별로 정리해 ISSUE에 넣습니다">🤖 팀 업무 보드에서 설비별 자동 정리</button></div>`;
   box.innerHTML=`<div class="subhead">● 요약 (단위: 백만원 · 중량 톤) <span class="hint">동국제강 실적 = [내화물 원단위] 입고내역(매출합계 포함+직매출) 자동 · 포스코·시중·축로 = [실적 입력] 탭에서 직접 입력 · 차월 예상 = [차월 예상실적] 화면 값</span></div>`
     +`<div class="tablewrap">${spSumTbl(p,false)}</div>`
     +`<div class="xl-legend"><b>색상 안내</b><i style="background:#bdd7ee;color:#1f3864">계획</i><i style="background:#c6e0b4;color:#274e13">실적</i><i style="background:#f8cbad;color:#833c0b">예상</i><span>달성율 →</span><i style="background:#c6efce;color:#006100">100% 이상</i><i style="background:#ffeb9c;color:#7f4f00">90~99%</i><i style="background:#ffc7ce;color:#9c0006">90% 미만</i><i style="background:#f2f2f2;color:#7f7f7f">0% (미입력)</i></div>`
@@ -38934,7 +39013,7 @@ function nfPrev(q){
   return q.n>1?{y:q.y,t:'h',n:1}:{y:q.y-1,t:'h',n:2};
 }
 function nfFmt1(v){return (Math.round(v*10)/10).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1});}
-function nfSg(v,d){const r=Math.round(v*(d===0?1:10))/(d===0?1:10);return (r>0?'+':'')+r.toLocaleString(undefined,{minimumFractionDigits:d===0?0:1,maximumFractionDigits:d===0?0:1});}
+function nfSg(v,d){const r=Math.round(v*(d===0?1:10))/(d===0?1:10)+0;return (r>0?'+':'')+r.toLocaleString(undefined,{minimumFractionDigits:d===0?0:1,maximumFractionDigits:d===0?0:1});}
 // ── 래들: 평균 해체수명 · 가동 래들 · 시뮬레이션 ──
 function nfLadleLife(y){
   const a=bizplanActualAvgLife('ladle',12),pl=bizplanSchedCfg(String(y)).life.ld;
@@ -39042,10 +39121,14 @@ function nfMonth(y,m){
     if(!P||!(P.ch>0))return null;
     const prodF=spProdFc(y,m).v,prodP=spProdPlan(y,m),CHf=prodF/BIZPLAN_TON_PER_CH,CHp=P.ch,rk=CHf/CHp;
     const L=nfLadleLife(y),lt=nfLadleMonth(y,m),eaf=nfEafMonth(y,m),T=nfTdLife(y);
-    const ldAvg=CHf/L.l,ld=lt.ok?lt.n:ldAvg;
+    const ldAvg=CHf/L.l,ld=lt.ok?lt.n:(nfaRound()?Math.round(ldAvg):ldAvg);
     const slP=spPatCnt('ladle',/^SL/,y,m),coneP=spPatCnt('ladle',/콘보수|CONE/i,y,m,/^SL/);
     const f150=T.a150?T.p150/T.a150:1,fSec=T.aSec?T.pSec/T.aSec:1;
-    const td150=P.td150*rk*f150,tdSec=P.tdsec*rk*fSec;
+    let td150=P.td150*rk*f150,tdSec=P.tdsec*rk*fSec;
+    {const nr=NFA[nfYm(y,m)]||{},hR=nfaHas(nr.pR),hS=nfaHas(nr.pS);
+     if(hR||hS){const pR=hR?+nr.pR:Math.max(0,prodF-(+nr.pS||0)),pS=hS?+nr.pS:Math.max(0,prodF-(+nr.pR||0));   // 철근/형강 생산량 ÷ 140톤/CH ÷ 수명 = 턴디쉬 대수
+       td150=pR/BIZPLAN_TON_PER_CH/(T.a150||T.p150);tdSec=pS/BIZPLAN_TON_PER_CH/(T.aSec||T.pSec);}
+     if(nfaRound()){td150=Math.round(td150);tdSec=Math.round(tdSec);}}
     const roj=eaf.ok?eaf.roj.n:P.roj,bal=eaf.ok?eaf.bal.n:P.bal;
     const pm=nfPlanMoney(y,m),pl=spPlan(y,m,'dg');
     const tA=pm.LD.a+pm.TD.a+pm.EAF.a,tW=pm.LD.w+pm.TD.w+pm.EAF.w;
@@ -39097,26 +39180,25 @@ function nfRunTable(q){
     const rem=Math.max(0,L.l-o.camp),days=rate>0?Math.ceil(rem/rate):null,end=days==null?'':nfAddDays(asOf,days);
     return {no:o.no,vendor:o.vendor,camp:o.camp,rem:rem,end:end,inP:!!end&&end>=S&&end<=E,over:o.camp>=L.l};})};
 }
-// 증가·감소 요인 자동 문구
+// 증가·감소 요인 자동 문구 — 월말 보고 COMMENT와 같은 방식(생산량 → 래들 신축·보수 대수 → 전기로 → 턴디쉬)
 function nfAnalysis(q){
   const D=nfPeriod(q);if(!D)return null;
-  const per=spLabel(q),d0=v=>Math.round(v).toLocaleString(),dd=D.prodF-D.prodP;
-  const prod=[`- ${per} 제강 생산량 ${d0(D.prodF)}톤 예상 (사업계획 ${d0(D.prodP)}톤 대비 ${nfSg(dd,0)}톤${D.prodP>0?', '+nfSg(dd/D.prodP*100,1)+'%':''})`,
-              `- 조업 CH ${d0(D.CHf)}CH (계획 ${d0(D.CHp)}CH) · 래들 평균 해체수명 ${D.L.actual!=null?nfFmt1(D.L.actual):'-'}CH (사업계획 기준 ${D.L.plan}CH, 최근 12개월 ${D.L.n}건)`];
-  if(D.ok)prod.push(`- 동국제강 제강 예상 매출 ${nfFmt1(D.a)}백만원 (계획 ${nfFmt1(D.pa)}백만원 대비 ${nfSg(D.a-D.pa,1)}백만원)`);
+  const per=spLabel(q),d0=v=>Math.round(v).toLocaleString(),dd=D.prodF-D.prodP,F1=nfFx(),DD=nfaRound()?0:1;
+  const prod=[`- ${per} 제강 생산량 ${d0(D.prodF)}톤 예상 (사업계획 ${d0(D.prodP)}톤 대비 ${nfSg(dd,0)}톤${D.prodP>0?' · '+nfSg(dd/D.prodP*100,1)+'%':''} ${dd>=0?'증가':'감소'})`];
+  try{const mj=spMonths(q).filter(m=>nfaMajorOn(q.y,m));
+    if(mj.length){const open=mj.filter(m=>{const r=NFA[nfYm(q.y,m)]||{};return !(r.p&&Object.keys(r.p).length)&&!nfaHas(r.wk)&&!nfaHas(r.roj)&&!nfaHas(r.bal);});
+      prod.push(`- ※ ${mj.join('·')}월 대보수 예정 — ${open.length?open.join('·')+'월은 보수 이벤트(영구장·대수리·주간보수·로저전극·발코니) 미입력 상태로 사업계획 월 대수 적용 중 → 활동량 계획에서 직접 입력 필요':'보수 이벤트를 직접 입력해 반영'}`);}}catch(e){}
   const items=[];
-  const ldNote=()=>{
-    const e=[];e.push(`생산량 ${nfSg(D.ld.eProd,1)}대`);e.push(`수명 ${nfSg(D.ld.eLife,1)}대`);if(D.ld.pat)e.push(`가동패턴 ${nfSg(D.ld.ePat,1)}대`);
-    return `래들 해체(신축) ${nfFmt1(D.ld.f)}대 예상 (계획 ${nfFmt1(D.ld.p)}대, ${nfSg(D.ld.f-D.ld.p,1)}대 : ${e.join(' · ')})`+(D.ld.ends.length?` — 수명 도달 예상 ${[...new Set(D.ld.ends)].join('·')}`:'');
-  };
   if(D.ok){
-    items.push({a:D.dA.LD,t:ldNote()+((D.sl.p||D.sl.f)?`; S/L보수 ${nfFmt1(D.sl.f)}건(계획 ${nfFmt1(D.sl.p)})`:'')+((D.cone.p||D.cone.f)?` · 콘보수 ${nfFmt1(D.cone.f)}건(계획 ${nfFmt1(D.cone.p)})`:'')});
-    items.push({a:D.dA.TD,t:`턴디쉬 ${nfFmt1(D.td150.f+D.tdSec.f)}대 예상 (계획 ${nfFmt1(D.td150.p+D.tdSec.p)}대 : 150각 ${nfFmt1(D.td150.f)}·B/L/BB ${nfFmt1(D.tdSec.f)}${D.T.a150?', 150각 평균수명 '+nfFmt1(D.T.a150)+'CH':''})`});
-    items.push({a:D.dA.EAF,t:`전기로 조업 CH ${nfSg(D.CHf-D.CHp,0)}CH 반영 (로저전극 ${nfFmt1(D.roj.f)}회·발코니 ${nfFmt1(D.bal.f)}회 예상 / 계획 ${nfFmt1(D.roj.p)}·${nfFmt1(D.bal.p)}회)`});
+    const e=[];e.push(`생산량 ${nfSg(D.ld.eProd,DD)}대`);e.push(`수명 ${nfSg(D.ld.eLife,DD)}대`);if(D.ld.pat)e.push(`가동패턴 ${nfSg(D.ld.ePat,DD)}대`);
+    const ldDiff=D.ld.f-D.ld.p,sl=(D.sl.p||D.sl.f)?` · S/L보수 ${F1(D.sl.f)}건(계획 ${F1(D.sl.p)}건, ${nfSg(D.sl.f-D.sl.p,DD)}건)`:'',cn=(D.cone.p||D.cone.f)?` · 콘보수 ${F1(D.cone.f)}건(계획 ${F1(D.cone.p)}건, ${nfSg(D.cone.f-D.cone.p,DD)}건)`:'';
+    items.push({a:D.dA.LD,t:`사업계획 대비 래들 신축 ${F1(D.ld.f)}대 예상(계획 ${F1(D.ld.p)}대, ${nfSg(ldDiff,DD)}대 : ${e.join(' · ')})${sl}${cn}${D.ld.ends.length?` · 수명 도달 예상 ${[...new Set(D.ld.ends)].join('·')}`:''} → 래들 신축·보수 내화물 사용량`});
+    items.push({a:D.dA.EAF,t:`제강 생산량 ${Math.abs(dd)<1?'계획 수준에 따른':nfSg(dd,0)+'톤(조업 CH '+nfSg(D.CHf-D.CHp,0)+'CH) '+(dd>0?'증가':'감소')+'에 따른'} 전기로 내화물 사용량 (로저전극 ${F1(D.roj.f)}회·발코니 ${F1(D.bal.f)}회 예상 / 계획 ${F1(D.roj.p)}·${F1(D.bal.p)}회)`});
+    items.push({a:D.dA.TD,t:`턴디쉬 기능성 내화물(형강재)·축조재 ${F1(D.td150.f+D.tdSec.f)}대 예상 (계획 ${F1(D.td150.p+D.tdSec.p)}대 : 150각 ${F1(D.td150.f)}·B/L/BB ${F1(D.tdSec.f)}${D.T.a150?', 150각 평균수명 '+F1(D.T.a150)+'CH':''}) 사용량`});
   }
-  const inc=items.filter(i=>i.a>0.05).sort((x,y)=>y.a-x.a).map(i=>`- ${i.t} : ${nfSg(i.a,1)}백만원`);
-  const dec=items.filter(i=>i.a<-0.05).sort((x,y)=>x.a-y.a).map(i=>`- ${i.t} : ${nfSg(i.a,1)}백만원`);
-  const flat=items.filter(i=>Math.abs(i.a)<=0.05).map(i=>`- ${i.t} : 변동 없음`);
+  const inc=items.filter(i=>i.a>(DD?0.05:0.5)).sort((x,y)=>y.a-x.a).map(i=>`- ${i.t} ${nfSg(i.a,DD)}백만원 증가`);
+  const dec=items.filter(i=>i.a<-(DD?0.05:0.5)).sort((x,y)=>x.a-y.a).map(i=>`- ${i.t} ${nfSg(i.a,DD)}백만원 감소`);
+  const flat=items.filter(i=>Math.abs(i.a)<=(DD?0.05:0.5)).map(i=>`- ${i.t} 변동 없음`);
   return {D:D,prod:prod.join('\n'),inc:(inc.length?inc:['- 해당 사항 없음']).join('\n'),dec:(dec.concat(flat).length?dec.concat(flat):['- 해당 사항 없음']).join('\n')};
 }
 function nfAutoToggle(on){NF_AUTO_ON=!!on;try{localStorage.setItem('dgrns_nf_auto',on?'1':'0');}catch(e){}nfClear();spRenderAll();}
@@ -39131,9 +39213,9 @@ function nfAutoHtml(q){
   const A=nfAnalysis(q),sty='border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#f8fbff';
   const tog=`<label style="font-size:12px;font-weight:700"><input type="checkbox" ${NF_AUTO_ON?'checked':''} onchange="nfAutoToggle(this.checked)"> 수명·가동패턴 자동 예상 사용 <span style="font-weight:400;color:var(--muted)">(끄면 사업계획 기본값)</span></label>`;
   if(!A||!A.D){return `<div style="${sty}"><div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-bottom:6px">🤖 자동 예상 (사업계획 대비 평균 수명·가동 패턴)</div>${tog}<div style="margin-top:8px;font-size:12px;color:var(--muted)">이 기간은 사업계획 월별 데이터가 없어 자동 예상을 만들 수 없습니다.</div></div>`;}
-  const D=A.D,N1=nfFmt1,cell=(v,s)=>`<td class="n"${s?` style="${s}"`:''}>${v}</td>`;
+  const D=A.D,DD=nfaRound()?0:1,N1=nfFx(),cell=(v,s)=>`<td class="n"${s?` style="${s}"`:''}>${v}</td>`;
   const dc=(v,d)=>`<td class="n" style="${spCls(v)}">${v===null||Math.abs(v)<(d===0?0.5:0.05)?'-':nfSg(v,d)}</td>`;
-  const row=(lab,p,f,dec,amt,note,sub)=>`<tr><td style="${sub?'padding-left:22px;color:#475569;':'font-weight:700;'}">${lab}</td>${cell(dec===0?Math.round(p).toLocaleString():N1(p))}${cell(dec===0?Math.round(f).toLocaleString():N1(f),'font-weight:700')}${dc(f-p,dec)}${amt==null?'<td></td>':dc(amt,1)}<td style="font-size:11px;color:var(--muted)">${note||''}</td></tr>`;
+  const row=(lab,p,f,dec0,amt,note,sub)=>{const dec=dec0===0?0:DD;return `<tr><td style="${sub?'padding-left:22px;color:#475569;':'font-weight:700;'}">${lab}</td>${cell(dec===0?Math.round(p).toLocaleString():N1(p))}${cell(dec===0?Math.round(f).toLocaleString():N1(f),'font-weight:700')}${dc(f-p,dec)}${amt==null?'<td></td>':dc(amt,DD)}<td style="font-size:11px;color:var(--muted)">${note||''}</td></tr>`;};
   let t=`<table class="bomtbl" style="min-width:auto"><tr><th>항목</th><th class="n">사업계획</th><th class="n">예상</th><th class="n">증감</th><th class="n">증감 금액(백만원)</th><th>산출 근거</th></tr>`;
   t+=row('제강 생산량(톤)',D.prodP,D.prodF,0,null,'[예상 생산량] 입력값(미입력 시 사업계획)');
   t+=row('조업 CH',D.CHp,D.CHf,0,null,`생산량 ÷ ${BIZPLAN_TON_PER_CH}톤/CH`);
@@ -39149,15 +39231,15 @@ function nfAutoHtml(q){
   t+=row('전기로 로저전극(회)',D.roj.p,D.roj.f,1,D.ok?D.dA.EAF:null,'전극 교체 후 누적 CH ÷ 최근 6회 평균수명 (금액은 조업 CH 비)');
   t+=row('전기로 발코니(회)',D.bal.p,D.bal.f,1,null,'동일 방식');
   if(D.ok){
-    t+=`<tr style="background:#eef2f6;font-weight:800"><td>동국제강 제강 예상 매출(백만원)</td>${cell(N1(D.pa))}${cell(N1(D.a))}${dc(D.a-D.pa,1)}${dc(D.a-D.pa,1)}<td style="font-size:11px;font-weight:400;color:var(--muted)">래들+턴디쉬+전기로 증감 합계</td></tr>`;
-    t+=`<tr style="background:#eef2f6;font-weight:800"><td>동국제강 제강 예상 중량(톤)</td>${cell(N1(D.pw))}${cell(N1(D.w))}${dc(D.w-D.pw,1)}<td></td><td></td></tr>`;
+    t+=`<tr style="background:#eef2f6;font-weight:800"><td>동국제강 제강 예상 매출(백만원)</td>${cell(N1(D.pa))}${cell(N1(D.a))}${dc(D.a-D.pa,DD)}${dc(D.a-D.pa,DD)}<td style="font-size:11px;font-weight:400;color:var(--muted)">래들+턴디쉬+전기로 증감 합계</td></tr>`;
+    t+=`<tr style="background:#eef2f6;font-weight:800"><td>동국제강 제강 예상 중량(톤)</td>${cell(N1(D.pw))}${cell(N1(D.w))}${dc(D.w-D.pw,DD)}<td></td><td></td></tr>`;
   }
   t+='</table>';
   const R=nfRunTable(q);
   let rt=`<table class="bomtbl" style="min-width:auto"><tr><th>래들</th><th>업체</th><th class="n">현재 누적 CH</th><th class="n">평균수명 대비</th><th class="n">잔여 CH</th><th>해체 도래 예상</th><th>예상 기간 내</th></tr>`;
   R.rows.forEach(r=>{rt+=`<tr><td style="font-weight:700">${esc(r.no)}</td><td>${esc(r.vendor||'')}</td>${cell(Math.round(r.camp))}${cell(Math.round(r.camp/R.L.l*100)+'%',r.over?'color:#c81e1e;font-weight:700':'')}${cell(Math.round(r.rem))}<td>${r.end?esc(r.end.slice(5).replace('-','/'))+' 경':'-'}</td><td style="text-align:center;${r.inP?'background:#fef08a;font-weight:700':''}">${r.inP?'● 해당':''}</td></tr>`;});
   rt+='</table>';
-  const concl=D.ok?`<b>${esc(spLabel(q))}</b> 동국제강 제강 예상 매출은 <b>${N1(D.a)}백만원</b>으로 사업계획(${N1(D.pa)}백만원) 대비 <b style="${spCls(D.a-D.pa)}">${nfSg(D.a-D.pa,1)}백만원</b>입니다. 래들 해체 <b>${N1(D.ld.f)}대</b>(계획 ${N1(D.ld.p)}대 ${nfSg(D.ld.f-D.ld.p,1)}대) — 생산량 ${nfSg(D.ld.eProd,1)}대 · 평균수명 ${nfSg(D.ld.eLife,1)}대 · 가동패턴 ${nfSg(D.ld.ePat,1)}대.`
+  const concl=D.ok?`<b>${esc(spLabel(q))}</b> 동국제강 제강 예상 매출은 <b>${N1(D.a)}백만원</b>으로 사업계획(${N1(D.pa)}백만원) 대비 <b style="${spCls(D.a-D.pa)}">${nfSg(D.a-D.pa,DD)}백만원</b>입니다. 래들 해체 <b>${N1(D.ld.f)}대</b>(계획 ${N1(D.ld.p)}대 ${nfSg(D.ld.f-D.ld.p,DD)}대) — 생산량 ${nfSg(D.ld.eProd,DD)}대 · 평균수명 ${nfSg(D.ld.eLife,DD)}대 · 가동패턴 ${nfSg(D.ld.ePat,DD)}대.`
     :`<b>${esc(spLabel(q))}</b> 래들 해체 <b>${N1(D.ld.f)}대</b> 예상(계획 ${N1(D.ld.p)}대).`;
   return `<div style="${sty}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#1d4ed8">🤖 자동 예상 — 사업계획 대비 평균 수명 · 현재 가동 래들 패턴</div><span style="flex:1"></span>${tog}</div>`
     +`<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">${concl}</div>`
@@ -39178,11 +39260,25 @@ const NFA_KEY='dgrns_nfact';
 let NFA=(function(){try{return JSON.parse(localStorage.getItem(NFA_KEY)||'{}')||{};}catch(e){return {};}})();
 function nfaSave(){try{localStorage.setItem(NFA_KEY,JSON.stringify(NFA));}catch(e){}try{nfClear();}catch(e){}try{if(typeof bizplanSchedClear==='function')bizplanSchedClear();}catch(e){}}
 const nfaHas=v=>v!=null&&v!=='';
-function nfaRound(){return !!(NFA._opt&&NFA._opt.round===1);}
+function nfaRound(){return !(NFA._opt&&NFA._opt.round===0);}   // 2026-10-30: 기본값 = 정수(반올림). 끄려면 체크 해제
+const nfI=v=>Math.round(v).toLocaleString();
+const nfFx=()=>nfaRound()?nfI:nfFmt1;
 function nfaMore(){return !!(NFA._opt&&NFA._opt.more);}
 function nfaWkPlan(y,m){const r=spRecGet(spYm(y,m)),w=r&&r.wk;return (w&&+w.p>0)?+w.p:Math.max(1,Math.round(nfDim(y,m)/7));}
 const NFA_MAIN={ladle:['NEW','CONE','SL_P1','PERM_ALL','SEMI_PERM','RECY1'],tundish:['TD150_GEN','TDBLBB_GEN','TD150_PERM','TDBLBB_PERM','TD_PERM'],eaf:['EAF_WEAR','EAF_NEW']};
 const NFA_LIFE_MAX=400; // 기준수명이 이 값 이하인 패턴만 "CH÷수명" 자동 계산(그 이상은 이벤트 입력형: 전기로 마모장 1,800CH 등)
+/* 대보수 월: 팀 업무 보드의 '대보수' 카드(미완료) 기한월 → 없으면 2026년 11~12월(현장 계획). 월별로 직접 체크/해제 가능(NFA[ym].mj) */
+function nfaMajorAuto(y,m){
+  const set=nfCached('major|'+y,function(){
+    const S={};
+    try{tbLoad();(tbCards||[]).forEach(c=>{if(c.del||c.st==='done'||['posco','mkt','field','inter','safe'].includes(c.ln))return;if(!/대보수|대수선|대형\s*보수/.test(String(c.t||'')))return;
+      const d=String(c.due||c.s||'');if(+d.slice(0,4)===y&&+d.slice(5,7)>=1)S[+d.slice(5,7)]=1;});}catch(e){}
+    if(!Object.keys(S).length&&y===2026){S[11]=1;S[12]=1;S._def=1;}
+    return S;
+  });
+  return !!set[m];
+}
+function nfaMajorOn(y,m){const r=NFA[nfYm(y,m)];return (r&&nfaHas(r.mj))?(+r.mj===1):nfaMajorAuto(y,m);}
 function nfaBomRows(){
   return nfCached('nfa|rows',function(){
     const out=[];
@@ -39207,18 +39303,27 @@ function nfaCalcMonth(y,m,ctl){
     const lifeD={ld:LL.l,td150:TL.a150||TL.p150,tdsec:TL.aSec||TL.pSec};
     const lf=k=>nfaHas(r.L&&r.L[k])&&+r.L[k]>0?+r.L[k]:lifeD[k];
     const life={ld:lf('ld'),td150:lf('td150'),tdsec:lf('tdsec')};
+    // 철근재(150각)·형강재(B·L·BB) 생산량 직접 입력 → 턴디쉬 CH 분리(한쪽만 입력하면 나머지 = 제강 생산량 − 입력값). 계획 생산량 기준(ctl.p) 계산에는 쓰지 않음
+    const hasR=nfaHas(r.pR)&&!(ctl&&ctl.p),hasS=nfaHas(r.pS)&&!(ctl&&ctl.p);
+    let pR=null,pS=null;if(hasR||hasS){pR=hasR?+r.pR:Math.max(0,prod-(+r.pS||0));pS=hasS?+r.pS:Math.max(0,prod-(+r.pR||0));}
+    const CHr=pR!=null?pR/BIZPLAN_TON_PER_CH:null,CHs=pS!=null?pS/BIZPLAN_TON_PER_CH:null;
+    // 래들 신축 대수: 가동 중 래들의 현재 누적 CH 패턴으로 해체 도래 시점을 모의(수명을 직접 입력했거나 계획수명 기준 분해 계산이면 수식 사용)
+    let ltm=null;if(NF_AUTO_ON&&!(ctl&&(ctl.l||ctl.p))&&!nfaHas(r.L&&r.L.ld)){try{ltm=nfLadleMonth(y,m);}catch(e){}if(ltm&&!ltm.ok)ltm=null;}
     const pats=bizplanSchedPatterns(),cnt={},pcnt={},pbase={},info={};
     pats.forEach(b=>{
       const c=bizplanPatCalc(b.code,Y),pm=bizplanSchedMonths(b.code,Y).cnt[m]||0;
       let L=c.L;if(!(ctl&&ctl.l)){if(b.code==='NEW')L=life.ld;else if(b.code==='TD150_GEN')L=life.td150;else if(b.code==='TDBLBB_GEN')L=life.tdsec;}
-      let kind,auto;
-      if(c.sh>0&&L>0&&L<=NFA_LIFE_MAX&&!c.ovAnnual){kind='auto';auto=CH*c.sh/100/L;}
+      let kind,auto,pat=null,direct=false;
+      const tdD=(b.code==='TD150_GEN'&&CHr!=null)||(b.code==='TDBLBB_GEN'&&CHs!=null);
+      if(b.code==='NEW'&&ltm&&!c.ovAnnual){kind='auto';auto=ltm.n;pat=ltm;}
+      else if(tdD&&L>0&&!c.ovAnnual){kind='auto';auto=(b.code==='TD150_GEN'?CHr:CHs)/L;direct=true;}
+      else if(c.sh>0&&L>0&&L<=NFA_LIFE_MAX&&!c.ovAnnual){kind='auto';auto=CH*c.sh/100/L;}
       else if(c.ovAnnual){kind='scale';auto=pm*(CHp>0?CH/CHp:1);}
       else{kind='event';auto=pm;}
       const ov=(ctl&&ctl.e)?null:(r.p&&r.p[b.code]),has=nfaHas(ov);
       const f=has?+ov:((kind==='auto'||kind==='scale')?R(auto):auto);
       const pb=(kind==='auto')?R(CHp*c.sh/100/c.L):pm;   // 사업계획과 같은 조건(계획 생산량·계획 수명)일 때의 대수 = 비교 기준선
-      cnt[b.code]=f;pcnt[b.code]=pm;pbase[b.code]=pb;info[b.code]={kind:kind,auto:auto,pm:pm,L:L,ov:has,sh:c.sh,name:b.name,eq:b.equip};
+      cnt[b.code]=f;pcnt[b.code]=pm;pbase[b.code]=pb;info[b.code]={kind:kind,auto:auto,pm:pm,L:L,ov:has,sh:c.sh,name:b.name,eq:b.equip,pat:pat,direct:direct};
     });
     // 전기로 주간보수·로저전극·발코니
     const wkP=nfaWkPlan(y,m),wk=(nfaHas(r.wk)&&!(ctl&&ctl.e))?+r.wk:wkP;
@@ -39248,7 +39353,7 @@ function nfaCalcMonth(y,m,ctl){
     });
     const T={pa:0,fa:0,pw:0,fw:0};Object.keys(S).forEach(k=>['pa','fa','pw','fw'].forEach(f=>T[f]+=S[k][f]));
     const pl=spPlan(y,m,'dg'),sA=T.pa>0?pl.a/T.pa:1,sW=T.pw>0?pl.w/T.pw:1;
-    return {y:y,m:m,ym:ym,prod:prod,prodP:prodP,prodSrc:pf.src,CH:CH,CHp:CHp,life:life,lifeD:lifeD,LL:LL,TL:TL,cnt:cnt,pcnt:pcnt,pbase:pbase,info:info,
+    return {y:y,m:m,ym:ym,prod:prod,prodP:prodP,prodSrc:pf.src,CH:CH,CHp:CHp,pR:pR,pS:pS,mj:nfaMajorOn(y,m),life:life,lifeD:lifeD,LL:LL,TL:TL,cnt:cnt,pcnt:pcnt,pbase:pbase,info:info,
       wk:wk,wkP:wkP,roj:roj,rojP:rojP,bal:bal,balP:balP,rows:rows,S:S,T:T,rate:{ld:rLD,td:rTD,wk:rWk,ch:rCH},
       planA:pl.a,planW:pl.w,a:pl.a+sA*(T.fa-T.pa),w:pl.w+sW*(T.fw-T.pw),apply:!!r.apply};
   });
@@ -39493,7 +39598,7 @@ function nfaPeriod(q){
 function nfaItemTable(D,x,all){
   const bg='background:#dbe4f0;font-weight:bold;text-align:center;';
   const th=s=>x?`<th style="${bg}">${s}</th>`:`<th>${s}</th>`;
-  const n1=v=>x?(Math.round(v*10)/10):spN1(v),n0=v=>x?Math.round(v):spN(v),n2=v=>x?(Math.round(v*100)/100):(Math.abs(v)<0.005?'-':(Math.round(v*100)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+  const n1=v=>nfaRound()?(x?Math.round(v):spN(v)):(x?(Math.round(v*10)/10):spN1(v)),n0=v=>x?Math.round(v):spN(v),n2=v=>x?(Math.round(v*100)/100):(Math.abs(v)<0.005?'-':(Math.round(v*100)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
   const dc=(v,f)=>`<td class="n" style="${x?'':spCls(v)}">${f(v)}</td>`;
   let L=D.items.slice();
   const chg=r=>Math.abs(r.fa-r.pa)>0.005||Math.abs(r.fq-r.pq)>0.05;
@@ -39512,15 +39617,15 @@ function nfaItemTable(D,x,all){
   return {html:t,n:L.length,nChg:nChg,nAll:D.items.length};
 }
 function nfaHtml(q){
-  const D=nfaPeriod(q),sty='border:1px solid #f9a825;border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#fff';
+  const DD=nfaRound()?0:1,D=nfaPeriod(q),sty='border:1px solid #f9a825;border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#fff';
   const head=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#b45309">🧮 활동량 입력형 판매계획 — 생산량·보수 이벤트만 넣으면 품목 판매량 산출</div><span style="flex:1"></span>`
     +`<label style="font-size:12px" title="끄면 CH÷수명의 소수 대수(기대값)로 계산, 켜면 정수 대수로 계산"><input type="checkbox" ${nfaRound()?'checked':''} onchange="nfaOpt('round',this.checked)"> 보수 대수 정수로 계산</label>`
     +`<label style="font-size:12px"><input type="checkbox" ${nfaMore()?'checked':''} onchange="nfaOpt('more',this.checked)"> 전체 패턴 입력 보기</label>`
     +`<button class="btn sm" onclick="nfaReset(${q.y},'${q.t}',${q.n})">입력 초기화</button><button class="btn sm" onclick="nfaExport()">📥 엑셀</button></div>`;
   if(!D)return `<div style="${sty}">${head}<div style="font-size:12px;color:var(--muted)">이 기간은 사업계획 월별 데이터가 없어 활동량 계획을 만들 수 없습니다.</div></div>`;
   const ms=D.ms,arr=D.arr,multi=ms.length>1,yel='inp-yel';
-  const inp=(o,kind,sub,ov,ph,w)=>{const on=nfaHas(ov);return `<input type="number" step="any" min="0" class="iinp${on?' '+yel:''}" style="width:${w||68}px" value="${on?ov:''}" placeholder="${ph}" onchange="nfaSet('${o.ym}','${kind}','${sub}',this.value)">`;};
-  const f1=nfFmt1,sub=s=>`<div style="font-size:10px;color:#94a3b8;white-space:nowrap">${s}</div>`;
+  const inp=(o,kind,sub,ov,ph,w,warn)=>{const on=nfaHas(ov);return `<input type="number" step="any" min="0" class="iinp${on?' '+yel:''}" style="width:${w||68}px${(warn&&!on&&o.mj)?';border:2px solid #f97316;background:#fff7ed':''}" value="${on?ov:''}" placeholder="${ph}" onchange="nfaSet('${o.ym}','${kind}','${sub}',this.value)">`;};
+  const f1=nfFx(),sub=s=>`<div style="font-size:10px;color:#94a3b8;white-space:nowrap">${s}</div>`;
   const colHead=`<tr><th style="min-width:210px">항목</th>${arr.map(o=>`<th class="n">${o.m}월</th>`).join('')}${multi?'<th class="n">기간 합계</th>':''}<th style="min-width:200px">산출·입력 방법</th></tr>`;
   const secRow=s=>`<tr style="background:#e3eaf3"><td colspan="${arr.length+(multi?3:2)}" style="font-weight:800">${s}</td></tr>`;
   const row=(lab,cells,tot,note,b)=>`<tr><td style="${b?'font-weight:700':'padding-left:14px'}">${lab}</td>${cells}${multi?`<td class="n" style="font-weight:700">${tot}</td>`:''}<td style="font-size:11px;color:#64748b">${note||''}</td></tr>`;
@@ -39531,12 +39636,19 @@ function nfaHtml(q){
     Math.round(D.prod).toLocaleString(),'예상 생산량(차월 예상실적의 생산량과 동일 칸). 비우면 사업계획',true);
   if(multi)t+=row('기간 생산량 한 번에 입력',`<td class="n" colspan="${arr.length}" style="text-align:left"><input type="number" step="any" class="iinp" style="width:110px" placeholder="${Math.round(D.prodP)}" onchange="nfaSetPeriodProd(${q.y},'${q.t}',${q.n},this.value)"> <span style="font-size:11px;color:#64748b">톤 → 사업계획 월 비중으로 배분</span></td>`,'','분기 계획용');
   t+=row('조업 CH',arr.map(o=>`<td class="n">${f1(o.CH)}${sub('계획 '+f1(o.CHp))}</td>`).join(''),f1(D.CH),`생산량 ÷ ${BIZPLAN_TON_PER_CH}톤/CH`);
+  const shD=o=>{const i=o.info.TD150_GEN;return i?(i.sh>0?i.sh/100:0.2):0.2;};
+  const pRow=(lab,key,dfl,note)=>row(lab,arr.map(o=>{const on=nfaHas(NFA[o.ym]&&NFA[o.ym][key]);const ef=key==='pR'?o.pR:o.pS;
+      return `<td class="n"><input type="number" step="any" min="0" class="iinp${on?' '+yel:''}" style="width:84px" value="${on?NFA[o.ym][key]:''}" placeholder="${Math.round(dfl(o))}" onchange="nfaSet('${o.ym}','${key}','',this.value)">${sub(ef!=null&&!on?'자동 '+Math.round(ef).toLocaleString():'기본 비중 '+Math.round((key==='pR'?shD(o):1-shD(o))*100)+'%')}</td>`;}).join(''),
+    Math.round(arr.reduce((s,o)=>s+(key==='pR'?(o.pR!=null?o.pR:o.prod*shD(o)):(o.pS!=null?o.pS:o.prod*(1-shD(o)))),0)).toLocaleString(),note);
+  t+=pRow('└ 철근재(150각) 생산량(톤)','pR',o=>o.prod*shD(o),'입력 → 턴디쉬 150각 대수 = 생산량 ÷ 140톤/CH ÷ 평균수명(물량표 기준 품목 수량에 반영). 비우면 최근 12개월 턴디쉬 사용 비중');
+  t+=pRow('└ 형강재(B·L·BB) 생산량(톤)','pS',o=>o.prod*(1-shD(o)),'한쪽만 입력하면 나머지는 제강 생산량 − 입력값으로 자동 계산');
   // 래들
   const patRow=(code,eqName)=>{
     const b=arr[0].info[code];if(!b)return '';
-    const kindTxt=b.kind==='auto'?'자동: CH × 적용률 ÷ 수명':b.kind==='scale'?'계획 연간 대수 × 생산량 비':'이벤트: 시공 대수 직접 입력';
+    const dirT=arr.some(o=>o.info[code].direct),patT=arr.some(o=>o.info[code].pat);
+    const kindTxt=b.kind==='auto'?(dirT?'자동: 철근/형강 생산량 ÷ 140톤/CH ÷ 평균수명(물량표 기준)':patT?'자동: 가동 중 래들의 누적 CH 패턴으로 해체 도래 대수 모의':'자동: CH × 적용률 ÷ 수명'):b.kind==='scale'?'계획 연간 대수 × 생산량 비':'이벤트: 시공 대수 직접 입력(대보수월은 주황 칸)';
     const cells=arr.map(o=>{const i=o.info[code];const dflt=i.kind==='event'?i.pm:((nfaRound()?Math.round(i.auto):i.auto));
-      return `<td class="n">${inp(o,'cnt',code,i.ov?o.cnt[code]:'',f1(dflt))}${sub('계획 '+i.pm+(i.kind==='auto'?' · 자동 '+f1(i.auto):''))}</td>`;}).join('');
+      return `<td class="n">${inp(o,'cnt',code,i.ov?o.cnt[code]:'',f1(dflt),0,i.kind==='event')}${sub((o.mj&&i.kind==='event'&&!i.ov?'⚠ 대보수월 · ':'')+'계획 '+i.pm+(i.kind==='auto'?' · 자동 '+f1(i.auto):''))}</td>`;}).join('');
     return row(esc(b.name),cells,f1(arr.reduce((s,o)=>s+o.cnt[code],0)),kindTxt,NFA_MAIN[eqName]&&NFA_MAIN[eqName].slice(0,1).includes(code));
   };
   const pcodes=eq=>{const all=Object.keys(arr[0].info).filter(c=>arr[0].info[c].eq===eq),main=NFA_MAIN[eq]||[];
@@ -39549,27 +39661,30 @@ function nfaHtml(q){
   t+=row('B·L·BB(형강재) 평균수명(CH)',arr.map(o=>`<td class="n">${inp(o,'L','tdsec',(NFA[o.ym]&&NFA[o.ym].L&&NFA[o.ym].L.tdsec)||'',f1(o.lifeD.tdsec))}${sub('계획 '+o.TL.pSec)}</td>`).join(''),'','');
   pcodes('tundish').forEach(c=>{t+=patRow(c,'tundish');});
   t+=secRow('④ 전기로 — 주간보수 · 마모장 보수 · 전극/발코니');
-  t+=row('주간보수(회)',arr.map(o=>`<td class="n">${inp(o,'wk','',(NFA[o.ym]&&NFA[o.ym].wk)||'',f1(o.wkP))}${sub('계획 '+f1(o.wkP))}</td>`).join(''),f1(arr.reduce((s,o)=>s+o.wk,0)),'열간보수재(SPRAY·ANKERHARTH·MAGRAM·올리빈) = 계획 × 주간보수 횟수 비',true);
+  t+=row('주간보수(회)',arr.map(o=>`<td class="n">${inp(o,'wk','',(NFA[o.ym]&&NFA[o.ym].wk)||'',f1(o.wkP),0,true)}${sub((o.mj&&!(NFA[o.ym]&&NFA[o.ym].wk)?'⚠ 대보수월 · ':'')+'계획 '+f1(o.wkP))}</td>`).join(''),f1(arr.reduce((s,o)=>s+o.wk,0)),'열간보수재(SPRAY·ANKERHARTH·MAGRAM·올리빈) = 계획 × 주간보수 횟수 비',true);
   pcodes('eaf').forEach(c=>{t+=patRow(c,'eaf');});
-  t+=row('로저전극 교체(회) — 참고',arr.map(o=>`<td class="n">${inp(o,'roj','',(NFA[o.ym]&&NFA[o.ym].roj)||'',f1(o.roj))}${sub('계획 '+o.rojP)}</td>`).join(''),f1(arr.reduce((s,o)=>s+o.roj,0)),'계획 대비 비교용(전용 물량표가 없어 품목에 직접 연결되지 않음)');
-  t+=row('발코니 교체(회) — 참고',arr.map(o=>`<td class="n">${inp(o,'bal','',(NFA[o.ym]&&NFA[o.ym].bal)||'',f1(o.bal))}${sub('계획 '+o.balP)}</td>`).join(''),f1(arr.reduce((s,o)=>s+o.bal,0)),'기본값: 전극 교체 후 누적 CH ÷ 최근 6회 평균수명');
+  t+=row('로저전극 교체(회) — 참고',arr.map(o=>`<td class="n">${inp(o,'roj','',(NFA[o.ym]&&NFA[o.ym].roj)||'',f1(o.roj),0,true)}${sub((o.mj&&!(NFA[o.ym]&&NFA[o.ym].roj)?'⚠ 대보수월 · ':'')+'계획 '+o.rojP)}</td>`).join(''),f1(arr.reduce((s,o)=>s+o.roj,0)),'계획 대비 비교용(전용 물량표가 없어 품목에 직접 연결되지 않음)');
+  t+=row('발코니 교체(회) — 참고',arr.map(o=>`<td class="n">${inp(o,'bal','',(NFA[o.ym]&&NFA[o.ym].bal)||'',f1(o.bal),0,true)}${sub((o.mj&&!(NFA[o.ym]&&NFA[o.ym].bal)?'⚠ 대보수월 · ':'')+'계획 '+o.balP)}</td>`).join(''),f1(arr.reduce((s,o)=>s+o.bal,0)),'기본값: 전극 교체 후 누적 CH ÷ 최근 6회 평균수명');
+  t+=row('🛠 대보수 월 (표시)',arr.map(o=>`<td class="n"><label style="font-size:11.5px"><input type="checkbox" ${o.mj?'checked':''} onchange="nfaSet('${o.ym}','mj','',this.checked?1:0)"> 대보수</label></td>`).join(''),'','체크한 달은 이벤트 입력칸(영구장·대수리·주간보수·로저전극·발코니)이 주황색으로 표시됩니다. 기본: 팀 업무 보드의 「대보수」 카드 기한월 · 없으면 2026년 11~12월',true);
   t+=secRow('⑤ 차월 판매예상에 반영');
   t+=row('이 달 예상 금액·중량으로 사용',arr.map(o=>`<td class="n"><label style="font-size:11.5px"><input type="checkbox" ${o.apply?'checked':''} onchange="nfaSet('${o.ym}','apply','',this.checked)"> 반영</label></td>`).join(''),'','체크하면 [차월 예상 실적]의 동국제강 예상(출처: 활동량 계획)과 판매실적분석에 반영. 직접 입력한 예상값이 있으면 그 값이 우선',true);
   t+='</table>';
   // 요약
   const S=D.S,tot={pa:0,fa:0,pw:0,fw:0};Object.keys(S).forEach(k=>['pa','fa','pw','fw'].forEach(f=>tot[f]+=S[k][f]));
   const dcell=(v,d)=>`<td class="n" style="${spCls(v)}">${Math.abs(v)<(d===0?0.5:0.05)?'-':nfSg(v,d)}</td>`;
-  const srow=(lab,o,b)=>`<tr style="${b?'background:#eef2f6;font-weight:800':''}"><td style="${b?'':'padding-left:14px'}">${lab}</td><td class="n">${f1(o.pa)}</td><td class="n" style="font-weight:700">${f1(o.fa)}</td>${dcell(o.fa-o.pa,1)}<td class="n">${f1(o.pw)}</td><td class="n" style="font-weight:700">${f1(o.fw)}</td>${dcell(o.fw-o.pw,1)}</tr>`;
+  const srow=(lab,o,b)=>`<tr style="${b?'background:#eef2f6;font-weight:800':''}"><td style="${b?'':'padding-left:14px'}">${lab}</td><td class="n">${f1(o.pa)}</td><td class="n" style="font-weight:700">${f1(o.fa)}</td>${dcell(o.fa-o.pa,DD)}<td class="n">${f1(o.pw)}</td><td class="n" style="font-weight:700">${f1(o.fw)}</td>${dcell(o.fw-o.pw,DD)}</tr>`;
   let st=`<table class="bomtbl" style="min-width:auto"><tr><th>구분</th><th class="n">계획 금액(백만원)</th><th class="n">예상 금액</th><th class="n">증감</th><th class="n">계획 중량(톤)</th><th class="n">예상 중량</th><th class="n">증감</th></tr>`;
   if(multi)arr.forEach(o=>{st+=srow(o.m+'월 (품목 합계)',{pa:o.T.pa,fa:o.T.fa,pw:o.T.pw,fw:o.T.fw});});
   st+=srow('래들(LD)',S.LD)+srow('턴디쉬(TD)',S.TD)+srow('전기로(EAF)',S.EAF)+srow('품목 합계',tot,true);
-  st+=`<tr style="background:#fef9c3;font-weight:800"><td>동국제강 제강 판매예상 (계획 합계 환산)</td><td class="n">${f1(D.planA)}</td><td class="n">${f1(D.a)}</td>${dcell(D.a-D.planA,1)}<td class="n">${f1(D.planW)}</td><td class="n">${f1(D.w)}</td>${dcell(D.w-D.planW,1)}</tr>`;
-  const erow=(lab,e)=>`<tr><td style="padding-left:26px;color:#475569">${lab}</td><td></td><td></td>${dcell(e.a,1)}<td></td><td></td>${dcell(e.w,1)}</tr>`;
+  st+=`<tr style="background:#fef9c3;font-weight:800"><td>동국제강 제강 판매예상 (계획 합계 환산)</td><td class="n">${f1(D.planA)}</td><td class="n">${f1(D.a)}</td>${dcell(D.a-D.planA,DD)}<td class="n">${f1(D.planW)}</td><td class="n">${f1(D.w)}</td>${dcell(D.w-D.planW,DD)}</tr>`;
+  const erow=(lab,e)=>`<tr><td style="padding-left:26px;color:#475569">${lab}</td><td></td><td></td>${dcell(e.a,DD)}<td></td><td></td>${dcell(e.w,DD)}</tr>`;
   st+=erow('├ 생산량 효과 (계획 수명·계획 보수 기준)',D.eff.prod)+erow('├ 수명 효과 (실적 평균 해체수명 ↔ 계획 수명)',D.eff.life)+erow('├ 보수 이벤트·직접 입력 효과 (대수리·주간보수 등)',D.eff.ev)+erow('└ 단가 변동 효과 (예상 단가 ↔ 계획 단가)',D.eff.price)+'</table>';
   const it=nfaItemTable(D,false,!!(NFA._opt&&NFA._opt.all));
   const ld=arr.reduce((s,o)=>s+o.cnt.NEW,0),ldp=arr.reduce((s,o)=>s+o.pcnt.NEW,0),td=arr.reduce((s,o)=>s+(o.cnt.TD150_GEN||0)+(o.cnt.TDBLBB_GEN||0),0),tdp=arr.reduce((s,o)=>s+(o.pcnt.TD150_GEN||0)+(o.pcnt.TDBLBB_GEN||0),0);
-  const concl=`<b>${esc(spLabel(q))}</b> 생산 ${Math.round(D.prod).toLocaleString()}톤(${f1(D.CH)}CH) 기준 래들 신축 <b>${f1(ld)}대</b>(계획 ${f1(ldp)}대), 턴디쉬 <b>${f1(td)}대</b>(계획 ${f1(tdp)}대) → 동국제강 제강 판매예상 <b>${f1(D.a)}백만원 · ${f1(D.w)}톤</b>, 사업계획(${f1(D.planA)}백만원 · ${f1(D.planW)}톤) 대비 <b style="${spCls(D.a-D.planA)}">${nfSg(D.a-D.planA,1)}백만원 · ${nfSg(D.w-D.planW,1)}톤</b> (생산량 ${nfSg(D.eff.prod.a,1)} · 수명 ${nfSg(D.eff.life.a,1)} · 보수 이벤트 ${nfSg(D.eff.ev.a,1)} · 단가 ${nfSg(D.eff.price.a,1)}백만원).`;
-  return `<div style="${sty}">${head}<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">${concl}</div>`
+  const mjA=arr.filter(o=>o.mj),mjOpen=mjA.filter(o=>{const r=NFA[o.ym]||{};return !(r.p&&Object.keys(r.p).length)&&!nfaHas(r.wk)&&!nfaHas(r.roj)&&!nfaHas(r.bal);});
+  const major=mjA.length?`<div style="border:1px solid #fdba74;background:#fff7ed;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:12px;line-height:1.6"><b style="color:#c2410c">🛠 ${mjA.map(o=>o.m+'월').join('·')} 대보수 예정</b> — 영구장·대수리·주간보수·로저전극·발코니 등 <b>이벤트는 자동 계산 대상이 아니므로 주황색 칸에 직접 입력</b>해 주세요. ${mjOpen.length?'<b style="color:#c2410c">'+mjOpen.map(o=>o.m+'월').join('·')+'은 아직 입력된 이벤트가 없어 사업계획 월 대수가 그대로 적용 중입니다.</b>':'이벤트 입력이 확인되었습니다.'}</div>`:'';
+  const concl=`<b>${esc(spLabel(q))}</b> 생산 ${Math.round(D.prod).toLocaleString()}톤(${f1(D.CH)}CH) 기준 래들 신축 <b>${f1(ld)}대</b>(계획 ${f1(ldp)}대), 턴디쉬 <b>${f1(td)}대</b>(계획 ${f1(tdp)}대) → 동국제강 제강 판매예상 <b>${f1(D.a)}백만원 · ${f1(D.w)}톤</b>, 사업계획(${f1(D.planA)}백만원 · ${f1(D.planW)}톤) 대비 <b style="${spCls(D.a-D.planA)}">${nfSg(D.a-D.planA,DD)}백만원 · ${nfSg(D.w-D.planW,DD)}톤</b> (생산량 ${nfSg(D.eff.prod.a,DD)} · 수명 ${nfSg(D.eff.life.a,DD)} · 보수 이벤트 ${nfSg(D.eff.ev.a,DD)} · 단가 ${nfSg(D.eff.price.a,DD)}백만원).`;
+  return `<div style="${sty}">${head}${major}<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">${concl}</div>`
     +`<div style="font-size:11px;color:var(--muted);margin-bottom:6px"><span style="display:inline-block;width:14px;height:10px;background:#ffeb3b;border:1px solid #f9a825;vertical-align:middle"></span> 노란색 = 직접 입력한 값(비우면 자동·사업계획 기본값). 칸 아래 작은 글씨는 사업계획 월 대수와 자동 계산값입니다.</div>`
     +`<div class="tablewrap">${t}</div>`+nfaPriceBlock(q,D)+`<div class="subhead" style="margin-top:10px">사업계획 대비 판매예상 (설비별)</div><div class="tablewrap">${st}</div>`
     +`<div class="subhead" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">품목별 수량·중량·단가 비교 <span class="hint" style="font-weight:400">${it.n}개 표시 / 변동 ${it.nChg}개 / 전체 ${it.nAll}개 (금액 증감 큰 순)</span><label style="font-size:12px;font-weight:400"><input type="checkbox" ${(NFA._opt&&NFA._opt.all)?'checked':''} onchange="nfaOpt('all',this.checked)"> 변동 없는 품목도 표시</label></div><div class="tablewrap" style="max-height:60vh;overflow:auto">${it.html}</div>`
@@ -39600,9 +39715,9 @@ function nfCtl(){
   document.getElementById('nf_n').innerHTML=spPeriodOpts(NF_ST.t,NF_ST.n);nfRender();
 }
 function nfTbl(p,x){
-  const ms=spMonths(p),bg='background:#dbe4f0;font-weight:bold;text-align:center;';
+  const nvF=v=>nfaRound()?spN(v):spN1(v),nr1=v=>nfaRound()?Math.round(v):Math.round(v*10)/10,ms=spMonths(p),bg='background:#dbe4f0;font-weight:bold;text-align:center;';
   const th=(s,a)=>x?`<th${a||''} style="${bg}">${s}</th>`:`<th${a||''}>${s}</th>`;
-  const v1=v=>x?`<td style="mso-number-format:'#,##0.0';text-align:center">${Math.round(v*10)/10}</td>`:`<td class="n">${spN1(v)}</td>`;
+  const v1=v=>x?`<td style="mso-number-format:'${nfaRound()?'#,##0':'#,##0.0'}';text-align:center">${nr1(v)}</td>`:`<td class="n">${nvF(v)}</td>`;
   let t=x?`<table border="1"><tr><td colspan="9" style="font-size:14pt;font-weight:bold;border:none">■ 포항사업소 ${esc(spLabel(p))} 예상 실적 (단위: 백만원 · 톤)</td></tr>`:`<table class="bomtbl" style="min-width:auto">`;
   t+=`<tr>${th('월')}${th('구분')}${th('계획금액')}${th('예상금액')}${th('증감')}${th('계획중량')}${th('예상중량')}${th('증감')}${th('출처')}</tr>`;
   const tot={};SP_CATS.forEach(c=>tot[c.k]={pa:0,fa:0,pw:0,fw:0});let pp=0,pf=0;
@@ -39614,10 +39729,10 @@ function nfTbl(p,x){
     SP_CATS.forEach(c=>{
       const f=spFc(p.y,m,c.k);tot[c.k].pa+=f.pa;tot[c.k].fa+=f.a;tot[c.k].pw+=f.pw;tot[c.k].fw+=f.w;
       const sa=(r.fc&&r.fc[c.k]&&r.fc[c.k].a!=null&&r.fc[c.k].a!==''),sw=(r.fc&&r.fc[c.k]&&r.fc[c.k].w!=null&&r.fc[c.k].w!=='');
-      const edA=!x?`<input type="number" step="any" class="iinp" style="width:96px;${(sa||f.src==='수정(전월 입력)')?'background:#fef08a;font-weight:700':''}" value="${sa?r.fc[c.k].a:''}" placeholder="${Math.round(((sa||f.src==='수정(전월 입력)')?f.pa:f.a)*10)/10}" onchange="spSetFc(${p.y},${m},'${c.k}','a',this.value)">`:'';
-      const edW=!x?`<input type="number" step="any" class="iinp" style="width:96px;${(sw||f.src==='수정(전월 입력)')?'background:#fef08a;font-weight:700':''}" value="${sw?r.fc[c.k].w:''}" placeholder="${Math.round(((sw||f.src==='수정(전월 입력)')?f.pw:f.w)*10)/10}" onchange="spSetFc(${p.y},${m},'${c.k}','w',this.value)">`:'';
-      t+=`<tr><td>${c.l}</td>${v1(f.pa)}${x?v1(f.a):`<td class="n">${edA}</td>`}<td class="n" style="${spCls(f.a-f.pa)}">${x?Math.round((f.a-f.pa)*10)/10:spN1(f.a-f.pa)}</td>`
-        +(c.k==='rf'?'<td></td><td></td><td></td>':`${v1(f.pw)}${x?v1(f.w):`<td class="n">${edW}</td>`}<td class="n" style="${spCls(f.w-f.pw)}">${x?Math.round((f.w-f.pw)*10)/10:spN1(f.w-f.pw)}</td>`)
+      const edA=!x?`<input type="number" step="any" class="iinp" style="width:96px;${(sa||f.src==='수정(전월 입력)'||f.src==='수정(업체별)')?'background:#fef08a;font-weight:700':''}" value="${sa?r.fc[c.k].a:''}" placeholder="${nr1(((sa||f.src==='수정(전월 입력)'||f.src==='수정(업체별)')?f.pa:f.a))}" onchange="spSetFc(${p.y},${m},'${c.k}','a',this.value)">`:'';
+      const edW=!x?`<input type="number" step="any" class="iinp" style="width:96px;${(sw||f.src==='수정(전월 입력)'||f.src==='수정(업체별)')?'background:#fef08a;font-weight:700':''}" value="${sw?r.fc[c.k].w:''}" placeholder="${nr1(((sw||f.src==='수정(전월 입력)'||f.src==='수정(업체별)')?f.pw:f.w))}" onchange="spSetFc(${p.y},${m},'${c.k}','w',this.value)">`:'';
+      t+=`<tr><td>${c.l}</td>${v1(f.pa)}${x?v1(f.a):`<td class="n">${edA}</td>`}<td class="n" style="${spCls(f.a-f.pa)}">${x?nr1((f.a-f.pa)):nvF(f.a-f.pa)}</td>`
+        +(c.k==='rf'?'<td></td><td></td><td></td>':`${v1(f.pw)}${x?v1(f.w):`<td class="n">${edW}</td>`}<td class="n" style="${spCls(f.w-f.pw)}">${x?nr1((f.w-f.pw)):nvF(f.w-f.pw)}</td>`)
         +`<td style="font-size:11px;color:var(--muted)">${x?esc(f.src):esc(f.src)}</td></tr>`;
     });
   });
@@ -39625,16 +39740,60 @@ function nfTbl(p,x){
   t+=`<tr><td colspan="9" style="${x?'':'background:#e5e7eb;'}font-weight:800;padding:6px 10px">▶ ${esc(spLabel(p))} 합계</td></tr>`;
   let ta={pa:0,fa:0,pw:0,fw:0};
   SP_CATS.forEach(c=>{const o=tot[c.k];if(c.k!=='rf'){ta.pa+=o.pa;ta.fa+=o.fa;ta.pw+=o.pw;ta.fw+=o.fw;}
-    t+=`<tr><td colspan="2" style="font-weight:700">${c.l}</td>${v1(o.pa)}${v1(o.fa)}<td class="n" style="${spCls(o.fa-o.pa)}">${x?Math.round((o.fa-o.pa)*10)/10:spN1(o.fa-o.pa)}</td>${c.k==='rf'?'<td></td><td></td><td></td>':`${v1(o.pw)}${v1(o.fw)}<td class="n" style="${spCls(o.fw-o.pw)}">${x?Math.round((o.fw-o.pw)*10)/10:spN1(o.fw-o.pw)}</td>`}<td></td></tr>`;});
-  t+=`<tr style="${x?'':'background:#eef2f6;'}font-weight:800"><td colspan="2">합계(축로제외)</td>${v1(ta.pa)}${v1(ta.fa)}<td class="n" style="${spCls(ta.fa-ta.pa)}">${x?Math.round((ta.fa-ta.pa)*10)/10:spN1(ta.fa-ta.pa)}</td>${v1(ta.pw)}${v1(ta.fw)}<td class="n" style="${spCls(ta.fw-ta.pw)}">${x?Math.round((ta.fw-ta.pw)*10)/10:spN1(ta.fw-ta.pw)}</td><td></td></tr>`;
+    t+=`<tr><td colspan="2" style="font-weight:700">${c.l}</td>${v1(o.pa)}${v1(o.fa)}<td class="n" style="${spCls(o.fa-o.pa)}">${x?nr1((o.fa-o.pa)):nvF(o.fa-o.pa)}</td>${c.k==='rf'?'<td></td><td></td><td></td>':`${v1(o.pw)}${v1(o.fw)}<td class="n" style="${spCls(o.fw-o.pw)}">${x?nr1((o.fw-o.pw)):nvF(o.fw-o.pw)}</td>`}<td></td></tr>`;});
+  t+=`<tr style="${x?'':'background:#eef2f6;'}font-weight:800"><td colspan="2">합계(축로제외)</td>${v1(ta.pa)}${v1(ta.fa)}<td class="n" style="${spCls(ta.fa-ta.pa)}">${x?nr1((ta.fa-ta.pa)):nvF(ta.fa-ta.pa)}</td>${v1(ta.pw)}${v1(ta.fw)}<td class="n" style="${spCls(ta.fw-ta.pw)}">${x?nr1((ta.fw-ta.pw)):nvF(ta.fw-ta.pw)}</td><td></td></tr>`;
   t+=`<tr><td colspan="2" style="font-weight:700">제강생산량(톤)</td>${x?`<td style="mso-number-format:'#,##0';text-align:center">${Math.round(pp)}</td><td style="mso-number-format:'#,##0';text-align:center">${Math.round(pf)}</td>`:`<td class="n">${spN(pp)}</td><td class="n">${spN(pf)}</td>`}<td class="n" style="${spCls(pf-pp)}">${spN(pf-pp)}</td><td colspan="4"></td></tr>`;
   return t+'</table>';
 }
+/* 포스코·시중 업체별 차월 예상 입력 카드 */
+function nfVendHtml(q){
+  const ms=spMonths(q),sty='border:1px solid #93c5fd;border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#fff';
+  const nv=v=>nfaRound()?spN(v):spN1(v),dd=nfaRound()?0:1;
+  const GR=[{k:'po1',l:'포스코-기존'},{k:'po2',l:'포스코-신규'},{k:'rt',l:'시중'}];
+  const sg=(v)=>Math.abs(v)<(dd?0.05:0.5)?'-':nfSg(v,dd);
+  const inp=(m,k,i,f,ov,ph,w)=>{const on=ov!=null&&ov!=='';return `<input type="number" step="any" class="iinp" style="width:${w||88}px;${on?'background:#fef08a;font-weight:700':''}" value="${on?ov:''}" placeholder="${ph}" onchange="nfVendSet(${q.y},${m},'${k}',${i},'${f}',this.value)">`;};
+  let t=`<table class="bomtbl" style="min-width:auto"><tr><th>월</th><th>구분</th><th>업체</th><th class="n">계획 금액(백만)</th><th class="n">예상 금액(백만)</th><th class="n">증감</th><th class="n">계획 중량(톤)</th><th class="n">예상 중량(톤)</th><th class="n">증감</th><th>최근 3개월 입고 월평균(백만 · 톤)</th></tr>`;
+  const T={};GR.forEach(g=>T[g.k]={pa:0,fa:0,pw:0,fw:0});
+  const avg={};
+  GR.forEach(g=>{let a=0,w=0,n=0;const y0=q.y,m0=Math.min.apply(null,ms);for(let j=1;j<=3;j++){let yy=y0,mm=m0-j;if(mm<1){mm+=12;yy--;}let o=null;try{o=piMonthSum(spYm(yy,mm),g.k);}catch(e){}if(o&&o.n>0){a+=o.a;w+=o.w;n++;}}avg[g.k]=n?{a:a/n,w:w/n,n:n}:null;});
+  ms.forEach(m=>{
+    const r=spRecGet(spYm(q.y,m))||{},vd=(r.fc&&r.fc.vend)||{};
+    let first=true;const rows=[];
+    GR.forEach(g=>{
+      const L=spVendList(g.k),ve=vd[g.k]||{};let sa=0,sw=0,spa=0,spw=0;
+      L.forEach((v,i)=>{
+        const p=spVendPlan(q.y,m,g.k,v),e=ve[v]||{},hA=e.a!=null&&e.a!=='',hW=e.w!=null&&e.w!=='',fa=hA?+e.a:p.a,fw=hW?+e.w:p.w;
+        sa+=fa;sw+=fw;spa+=p.a;spw+=p.w;
+        rows.push({g:g,v:v,i:i,p:p,e:e,hA:hA,hW:hW,fa:fa,fw:fw,m:m});
+      });
+      rows.push({sum:1,g:g,pa:spa,fa:sa,pw:spw,fw:sw,m:m});T[g.k].pa+=spa;T[g.k].fa+=sa;T[g.k].pw+=spw;T[g.k].fw+=sw;
+    });
+    rows.forEach((o,ix)=>{
+      const mc=ix===0?`<td rowspan="${rows.length}" style="font-weight:800;text-align:center;background:#f8fafc">${m}월</td>`:'';
+      if(o.sum){const av=avg[o.g.k];
+        t+=`<tr style="background:#eef2f6;font-weight:800">${mc}<td colspan="2">${o.g.l} 합계${o.g.k==='rt'?'':''}</td><td class="n">${nv(o.pa)}</td><td class="n">${nv(o.fa)}</td><td class="n" style="${spCls(o.fa-o.pa)}">${sg(o.fa-o.pa)}</td><td class="n">${nv(o.pw)}</td><td class="n">${nv(o.fw)}</td><td class="n" style="${spCls(o.fw-o.pw)}">${sg(o.fw-o.pw)}</td><td style="font-size:11px;font-weight:400;color:var(--muted)">${av?nv(av.a)+' · '+nv(av.w)+' ('+av.n+'개월)':'입고 실적 없음'}</td></tr>`;
+      }else{
+        t+=`<tr>${mc}<td style="font-size:11px;color:#64748b">${o.g.l}</td><td style="font-weight:600">${esc(o.v)}</td><td class="n">${nv(o.p.a)}</td><td class="n">${inp(o.m,o.g.k,o.i,'a',o.e.a,nv(o.p.a))}</td><td class="n" style="${spCls(o.fa-o.p.a)}">${sg(o.fa-o.p.a)}</td><td class="n">${nv(o.p.w)}</td><td class="n">${inp(o.m,o.g.k,o.i,'w',o.e.w,nv(o.p.w))}</td><td class="n" style="${spCls(o.fw-o.p.w)}">${sg(o.fw-o.p.w)}</td><td></td></tr>`;
+      }
+    });
+  });
+  if(ms.length>1){
+    GR.forEach((g,ix)=>{const o=T[g.k];t+=`<tr style="background:#e5e7eb;font-weight:800"><td colspan="3">${ix===0?'▶ 기간 합계 · ':''}${g.l}</td><td class="n">${nv(o.pa)}</td><td class="n">${nv(o.fa)}</td><td class="n" style="${spCls(o.fa-o.pa)}">${sg(o.fa-o.pa)}</td><td class="n">${nv(o.pw)}</td><td class="n">${nv(o.fw)}</td><td class="n" style="${spCls(o.fw-o.pw)}">${sg(o.fw-o.pw)}</td><td></td></tr>`;});
+  }
+  t+='</table>';
+  const nIn=ms.reduce((s,m)=>{const r=spRecGet(spYm(q.y,m))||{},vd=(r.fc&&r.fc.vend)||{};return s+Object.keys(vd).reduce((a,k)=>a+Object.keys(vd[k]).length,0);},0);
+  return `<div style="${sty}"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#1d4ed8">🏭 포스코·시중 업체별 예상 — 업체별 금액·중량 직접 입력</div><span style="flex:1"></span>`
+    +GR.map(g=>`<button class="btn sm" onclick="nfVendAdd('${g.k}')" title="사업계획에 없는 업체를 추가">＋ ${g.l} 업체</button>`).join('')
+    +`<button class="btn sm" onclick="nfVendClear(${q.y},'${q.t}',${q.n})">업체별 입력 지우기</button></div>`
+    +`<div style="font-size:11.5px;color:#475569;line-height:1.6;margin-bottom:6px">노란색 = 직접 입력한 값(입력한 업체는 그 값, 비운 업체는 사업계획 값으로 합산 · 현재 입력 ${nIn}건). 합계가 아래 [예상 실적] 표의 포스코-기존·포스코-신규·시중과 [판매실적분석] 차월 예상에 그대로 반영됩니다. 합계를 [예상 실적] 표에서 직접 입력하면 업체별 입력은 지워지고 합계 값이 우선합니다.</div>`
+    +`<div class="tablewrap">${t}</div></div>`;
+}
+
 function nfRender(){
   const p={y:NF_ST.y,t:NF_ST.t,n:NF_ST.n},box=document.getElementById('nfBox');if(!box)return;
   try{
     document.getElementById('nfLbl').textContent=spLabel(p)+' 예상 실적';
-    box.innerHTML=nfaHtml(p)+nfAutoHtml(p)+`<div class="tablewrap">${nfTbl(p,false)}</div>`
+    box.innerHTML=nfaHtml(p)+nfAutoHtml(p)+nfVendHtml(p)+`<div class="tablewrap">${nfTbl(p,false)}</div>`
       +`<div style="font-size:11px;color:var(--muted);margin:6px 2px 12px">※ <b>기본값 = 사업계획</b>(2026년은 V7 월별 판매계획, 2027년~는 사업계획 엔진: 동국제강 다원화 반영·포스코·시중). 칸에 값을 넣으면 그 값(노란색)이 예상으로 확정되고, 비우면 사업계획 기본값으로 돌아갑니다. 여기서 정한 값은 [판매실적분석]의 "차월 예상 실적" 블록·누적·엑셀에 그대로 반영됩니다. 월 단위로 입력한 값은 분기·반기 합계에 자동 합산됩니다.</div>`;
   }catch(e){console.error(e);box.innerHTML='<div class="empty">화면을 그리는 중 오류가 발생했습니다: '+esc(String(e.message||e))+'</div>';}
 }
