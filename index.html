@@ -987,7 +987,7 @@
   .qdoc tfoot td{font-weight:800;background:#f6f8fa}
   .qdoc-toolbar{max-width:820px;margin:0 auto 12px;display:flex;gap:8px;justify-content:flex-end}
   @media print{#fsBar,#stickyHead,.sidebar,.topbar,.formbar,.toolrow,.acts,.btn{display:none!important}
-    .content{padding:0}.tablewrap{overflow:visible;border:none}thead th{position:static}body{font-size:11px}
+    .content{padding:0}.tablewrap{overflow:visible;border:none}thead th{position:static!important;top:auto!important}[data-stkh-o]{max-height:none!important;overflow:visible!important}body{font-size:11px}
     body.qprint .sidebar,body.qprint .main{display:none!important}
     /* 2026-09-23: 열려있지 않은 다른 오버레이(직원 일괄등록·휴가 기록 일괄등록·사용자 선택 등)까지
        인쇄 대상에 같이 끌려나와 PDF 페이지가 깨지던 문제 수정 — 현재 열려있는(.show) 오버레이만 인쇄 */
@@ -1033,6 +1033,11 @@
   .qrv-h{font-size:20px;font-weight:800}.qrv-d{font-size:12px}
   .qrv-sec{font-size:13px;margin-top:12px;margin-bottom:2px}
   .qrv-tx{font-size:12.5px;line-height:1.65}
+  .q-rte{min-height:96px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;color:#111;font-size:13px;line-height:1.65;outline:none}
+  .q-rte:focus{border-color:var(--accent,#2563eb);box-shadow:0 0 0 2px rgba(37,99,235,.15)}
+  .q-rte:empty::before{content:attr(data-ph);color:#94a3b8;white-space:pre-line;pointer-events:none}
+  .qrte-bar{display:flex;gap:4px;flex-wrap:wrap;margin:2px 0 4px;align-items:center}
+  .qrte-bar .btn.sm{padding:2px 8px;min-width:26px}
   .qrv-tx .qyl{background:#ff0!important;display:block}
   .qrv-vat{font-size:11px;color:#444;margin-top:4px;text-align:right}
   .qrv-app{display:flex;gap:28px;justify-content:center;align-items:flex-start;break-before:page;page-break-before:always;margin-top:30px;padding-top:20px}
@@ -3913,6 +3918,7 @@ service cloud.firestore {
       <div class="toolrow" style="margin-top:6px">
         <button class="btn primary" onclick="dtkBizPrint()" title="A4 가로 · 인쇄 창에서 'PDF로 저장' 선택">🖨 인쇄 / PDF 저장</button>
         <button class="btn" onclick="spExportSumFor(dtkP())">📥 엑셀(포항영업소 양식)</button>
+        <button class="btn" onclick="spAutoCmBoth(dtkP())" title="사업계획 대비 실제 판매 수량·물량을 품목별로 비교해 증가·감소 품목을 COMMENT(실적·누적)에 자동 작성합니다">🤖 COMMENT 자동 작성 (사업계획 대비 품목)</button>
         <span class="spacer"></span>
         <button class="btn" onclick="nav('salesperf')" title="요약표·COMMENT·ISSUE·실적 입력">✏ 판매실적분석에서 수정</button>
         <button class="btn" onclick="nav('nextfc')" title="차월·차분기 예상(계획) 입력">🔮 차월·차분기 예상 입력</button>
@@ -4118,23 +4124,25 @@ service cloud.firestore {
       </div>
     </div>
     <div class="formbar" style="background:#f6f8fa;border-color:var(--line)">
-      <h3 style="color:#3a4552">견적검토 내용 <span style="font-weight:500;color:var(--muted);font-size:11.5px">(내부결재용 견적검토서에 표시 · 줄바꿈으로 항목 구분 · 원가산출 기준은 노란 줄로 출력)</span>
+      <h3 style="color:#3a4552">견적검토 내용 <span style="font-weight:500;color:var(--muted);font-size:11.5px">(내부결재용 견적검토서에 표시 · 줄바꿈으로 항목 구분 · 글자를 드래그해 굵게/글자색 서식 지정 가능)</span>
         <button class="btn sm" style="margin-left:10px" onclick="qAutoText()">✍ 개요·원가산출 기준 자동 작성</button></h3>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <div class="field" style="flex:1;min-width:280px"><label>▪ 개요</label>
-          <textarea id="q_overview" rows="4" placeholder="예)&#10;포스코퓨처엠(포스코 광양) PNR 공장 MAGRAM-85 견적 제출 요청 접수&#10;27년 3월 납품 예정&#10;1) 26년 4월 포항/광양 (106톤) 최신 판매가 : 558/kg"></textarea></div>
+          <div id="q_overview" class="q-rte" contenteditable="true" data-ph="예)&#10;포스코퓨처엠(포스코 광양) PNR 공장 MAGRAM-85 견적 제출 요청 접수&#10;27년 3월 납품 예정&#10;1) 26년 4월 포항/광양 (106톤) 최신 판매가 : 558/kg"></div></div>
         <div class="field" style="flex:1;min-width:280px"><label>▪ 원가산출 기준</label>
-          <textarea id="q_costbasis" rows="4" placeholder="예)&#10;1) 25년 대비 26년 원재료 상승분 반영 (52원/kg)&#10;2) 직접고정비 제외"></textarea></div>
+          <div id="q_costbasis" class="q-rte" contenteditable="true" data-ph="예)&#10;1) 25년 대비 26년 원재료 상승분 반영 (52원/kg)&#10;2) 직접고정비 제외"></div></div>
       </div>
+      <div id="q_fcbox" style="margin-top:8px"></div>
     </div>
     <div class="toolrow">
       <button class="btn" onclick="addQuoteItem()">＋ 품목 추가</button>
+      <button class="btn" onclick="document.getElementById('fcFile').click()" title="공장에서 받은 제조원가 서식(PDF·사진·엑셀)을 자동으로 읽어 견적 품목·제조원가에 등록합니다">🏭 공장 제조원가 추가</button><input type="file" id="fcFile" accept=".pdf,.png,.jpg,.jpeg,.xlsx" multiple style="display:none" onchange="fcLoad(this)">
       <button class="btn primary" onclick="openReviewDoc()">📋 견적검토서 (내부결재)</button>
       <button class="btn" onclick="downloadReviewExcel()">📥 견적검토 엑셀</button>
       <button class="btn primary" onclick="openQuoteDoc()">📄 견적서 (제출용)</button>
       <button class="btn" onclick="downloadQuoteExcel()">📥 견적서 엑셀</button>
       <button class="btn" onclick="qSendSales()">📤 영업 견적서 제출로 보내기</button>
-      <button class="btn" onclick="saveQuote()">저장</button>
+      <button class="btn" onclick="saveQuote()" title="임시저장 — 나중에 [불러오기]로 이어서 작업할 수 있고, 새 품목은 견적 품목·제조원가에 자동 등록됩니다">💾 저장 (임시저장)</button>
       <button class="btn" onclick="newQuote()">새 견적</button>
       <button class="btn" onclick="nav('qitems')">🧮 견적 품목·제조원가 관리</button>
       <span class="spacer"></span><span id="q_id" style="font-size:11px;color:var(--muted)"></span>
@@ -4153,7 +4161,7 @@ service cloud.firestore {
     <div style="font-size:11.5px;color:var(--muted);margin:4px 2px">품목을 고르면 <b>최신 제조원가가 자동 입력</b>됩니다. 같은 품목의 다른 안(Nego)은 [＋안]으로 행을 추가하고, 견적서에 넣을 안만 왼쪽 ☑ 체크하세요(합계도 체크된 행 기준).</div>
     <div class="subhead">저장된 견적 <span class="hint">불러오기·복사·삭제</span></div>
     <div class="tablewrap"><table class="mini">
-      <thead><tr><th>일자</th><th>고객사</th><th>견적명</th><th>제출 품목수</th><th>견적금액</th><th>총 영업이익</th><th style="width:170px">관리</th></tr></thead>
+      <thead><tr><th>일자</th><th>고객사</th><th>견적명</th><th>제출 품목수</th><th>견적금액</th><th>총 영업이익</th><th>상태</th><th style="width:170px">관리</th></tr></thead>
       <tbody id="savedQuotes"></tbody>
     </table></div>
   </section>
@@ -9924,7 +9932,7 @@ function qiRef(it){const c=qiLatest(it);if(!c)return null;let d=c.d;(it.conf||[]
 function qiAge(it){const r=qiRef(it);return r?qiDays(r,todayStr()):null;}
 function qiState(it){const a=qiAge(it);if(a==null)return 'none';return a<=qiSet.fresh?'ok':(a<=qiSet.stale?'chk':'old');}
 const QI_ST={ok:['🟢','최신','#166534','#dcfce7'],chk:['🟡','동일 확인 필요','#92400e','#fef3c7'],old:['🔴','갱신 필요','#991b1b','#fee2e2'],none:['⚪','원가 미등록','#475569','#e2e8f0']};
-function qiChip(it,withAge){const s=qiState(it),o=QI_ST[s],a=qiAge(it);
+function qiChip(it,withAge){const lc=qiLatest(it);if(lc&&lc.tmp)return '<span style="display:inline-block;padding:1px 9px;border-radius:10px;font-size:11px;font-weight:800;color:#9a3412;background:#ffedd5;white-space:nowrap">🟠 임시 입력 · 원가시트 확인 필요</span>';const s=qiState(it),o=QI_ST[s],a=qiAge(it);
   return `<span style="display:inline-block;padding:1px 9px;border-radius:10px;font-size:11px;font-weight:800;color:${o[2]};background:${o[3]};white-space:nowrap">${o[0]} ${o[1]}${withAge&&a!=null?' · '+a+'일':''}</span>`;}
 const qiTot=c=>c?(+c.v||0)+(+c.f||0):0;
 const qiF1=v=>v==null||v===''?'-':(Math.round(+v*100)/100).toLocaleString('ko-KR',{maximumFractionDigits:2});
@@ -9956,7 +9964,7 @@ function qiRender(){
   const tr=rows.map(r=>{const c=qiLatest(r),p=qiPrevC(r),a=qiAge(r),h=qiHistOf(r)[0];
     let dl='';if(c&&p){const d=qiTot(c)-qiTot(p),dv=(+c.v||0)-(+p.v||0);dl=`<div style="font-size:10.5px;color:${dv>0?'#b42318':(dv<0?'#1f8a4c':'#64748b')}">직전 대비 변동비 ${dv>0?'+':''}${qiF1(dv)} (${p.v?((dv/p.v*100).toFixed(1)):'0'}%)</div>`;}
     const nrv=(r.rv||[]).length,hs=h?`<div>${fmt(h.price)}원</div><div style="font-size:10.5px;color:var(--muted)">${esc(h.d)} ${esc(h.cu)}${h.rate!=null?' · '+(h.rate*100).toFixed(1)+'%':''}</div>${nrv?`<div style="font-size:10.5px;color:#475569">검토 이력 ${nrv}건</div>`:''}`:(nrv?`<div style="font-size:10.5px;color:#475569">검토 이력 ${nrv}건</div>`:'<span style="color:var(--muted)">-</span>');
-    return `<tr><td style="text-align:left"><b>${esc(r.name)}</b>${(!c&&r.src)?`<div style="font-size:10.5px;color:#b45309">🆕 ${esc(r.src)} — 제조원가 확인·등록 필요</div>`:''}${r.disp?`<div style="font-size:10.5px;color:var(--muted)">견적서 표기: ${esc(r.disp)}</div>`:''}</td><td>${esc(r.spec)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.code||'')}</td>
+    return `<tr><td style="text-align:left"><b>${esc(r.name)}</b>${r.tmp?' <span style="font-size:10.5px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:8px;padding:0 6px" title="품명·규격이 임시입니다 — [수정]에서 확정">🟠 임시</span>':''}${(!c&&r.src)?`<div style="font-size:10.5px;color:#b45309">🆕 ${esc(r.src)} — 제조원가 확인·등록 필요</div>`:''}${r.disp?`<div style="font-size:10.5px;color:var(--muted)">견적서 표기: ${esc(r.disp)}</div>`:''}</td><td>${esc(r.spec)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.code||'')}</td>
       <td class="n">${c?qiF1(c.v):'-'}</td><td class="n">${c?qiF1(c.f):'-'}</td><td class="n"><b>${c?qiF1(qiTot(c)):'-'}</b>${dl}</td>
       <td>${c?esc(c.d):'-'}<div style="font-size:10.5px;color:var(--muted)">${c&&c.src?esc(c.src):''}</div></td>
       <td>${qiChip(r,true)}<div style="font-size:10.5px;color:var(--muted)">${a!=null?(qiRef(r)!==(c&&c.d)?'동일 확인 '+qiRef(r):'확인 없음'):''}</div></td>
@@ -9981,7 +9989,7 @@ function qiRender(){
   <div class="tablewrap"><table class="qi-tb"><thead><tr><th>품목</th><th>규격</th><th>단위</th><th>코드</th><th>직접변동비</th><th>직접고정비</th><th>제조원가 계</th><th>원가 기준일</th><th>상태(경과)</th><th>최근 견적</th><th style="min-width:230px">관리</th></tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 /* ---------- 공용 대화상자 ---------- */
-function qiOpen(html){document.getElementById('qiBox').innerHTML=html;document.getElementById('qiOverlay').classList.add('show');}
+function qiOpen(html,wide){const bx=document.getElementById('qiBox');bx.style.maxWidth=wide?'1240px':'';bx.style.width=wide?'96vw':'';bx.innerHTML=html;document.getElementById('qiOverlay').classList.add('show');}
 function qiClose(){document.getElementById('qiOverlay').classList.remove('show');qiCD=null;}
 function qiAfter(){try{if(curView==='qitems')qiRender();else if(curView==='quote')renderQuoteItems();else if(curView==='salesq'&&slQ){qrvLinkAll();slQRender();}}catch(e){}}
 /* ---------- 제조원가 입력/갱신 ---------- */
@@ -10112,13 +10120,14 @@ function qiEditDlg(id){
   <div class="frow" style="margin-top:8px;flex-wrap:wrap;gap:8px"><div class="field"><label>품목</label><input id="qe_n" value="${esc(it.name)}" style="width:150px"></div><div class="field"><label>규격</label><input id="qe_s" value="${esc(it.spec)}" style="width:90px"></div><div class="field"><label>단위</label><input id="qe_u" value="${esc(it.unit||'KG')}" style="width:60px"></div>
     <div class="field"><label>생산 코드</label><input id="qe_c" value="${esc(it.code||'')}" style="width:120px"></div><div class="field"><label>견적서 표기 품명</label><input id="qe_d" value="${esc(it.disp||'')}" style="width:140px"></div><div class="field"><label>분류</label><input id="qe_g" value="${esc(it.grp||'')}" style="width:110px"></div></div>
   <div class="field" style="margin-top:8px"><label>메모</label><input id="qe_m" value="${esc(it.note||'')}" style="width:100%"></div>
+  ${it.tmp?'<label style="display:block;margin-top:8px;font-size:12.5px"><input type="checkbox" id="qe_t" style="width:auto"> 품명·규격 확정 (🟠 임시 표시 해제)</label>':''}
   <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px"><span>${canDelete()?`<button class="btn danger" onclick="qiDelItem('${it.id}')">품목 삭제</button>`:''}</span><span><button class="btn" onclick="qiClose()">취소</button> <button class="btn primary" onclick="qiEditSave()">저장</button></span></div>`);
 }
 function qiEditSave(){
   const it=qiById(qiCD&&qiCD.id);if(!it)return;const g=i=>document.getElementById(i).value.trim();
   const nm=g('qe_n');if(!nm){toast('품목명을 입력하세요');return;}
   const o=qiFind(nm,g('qe_s'));if(o&&o.id!==it.id){toast('같은 품목·규격이 이미 있습니다');return;}
-  it.name=nm;it.spec=g('qe_s');it.unit=g('qe_u')||'KG';it.code=g('qe_c');it.disp=g('qe_d');it.grp=g('qe_g');it.note=g('qe_m');
+  it.name=nm;it.spec=g('qe_s');it.unit=g('qe_u')||'KG';it.code=g('qe_c');it.disp=g('qe_d');it.grp=g('qe_g');it.note=g('qe_m');{const tc=document.getElementById('qe_t');if(tc&&tc.checked)it.tmp=0;}
   if(qiCommit(it)){qiClose();toast('저장했습니다');qiAfter();}
 }
 function qiDelItem(id){if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}const it=qiById(id);if(!it||!confirm('「'+it.name+' '+it.spec+'」 품목과 원가 이력을 모두 삭제할까요?'))return;
@@ -10253,7 +10262,7 @@ function qSubHtml(i,r){   /* 품목 아래 줄: 최신 제조원가 상태·경�
   if(r.cd&&c.id!==r.cd)w=`<span class="qwarn">⚠ 저장 이후 원가가 갱신되었습니다 (${esc(c.d)}, 변동 ${qiF1(c.v)})</span> <button class="btn sm primary" onclick="qiUseCost(${i})">최신 원가 적용</button>`;
   else if(Math.abs(qiN(r.var)-qiN(qiRnd(c.v)))>0.005||Math.abs(qiN(r.fix)-qiN(qiRnd(c.f)))>0.005)w=`<span class="qwarn">⚠ 등록 원가(변동 ${qiF1(c.v)} / 고정 ${qiF1(c.f)})와 다르게 입력됨</span> <button class="btn sm" onclick="qiUseCost(${i})">등록값으로</button>`;
   const a=qiAge(it),s=qiState(it);
-  return `${qiChip(it,true)} <span style="color:var(--muted)">원가 기준 ${esc(qiRef(it))}${qiRef(it)!==c.d?' (동일 확인, 시트 '+esc(c.d)+')':''}</span>
+  return `${it.tmp?'<span style="font-size:11px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:8px;padding:0 6px" title="품명·규격이 임시입니다 — 견적 품목·제조원가 관리 > 수정에서 확정">🟠 임시 품목(품명·규격 확인)</span> ':''}${qiChip(it,true)} <span style="color:var(--muted)">원가 기준 ${esc(qiRef(it))}${qiRef(it)!==c.d?' (동일 확인, 시트 '+esc(c.d)+')':''}</span>
     ${s!=='ok'?`<button class="btn sm" onclick="qiConfDlg('${it.id}',${i})">✔ 동일 확인</button>`:''}<button class="btn sm" onclick="qiCostDlg('${it.id}',${i})">원가 갱신</button><button class="btn sm" onclick="qiSheetOpen('${it.id}','${esc(r.cd||c.id)}')">원가 시트</button> ${w} ${ref}
     <span style="margin-left:6px;color:var(--muted)">견적서 표기 <input value="${esc(r.disp||'')}" placeholder="${esc(it.disp||r.name)}" oninput="quoteItems[${i}].disp=this.value" style="width:120px;font-size:11.5px"></span>`;
 }
@@ -10279,7 +10288,7 @@ function renderQuoteItems(){
     const sub=alt?'':`<tr class="qsub"><td></td><td colspan="14" id="qsub_${i}">${qSubHtml(i,r)}</td></tr>`;
     return main+sub;}).join('')
     ||`<tr><td colspan="15"><div class="empty">품목이 없습니다. [＋ 품목 추가]를 누르세요.</div></td></tr>`;
-  recalcAll();
+  recalcAll();try{fcReviewRender();}catch(e){}
 }
 function recalcRow(i,res){res=res||qRes();const it=res[i];if(!it)return;const c=calcItem(it);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
@@ -10301,7 +10310,7 @@ function recalcTotals(res){
 }
 function recalcAll(){const res=qRes();quoteItems.forEach((_,i)=>recalcRow(i,res));recalcTotals(res);}
 /* ---------- 새 견적 / 저장 / 불러오기 ---------- */
-function newQuote(){currentQuoteId=null;document.getElementById('q_id').textContent='';
+function newQuote(){currentQuoteId=null;currentQuoteSt='임시저장';document.getElementById('q_id').textContent='';
   ['q_customer','q_title','q_docno','q_attach','q_rvtitle'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('q_delivery').value='별도 협의';document.getElementById('q_incoterm').value='도착도';
   document.getElementById('q_valid').value='1개월';document.getElementById('q_payment').value='정기결제';
@@ -10314,25 +10323,27 @@ function gatherQuote(){const g=id=>document.getElementById(id).value;return {id:
   docno:g('q_docno').trim(),date:g('q_date'),delivery:g('q_delivery'),incoterm:g('q_incoterm'),
   valid:g('q_valid'),payment:g('q_payment'),attach:g('q_attach'),overview:g('q_overview'),costbasis:g('q_costbasis'),
   margin:num(g('q_margin'))||0,incfixed:incFixed(),round:g('q_round'),seal:document.getElementById('q_seal').checked,sheets:g('q_sheets'),
-  items:JSON.parse(JSON.stringify(quoteItems.filter(r=>!qBlank(r)))),upd:new Date().toISOString(),by:qiWho()};}
-async function saveQuote(){const q=gatherQuote();if(!q.items.length){toast('품목을 입력하세요');return;}
-  currentQuoteId=q.id;await putRec('quotes',q);flashSave();document.getElementById('q_id').textContent='저장됨: '+q.id;
-  const un=qResolve(q.items).filter(r=>!r.alt&&r.name&&!r.qi).length;
-  toast('견적을 저장했습니다'+(un?' (원가 보관소에 없는 품목 '+un+'건 — [보관소에 등록] 권장)':''));
-  qiHist=null;qiHistLoad();renderSavedQuotes();}
+  items:JSON.parse(JSON.stringify(quoteItems.filter(r=>!qBlank(r)))),st:currentQuoteSt||'임시저장',upd:new Date().toISOString(),by:qiWho()};}
+async function saveQuote(){if(!quoteItems.some(r=>!qBlank(r))){toast('품목을 입력하세요');return;}
+  const nReg=qiAutoFromQuote();const q=gatherQuote();
+  currentQuoteId=q.id;await putRec('quotes',q);flashSave();document.getElementById('q_id').textContent=(q.st==='작성완료'?'작성완료: ':'임시저장됨: ')+q.id;
+  toast((q.st==='작성완료'?'견적을 저장했습니다':'임시저장했습니다 — 나중에 [불러오기]로 이어서 작업하세요')+(nReg?' · 견적 품목·제조원가에 '+nReg+'건 새로 등록(임시)':''));
+  qiHist=null;qiHistLoad();renderSavedQuotes();renderQuoteItems();}
 async function renderSavedQuotes(){let list=[];try{list=await txAll('quotes');}catch(e){}
   list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const tb=document.getElementById('savedQuotes');if(!tb)return;
-  if(!list.length){tb.innerHTML=`<tr><td colspan="7"><div class="empty">저장된 견적이 없습니다.</div></td></tr>`;return;}
+  if(!list.length){tb.innerHTML=`<tr><td colspan="8"><div class="empty">저장된 견적이 없습니다.</div></td></tr>`;return;}
   tb.innerHTML=list.map(q=>{const t=qTotals(q);
     return `<tr><td>${esc(q.date)}</td><td>${esc(q.customer)||'-'}</td><td>${esc(q.title)||'-'}</td><td>${t.n}</td>
       <td class="ch-cum">${fmt(t.amt)}</td><td>${fmt(t.pf)}</td>
-      <td><div class="acts"><button class="btn sm" onclick="loadQuote('${q.id}')">불러오기</button>
+      <td>${q.st==='임시저장'?'<span style="background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:800;white-space:nowrap">📝 임시저장</span>':(q.st==='작성완료'?'<span style="background:#dcfce7;color:#166534;border-radius:10px;padding:1px 9px;font-size:11px;font-weight:800;white-space:nowrap">✔ 작성완료</span>':'<span style="color:var(--muted)">저장됨</span>')}</td>
+      <td><div class="acts"><button class="btn sm" onclick="loadQuote('${q.id}')">${q.st==='임시저장'?'이어서 작업':'불러오기'}</button>
+        ${q.st==='작성완료'?`<button class="btn sm" onclick="qSetSt('${q.id}','임시저장')">임시로</button>`:`<button class="btn sm" onclick="qSetSt('${q.id}','작성완료')">작성완료</button>`}
         <button class="btn sm" onclick="qCopyQuote('${q.id}')">복사</button>
         <button class="btn sm danger del-rec" onclick="removeQuote('${q.id}')">삭제</button></div></td></tr>`;}).join('');
 }
 async function qLoadInto(q,asCopy){
-  currentQuoteId=asCopy?null:q.id;document.getElementById('q_id').textContent=asCopy?'복사본(저장 전)':'불러옴: '+q.id;
+  currentQuoteId=asCopy?null:q.id;currentQuoteSt=asCopy?'임시저장':(q.st||'');document.getElementById('q_id').textContent=asCopy?'복사본(저장 전)':'불러옴'+(q.st?'('+q.st+')':'')+': '+q.id;
   const s=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v==null?'':v;};
   s('q_customer',q.customer);s('q_title',q.title);s('q_rvtitle',q.rvtitle);s('q_docno',asCopy?'':q.docno);s('q_date',asCopy?todayStr():(q.date||todayStr()));
   s('q_delivery',q.delivery);s('q_incoterm',q.incoterm);s('q_valid',q.valid);s('q_payment',q.payment);s('q_attach',q.attach);
@@ -10390,7 +10401,7 @@ function qCtx(){const g=id=>((document.getElementById(id)||{}).value||'');
   return {custRaw:g('q_customer').trim(),cust:g('q_customer').trim()||'(고객사)',title:g('q_title').trim(),rvtitle:g('q_rvtitle').trim(),dt:g('q_date')||todayStr(),docno:g('q_docno').trim(),delivery:g('q_delivery'),incoterm:g('q_incoterm'),valid:g('q_valid'),payment:g('q_payment'),attach:g('q_attach'),
     overview:g('q_overview'),costbasis:g('q_costbasis'),seal:(document.getElementById('q_seal')||{}).checked!==false,sheets:g('q_sheets')||'cmp'};}
 const qDate=d=>String(d||'').replace(/-/g,'.');
-const qLines=(t,cls)=>String(t||'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim()).map(l=>`<div class="${cls||''}">${esc(l)}</div>`).join('');
+const qLines=(t,cls)=>String(t||'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>qMkPlain(l).trim()).map(l=>`<div class="${cls||''}">${qMkInline(l)}</div>`).join('');
 function qRvTitle(x,res){const names=[...new Set(res.filter(r=>!r.alt&&r.name).map(r=>r.name))].join(', ');return x.rvtitle||`${x.cust} ${names||x.title} 견적검토의 건`;}
 /* 제조원가 시트 (엑셀 '제조원가' 시트 양식) */
 const qiSpecShow=it=>!!it.spec&&qiRecs.filter(r=>r.name===it.name).length>1;
@@ -10447,7 +10458,7 @@ function openReviewDoc(){
   const bd=document.getElementById('qdocBody');bd.className='qdoc qd2 qwide';
   bd.innerHTML=`<div class="qrv"><div class="qrv-top"><div class="qrv-h">■ ${esc(qRvTitle(x,res))}</div><div class="qrv-d">${esc(qDate(x.dt))}</div></div>
     <div class="qrv-sec">▪ 개요</div><div class="qrv-tx">${qLines(x.overview)||'<div>&nbsp;</div>'}</div>
-    <div class="qrv-sec" style="margin-top:10px">▪ 원가산출 기준</div><div class="qrv-tx">${qLines(x.costbasis,'qyl')||'<div>&nbsp;</div>'}</div>
+    <div class="qrv-sec" style="margin-top:10px">▪ 원가산출 기준</div><div class="qrv-tx">${qLines(x.costbasis)||'<div>&nbsp;</div>'}</div>
     <table class="qrv-tb" style="margin-top:12px"><colgroup><col style="width:12%"><col style="width:6%"><col style="width:4.5%"><col style="width:7%"><col style="width:5.5%"><col style="width:9%"><col style="width:5.5%"><col style="width:9%"><col style="width:6%"><col style="width:9.5%"><col style="width:9%"><col style="width:6%"><col style="width:11%"></colgroup>
       <thead><tr><td rowspan="2" class="qh">품목</td><td rowspan="2" class="qh">규격</td><td rowspan="2" class="qh">단위</td><td rowspan="2" class="qh">수량</td><td colspan="2" class="qh">제조원가</td><td colspan="2" class="qh">판매원가</td><td colspan="2" class="qh">견적가</td><td rowspan="2" class="qh">영업이익</td><td rowspan="2" class="qh">이익률</td><td rowspan="2" class="qh">비고</td></tr>
       <tr><td class="qh">원가</td><td class="qh">금액</td><td class="qh">단가</td><td class="qh">금액</td><td class="qh">단가</td><td class="qh">금액</td></tr></thead>
@@ -10533,7 +10544,7 @@ function qxBook(){
   const book={sheet(name,opt){
     const rows={},merges=[],rh={},pics=[];
     const S={name,opt:opt||{},rows,merges,rh,pics,
-      put(r,c,v,o,f){(rows[r]=rows[r]||{})[c]={v,s:ST(o),f};return S;},
+      put(r,c,v,o,f){const rc=o&&o.rich;if(rc){o=Object.assign({},o);delete o.rich;}(rows[r]=rows[r]||{})[c]={v,s:ST(o),f,rich:rc};return S;},
       fill(r1,c1,r2,c2,o){for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++)if(!(rows[r]&&rows[r][c]))S.put(r,c,'',o);return S;},
       merge(r1,c1,r2,c2,o){S.fill(r1,c1,r2,c2,o);merges.push(colL(c1)+r1+':'+colL(c2)+r2);return S;},
       height(r,h){rh[r]=h;return S;},pic(p){pics.push(p);return S;}};
@@ -10550,6 +10561,7 @@ function qxBook(){
           if(c.f!=null)sd+=`<c r="${ref}" s="${c.s}"><f>${_xe(c.f)}</f><v>${isFinite(c.v)?c.v:0}</v></c>`;
           else if(typeof c.v==='number'&&isFinite(c.v))sd+=`<c r="${ref}" s="${c.s}"><v>${c.v}</v></c>`;
           else if(c.v===''||c.v==null)sd+=`<c r="${ref}" s="${c.s}"/>`;
+          else if(c.rich)sd+=`<c r="${ref}" s="${c.s}" t="inlineStr"><is>${c.rich.map(q=>`<r><rPr>${q.b?'<b/>':''}${q.u?'<u/>':''}<sz val="11"/><color rgb="${argb(q.c||'#000000')}"/><rFont val="맑은 고딕"/></rPr><t xml:space="preserve">${_xe(q.t)}</t></r>`).join('')}</is></c>`;
           else sd+=`<c r="${ref}" s="${c.s}" t="inlineStr"><is><t xml:space="preserve">${_xe(c.v)}</t></is></c>`;});
         sd+='</row>';});
       const cols=(o.cols||[]).map((w,k)=>`<col min="${k+1}" max="${k+1}" width="${w}" customWidth="1"/>`).join('');
@@ -10610,10 +10622,11 @@ async function downloadReviewExcel(){
   S.put(1,1,'■ '+qRvTitle(x,res),{b:1,sz:20,h:'left'});S.merge(1,1,1,12,{b:1,sz:20,h:'left'});S.height(1,34);
   S.put(2,14,qxSerial(x.dt),{fmt:'md',h:'right'});
   let r=3;S.put(r,1,'▪ 개요',{h:'left'});r++;
-  const lines=t=>String(t||'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim());
-  lines(x.overview).forEach(l=>{S.put(r,1,l,{h:'left'});r++;});r++;
+  const lines=t=>String(t||'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>qMkPlain(l).trim());
+  const rich=l=>{const rs=qMkRuns(l),fm=rs.some(q=>q.b||q.u||q.c||q.h),all=rs.length&&rs.every(q=>q.h||!q.t.trim());return {t:qMkPlain(l),rich:fm?rs:null,fill:all?rs.filter(q=>q.h)[0].h:''};};
+  lines(x.overview).forEach(l=>{const q=rich(l);S.put(r,1,q.t,Object.assign({h:'left'},q.rich?{rich:q.rich}:{},q.fill?{fill:q.fill}:{}));r++;});r++;
   S.put(r,1,'▪ 원가산출 기준',{h:'left'});r++;
-  lines(x.costbasis).forEach(l=>{S.put(r,1,l,{h:'left',fill:'#FFFF00'});S.merge(r,1,r,14,{h:'left',fill:'#FFFF00'});r++;});r++;
+  lines(x.costbasis).forEach(l=>{const q=rich(l),o=Object.assign({h:'left'},q.fill?{fill:q.fill}:{});S.put(r,1,q.t,Object.assign({},o,q.rich?{rich:q.rich}:{}));S.merge(r,1,r,14,o);r++;});r++;
   const h=r;
   [['품목',1,1],['규격',2,2],['단위',3,3],['수량',4,4],['영업이익',11,11],['이익률',12,12]].forEach(a=>{S.put(h,a[1],a[0],QXH);S.merge(h,a[1],h+1,a[2],QXH);});
   [['제조원가',5],['판매원가',7],['견적가',9]].forEach(a=>{S.put(h,a[1],a[0],QXH);S.merge(h,a[1],h,a[1]+1,QXH);});
@@ -31020,6 +31033,7 @@ function fitwRun(){
   if(__fitwBusy)return;const c=document.querySelector('.content');if(!c)return;
   __fitwBusy=true;const mn=document.querySelector('.main'),st=mn?mn.scrollTop:0;
   try{
+    try{stkhUndo();}catch(e){}
     c.querySelectorAll('[data-fitw]').forEach(el=>{el.style.zoom='';el.removeAttribute('data-fitw');});
     if(!fitwOn()||document.body.classList.contains('mv')||window.innerWidth<900)return;
     const cand=[];
@@ -31036,13 +31050,591 @@ function fitwRun(){
         for(const ch of e.children){if(ch.tagName==='SCRIPT'||ch.tagName==='STYLE')continue;ch.style.zoom=z;ch.setAttribute('data-fitw','1');}
       }});
   }catch(err){}
-  finally{if(mn)mn.scrollTop=st;__fitwBusy=false;}
+  finally{if(mn)mn.scrollTop=st;__fitwBusy=false;try{stkhRun();}catch(e){}}
 }
 (function(){const init=()=>{const c=document.querySelector('.content');if(!c||!window.MutationObserver)return;
   new MutationObserver(()=>{if(!__fitwBusy)fitwSoon();}).observe(c,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden']});
   new MutationObserver(()=>fitwSoon()).observe(document.body,{attributes:true,attributeFilter:['class']});
   window.addEventListener('resize',fitwSoon);fitwBtnMark();fitwSoon();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();})();
+/* 2026-10-30 (rpt174): 표 머리글(품명·규격 등 맨 윗줄) 고정 — 모든 사이드바 화면에서 아래로 스크롤해도 표 제목줄이 상단 고정 영역 바로 아래에 계속 보이게 한다.
+   원인: .tablewrap{overflow-x:auto}가 세로 스크롤 상자가 되어 thead의 sticky가 화면 스크롤에 먹지 않음 →
+   가로로 넘치지 않는 감싸개는 overflow:clip(+flow-root)으로 바꿔 sticky가 화면(.main) 기준으로 동작하게 하고,
+   여전히 가로로 넘치는 표(한 화면 맞춤 이후에도)는 표 상자 안에서 세로 스크롤 되도록 높이를 제한해 그 안에서 고정한다.
+   한 화면 맞춤(fitwRun) 계산을 방해하지 않도록 fitwRun 시작 때 되돌리고(stkhUndo), 끝난 뒤 다시 적용(stkhSoon). 인쇄에는 영향 없음. */
+let __stkhT=0;
+function stkhSoon(){clearTimeout(__stkhT);__stkhT=setTimeout(()=>{try{stkhRun();}catch(e){}},60);}
+function stkhUndo(){
+  document.querySelectorAll('[data-stkh-o]').forEach(el=>{let o={};try{o=JSON.parse(el.getAttribute('data-stkh-o'))||{};}catch(e){}
+    el.style.overflowX=o.x||'';el.style.overflowY=o.y||'';el.style.maxHeight=o.m||'';el.style.display=o.d||'';el.removeAttribute('data-stkh-o');});
+  document.querySelectorAll('table[data-stkh]').forEach(t=>{t.removeAttribute('data-stkh');
+    t.querySelectorAll('thead th,thead td').forEach(h=>{h.style.top='';if(h.hasAttribute('data-stkh-bg')){h.style.backgroundColor='';h.removeAttribute('data-stkh-bg');}});});
+}
+function stkhBase(){let s=0;['fsBar','stickyHead'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const cs=getComputedStyle(e);if(cs.display==='none')return;if(cs.position==='sticky'||cs.position==='fixed')s+=e.getBoundingClientRect().height;});return Math.round(s);}
+function stkhZoom(el){let z=1;for(let e=el;e&&e.nodeType===1;e=e.parentElement){const v=parseFloat(getComputedStyle(e).zoom);if(v&&v!==1)z*=v;}return z||1;}
+function stkhRun(){
+  const c=document.querySelector('.content'),mn=document.querySelector('.main');if(!c||!mn)return;
+  stkhUndo();
+  const base=stkhBase(),small=document.body.classList.contains('mv')||window.innerWidth<900,st=mn.scrollTop;
+  c.querySelectorAll('table').forEach(t=>{
+    const hd=t.tHead;if(!hd||!hd.rows.length||!t.offsetWidth||t.closest('[data-nostk],.nostk,.dtk-prev'))return;
+    let mode='page',skip=false;
+    for(let el=t.parentElement;el&&el!==mn&&el!==document.body;el=el.parentElement){
+      const cs=getComputedStyle(el);
+      if(cs.position==='fixed'){mode='in';break;}
+      if(cs.transform!=='none'&&/matrix|scale/.test(cs.transform)){skip=true;break;}
+      const ox=cs.overflowX,oy=cs.overflowY;
+      if(ox==='visible'&&oy==='visible')continue;
+      if(ox==='clip'&&oy==='clip')continue;
+      const vScroll=(oy==='auto'||oy==='scroll'||oy==='hidden')&&el.scrollHeight>el.clientHeight+3&&el.clientHeight>0;
+      if(vScroll){mode='in';break;}                                  /* 스스로 세로 스크롤하는 상자(팝업 등) — 그 안에서 고정 */
+      if((ox==='auto'||ox==='scroll')&&el.scrollWidth>el.clientWidth+3){      /* 가로로 넘침 — 표 상자 안에서 세로 스크롤 */
+        if(small){skip=true;break;}
+        if(!el.hasAttribute('data-stkh-o'))el.setAttribute('data-stkh-o',JSON.stringify({x:el.style.overflowX,y:el.style.overflowY,m:el.style.maxHeight,d:el.style.display}));
+        el.style.overflowY='auto';el.style.maxHeight='calc(100vh - '+(base+(document.body.classList.contains('nav-top')?60:24))+'px)';mode='in';break;}
+      /* 가로로 안 넘침 — clip으로 바꿔 sticky가 화면 기준으로 동작 */
+      el.setAttribute('data-stkh-o',JSON.stringify({x:el.style.overflowX,y:el.style.overflowY,m:el.style.maxHeight,d:el.style.display}));
+      el.style.overflowX='clip';el.style.overflowY='clip';if(cs.display==='block')el.style.display='flow-root';
+    }
+    if(skip)return;
+    t.setAttribute('data-stkh',mode);
+    const z=stkhZoom(t),b0=(mode==='page'?base:0);let off=0;
+    for(const tr of hd.rows){
+      const h=tr.getBoundingClientRect().height;
+      for(const cell of tr.cells){cell.style.top=((b0+off)/z)+'px';
+        const bg=getComputedStyle(cell).backgroundColor;
+        if(bg==='rgba(0, 0, 0, 0)'||bg==='transparent'){cell.style.backgroundColor=getComputedStyle(document.documentElement).getPropertyValue('--head').trim()||'#eef2f6';cell.setAttribute('data-stkh-bg','1');}}
+      off+=h;}
+  });
+  mn.scrollTop=st;
+}
+(function(){const init=()=>{window.addEventListener('resize',stkhSoon);stkhSoon();};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();})();
+/* ===== 2026-10-30 (rpt175): 공장 제조원가 서식 자동 읽기 + 견적 임시저장 =====
+   [견적검토·견적서 > 🏭 공장 제조원가 추가]: 공장에서 받은 '제조원가' 서식(PDF·사진·엑셀)을 올리면 자동으로 읽어
+   ① 품목·제조원가 보관소에 등록(품명·규격은 임시 표시 → 나중에 [수정]) ② 전체원가/변동비로 직접변동비·직접고정비를 나누고
+   ③ 견적검토 내용(내부결재)에 넣을 검토 문구를 체크박스로 제시한다.
+   읽기 방식: 엑셀·글자가 있는 PDF는 서식 항목명을 찾아 읽고, 스캔본(그림)은 숫자 인식 엔진(tesseract.js, 급여 사진 인식과 동일)으로
+   표 칸 위치를 계산해 읽는다. 읽은 값은 원본 이미지와 나란히 보여 주고 합계 검산을 표시하며, 사람이 대조·확인(체크)해야 등록된다. */
+const FC_ROWS=['재료비','노무비','전력비','연료비','감가상각비','소모품비','가공비','기타경비','임가공비'];
+let fcSheets=[],__fcW=null;
+const fcNum=s=>{s=String(s==null?'':s).replace(/[\s,]/g,'');if(s===''||/^[-–—]+$/.test(s))return 0;const n=parseFloat(s);return isFinite(n)?n:0;};
+const fcNz=s=>String(s==null?'':s).replace(/\s+/g,'');
+function fcBlank(src,warn){const rows={};FC_ROWS.forEach(k=>{rows[k]=['',''];});
+  return {src:src||'',mode:'manual',name:'',spec:'',plant:'',date:'',wt:'',rows,sub:['',''],ea:['',''],pack:['',''],packIn:false,ok:false,img:'',warn:warn?[warn]:[]};}
+/* 줄 간격: 인접 숫자 사이 간격을 최소 간격의 정수배로 보고 평균(글자 위치 흔들림에 강함) */
+function fcPitch(A,J,I){
+  const gs=[];for(let k=J+1;k<=I;k++){const g=A[k].yc-A[k-1].yc;if(g>10)gs.push(g);}
+  if(!gs.length)return 0;const m=Math.min.apply(null,gs);let sg=0,sn=0;
+  gs.forEach(g=>{const n=Math.max(1,Math.round(g/m));sg+=g;sn+=n;});return sg/sn;
+}
+/* ---- ① 스캔(그림) → 표 칸 위치로 읽기 ---- */
+function fcParseOcr(ws,W){
+  const toks=[];let date='';
+  ws.forEach(w=>{const raw=String(w.t||'');const dm=/20\d\d[-.]\d\d[-.]\d\d/.exec(raw);if(dm&&!date)date=dm[0].replace(/\./g,'-');
+    const s=raw.replace(/^[:;|\/!]+/,'').replace(/[:;|\/!]+$/,'');
+    if(!/^\d+(?:[.,]\d{3})*$/.test(s))return;
+    const d=s.replace(/[.,]/g,'');if(d.length<2)return;toks.push({v:parseInt(d,10),x1:w.x1,yc:(w.y0+w.y1)/2,len:d.length});});
+  const tol=Math.max(12,W*0.012),cl=[];
+  toks.slice().sort((a,b)=>a.x1-b.x1).forEach(t=>{const c=cl[cl.length-1];
+    if(c&&t.x1-c.xm<=tol){c.t.push(t);c.xm=c.t.reduce((s,q)=>s+q.x1,0)/c.t.length;}else cl.push({t:[t],xm:t.x1});});
+  cl.forEach(c=>{c.sc=c.t.reduce((s,q)=>s+q.len,0);});
+  const top=cl.filter(c=>c.t.length>=3).sort((a,b)=>b.sc-a.sc).slice(0,2).sort((a,b)=>a.xm-b.xm);
+  if(top.length<2||top[1].xm-top[0].xm<W*0.04||top[1].xm-top[0].xm>W*0.25)return null;
+  const ded=a=>{const o=[];a.slice().sort((p,q)=>p.yc-q.yc).forEach(t=>{const l=o[o.length-1];if(l&&Math.abs(l.yc-t.yc)<6){if(t.len>l.len)o[o.length-1]=t;}else o.push(t);});return o;};
+  const A=ded(top[0].t),B=ded(top[1].t);
+  let J=-1,I=-1;
+  outer:for(let j=0;j<Math.min(3,A.length);j++){let sum=0;
+    for(let i=j;i<A.length;i++){if(i-j>=3&&Math.abs(A[i].v-sum)<=Math.max(3,A[i].v*0.003)){J=j;I=i;break outer;}sum+=A[i].v;}}
+  let mg0=0,y9,pitch;
+  if(J<0){   /* 제조경비 합계 칸을 못 읽은 경우: EA 합계(= 항목 합 × 단중)를 기준으로 줄 위치를 잡는다 */
+    const e=A.findIndex(t=>t.v>=20000);
+    if(e<2)return null;
+    for(let j=1;j<=Math.min(3,e-2);j++){const wt=A[j-1].v;let sum=0;for(let i=j;i<e;i++)sum+=A[i].v;
+      if(wt>0&&Math.abs(A[e].v-sum*wt)<=A[e].v*0.006){J=j;break;}}
+    if(J<0)return null;
+    pitch=fcPitch(A,J,e-1);if(!pitch)return null;y9=A[e].yc-pitch;I=-1;
+  }else{
+    pitch=fcPitch(A,J,I);if(!pitch)return null;y9=A[I].yc;if(Math.round((A[I].yc-A[J].yc)/pitch)>9)return null;
+  }
+  const rowOf=t=>Math.round((t.yc-y9)/pitch)+9;
+  const s=fcBlank('', '');s.mode='ocr';s.date=date;s._geo={xa:top[0].xm,xb:top[1].xm,y9,pitch};
+  if(J>0)s.wt=A[J-1].v;
+  FC_ROWS.forEach(k=>{s.rows[k]=[0,0];});
+  A.forEach(t=>{const r=rowOf(t);if(r>=0&&r<=8)s.rows[FC_ROWS[r]][0]=t.v;else if(r===9)s.sub[0]=t.v;else if(r===10)s.ea[0]=t.v;});
+  B.forEach(t=>{const r=rowOf(t);if(r>=0&&r<=8)s.rows[FC_ROWS[r]][1]=t.v;else if(r===9)s.sub[1]=t.v;else if(r===10)s.ea[1]=t.v;});
+  /* 판매관리비 구역(포장비 등): 행 13 우선, 없으면 남은 값이 한 줄뿐일 때 그 줄 */
+  const tail=[...A,...B].filter(t=>rowOf(t)>=11&&rowOf(t)<=14);
+  let pr=tail.some(t=>rowOf(t)===13)?13:(new Set(tail.map(rowOf)).size===1?rowOf(tail[0]):0);
+  if(pr){A.forEach(t=>{if(rowOf(t)===pr)s.pack[0]=t.v;});B.forEach(t=>{if(rowOf(t)===pr)s.pack[1]=t.v;});}
+  if(J===0&&!s.wt)s.warn.push('제품단중(kg)을 읽지 못했습니다. 직접 입력해 주세요.');
+  return s;
+}
+/* ---- ② 항목명이 글자로 있는 경우(엑셀·글자 PDF) → 항목명 위치로 읽기 ---- */
+function fcParseLabeled(ws){
+  const cy=w=>(w.y0+w.y1)/2,cx=w=>(w.x0+w.x1)/2;
+  const hA=ws.filter(w=>fcNz(w.t)==='전체원가')[0],hB=ws.filter(w=>fcNz(w.t)==='변동비')[0];
+  if(!hA||!hB)return null;
+  const isNum=t=>{t=fcNz(t);return t!==''&&/^[-–—]+$|^\d[\d,]*(?:\.\d+)?$/.test(t);};
+  const lab={};FC_ROWS.forEach(k=>{const w=ws.filter(x=>fcNz(x.t)===k&&cx(x)<hA.x0)[0];if(w)lab[k]=w;});
+  const ks=Object.keys(lab);if(ks.length<4)return null;
+  const ys=ks.map(k=>cy(lab[k])).sort((a,b)=>a-b),gp=ys.slice(1).map((y,i)=>y-ys[i]).filter(g=>g>1).sort((a,b)=>a-b),gap=gp.length?gp[gp.length>>1]:20,tol=gap*0.45;
+  const xa=cx(hA),xb=cx(hB),cg=Math.abs(xb-xa);
+  const rowVals=y=>{const r=[0,0],f=[false,false];
+    ws.filter(w=>Math.abs(cy(w)-y)<=tol&&cx(w)>xa-cg*0.6&&isNum(w.t)).forEach(w=>{const c=Math.abs(cx(w)-xa)<=Math.abs(cx(w)-xb)?0:1;if(!f[c]){r[c]=fcNum(w.t);f[c]=true;}});return r;};
+  const s=fcBlank('','');s.mode='text';
+  FC_ROWS.forEach(k=>{s.rows[k]=lab[k]?rowVals(cy(lab[k])):[0,0];});
+  const lastY=Math.max.apply(null,ys);
+  const below=[...new Set(ws.filter(w=>cy(w)>lastY+gap*0.5&&Math.abs(cx(w)-xa)<=cg*0.6&&isNum(w.t)&&fcNz(w.t)!=='-').map(w=>Math.round(cy(w))))].sort((a,b)=>a-b);
+  if(below[0]!=null)s.sub=rowVals(below[0]);
+  if(below[1]!=null)s.ea=rowVals(below[1]);
+  const pk=ws.filter(w=>fcNz(w.t)==='포장비'&&cx(w)<hA.x0&&cy(w)>lastY)[0];if(pk)s.pack=rowVals(cy(pk));
+  const wl=ws.filter(w=>/^제품단중/.test(fcNz(w.t)))[0];
+  if(wl){const c=ws.filter(w=>Math.abs(cy(w)-cy(wl))<=tol&&cx(w)>cx(wl)&&isNum(w.t)&&fcNz(w.t)!=='-')[0];if(c)s.wt=fcNum(c.t);
+    else{const m=/(\d[\d,]*(?:\.\d+)?)\s*$/.exec(String(wl.t));if(m)s.wt=fcNum(m[1]);}}
+  const all=ws.map(w=>String(w.t)).join(' ');const dm=/20\d\d[-.]\s?\d\d[-.]\s?\d\d/.exec(all);if(dm)s.date=dm[0].replace(/[.\s]/g,m=>m==='.'?'-':'');
+  const side=lbl=>{const w=ws.filter(x=>fcNz(x.t)===lbl)[0];if(!w)return '';
+    return ws.filter(x=>Math.abs(cy(x)-cy(w))<=tol&&cx(x)>cx(w)&&String(x.t).trim()).sort((a,b)=>a.x0-b.x0).map(x=>String(x.t).trim()).join(' ');};
+  s.name=side('품명');s.plant=side('규격');
+  return s;
+}
+/* ---- 검산 ---- */
+function fcCheck(s){
+  const out=[],wt=fcNum(s.wt),sumT=FC_ROWS.reduce((a,k)=>a+fcNum(s.rows[k][0]),0),sumV=FC_ROWS.reduce((a,k)=>a+fcNum(s.rows[k][1]),0);
+  const subT=fcNum(s.sub[0]),subV=fcNum(s.sub[1]),eaT=fcNum(s.ea[0]),eaV=fcNum(s.ea[1]);
+  const near=(a,b,r)=>Math.abs(a-b)<=Math.max(3,Math.abs(b)*(r||0.003));
+  if(!(wt>0))out.push({ok:false,t:'제품단중(kg)이 없습니다'});
+  if(subT)out.push({ok:near(sumT,subT),t:`전체원가 항목 합 ${fmt(sumT)} ↔ 서식 제조경비 합계 ${fmt(subT)}`});else out.push({ok:false,t:'제조경비 합계(전체원가)를 읽지 못했습니다'});
+  if(subV)out.push({ok:near(sumV,subV),t:`변동비 항목 합 ${fmt(sumV)} ↔ 서식 변동비 합계 ${fmt(subV)}`});else out.push({ok:false,t:'제조경비 합계(변동비)를 읽지 못했습니다'});
+  if(eaT&&wt&&subT)out.push({ok:near(eaT,subT*wt,0.004),t:`EA 합계 ${fmt(eaT)} ↔ 합계 ${fmt(subT)} × 단중 ${fmt(wt)}kg = ${fmt(Math.round(subT*wt))}`});
+  if(eaV&&wt&&subV)out.push({ok:near(eaV,subV*wt,0.004),t:`EA 변동비 ${fmt(eaV)} ↔ ${fmt(subV)} × ${fmt(wt)}kg = ${fmt(Math.round(subV*wt))}`});
+  if(FC_ROWS.some(k=>fcNum(s.rows[k][1])>fcNum(s.rows[k][0])+0.5))out.push({ok:false,t:'변동비가 전체원가보다 큰 항목이 있습니다'});
+  return out;
+}
+function fcCalc(s){
+  const wt=fcNum(s.wt),sumT=FC_ROWS.reduce((a,k)=>a+fcNum(s.rows[k][0]),0),sumV=FC_ROWS.reduce((a,k)=>a+fcNum(s.rows[k][1]),0);
+  const subT=fcNum(s.sub[0])||sumT,subV=fcNum(s.sub[1])||sumV,eaT=fcNum(s.ea[0])||subT*wt,eaV=fcNum(s.ea[1])||subV*wt;
+  const pT=fcNum(s.pack[0]),pV=fcNum(s.pack[1]),pkT=s.packIn?pT*wt:0,pkV=s.packIn?pV*wt:0;
+  const v=Math.round(eaV+pkV),t=Math.round(eaT+pkT);
+  return {wt,sumT,sumV,subT,subV,eaT,eaV,v,f:t-v,t,pT,pV,pkEA:pT*wt};
+}
+/* 항목별 EA 환산(원/kg × 제품단중) — 합계는 서식에 적힌 EA 합계에 정확히 맞춤(반올림 차이는 가장 큰 항목에 반영) */
+function fcDet(s,cc){
+  const wt=cc.wt,keys=QI_ROWS.filter(r=>r[1]!==1).map(r=>r[0]),rv={},rf={};
+  keys.forEach(k=>{rv[k]=0;rf[k]=0;});
+  FC_ROWS.forEach(k=>{const kk=k==='임가공비'?'가공비':k,t=fcNum(s.rows[k][0]),v=fcNum(s.rows[k][1]);rv[kk]+=v*wt;rf[kk]+=(t-v)*wt;});
+  if(s.packIn){rv['포장비']+=cc.pV*wt;rf['포장비']+=(cc.pT-cc.pV)*wt;}
+  const fix=(r,target)=>{keys.forEach(k=>{r[k]=Math.round(r[k]);});let d=target-keys.reduce((a,k)=>a+r[k],0);
+    if(d){const big=keys.slice().sort((a,b)=>r[b]-r[a])[0];r[big]+=d;}};
+  fix(rv,cc.v);fix(rf,cc.f);
+  const det={};keys.forEach(k=>{det[k]=[rv[k],rf[k]];});return det;
+}
+/* ---- 파일 읽기 ---- */
+function fcLoadScript(src,ok){return new Promise((res,rej)=>{if(ok())return res();const e=document.createElement('script');e.src=src;e.onload=res;e.onerror=()=>rej(new Error('PDF 읽기 엔진을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'));document.head.appendChild(e);});}
+async function fcPdfLib(){const B=window.FC_PDFJS_BASE||'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+  await fcLoadScript(B+'pdf.min.js',()=>!!window.pdfjsLib);window.pdfjsLib.GlobalWorkerOptions.workerSrc=B+'pdf.worker.min.js';}
+async function fcWorker(st){
+  if(__fcW)return __fcW;await payTessLoad();
+  __fcW=await Tesseract.createWorker('eng',1,{langPath:window.PAY_TESS_LANG||'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int',
+    logger:m=>{if(st&&m&&m.status&&m.progress!=null&&/load|init/.test(m.status))st('읽기 엔진 준비 중… '+Math.round(m.progress*100)+'%');}});
+  return __fcW;
+}
+function fcRot(cv,deg){
+  if(!deg)return cv;const c=document.createElement('canvas'),q=deg===180;c.width=q?cv.width:cv.height;c.height=q?cv.height:cv.width;
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(cv,-cv.width/2,-cv.height/2);return c;
+}
+const fcScore=s=>((fcNum(s.wt)>0&&fcNum(s.sub[0])>=50)?10:0)+fcCheck(s).filter(c=>c.ok).length;
+const FC_FULL=14;
+/* 한 칸이 잘못/누락 읽힌 경우: 서로 다른 세 값(항목 합 · 서식 합계 · EA÷단중)이 두 개 이상 일치하면 나머지 하나를 고친다 */
+function fcRepair(s){
+  const wt=fcNum(s.wt);if(!(wt>0))return;
+  [[0,'전체원가'],[1,'변동비']].forEach(([k,nm])=>{
+    const sum=FC_ROWS.reduce((a,r)=>a+fcNum(s.rows[r][k]),0),sub=fcNum(s.sub[k]),ea=fcNum(s.ea[k])/wt;
+    const eq=(a,b)=>a>0&&b>0&&Math.abs(a-b)<=Math.max(3,b*0.004);
+    if(eq(sum,ea)&&!eq(sub,sum)){s.warn.push(sub?('서식 '+nm+' 합계 '+fmt(sub)+'을(를) '+fmt(Math.round(ea))+'(으)로 보정했습니다(항목 합·EA 합계와 일치) — 원본 확인'):('서식 '+nm+' 합계를 읽지 못해 EA 합계÷단중 '+fmt(Math.round(ea))+'(으)로 채웠습니다(항목 합과 일치) — 원본 확인'));s.sub[k]=Math.round(ea);}
+    else if(eq(sub,ea)&&!eq(sub,sum)&&sum<sub){   /* 항목 합이 모자라면 비어 읽힌 칸이 있다는 뜻 — 후보가 하나일 때만 채움 */
+      const miss=FC_ROWS.filter(r=>fcNum(s.rows[r][k])===0&&(k===0||fcNum(s.rows[r][0])>0)),d=Math.round(sub-sum);
+      if(miss.length===1){s.rows[miss[0]][k]=d;s.warn.push(miss[0]+' '+nm+' '+fmt(d)+'을(를) 합계 차액으로 채웠습니다 — 원본 확인');}
+      else s.warn.push(nm+' 항목 합('+fmt(Math.round(sum))+')이 합계('+fmt(sub)+')보다 '+fmt(d)+' 모자랍니다 — 비어 있는 칸을 원본과 대조해 입력하세요');}
+  });
+}
+async function fcOcrCanvas(cv,st,label){
+  const w=await fcWorker(st);let best=null,bestScore=-1;
+  const tries=cv.height>cv.width?[90,270,0,180]:[0,180,90,270];
+  for(const deg of tries){
+    const r=fcRot(cv,deg);st(label+' 읽는 중… (방향 '+deg+'°)');
+    await w.setParameters({tessedit_char_whitelist:'0123456789.,:-/ ',tessedit_pageseg_mode:'6'});
+    const res=await w.recognize(r),s=fcParseOcr(payWords(res.data),r.width);
+    if(!s)continue;
+    s._cv=r;fcRepair(s);const sc=fcScore(s);
+    if(sc>bestScore){best=s;bestScore=sc;}
+    if(sc>=FC_FULL)break;
+  }
+  if(best&&bestScore<FC_FULL&&best._geo){   /* 2차: 숫자 칸(전체원가·변동비 두 열)만 잘라 다시 읽기 */
+    try{const r=best._cv,g=best._geo,W=r.width,H=r.height,x0=Math.max(0,Math.round(g.xa-W*0.09)),x1=Math.min(W,Math.round(g.xb+W*0.014)),y0=Math.max(0,Math.round(g.y9-g.pitch*13)),y1=Math.min(H,Math.round(g.y9+g.pitch*6.5));
+      const c2=document.createElement('canvas');c2.width=x1-x0;c2.height=y1-y0;const gx=c2.getContext('2d');gx.fillStyle='#fff';gx.fillRect(0,0,c2.width,c2.height);gx.drawImage(r,x0,y0,x1-x0,y1-y0,0,0,x1-x0,y1-y0);
+      st(label+' 숫자 칸 다시 읽는 중…');await w.setParameters({tessedit_char_whitelist:'0123456789.,-/ ',tessedit_pageseg_mode:'6'});
+      const res2=await w.recognize(c2),ws2=payWords(res2.data).map(q=>({t:q.t,x0:q.x0+x0,x1:q.x1+x0,y0:q.y0+y0,y1:q.y1+y0})),s2=fcParseOcr(ws2,W);
+      if(s2){s2.date=best.date;s2._cv=r;fcRepair(s2);if(fcScore(s2)>=bestScore){best=s2;bestScore=fcScore(s2);}}}catch(e){}
+  }
+  if(!best){const s=fcBlank('','이 방향에서 표를 찾지 못했습니다. 서식을 똑바로(또는 90° 회전해) 스캔한 파일로 다시 올리거나 값을 직접 입력해 주세요.');s._cv=fcRot(cv,tries[0]);return s;}
+  /* 품명 칸(서식 위쪽 가운데)만 확대해 영문·숫자로 읽기 */
+  try{const r=best._cv,W=r.width,H=r.height,x0=Math.round(W*0.40),x1=Math.round(W*0.70),y0=Math.round(H*0.08),y1=Math.round(H*0.14),sc=2;
+    const c2=document.createElement('canvas');c2.width=(x1-x0)*sc;c2.height=(y1-y0)*sc;const g=c2.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c2.width,c2.height);g.imageSmoothingQuality='high';g.drawImage(r,x0,y0,x1-x0,y1-y0,0,0,c2.width,c2.height);
+    st(label+' 품명 읽는 중…');await w.setParameters({tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-. ',tessedit_pageseg_mode:'7'});
+    const t=await w.recognize(c2);best.name=String((t.data&&t.data.text)||'').replace(/\s+/g,' ').trim();}catch(e){}
+  return best;
+}
+async function fcThumb(cv){try{const s=Math.min(1,1400/cv.width),c=document.createElement('canvas');c.width=Math.round(cv.width*s);c.height=Math.round(cv.height*s);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(cv,0,0,c.width,c.height);return c.toDataURL('image/jpeg',0.72);}catch(e){return '';}}
+async function fcReadFile(f,st){
+  const ext=(f.name.split('.').pop()||'').toLowerCase(),out=[];
+  if(ext==='xlsx'){
+    const wb=await xlsxOpenWorkbook(f);
+    for(const sh of wb.sheets){const g=await xlsxParseSheetGrid(wb,sh.path),ws=[];
+      Object.keys(g).forEach(r=>{Object.keys(g[r]).forEach(c=>{const v=g[r][c];if(v===''||v==null)return;ws.push({t:String(v),x0:+c*100,x1:+c*100+80,y0:+r*20,y1:+r*20+16});});});
+      const s=fcParseLabeled(ws);if(s){s.src=f.name+' ['+sh.name+']';out.push(s);}}
+    if(!out.length)out.push(fcBlank(f.name,'엑셀에서 제조원가 서식(전체원가·변동비 열)을 찾지 못했습니다. 값을 직접 입력해 주세요.'));
+    return out;
+  }
+  if(ext==='pdf'){
+    await fcPdfLib();const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+    for(let p=1;p<=Math.min(pdf.numPages,12);p++){
+      const page=await pdf.getPage(p),vp1=page.getViewport({scale:1});let s=null;
+      try{const tc=await page.getTextContent();
+        if(tc.items.filter(i=>String(i.str).trim()).length>=25){
+          const ws=tc.items.filter(i=>String(i.str).trim()).map(i=>({t:i.str,x0:i.transform[4],x1:i.transform[4]+(i.width||0),y0:vp1.height-i.transform[5]-(i.height||Math.abs(i.transform[3])||8),y1:vp1.height-i.transform[5]}));
+          s=fcParseLabeled(ws);}}catch(e){}
+      const sc=Math.min(3.5,2400/Math.max(vp1.width,vp1.height)),vp=page.getViewport({scale:sc}),cv=document.createElement('canvas');cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+      const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);
+      await page.render({canvasContext:cx,viewport:vp}).promise;
+      if(!s){try{s=await fcOcrCanvas(cv,st,f.name+' '+p+'쪽');}catch(e){s=fcBlank('',e.message||String(e));s._cv=cv;}}
+      else s._cv=cv;
+      s.src=f.name+' '+p+'쪽';s.img=await fcThumb(s._cv||cv);delete s._cv;out.push(s);
+    }
+    return out;
+  }
+  const cv=await payImgCanvas(f);let s;
+  try{s=await fcOcrCanvas(cv,st,f.name);}catch(e){s=fcBlank('',e.message||String(e));s._cv=cv;}
+  s.src=f.name;s.img=await fcThumb(s._cv||cv);delete s._cv;return [s];
+}
+async function fcLoad(input){
+  const files=[...(input.files||[])];input.value='';if(!files.length)return;
+  if(qiRo()){toast('열람 전용 화면입니다');return;}
+  const st=m=>{const e=document.getElementById('fc_st');if(e)e.textContent=m;};
+  qiOpen(`<h3 style="margin:0">🏭 공장 제조원가 서식 읽는 중…</h3><div id="fc_st" style="margin-top:12px;font-size:13px;color:#334155">준비 중…</div><div style="margin-top:8px;font-size:11.5px;color:var(--muted)">처음 한 번만 읽기 엔진을 내려받습니다(이후 브라우저에 보관). 파일은 이 PC 안에서만 처리됩니다.</div>`);
+  const all=[];
+  for(const f of files){try{(await fcReadFile(f,st)).forEach(s=>all.push(s));}catch(e){const s=fcBlank(f.name,(e&&e.message)||String(e));all.push(s);}}
+  all.forEach(s=>{if(!s.date)s.date=todayStr();s.packIn=false;});
+  fcSheets=all;fcDlg();
+}
+/* ---- 확인 대화상자 ---- */
+function fcDlg(){
+  const body=fcSheets.map((s,i)=>fcCardHtml(s,i)).join('');
+  qiOpen(`<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🏭 공장 제조원가 서식 읽기 결과 <span style="font-size:12px;font-weight:500;color:var(--muted)">(${fcSheets.length}건)</span></h3><button class="btn sm" onclick="qiClose()">✕</button></div>
+  <div style="font-size:12px;color:#475569;margin-top:6px;line-height:1.6">원본(왼쪽)과 읽은 값(오른쪽)을 대조해 틀린 숫자는 고치고, 각 서식의 <b>☑ 원본과 대조했습니다</b>를 체크한 뒤 등록하세요. <b>품목명·규격은 임시</b>로 등록되며 [견적 품목·제조원가 관리 &gt; 수정]에서 바꿀 수 있습니다.</div>
+  <div style="max-height:68vh;overflow:auto;margin-top:8px">${body}</div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn" onclick="qiClose()">취소</button><button class="btn" onclick="fcSave(false)">보관소에만 등록</button><button class="btn primary" onclick="fcSave(true)">등록하고 견적 행에도 넣기</button></div>`,true);
+  fcSheets.forEach((s,i)=>fcRecalc(i));
+}
+function fcCardHtml(s,i){
+  const cell=(a,k)=>`<input value="${esc(fcSheets[i][a][k]===''||fcSheets[i][a][k]==null?'':fcSheets[i][a][k])}" oninput="fcSet(${i},'${a}',${k},this.value)" style="width:74px;text-align:right">`;
+  const rowH=FC_ROWS.map(k=>`<tr><td style="text-align:left">${k}</td><td><input value="${esc(s.rows[k][0]===''?'':s.rows[k][0])}" oninput="fcSetRow(${i},'${k}',0,this.value)" style="width:74px;text-align:right"></td><td><input value="${esc(s.rows[k][1]===''?'':s.rows[k][1])}" oninput="fcSetRow(${i},'${k}',1,this.value)" style="width:74px;text-align:right"></td><td class="n" id="fc_f_${i}_${k}">-</td></tr>`).join('');
+  return `<div style="border:1px solid #cbd5e1;border-radius:10px;padding:10px;margin-bottom:12px;background:#fff">
+  <div style="font-size:12px;color:var(--muted)">📄 ${esc(s.src)} · 읽기 방식: ${s.mode==='ocr'?'스캔 숫자 인식':s.mode==='text'?'서식 글자 읽기':'직접 입력'}</div>
+  ${(s.warn||[]).map(w=>`<div style="color:#b45309;font-size:12.5px;margin-top:4px">⚠ ${esc(w)}</div>`).join('')}
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+   ${s.img?`<div style="flex:1 1 300px;min-width:260px"><img src="${s.img}" style="width:100%;border:1px solid #cbd5e1;border-radius:6px;cursor:zoom-in" onclick="window.open(this.src,'_blank')" title="클릭하면 크게 봅니다"></div>`:''}
+   <div style="flex:1 1 380px;min-width:340px">
+    <div class="frow" style="gap:8px;flex-wrap:wrap"><div class="field"><label>품목(임시)</label><input value="${esc(s.name)}" oninput="fcSets(${i},'name',this.value)" style="width:150px"></div>
+      <div class="field"><label>규격(임시)</label><input value="${esc(s.spec)}" oninput="fcSets(${i},'spec',this.value)" style="width:90px" placeholder="${esc(s.plant||'')}"></div>
+      <div class="field"><label>제품단중(kg)</label><input value="${esc(s.wt)}" oninput="fcSets(${i},'wt',this.value)" style="width:80px;text-align:right"></div>
+      <div class="field w-date"><label>작성일(원가 기준일)</label><input type="date" value="${esc(s.date)}" onchange="fcSets(${i},'date',this.value)"></div></div>
+    <table class="qi-tb" style="margin-top:6px"><thead><tr><th>항목</th><th>전체원가<br><small>원/kg</small></th><th>변동비<br><small>원/kg</small></th><th>고정비<br><small>원/kg</small></th></tr></thead><tbody>${rowH}
+      <tr style="font-weight:800;background:#fef9c3"><td style="text-align:left">제조경비 합계</td><td>${cell('sub',0)}</td><td>${cell('sub',1)}</td><td class="n" id="fc_sf_${i}">-</td></tr>
+      <tr style="font-weight:800;background:#fef9c3"><td style="text-align:left">EA 합계(원/EA)</td><td>${cell('ea',0)}</td><td>${cell('ea',1)}</td><td class="n" id="fc_ef_${i}">-</td></tr>
+      <tr><td style="text-align:left">포장비(판관·미포함)</td><td>${cell('pack',0)}</td><td>${cell('pack',1)}</td><td class="n"><label style="font-size:11px;white-space:nowrap"><input type="checkbox" ${s.packIn?'checked':''} onchange="fcSetPk(${i},this.checked)" style="width:auto"> 변동비에 포함</label></td></tr></tbody></table>
+    <div id="fc_chk_${i}" style="margin-top:6px;font-size:12px;line-height:1.55"></div>
+    <div id="fc_res_${i}" style="margin-top:6px;padding:8px 10px;background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;line-height:1.7"></div>
+    <label style="display:block;margin-top:8px;font-size:13px;font-weight:700"><input type="checkbox" ${s.ok?'checked':''} onchange="fcSets(${i},'ok',this.checked)" style="width:auto"> 원본과 대조했습니다 (체크해야 등록됩니다)</label>
+   </div></div></div>`;
+}
+function fcSets(i,k,v){fcSheets[i][k]=v;if(k==='wt')fcRecalc(i);}
+function fcSet(i,a,k,v){fcSheets[i][a][k]=v;fcRecalc(i);}
+function fcSetRow(i,r,k,v){fcSheets[i].rows[r][k]=v;fcRecalc(i);}
+function fcSetPk(i,on){fcSheets[i].packIn=!!on;fcRecalc(i);}
+function fcRecalc(i){
+  const s=fcSheets[i],cc=fcCalc(s),set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
+  FC_ROWS.forEach(k=>set(`fc_f_${i}_${k}`,fmt(fcNum(s.rows[k][0])-fcNum(s.rows[k][1]),0)||'-'));
+  set(`fc_sf_${i}`,fmt(cc.subT-cc.subV,0));set(`fc_ef_${i}`,fmt(Math.round(cc.eaT-cc.eaV),0));
+  set(`fc_chk_${i}`,fcCheck(s).map(c=>`<div style="color:${c.ok?'#166534':'#b42318'}">${c.ok?'✔':'✖'} ${esc(c.t)}</div>`).join(''));
+  set(`fc_res_${i}`,`<b>직접변동비 ${fmt(cc.v)}원/EA</b> · <b>직접고정비 ${fmt(cc.f)}원/EA</b> · 제조원가 ${fmt(cc.t)}원/EA<br><span style="font-size:11.5px;color:#475569">원/kg: 변동 ${fmt(cc.subV)} · 고정 ${fmt(cc.subT-cc.subV)} · 계 ${fmt(cc.subT)} ${s.packIn?'(+포장비 포함)':'· 포장비 '+fmt(cc.pV)+'원/kg(약 '+fmt(Math.round(cc.pkEA))+'원/EA)은 판관비로 제외'}</span>`);
+}
+/* ---- 등록 ---- */
+async function fcSave(addRows){
+  const sel=fcSheets.filter(s=>s.ok);
+  if(!sel.length){toast('원본과 대조한 뒤 ☑ 체크해 주세요');return;}
+  const bad=sel.find(s=>!String(s.name||'').trim());if(bad){toast('품목명을 입력하세요(임시 이름이어도 됩니다)');return;}
+  const reg=[];
+  for(const s of sel){
+    const cc=fcCalc(s);if(!(cc.wt>0)||!(cc.t>0)){toast('「'+s.name+'」 제품단중·원가 값을 확인하세요');return;}
+    const nm=String(s.name).trim().replace(/\s+/g,' '),sp=String(s.spec||'').trim();
+    let it=qiFind(nm,sp);const isNew=!it;
+    if(!it)it={id:'qi_'+uid(),name:nm,spec:sp,unit:'EA',costs:[],conf:[],qh:[],tmp:1,note:'공장 제조원가 서식으로 자동 등록 — 품명·규격은 임시(확인 후 [수정])',by:qiWho(),cr:new Date().toISOString()};
+    let img='';if(s.img){try{img=await savePhotoBlob(s.img,'공장 제조원가 서식 '+nm);}catch(e){}}
+    const det=fcDet(s,cc),dn={};if(fcNum(s.rows['임가공비'][0])>0)dn['가공비']='임가공비 포함';
+    const c={id:'c'+uid(),d:s.date||todayStr(),v:cc.v,f:cc.f,det,dn,bs:'',src:'공장 제조원가 서식('+(s.plant||'포항')+') · '+s.src,foot:QI_FOOT,img,
+      fc:{wt:cc.wt,rows:JSON.parse(JSON.stringify(s.rows)),sub:[cc.subT,cc.subV],ea:[cc.eaT,cc.eaV],pack:[cc.pT,cc.pV],pk:s.packIn?1:0,plant:s.plant||'',mode:s.mode},by:qiWho(),at:new Date().toISOString()};
+    const dup=it.costs.findIndex(x=>x.d===c.d);
+    if(dup>=0){if(!confirm('「'+nm+'」 '+c.d+' 기준일의 원가가 이미 있습니다. 새 값으로 덮어쓸까요?'))continue;it.costs[dup]=c;}else it.costs.push(c);
+    if(!qiCommit(it))return;reg.push({it,c,isNew});
+  }
+  qiClose();
+  if(addRows&&reg.length){
+    reg.forEach(x=>{let i=quoteItems.findIndex(r=>qBlank(r)&&!r.alt);if(i<0){quoteItems.push(qNew());i=quoteItems.length-1;}
+      quoteItems[i]=Object.assign(qNew(),{});qiApplyCost(i,x.it,x.c);});
+  }
+  qiHist=null;qiHistLoad().then(qiAfter);qiAfter();renderQuoteItems();
+  toast(reg.length?('공장 제조원가 '+reg.length+'건을 견적 품목·제조원가에 등록했습니다 (품명·규격 임시)'+(addRows?' — 견적 행에도 넣었습니다. 아래 [공장 제조원가 검토]에서 체크하세요':'')):'등록된 항목이 없습니다');
+}
+function qiApplyCost(i,it,c){const row=quoteItems[i];row.qi=it.id;row.name=it.name;row.spec=it.spec;row.unit=it.unit||'EA';row.disp=it.disp||'';row.qty=row.qty||1;row.var=qiRnd(c.v);row.fix=qiRnd(c.f);row.cd=c.id;}
+/* ---- 견적검토 내용(내부결재)용 체크 문구 ---- */
+function fcLines(it,c){
+  const f=c&&c.fc;if(!f)return [];const nm=it.name+(it.spec?' '+it.spec:''),u=String(it.unit||'EA'),fm=v=>fmt(Math.round(+v||0));
+  const L=[],kk=FC_ROWS.filter(k=>fcNum(f.rows[k][0])>0).map(k=>k+' '+fm(f.rows[k][0])).join(' / ');
+  L.push(`[${nm}] 공장 제조원가 서식(${f.plant||'포항'}, 작성 ${c.d}) 기준 — 제조원가 ${fm(c.v+c.f)}원/${u} = 직접변동비 ${fm(c.v)}원 + 직접고정비 ${fm(c.f)}원`);
+  L.push(`[${nm}] 원/kg 환산(제품단중 ${fm(f.wt)}kg): 직접변동비 ${fm(f.sub[1])}원/kg · 직접고정비 ${fm(f.sub[0]-f.sub[1])}원/kg (전체 ${fm(f.sub[0])}원/kg${kk?' : '+kk:''})`);
+  if(fcNum(f.pack[0])>0)L.push(f.pk?`[${nm}] 포장비 ${fm(f.pack[0])}원/kg 직접변동비에 포함`:`[${nm}] 포장비 ${fm(f.pack[0])}원/kg(약 ${fm(f.pack[0]*f.wt)}원/${u})은 판매관리비로 구분되어 제조원가에서 제외`);
+  return L;
+}
+function fcReviewRender(){
+  const box=document.getElementById('q_fcbox');if(!box)return;
+  const L=[];qRes().forEach(r=>{if(r.alt||qBlank(r)||!r.qi)return;const it=qiById(r.qi);if(!it)return;const cs=qiSorted(it);const c=cs.find(x=>x.id===r.cd)||cs[0];if(c&&c.fc)fcLines(it,c).forEach(t=>{if(!L.includes(t))L.push(t);});});
+  window.__fcLines=L;
+  if(!L.length){box.innerHTML='';return;}
+  const cur=String((document.getElementById('q_costbasis')||{}).value||'').split('\n').map(x=>qMkPlain(x).trim());
+  box.innerHTML=`<div style="border:1px dashed #f59e0b;background:#fffbeb;border-radius:9px;padding:8px 12px;font-size:12.5px;line-height:1.7"><b style="color:#b45309">🏭 공장 제조원가 검토 사항</b> <span style="color:var(--muted)">— 체크한 문장이 위 [원가산출 기준]에 들어가 견적검토서(내부결재)에 출력됩니다</span>
+    <button class="btn sm" style="margin-left:8px" onclick="fcAll(true)">모두 체크</button><button class="btn sm" onclick="fcAll(false)">모두 해제</button>
+    ${L.map((t,i)=>`<label style="display:block;cursor:pointer"><input type="checkbox" style="width:auto" ${cur.includes(t.trim())?'checked':''} onchange="fcToggle(${i},this.checked)"> ${esc(t)}</label>`).join('')}</div>`;
+}
+function fcToggle(i,on){
+  const t=(window.__fcLines||[])[i];if(!t)return;const ta=document.getElementById('q_costbasis'),ls=ta.value.split('\n');
+  if(on){if(!ls.some(x=>qMkPlain(x).trim()===t.trim()))ta.value=(ta.value.trim()?ta.value.replace(/\s+$/,'')+'\n':'')+t;}
+  else ta.value=ls.filter(x=>qMkPlain(x).trim()!==t.trim()).join('\n');
+}
+function fcAll(on){(window.__fcLines||[]).forEach((_,i)=>fcToggle(i,on));fcReviewRender();}
+/* ---- 견적 저장 = 임시저장 + 품목·제조원가 자동 이전 ---- */
+let currentQuoteSt='임시저장';
+function qiAutoFromQuote(){
+  if(qiRo())return 0;let n=0;const dt=(document.getElementById('q_date')||{}).value||todayStr();
+  quoteItems.forEach(r=>{
+    if(r.alt||qBlank(r)||r.qi||!String(r.name||'').trim())return;
+    let it=qiFind(r.name,r.spec);
+    if(!it){it={id:'qi_'+uid(),name:String(r.name).trim(),spec:String(r.spec||'').trim(),unit:String(r.unit||'KG').trim()||'KG',costs:[],conf:[],qh:[],tmp:1,src:'견적검토 임시저장에서 자동 등록',by:qiWho(),cr:new Date().toISOString()};n++;}
+    if(!(it.costs||[]).length&&(qiN(r.var)||qiN(r.fix))){
+      const c={id:'c'+uid(),d:dt,v:qiN(r.var),f:qiN(r.fix),det:null,dn:null,bs:'',src:'견적검토 임시 입력값 — 원가시트 확인 필요',foot:QI_FOOT,img:'',tmp:1,by:qiWho(),at:new Date().toISOString()};
+      it.costs.push(c);r.cd=c.id;}
+    if(qiCommit(it))r.qi=it.id;
+  });
+  return n;
+}
+async function qSetSt(id,st){
+  const list=await txAll('quotes'),q=list.find(x=>x.id===id);if(!q)return;q.st=st;q.upd=new Date().toISOString();await putRec('quotes',q);flashSave();
+  if(currentQuoteId===id){currentQuoteSt=st;const e=document.getElementById('q_id');if(e)e.textContent=(st==='임시저장'?'임시저장됨: ':'작성완료: ')+id;}
+  renderSavedQuotes();toast(st==='임시저장'?'임시저장 상태로 되돌렸습니다':'작성완료로 표시했습니다');
+}
+/* ===== 2026-10-30 (rpt175): 견적검토 [개요]·[원가산출 기준] 글자 서식(굵게·밑줄·글자색·형광펜) =====
+   입력칸을 서식 편집칸으로 바꾸고, 저장값은 ⟦b⟧굵게⟦/b⟧ · ⟦c#dc2626⟧빨강⟦/c⟧ · ⟦h#fde047⟧형광펜⟦/h⟧ · ⟦u⟧밑줄⟦/u⟧ 같은 표식이 들어간 글(줄바꿈 \n)로 보관한다.
+   견적검토서 화면·인쇄·엑셀에 같은 서식으로 나온다. 서식 없이 쓴 기존 견적은 그대로(원가산출 기준 전체 노란 배경은 더 이상 쓰지 않음). */
+const QM_RE=/⟦(\/?)(b|u|c|h)(#[0-9a-fA-F]{3,6})?⟧/g;
+const qMkPlain=s=>String(s==null?'':s).replace(QM_RE,'');
+function qMkInline(l){
+  l=String(l==null?'':l);let out='',last=0,st=[],m;QM_RE.lastIndex=0;
+  while((m=QM_RE.exec(l))){out+=esc(l.slice(last,m.index));last=m.index+m[0].length;
+    if(m[1]){const i=st.map(x=>x.t).lastIndexOf(m[2]);
+      if(i>=0){const rest=st.splice(i);out+=rest.slice().reverse().map(x=>'</'+x.tag+'>').join('');rest.slice(1).forEach(x=>{out+=x.open;st.push(x);});}}
+    else{const o=m[2]==='b'?{t:'b',tag:'b',open:'<b>'}:m[2]==='u'?{t:'u',tag:'u',open:'<u>'}:m[2]==='c'?{t:'c',tag:'span',open:'<span style="color:'+m[3]+'">'}:{t:'h',tag:'span',open:'<span style="background:'+m[3]+';-webkit-print-color-adjust:exact;print-color-adjust:exact">'};
+      out+=o.open;st.push(o);}}
+  out+=esc(l.slice(last));while(st.length)out+='</'+st.pop().tag+'>';return out;
+}
+function qMkRuns(l){   /* 엑셀용: [{t,b,u,c,h}] */
+  l=String(l==null?'':l);const runs=[];let last=0,m,b=0,u=0,c=[],h=[];QM_RE.lastIndex=0;
+  const push=t=>{if(t)runs.push({t,b:b>0,u:u>0,c:c.length?c[c.length-1]:'',h:h.length?h[h.length-1]:''});};
+  while((m=QM_RE.exec(l))){push(l.slice(last,m.index));last=m.index+m[0].length;
+    if(m[1]){if(m[2]==='b')b=Math.max(0,b-1);else if(m[2]==='u')u=Math.max(0,u-1);else if(m[2]==='c')c.pop();else h.pop();}
+    else{if(m[2]==='b')b++;else if(m[2]==='u')u++;else if(m[2]==='c')c.push(m[3]);else h.push(m[3]);}}
+  push(l.slice(last));return runs;
+}
+const qMkHtml=v=>String(v==null?'':v).split('\n').map(l=>'<div>'+(qMkInline(l)||'<br>')+'</div>').join('');
+function qRgb(c){c=String(c||'').trim().toLowerCase();let m=/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(c);
+  if(m){if(m[4]!=null&&+m[4]===0)return '';const h=x=>('0'+(+x).toString(16)).slice(-2);return '#'+h(m[1])+h(m[2])+h(m[3]);}
+  m=/^#([0-9a-f]{3}|[0-9a-f]{6})$/.exec(c);if(m)return m[1].length===3?'#'+m[1].split('').map(x=>x+x).join(''):c;return '';}
+function qRteSer(root){
+  const lines=[];let cur='';
+  const nl=()=>{lines.push(cur);cur='';};
+  const open=s=>(s.b?'⟦b⟧':'')+(s.u?'⟦u⟧':'')+(s.c?'⟦c'+s.c+'⟧':'')+(s.h?'⟦h'+s.h+'⟧':'');
+  const close=s=>(s.h?'⟦/h⟧':'')+(s.c?'⟦/c⟧':'')+(s.u?'⟦/u⟧':'')+(s.b?'⟦/b⟧':'');
+  const walk=(n,st)=>{
+    if(n.nodeType===3){const t=n.nodeValue.replace(/[ ​]/g,' ').replace(/[⟦⟧]/g,'');if(t)cur+=open(st)+t+close(st);return;}
+    if(n.nodeType!==1)return;const tag=n.tagName;
+    if(tag==='BR'){nl();return;}
+    const s2=Object.assign({},st),cs=n.style||{};
+    if(tag==='B'||tag==='STRONG'||cs.fontWeight==='bold'||+cs.fontWeight>=600)s2.b=1;
+    if(tag==='U'||String(cs.textDecorationLine||cs.textDecoration||'').indexOf('underline')>=0)s2.u=1;
+    let col=cs.color||(tag==='FONT'?n.getAttribute('color'):'');col=qRgb(col);if(col&&col!=='#000000')s2.c=col;else if(cs.color||tag==='FONT')s2.c='';
+    const bg=qRgb(cs.backgroundColor||'');if(bg&&bg!=='#ffffff')s2.h=bg;else if(cs.backgroundColor)s2.h='';
+    const blk=(tag==='DIV'||tag==='P'||tag==='LI');
+    if(blk&&cur!=='')nl();
+    n.childNodes.forEach(ch=>walk(ch,s2));
+    if(blk&&cur!=='')nl();
+  };
+  root.childNodes.forEach(ch=>walk(ch,{}));if(cur!=='')nl();
+  let s=lines.join('\n').replace(/⟦\/b⟧⟦b⟧/g,'').replace(/⟦\/u⟧⟦u⟧/g,'');
+  return s.replace(/\n+$/,'');
+}
+function qRteInit(){
+  const cols=[['빨강','#dc2626'],['파랑','#1d4ed8'],['초록','#15803d'],['검정','#000000']];
+  [['q_overview'],['q_costbasis']].forEach(([id])=>{
+    const e=document.getElementById(id);if(!e||e.__rte)return;e.__rte=1;
+    Object.defineProperty(e,'value',{configurable:true,get(){return qRteSer(e);},set(v){e.innerHTML=String(v==null?'':v)===''?'':qMkHtml(v);}});
+    e.addEventListener('paste',ev=>{ev.preventDefault();const t=((ev.clipboardData||window.clipboardData).getData('text/plain')||'').replace(/[⟦⟧]/g,'');document.execCommand('insertText',false,t);});
+    e.addEventListener('input',()=>{if(!e.textContent.trim()&&!e.querySelector('img')&&e.innerHTML.length<40)e.innerHTML='';try{if(typeof markDirty==='function')markDirty();}catch(x){}});
+    const bar=document.createElement('div');bar.className='qrte-bar';
+    const B=(t,fn,ttl,sty)=>`<button type="button" class="btn sm" title="${ttl}" style="${sty||''}" onmousedown="event.preventDefault()" onclick="${fn}">${t}</button>`;
+    bar.innerHTML=B('<b>B</b>',`qRteCmd('${id}','bold')`,'굵게 (Ctrl+B)')+B('<u>U</u>',`qRteCmd('${id}','underline')`,'밑줄 (Ctrl+U)')
+      +cols.map(c=>B('A',`qRteCol('${id}','${c[1]}')`,'글자색 '+c[0]+' (선택한 글자에 적용)','color:'+(c[1]==='#000000'?'#000':c[1])+';font-weight:900;border-bottom:3px solid '+c[1])).join('')
+      +B('형광펜',`qRteHi('${id}','#fde047')`,'선택한 글자에 노란 형광펜','background:#fde047')+B('형광펜 해제',`qRteHi('${id}','')`,'형광펜 지우기')
+      +B('서식 지우기',`qRteCmd('${id}','removeFormat')`,'선택한 글자의 서식 지우기')
+      +'<span style="font-size:11px;color:var(--muted);align-self:center">글자를 드래그해 선택한 뒤 누르세요</span>';
+    e.parentNode.insertBefore(bar,e);
+    const v=e.getAttribute('data-init');if(v)e.value=v;
+  });
+}
+function qRteFocusOk(id){const e=document.getElementById(id),s=window.getSelection();if(!e||!s.rangeCount||!e.contains(s.anchorNode)){toast('서식을 바꿀 글자를 먼저 드래그해서 선택하세요');return false;}return true;}
+function qRteCmd(id,cmd){if(!qRteFocusOk(id))return;document.execCommand('styleWithCSS',false,true);document.execCommand(cmd,false,null);}
+function qRteCol(id,c){if(!qRteFocusOk(id))return;document.execCommand('styleWithCSS',false,true);document.execCommand('foreColor',false,c);}
+function qRteHi(id,c){if(!qRteFocusOk(id))return;document.execCommand('styleWithCSS',false,true);if(!document.execCommand('hiliteColor',false,c||'#ffffff'))document.execCommand('backColor',false,c||'#ffffff');}
+(function(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',qRteInit);else qRteInit();})();
+/* ===== 2026-10-30 (rpt175): 월말 보고 COMMENT 자동 작성 — 사업계획 대비 품목별 판매 수량·물량(동국제강 제강) 증감 분석 =====
+   · 계획 : 사업계획 품목(BIZPLAN_ITEMS_SEED)의 월별 수량·중량·금액(다원화 반영 후 동국제강 몫) — bizplanItemCalc
+   · 실적 : [내화물 원단위] 입고(매출 합계 포함 품목) — 입고수량·중량·금액(입고량×단가)
+   · 연결 : 사업계획 품목 ↔ 원단위는 자재코드(Q코드) 연결(scPlan) 기준. 코드가 서로 이어진 품목은 한 묶음으로 비교.
+   · 증가세 : 해당 기간 월평균 중량 ÷ 직전 3개월 월평균 중량 */
+let __mcCache={};
+function spItemCmp(y,months){
+  const key=y+'|'+months.join(',')+'|'+Math.floor(Date.now()/4000);if(__mcCache.k===key)return __mcCache.v;
+  const pad=m=>String(m).padStart(2,'0'),ym=m=>y+'-'+pad(m);
+  const rows=(()=>{try{return scPlan(String(y));}catch(e){return [];}})();
+  // 1) 계획 품목 묶음(자재코드가 겹치면 합침)
+  const G=[],byCode={};
+  const merge=(a,b)=>{if(a===b)return a;b.pl.forEach(x=>a.pl.push(x));b.codes.forEach(c=>{a.codes.add(c);byCode[c]=a;});b.dead=true;return a;};
+  rows.forEach(r=>{
+    if(r.st==='skip')return;
+    const codes=(r.inv||[]).map(m=>m.c).filter(Boolean);
+    let g=null;codes.forEach(c=>{if(byCode[c])g=g?merge(g,byCode[c]):byCode[c];});
+    if(!g){g={pl:[],codes:new Set(),dead:false};G.push(g);}
+    g.pl.push(r);codes.forEach(c=>{g.codes.add(c);byCode[c]=g;});
+  });
+  const groups=G.filter(g=>!g.dead);
+  // 2) 실적만 있는 원단위 코드(계획 묶음에 연결되지 않은 것)
+  INV_MASTER.forEach(mm=>{
+    if(!mm.c||byCode[mm.c])return;
+    let any=0;for(let m=1;m<=12;m++){if((+invIn(mm.c,ym(m))||0)>0){any=1;break;}}
+    if(!any)return;const g={pl:[],codes:new Set([mm.c]),dead:false};byCode[mm.c]=g;groups.push(g);
+  });
+  // 3) 월별 계획·실적 계산
+  const actOf=(c,m)=>{
+    if(invSalesSec(c)==='out')return {q:0,w:0,a:0};
+    const q=+invIn(c,ym(m))||0;if(!q)return {q:0,w:0,a:0};
+    const it=invItem(c),uu=String(it.u||'').toLowerCase();let w=0;
+    if(uu==='kg')w=q;else if(uu==='ea'||invIsSetUnit(uu))w=q*invUnitKg(it);
+    return {q,w,a:q*invPriceAt(c,ym(m))};
+  };
+  groups.forEach(g=>{
+    g.pm=[null];g.am=[null];
+    for(let m=1;m<=12;m++){
+      const p={q:0,w:0,a:0};g.pl.forEach(r=>{try{const c=bizplanItemCalc(r.i,m,String(y));p.q+=c.qty||0;p.w+=c.wt||0;p.a+=c.amt||0;}catch(e){}});
+      const a={q:0,w:0,a:0};g.codes.forEach(c=>{const o=actOf(c,m);a.q+=o.q;a.w+=o.w;a.a+=o.a;});
+      g.pm.push(p);g.am.push(a);
+    }
+    const first=g.pl[0],cd=[...g.codes][0],it=cd?invItem(cd):null;
+    g.name=first?(first.name+(first.spec?' '+first.spec:'')):(it?it.n:'');
+    g.unit=it?String(it.u||'').toUpperCase():'';
+    g.eq=first?first.eq:'';
+    const kg=it?(invUnitKg(it)||0):0,pw=first&&first.qty?first.wt/first.qty:0;
+    g.qtyOk=!!(it&&/^(EA|ST|SET|세트)$/i.test(it.u||'')&&first&&(!kg||!pw||Math.abs(kg-pw)/Math.max(kg,pw)<0.25));   // 수량 단위가 서로 같을 때만 수량 비교
+  });
+  const sum=(g,ms,k,f)=>ms.reduce((s,m)=>s+g[k][m][f],0);
+  const v={groups,sum};
+  __mcCache={k:key,v};return v;
+}
+function spItemCmpRows(y,months,cum){
+  const D=spItemCmp(y,months),first=months[0],prev=[];
+  const hasD=m=>m>=1&&m<=12&&D.groups.some(g=>g.am[m].a>0);   // 품목별 입고 실적이 들어 있는 달만 비교
+  for(let m=first-3;m<first;m++)if(hasD(m))prev.push(m);
+  months=months.filter(hasD);if(!months.length)return [];
+  let recM=months;
+  if(cum){recM=months.slice(-3);const f0=recM[0];prev.length=0;months.filter(m=>m<f0).slice(-3).forEach(m=>prev.push(m));}   // 누적: 최근 3개월 ↔ 그 직전 3개월
+  const out=D.groups.map(g=>{
+    const pw=D.sum(g,months,'pm','w'),aw=D.sum(g,months,'am','w'),pa=D.sum(g,months,'pm','a')/1e6,aa=D.sum(g,months,'am','a')/1e6;
+    const pq=D.sum(g,months,'pm','q'),aq=D.sum(g,months,'am','q');
+    const rw=recM.reduce((s2,m)=>s2+g.am[m].w,0)/recM.length,pv=prev.length?prev.reduce((s,m)=>s+g.am[m].w,0)/prev.length:null;
+    return {g,name:g.name,eq:g.eq,unit:g.unit,qtyOk:g.qtyOk,pw:pw/1000,aw:aw/1000,pa,aa,pq,aq,dw:(aw-pw)/1000,da:aa-pa,
+      trend:(pv!=null&&pv>0)?(rw-pv)/pv*100:null,prevAvg:pv!=null?pv/1000:null,recAvg:rw/1000,unplanned:!g.pl.length,
+      pl:g.pl.length>0};
+  }).filter(r=>r.pw||r.aw||r.pa||r.aa);
+  return out;
+}
+const mcN=(v,d)=>{const r=Math.round(v*Math.pow(10,d))/Math.pow(10,d);return r.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});};
+const mcS=(v,d)=>{const r=Math.round(v*Math.pow(10,d))/Math.pow(10,d);return (r>0?'+':'')+r.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});};
+function spAutoCmText(p,blk){
+  const ms=blk==='cum'?Array.from({length:Math.max.apply(null,spMonths(p))},(_,i)=>i+1):spMonths(p);
+  const lab=blk==='cum'?(p.y+'년 1~'+Math.max.apply(null,ms)+'월 누적'):spLabel(p,true);
+  const R=spItemCmpRows(p.y,ms,blk==='cum');
+  if(!R.length)return null;
+  const D0=spItemCmp(p.y,ms),msU=ms.filter(m=>D0.groups.some(g=>g.am[m].a>0));
+  // 요약표(동국제강) 수치 — 요약표와 동일한 계획/실적
+  let pa=0,pw=0,aa=0,aw=0;ms.forEach(m=>{const a=spAct(p.y,m,'dg'),l=spPlan(p.y,m,'dg');pa+=l.a;pw+=l.w;aa+=a.a;aw+=a.w;});
+  const prod=[`- ${lab} 동국제강 제강 판매 실적 ${mcN(aa,1)}백만원 · ${mcN(aw,1)}톤 (사업계획 ${mcN(pa,1)}백만원 · ${mcN(pw,1)}톤 대비 ${mcS(aa-pa,1)}백만원 · ${mcS(aw-pw,1)}톤${pa>0?' / 달성률 '+Math.round(aa/pa*100)+'%':''})`];
+  const up=R.filter(r=>r.da>=0.1||r.dw>=0.5),dn=R.filter(r=>r.da<=-0.1||r.dw<=-0.5);
+  const upI=up.filter(r=>r.pl),upX=up.filter(r=>!r.pl);
+  if(msU.length<ms.length)prod.push(`- ※ 품목별 비교는 입고 실적이 집계된 ${msU.join('·')}월 기준 (품목별 입고 내역이 없는 달은 제외)`);
+  prod.push(`- 품목별로는 계획 대비 증가 ${up.length}개(계획 외 출하 ${upX.length}개 포함) · 감소 ${dn.length}개 품목 (사업계획 연결 품목 기준 비교)`);
+  const trendUp=R.filter(r=>r.trend!=null&&r.trend>=10&&r.aw>=0.5).sort((a,b)=>b.trend-a.trend).slice(0,3);
+  if(trendUp.length)prod.push(`- ${blk==='cum'?'최근 3개월 월평균이 그 직전 3개월 대비':'직전 3개월 월평균 대비'} 판매량 증가세 품목: ${trendUp.map(r=>r.name+' '+mcS(r.trend,0)+'%').join(' · ')}`);
+  const q=r=>r.qtyOk&&(r.pq||r.aq)?` / 수량 ${mcN(r.aq,0)}${r.unit==='ST'?'SET':r.unit}(계획 ${mcN(r.pq,0)}, ${mcS(r.aq-r.pq,0)})`:'';
+  const tr=r=>r.trend!=null&&Math.abs(r.trend)>=10?` · ${blk==='cum'?'최근 3개월 월평균이 직전 3개월 대비':'직전 3개월 월평균 대비'} ${mcS(r.trend,0)}%${r.trend>0?' 증가세':' 감소세'}`:'';
+  const line=(r,s)=>`- ${r.name}${r.unplanned?' (사업계획 외 출하)':''} : 중량 ${mcN(r.aw,1)}톤(계획 ${mcN(r.pw,1)}톤, ${mcS(r.dw,1)}톤${r.pw>0?' · '+mcS(r.dw/r.pw*100,0)+'%':''})${q(r)} · ${mcS(r.da,1)}백만원${tr(r)}`;
+  const inc=up.sort((a,b)=>b.da-a.da||b.dw-a.dw).slice(0,5).map(r=>line(r));
+  const dec=dn.sort((a,b)=>a.da-b.da||a.dw-b.dw).slice(0,5).map(r=>line(r)+(r.aw===0&&r.pw>0?' — 출하 없음':''));
+  return {prod:prod.join('\n'),inc:(inc.length?inc:['- 해당 사항 없음']).join('\n'),dec:(dec.length?dec:['- 해당 사항 없음']).join('\n'),rows:R,lab};
+}
+async function spAutoCm(blk,p0){
+  const p=p0||spCur(),A=spAutoCmText(p,blk);
+  if(!A){toast('사업계획·입고 실적 데이터가 없어 자동 작성할 수 없습니다');return;}
+  const cm=spCmGet(p)[blk]||{};
+  if((cm.prod||cm.inc||cm.dec)&&!confirm('「'+A.lab+(blk==='cum'?'':' 실적')+'」 COMMENT에 이미 입력된 내용이 있습니다.\n사업계획 대비 품목별 자동 작성 내용으로 바꾸시겠습니까?'))return;
+  await spMut(spAnchorId(p),rr=>{rr.cm=rr.cm||{};rr.cm[blk]={prod:A.prod,inc:A.inc,dec:A.dec};});
+  toast(A.lab+' COMMENT를 사업계획 대비 품목 증감으로 자동 작성했습니다');spRenderAll();try{if(typeof curView!=='undefined'&&curView==='dtkrpt')dtkRender();}catch(e){}
+}
+async function spAutoCmBoth(p){   // 월말 보고자료 화면: 당월(기간) 실적 + 누적 실적 COMMENT 동시 작성
+  const a=spAutoCmText(p,'cur'),b=spAutoCmText(p,'cum');
+  if(!a&&!b){toast('사업계획·입고 실적 데이터가 없어 자동 작성할 수 없습니다');return;}
+  const cm=spCmGet(p),has=['cur','cum'].some(k=>cm[k]&&(cm[k].prod||cm[k].inc||cm[k].dec));
+  if(has&&!confirm('실적·누적 실적 COMMENT에 이미 입력된 내용이 있습니다.\n사업계획 대비 품목별 자동 작성 내용으로 바꾸시겠습니까?'))return;
+  await spMut(spAnchorId(p),rr=>{rr.cm=rr.cm||{};if(a)rr.cm.cur={prod:a.prod,inc:a.inc,dec:a.dec};if(b)rr.cm.cum={prod:b.prod,inc:b.inc,dec:b.dec};});
+  toast('실적·누적 COMMENT를 사업계획 대비 품목 증감으로 자동 작성했습니다');spRenderAll();try{dtkRender();}catch(e){}
+}
+function spAutoCmBasis(p){
+  const ms=spMonths(p),R=spItemCmpRows(p.y,ms);
+  if(!R.length)return '';
+  const rs=R.slice().sort((a,b)=>Math.abs(b.da)-Math.abs(a.da)).slice(0,30);
+  const th='<tr><th>설비</th><th>품목</th><th class="n">계획(톤)</th><th class="n">실적(톤)</th><th class="n">증감(톤)</th><th class="n">계획(백만원)</th><th class="n">실적(백만원)</th><th class="n">증감(백만원)</th><th class="n">직전3개월 대비</th></tr>';
+  const c=v=>`<td class="n" style="${spCls(v)}">${Math.abs(v)<0.05?'-':mcS(v,1)}</td>`;
+  return `<details style="margin:8px 0"><summary style="cursor:pointer;font-size:12px;font-weight:700">📊 자동 작성 근거 — ${esc(spLabel(p))} 품목별 사업계획 vs 판매실적 (금액 변동 큰 순 ${rs.length}개)</summary><div class="tablewrap"><table class="bomtbl" style="min-width:auto">${th}`
+    +rs.map(r=>`<tr><td>${esc(r.eq||'')}</td><td>${esc(r.name)}${r.unplanned?' <span style="color:#b45309;font-size:10.5px">(계획 외)</span>':''}</td><td class="n">${mcN(r.pw,1)}</td><td class="n">${mcN(r.aw,1)}</td>${c(r.dw)}<td class="n">${mcN(r.pa,1)}</td><td class="n">${mcN(r.aa,1)}</td>${c(r.da)}<td class="n" style="${r.trend==null?'color:#94a3b8':spCls(r.trend)}">${r.trend==null?'-':mcS(r.trend,0)+'%'}</td></tr>`).join('')
+    +`</table></div><div style="font-size:11px;color:var(--muted)">※ 계획 = 사업계획 품목 월별 수량(다원화 반영 후 동국제강 몫), 실적 = [내화물 원단위] 입고(매출합계 포함 품목) · 사업계획 품목과 원단위는 자재코드로 연결 · 미연결 품목은 비교에서 빠지거나 '계획 외'로 표시</div></details>`;
+}
+
 /* 2026-10-26 (rpt138): V2 작성 시 수정할 사항 안내 — 2027 사업계획 화면에 알림 배너를 띄우고, 새 버전(V2) 만들 때·V2 선택 시 팝업으로 알려 준다.
    '확인 완료' 체크는 이 브라우저(localStorage dgrns_bp_v2todo)에 저장. 엑셀·전산이 모두 틀린 항목이라 V-1(전산 기준)에는 반영하지 않고 V2에서 고친다. */
 const BP_V2_TODO=[
@@ -31065,7 +31657,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.30.rpt172";
+const APP_VERSION = "2026.10.30.rpt175";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -32325,7 +32917,8 @@ async function importStockXlsx(input){
       let s2=null;
       if(mx2&&byKey[ns2+'|'+mx2])s2=byKey[ns2+'|'+mx2];
       else if(!mx2&&anyK.length===1)s2=byKey[anyK[0]];
-      else{addAmb.push(pm.name+' · '+pm.spec+' · 배합 '+(pm.mix||'-')+' → 엑셀 배합: '+anyK.map(k=>byKey[k].mix||'(없음)').join(', '));continue;}
+      else{if(!anyK.some(k=>{const e=byKey[k];return e.expUse||e.cur||e.onOrder||e.ord;}))continue;   /* rpt173: 엑셀 후보 행이 모두 0이면 안내 없이 건너뜀(예: 옛 규격 LW251FBP·EOC-AFB-01) */
+        addAmb.push(pm.name+' · '+pm.spec+' · 배합 '+(pm.mix||'-')+' → 엑셀 배합: '+anyK.map(k=>byKey[k].mix||'(없음)').join(', '));continue;}
       if(!(s2.expUse||s2.cur||s2.onOrder||s2.ord))continue;
       addPlan.push([pm,s2]);
     }
@@ -38080,6 +38673,7 @@ function spRenderSum(){
   const ta=(blk,fld,val,ph)=>`<textarea style="width:100%;min-height:62px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;font-family:inherit" placeholder="${ph}" onchange="spSetCm('${blk}','${fld}',this.value)">${esc(val)}</textarea>`;
   const col=(blk,title)=>`<div style="flex:1;min-width:250px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="font-size:12.5px;font-weight:800;margin-bottom:6px;color:#1d4ed8">${title}</div>`
     +(blk==='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="nfWriteComments(spNext(spCur()))" title="사업계획 대비 평균 수명·가동 래들 패턴으로 증감 분석 문구를 자동 작성합니다">🤖 자동 작성</button></div>`:'')
+    +(blk!=='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="spAutoCm('${blk}')" title="사업계획 대비 실제 판매 수량·물량을 품목별로 비교해 증가·감소 품목을 자동 작성합니다">🤖 자동 작성 (사업계획 대비 품목)</button></div>`:'')
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted)">● 제강 생산량</div>${ta(blk,'prod',cm[blk].prod,'- 생산량 +0톤 증가 …')}`
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:6px">● 증가요인</div>${ta(blk,'inc',cm[blk].inc,'- 래들 S/L 보수 물량 증가 +00백 …')}`
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:6px">● 감소요인</div>${ta(blk,'dec',cm[blk].dec,'- 열간보수재 다원화 비율 조정 -00백 …')}</div>`;
@@ -38095,6 +38689,7 @@ function spRenderSum(){
     +`<div class="xl-legend"><b>색상 안내</b><i style="background:#bdd7ee;color:#1f3864">계획</i><i style="background:#c6e0b4;color:#274e13">실적</i><i style="background:#f8cbad;color:#833c0b">예상</i><span>달성율 →</span><i style="background:#c6efce;color:#006100">100% 이상</i><i style="background:#ffeb9c;color:#7f4f00">90~99%</i><i style="background:#ffc7ce;color:#9c0006">90% 미만</i><i style="background:#f2f2f2;color:#7f7f7f">0% (미입력)</i></div>`
     +`<div style="font-size:11px;color:var(--muted);margin:4px 2px 12px">※ 누적은 ${p.y}년 1월부터 ${spLabel(p)} 말까지 · 달성율 = 실적 ÷ 계획 · 계획은 [사업계획]${p.y===2026?'(2026 V7 월별 판매계획)':' 엔진(다원화 반영)'}에서 가져오며 [실적 입력] 탭에서 월별로 직접 수정할 수 있습니다.</div>`
     +`<div class="subhead">COMMENT · 증가요인 · 감소요인</div><div style="display:flex;gap:10px;flex-wrap:wrap">${col('cur',spLabel(p,true)+' 실적')}${col('fc',spLabel(np,true)+' 예상 실적')}${col('cum',p.y+'년 누적 실적')}</div>`
+    +(()=>{try{return spAutoCmBasis(p);}catch(e){console.error(e);return '';}})()
     +`<div class="subhead">● 주요 ISSUE 사항</div><div class="tablewrap">${it}</div>`;
 }
 function spRenderMt(){
