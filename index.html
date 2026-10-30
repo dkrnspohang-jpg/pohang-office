@@ -321,6 +321,19 @@
   .eaf-sub-row td{background:#f6f8fa;font-weight:700}
   .eaf-total-row td{background:#fde68a;font-weight:800}
   .bomtbl td.n,.bomtbl th.n{text-align:right;font-variant-numeric:tabular-nums}
+  /* 2026-10-30: 차월 판매계획 한 화면 배치 */
+  .nf-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:12px;align-items:start}
+  @media(max-width:1300px){.nf-grid{grid-template-columns:minmax(0,1fr)}}
+  .nf-card{border:1px solid #f9a825;border-radius:10px;padding:8px 10px;margin-bottom:10px;background:#fff}
+  table.nfa-t td,table.nfa-t th{padding:1px 6px !important;line-height:1.2}
+  .nfa-t .iinp{height:22px;font-size:12px;box-sizing:border-box}
+  table.nf-v td,table.nf-v th{white-space:nowrap;padding:2px 6px !important}
+  .nf-v .iinp{height:22px;font-size:12px;box-sizing:border-box}
+  .nfa-t .nfsub{display:inline-block;margin-left:5px;vertical-align:middle}
+  .nfa-t.multi .nfsub{display:block;margin-left:0}
+  .nfa-t td.nfnote{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:#64748b}
+  details.nf-det{border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:10px;background:#fff}
+  details.nf-det>summary{cursor:pointer;font-size:13px;font-weight:800;color:#334155}
 
   /* ===== 2026-10-26 실적 화면 엑셀식 색상 구분 (xlPaint) ===== */
   .xl-on table.bomtbl{border-collapse:collapse}
@@ -1041,6 +1054,12 @@
   .qrv-tx .qyl{background:#ff0!important;display:block}
   .qrv-vat{font-size:11px;color:#444;margin-top:4px;text-align:right}
   .qrv-app{display:flex;gap:28px;justify-content:center;align-items:flex-start;break-before:page;page-break-before:always;margin-top:30px;padding-top:20px}
+  .qrv-pg{display:block;margin:26px 0 -8px;padding:3px 10px;font-size:11.5px;font-weight:700;color:#475569;background:#e2e8f0;border-radius:6px;text-align:center}
+  @media print{.qrv-pg{display:none!important}}
+  .qrv-app.qrv-fac{display:block!important;margin-top:0}
+  .qfac{max-width:1000px;margin:0 auto 16px;text-align:center}
+  .qfac .qs-ttl{text-align:left}
+  @media print{.qfac.pg{break-after:page;page-break-after:always}}
   .qsheet{width:46%;max-width:440px;font-family:'Malgun Gothic','맑은 고딕',sans-serif;color:#000}
   .qs-ttl{display:flex;justify-content:space-between;align-items:baseline;font-size:16px;margin-bottom:2px}
   .qs-ttl span{font-size:12px}
@@ -10267,8 +10286,18 @@ function qSubHtml(i,r){   /* 품목 아래 줄: 최신 제조원가 상태·경�
     <span style="margin-left:6px;color:var(--muted)">견적서 표기 <input value="${esc(r.disp||'')}" placeholder="${esc(it.disp||r.name)}" oninput="quoteItems[${i}].disp=this.value" style="width:120px;font-size:11.5px"></span>`;
 }
 function qSubRefresh(i){const e=document.getElementById('qsub_'+i),r=qRes()[i];if(e&&r)e.innerHTML=qSubHtml(i,r);}
+function qAutoCost(){
+  if(currentQuoteId)return 0;let n=0;   // 저장된 견적을 불러온 경우엔 당시 원가를 유지(최신 원가 적용은 버튼)
+  quoteItems.forEach(r=>{if(r.alt||!r.qi)return;const it=qiById(r.qi),c=it&&qiLatest(it);if(!c||r.cd===c.id)return;
+    const pc=r.cd?(it.costs||[]).find(x=>x.id===r.cd):null;
+    const blank=!qiN(r.var)&&!qiN(r.fix);
+    const untouched=pc?(Math.abs(qiN(r.var)-qiN(qiRnd(pc.v)))<=0.005&&Math.abs(qiN(r.fix)-qiN(qiRnd(pc.f)))<=0.005):blank;
+    if(untouched){r.var=qiRnd(c.v);r.fix=qiRnd(c.f);r.cd=c.id;n++;}});
+  return n;
+}
 function renderQuoteItems(){
   const b=document.getElementById('quoteBody');if(!b)return;
+  try{const na=qAutoCost();if(na)setTimeout(()=>toast('제조원가 '+na+'건을 등록된 최신 값으로 자동 입력했습니다'),0);}catch(e){}
   const dl=document.getElementById('qiPickDL');
   if(dl){const s=qiRecs.map(r=>`<option value="${esc(qPickLabel(r))}">`);qiNames().forEach(n=>{if(!qiRecs.some(r=>r.name===n))s.push(`<option value="${esc(n)}">`);});dl.innerHTML=s.join('');}
   const res=qRes();
@@ -10417,20 +10446,38 @@ function qiSheetRows(it,c){
   out.push({k:'제조원가',u:'',v:+c.v||0,f:+c.f||0,t:(+c.v||0)+(+c.f||0),n:'',kind:'total'});
   return out;
 }
-function qiSheetHtml(it,c){
-  const z=v=>v?qf2(v):'';
+/* 공장 제조원가 서식 이미지 — 다른 PC에서 아직 내려받는 중이면 안내 문구를 보이고, 받으면 화면을 다시 그린다 */
+function qiFacImg(c,st){
+  if(!c||!c.img)return '';const u=photoUrl(c.img);
+  if(u)return `<img src="${u}" style="${st||''}">`;
+  try{fcImgEnsure(c.img);}catch(e){}
+  return `<div style="margin-top:8px;padding:14px;border:1px dashed #94a3b8;color:#64748b;font-size:12px;text-align:center">공장 제조원가 서식 이미지를 팀 저장소에서 불러오는 중입니다…</div>`;
+}
+const __fcImgTry={};
+async function fcImgEnsure(id){
+  if(!id||photoCache.has(id)||__fcImgTry[id]>=3)return;__fcImgTry[id]=(__fcImgTry[id]||0)+1;
+  if(!fbOn){return;}
+  try{await fbPhotoFetchOne(id,'공장 제조원가 서식');}catch(e){}
+  if(photoCache.has(id)){try{
+    if(document.getElementById('qdocOverlay').classList.contains('show')){
+      if(currentDocKind==='review')openReviewDoc();else if(currentDocKind==='sheet'&&window.__qSheetCur)qiSheetOpen(window.__qSheetCur.it.id,window.__qSheetCur.c.id);}
+    else if(curView==='qitems')qiRender();
+  }catch(e){}}
+}
+function qiSheetHtml(it,c,opt){
+  opt=opt||{};const z=v=>v?qf2(v):'';
   const rows=qiSheetRows(it,c).map(r=>{const cl=r.kind==='sub'?'qsi':(r.kind==='total'?'qst':'');
     return `<tr class="${cl}"><td class="${cl} ${r.kind==='sub'?'ind':'b'}" style="text-align:left">${esc(r.k)}</td><td class="${cl}">${esc(r.u)}</td><td class="${cl}">${z(r.v)}</td><td class="${cl}">${z(r.f)}</td><td class="${cl}${r.kind==='total'?' yl':''}">${qf2(r.t)}</td><td class="${cl}">${esc(r.n)}</td></tr>`;}).join('');
   return `<div class="qsheet"><div class="qs-ttl"><b>${esc(it.name)}${qiSpecShow(it)?' '+esc(it.spec):''} 제조원가</b><span>${esc(it.code||'')}</span></div><div class="qs-dt">${esc(c.d)}</div>
     <table><colgroup><col style="width:21%"><col style="width:8%"><col style="width:16%"><col style="width:16%"><col style="width:15%"><col style="width:24%"></colgroup>
     <thead><tr><td class="qsh">원가 요소</td><td class="qsh">단위</td><td class="qsh">직접변동비</td><td class="qsh">직접고정비</td><td class="qsh">원단위</td><td class="qsh">비 고</td></tr></thead><tbody>${rows}</tbody></table>
-    <div class="qs-ft">${esc(c.foot||'')}</div>${c.img&&photoUrl(c.img)?`<img src="${photoUrl(c.img)}" style="max-width:100%;max-height:260px;margin-top:8px;border:1px solid #ccc">`:''}</div>`;
+    <div class="qs-ft">${esc(c.foot||'')}</div>${opt.noImg?'':qiFacImg(c,'max-width:100%;max-height:420px;margin-top:8px;border:1px solid #ccc')}</div>`;
 }
 function qiSheetList(res,mode){
   if(mode==='none')return [];const out=[],seen=new Set();
   res.forEach(r=>{if(r.alt||!r.qi)return;const it=qiById(r.qi);if(!it)return;const cs=qiSorted(it);if(!cs.length)return;let idx=cs.findIndex(c=>c.id===r.cd);if(idx<0)idx=0;
     const list=[cs[idx]];if(mode==='cmp'&&cs[idx+1])list.push(cs[idx+1]);
-    list.forEach(c=>{if(!c||seen.has(c.id))return;seen.add(c.id);out.push({it,c});});});
+    list.forEach((c,k)=>{if(!c||seen.has(c.id))return;seen.add(c.id);out.push({it,c,cur:k===0});});});
   return out;
 }
 function qiSheetOpen(itemId,costId){
@@ -10454,7 +10501,9 @@ function openReviewDoc(){
       <td class="qn qred">${fmt(r.price)}</td><td class="qn">${fmt(c.quoteAmt)}</td><td class="qn qred">${fmt(c.profit)}</td><td class="qn qred">${(c.rate*100).toFixed(1)}%</td><td class="qc">${esc(r.note)}</td></tr>`);});
   const tot=n>1?`<tr class="qtot"><td colspan="4" style="text-align:right">합계 (견적서 제출 기준)</td><td></td><td class="qn">${fmt(tm)}</td><td></td><td class="qn">${fmt(ts)}</td><td></td><td class="qn">${fmt(tq)}</td><td class="qn qred">${fmt(tp)}</td><td class="qn qred">${ts?(tp/ts*100).toFixed(1):'0.0'}%</td><td></td></tr>`:'';
   const sh=qiSheetList(res,x.sheets),grp=[];sh.forEach(s=>{let g=grp.find(a=>a.it.id===s.it.id);if(!g){g={it:s.it,list:[]};grp.push(g);}g.list.push(s.c);});
-  const app=grp.map(g=>`<div class="qrv-app">${g.list.map(c=>qiSheetHtml(g.it,c)).join('')}</div>`).join('');
+  const app=grp.length?`<div class="qrv-pg">2쪽 · 제조원가 시트</div>`+grp.map(g=>`<div class="qrv-app">${g.list.map(c=>qiSheetHtml(g.it,c,{noImg:true})).join('')}</div>`).join(''):'';
+  const facs=sh.filter(z=>z.cur&&z.c.img);
+  const fac=facs.length?`<div class="qrv-pg">${grp.length?'3쪽':'2쪽'} · 공장 제조원가 서식 (원본)</div><div class="qrv-app qrv-fac">${facs.map((z,k)=>`<div class="qfac${k<facs.length-1?' pg':''}"><div class="qs-ttl"><b>공장 제조원가 서식 — ${esc(z.it.name)}${qiSpecShow(z.it)?' '+esc(z.it.spec):''}</b><span>${esc(qDate(z.c.d))}</span></div>${qiFacImg(z.c,'max-width:100%;max-height:640px;border:1px solid #888')}</div>`).join('')}</div>`:'';
   const bd=document.getElementById('qdocBody');bd.className='qdoc qd2 qwide';
   bd.innerHTML=`<div class="qrv"><div class="qrv-top"><div class="qrv-h">■ ${esc(qRvTitle(x,res))}</div><div class="qrv-d">${esc(qDate(x.dt))}</div></div>
     <div class="qrv-sec">▪ 개요</div><div class="qrv-tx">${qLines(x.overview)||'<div>&nbsp;</div>'}</div>
@@ -10463,7 +10512,7 @@ function openReviewDoc(){
       <thead><tr><td rowspan="2" class="qh">품목</td><td rowspan="2" class="qh">규격</td><td rowspan="2" class="qh">단위</td><td rowspan="2" class="qh">수량</td><td colspan="2" class="qh">제조원가</td><td colspan="2" class="qh">판매원가</td><td colspan="2" class="qh">견적가</td><td rowspan="2" class="qh">영업이익</td><td rowspan="2" class="qh">이익률</td><td rowspan="2" class="qh">비고</td></tr>
       <tr><td class="qh">원가</td><td class="qh">금액</td><td class="qh">단가</td><td class="qh">금액</td><td class="qh">단가</td><td class="qh">금액</td></tr></thead>
       <tbody>${body.join('')}${tot}</tbody></table>
-    <div class="qrv-vat">VAT 별도 · 판관비 ${qMargin()}%${incFixed()?'':' · 직접고정비 제외'}</div></div>${app}`;
+    <div class="qrv-vat">VAT 별도 · 판관비 ${qMargin()}%${incFixed()?'':' · 직접고정비 제외'}</div></div>${app}${fac}`;
   document.getElementById('qdocOverlay').classList.add('show');
 }
 /* ---------- 견적서 (엑셀 '견적서' 시트 양식: 직인·로고·빈 줄) ---------- */
@@ -31324,14 +31373,16 @@ async function fcLoad(input){
   qiOpen(`<h3 style="margin:0">🏭 공장 제조원가 서식 읽는 중…</h3><div id="fc_st" style="margin-top:12px;font-size:13px;color:#334155">준비 중…</div><div style="margin-top:8px;font-size:11.5px;color:var(--muted)">처음 한 번만 읽기 엔진을 내려받습니다(이후 브라우저에 보관). 파일은 이 PC 안에서만 처리됩니다.</div>`);
   const all=[];
   for(const f of files){try{(await fcReadFile(f,st)).forEach(s=>all.push(s));}catch(e){const s=fcBlank(f.name,(e&&e.message)||String(e));all.push(s);}}
-  all.forEach(s=>{if(!s.date)s.date=todayStr();s.packIn=false;});
+  all.forEach(s=>{if(!s.date)s.date=todayStr();s.packIn=false;
+    if(!String(s.name||'').trim()){const b=String(s.src||'').replace(/\.[a-z0-9]+(\s*\d+쪽)?(\s*\[.*\])?$/i,'').replace(/\s*\d+쪽$/,'').trim();s.name=b||'공장원가';}
+    try{const ch=fcCheck(s);s.auto=ch.length>0&&ch.every(c=>c.ok);s.ok=s.auto;}catch(e){s.auto=false;}});   // 자동 검증(합계 대조) 통과 → 자동 체크
   fcSheets=all;fcDlg();
 }
 /* ---- 확인 대화상자 ---- */
 function fcDlg(){
   const body=fcSheets.map((s,i)=>fcCardHtml(s,i)).join('');
   qiOpen(`<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🏭 공장 제조원가 서식 읽기 결과 <span style="font-size:12px;font-weight:500;color:var(--muted)">(${fcSheets.length}건)</span></h3><button class="btn sm" onclick="qiClose()">✕</button></div>
-  <div style="font-size:12px;color:#475569;margin-top:6px;line-height:1.6">원본(왼쪽)과 읽은 값(오른쪽)을 대조해 틀린 숫자는 고치고, 각 서식의 <b>☑ 원본과 대조했습니다</b>를 체크한 뒤 등록하세요. <b>품목명·규격은 임시</b>로 등록되며 [견적 품목·제조원가 관리 &gt; 수정]에서 바꿀 수 있습니다.</div>
+  <div style="font-size:12px;color:#475569;margin-top:6px;line-height:1.6">원본(왼쪽)과 읽은 값(오른쪽)을 대조해 틀린 숫자는 고치고, 읽은 값이 서식 합계와 <b>자동으로 맞으면 ☑가 미리 체크</b>되어 바로 등록할 수 있고, 어긋난 건만 원본과 대조해 고친 뒤 체크하세요. <b>품목명·규격은 임시</b>로 등록되며 [견적 품목·제조원가 관리 &gt; 수정]에서 바꿀 수 있습니다.</div>
   <div style="max-height:68vh;overflow:auto;margin-top:8px">${body}</div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn" onclick="qiClose()">취소</button><button class="btn" onclick="fcSave(false)">보관소에만 등록</button><button class="btn primary" onclick="fcSave(true)">등록하고 견적 행에도 넣기</button></div>`,true);
   fcSheets.forEach((s,i)=>fcRecalc(i));
@@ -31355,7 +31406,7 @@ function fcCardHtml(s,i){
       <tr><td style="text-align:left">포장비(판관·미포함)</td><td>${cell('pack',0)}</td><td>${cell('pack',1)}</td><td class="n"><label style="font-size:11px;white-space:nowrap"><input type="checkbox" ${s.packIn?'checked':''} onchange="fcSetPk(${i},this.checked)" style="width:auto"> 변동비에 포함</label></td></tr></tbody></table>
     <div id="fc_chk_${i}" style="margin-top:6px;font-size:12px;line-height:1.55"></div>
     <div id="fc_res_${i}" style="margin-top:6px;padding:8px 10px;background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;line-height:1.7"></div>
-    <label style="display:block;margin-top:8px;font-size:13px;font-weight:700"><input type="checkbox" ${s.ok?'checked':''} onchange="fcSets(${i},'ok',this.checked)" style="width:auto"> 원본과 대조했습니다 (체크해야 등록됩니다)</label>
+    <label style="display:block;margin-top:8px;font-size:13px;font-weight:700"><input type="checkbox" ${s.ok?'checked':''} onchange="fcSets(${i},'ok',this.checked)" style="width:auto"> ${s.auto?'<span style="color:#166534">✔ 자동 검증 통과(항목 합계·EA 환산이 서식 합계와 일치) — 그대로 등록해도 됩니다</span>':'원본과 대조했습니다 (자동 검증이 어긋나 직접 확인 후 체크해야 등록됩니다)'}</label>
    </div></div></div>`;
 }
 function fcSets(i,k,v){fcSheets[i][k]=v;if(k==='wt')fcRecalc(i);}
@@ -31395,6 +31446,30 @@ async function fcSave(addRows){
   }
   qiHist=null;qiHistLoad().then(qiAfter);qiAfter();renderQuoteItems();
   toast(reg.length?('공장 제조원가 '+reg.length+'건을 견적 품목·제조원가에 등록했습니다 (품명·규격 임시)'+(addRows?' — 견적 행에도 넣었습니다. 아래 [공장 제조원가 검토]에서 체크하세요':'')):'등록된 항목이 없습니다');
+  if(reg.length)fcShare(reg);
+}
+/* 등록한 원가(기록 + 공장 서식 이미지)가 팀 저장소(Firebase)에 올라갔는지 서버에서 확인하고 결과를 알려 준다 */
+async function fcShare(reg,tries){
+  tries=tries||0;
+  const keys=reg.map(x=>QI_PRE+x.it.id),imgs=[...new Set(reg.map(x=>x.c.img).filter(Boolean))];
+  if(!fbOn){fcShareMsg(false,'팀 저장소에 연결되어 있지 않아 <b>이 PC에만 저장</b>되었습니다. 화면 위쪽 연결 표시가 [팀 미연결]이면 팀 공유에서 연결해 주세요. 연결하면 자동으로 올라갑니다.');return;}
+  fcShareMsg(null,'팀 저장소에 올리는 중입니다…');
+  let ok=true,why='';
+  try{
+    clearTimeout(fbTimers.__kv);
+    if(!(await fbPushKv())){ok=false;why='원가 기록 업로드 실패: '+((window.fbKvLast||{}).err||'알 수 없음')+(/size|large|exceed|limit/i.test((window.fbKvLast||{}).err||'')?' (저장 용량 한도 초과 가능 — 팀 공유 화면의 [저장 용량 점검] 확인)':'');}
+    for(const id of imgs){fbPhQ=fbPhQ.then(()=>fbPhotoPushOne(id)).catch(()=>{});await fbPhQ;if(!fbPhRemote.has(id)){ok=false;why=why||'공장 서식 이미지 업로드 실패(동기화 로그 확인)';}}
+    if(ok){const q=await fbKvqGet(true);keys.forEach(k=>{if(!(k in q.kv)){ok=false;why='서버에서 원가 기록을 확인하지 못했습니다';}});}
+  }catch(e){ok=false;why=e.message||String(e);}
+  fcShareMsg(ok,ok?'<b>팀 저장소 반영 확인 완료</b> — 다른 PC·브라우저에서도 같은 원가와 공장 서식이 보입니다 (원가 기록 '+keys.length+'건'+(imgs.length?' · 서식 이미지 '+imgs.length+'장':'')+').':'<b>팀 저장소 반영 실패</b> — '+esc(why)+'. 이 PC에는 저장되어 있습니다.'+(tries<2?' 20초 뒤 자동으로 다시 시도합니다.':' 팀 공유 화면에서 연결 상태를 확인해 주세요.'));
+  if(!ok&&tries<2)setTimeout(()=>{fcShare(reg,tries+1);},20000);
+}
+function fcShareMsg(ok,html){
+  let e=document.getElementById('fcShareBar');
+  if(!e){e=document.createElement('div');e.id='fcShareBar';e.style.cssText='position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:120;max-width:min(720px,92vw);padding:10px 16px;border-radius:10px;font-size:13px;line-height:1.55;box-shadow:0 6px 24px rgba(0,0,0,.25);cursor:pointer';e.onclick=()=>{e.style.display='none';};document.body.appendChild(e);}
+  e.style.display='block';e.style.background=ok===true?'#ecfdf5':ok===false?'#fef2f2':'#eff6ff';e.style.color=ok===true?'#166534':ok===false?'#991b1b':'#1e3a8a';e.style.border='1px solid '+(ok===true?'#86efac':ok===false?'#fca5a5':'#93c5fd');
+  e.innerHTML=(ok===true?'✔ ':ok===false?'⚠ ':'⏳ ')+html+' <span style="opacity:.6;font-size:11px">(클릭하면 닫힘)</span>';
+  clearTimeout(e._t);if(ok!==null)e._t=setTimeout(()=>{e.style.display='none';},ok===true?9000:30000);
 }
 function qiApplyCost(i,it,c){const row=quoteItems[i];row.qi=it.id;row.name=it.name;row.spec=it.spec;row.unit=it.unit||'EA';row.disp=it.disp||'';row.qty=row.qty||1;row.var=qiRnd(c.v);row.fix=qiRnd(c.f);row.cd=c.id;}
 /* ---- 견적검토 내용(내부결재)용 체크 문구 ---- */
@@ -33183,10 +33258,10 @@ function fbDoc(name){return fbWrap(fbDb.collection('dgrns_rooms').doc(fbRoom).co
    결재 사인 이미지 때문에 건당 약 7KB → 한 문서(1MiB 한도)가 98%까지 찼음.
    문서명 ot__2026-09-24 … 로 나눠 저장하고, 읽을 때는 구 단일 문서(ot)와 분할 문서를 합쳐 id 기준으로 병합한다.
    구 단일 문서는 첫 저장 시 비워 두고(migrated), 아직 갱신하지 않은 PC가 올린 내용은 병합으로 흡수된다. */
-const FB_SHARDED={ot:1};
+const FB_SHARDED={ot:1,leave:'m'};   // 'm' = 월별(YYYY-MM) 문서로 분할, 1 = 일자별. 2026-10-30(rpt178): 휴가원이 문서 1개 한도의 49%에 도달해 월별 분할로 전환
 function fbShardOf(store,x){if(!FB_SHARDED[store])return store;
   const d=String((x&&(x.date||x.at))||'').slice(0,10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(d)?store+'__'+d:store+'__misc';}
+  return /^\d{4}-\d{2}-\d{2}$/.test(d)?store+'__'+(FB_SHARDED[store]==='m'?d.slice(0,7):d):store+'__misc';}
 const fbShardSig={};let fbLegacyCleared=false;
 const fbSigOf=a=>JSON.stringify((a||[]).slice().sort((x,y)=>String(x&&x.id)<String(y&&y.id)?-1:1));
 function fbShardQuery(store){const fp=firebase.firestore.FieldPath.documentId();
@@ -33256,7 +33331,51 @@ function kvTimesSave(){try{(window.rawSetItem||localStorage.setItem.bind(localSt
 function kvTouch(k){if(typeof k==='string'&&k.indexOf('dgrns_')===0&&k!==FB_KV_TIMES_KEY){kvTimes[k]=Date.now();kvTimesSave();}}
 function fbCollectKv(){const kv={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('dgrns_')===0&&FB_KV_SKIP.indexOf(k)<0)kv[k]=localStorage.getItem(k);}return kv;}
 function fbCollectKvTimes(kv){const t={};Object.keys(kv||{}).forEach(k=>{t[k]=kvTimes[k]||0;});return t;}
-async function fbPushKv(){if(!fbOn)return;try{const kv=fbCollectKv();await fbDoc('__kv').set({kv,times:fbCollectKvTimes(kv),by:fbClientId,at:Date.now()});syncLog('↑ 설정/마스터');}catch(e){syncLog('업로드 오류 kv: '+e.message);}}
+/* 2026-10-30(rpt177): 견적 품목·공장 제조원가(dgrns_qi_*)는 '__kv' 한 문서(한도 1MB)에 같이 묶이면 용량이 차는 순간 다른 PC로 안 넘어가므로
+   별도 문서(__kvq0, __kvq1 …, 문서당 약 600KB)로 나눠 올린다. 받는 쪽은 fbApplyKv가 키별로 합치므로 구버전과도 호환된다. */
+const fbIsQ=k=>typeof k==='string'&&k.indexOf('dgrns_qi_')===0;
+let fbKvqCnt=0;window.fbKvLast={ok:null,at:0,err:'',mainKB:0,qKB:0,qn:0};
+const fbU8=t=>{try{return new TextEncoder().encode(String(t)).length;}catch(e){return String(t).length*3;}};
+const FB_KV_DOC_MAX=700000;   // 문서 1개당 최대 바이트(한도 1,048,576 바이트의 약 2/3, 한글은 글자당 3바이트로 계산)
+/* 전체 설정·마스터 키를 이름순으로 채워 문서 여러 개로 나눈다. 첫 문서는 기존 '__kv', 넘치는 분량은 '__kvq0, __kvq1…' */
+function fbKvGroups(kv,tm){
+  const keys=Object.keys(kv).sort((x,y)=>(fbIsQ(x)?1:0)-(fbIsQ(y)?1:0)||(x<y?-1:x>y?1:0));
+  const groups=[];let cur={kv:{},times:{},b:0};
+  keys.forEach(k=>{const b=fbU8(k)+fbU8(kv[k])+40;
+    if(cur.b+b>FB_KV_DOC_MAX&&Object.keys(cur.kv).length){groups.push(cur);cur={kv:{},times:{},b:0};}
+    cur.kv[k]=kv[k];cur.times[k]=(tm||{})[k]||0;cur.b+=b;});
+  groups.push(cur);return groups;
+}
+async function fbPushKv(){
+  if(!fbOn)return false;
+  try{
+    const kv=fbCollectKv(),tm=fbCollectKvTimes(kv),groups=fbKvGroups(kv,tm),extra=groups.length-1;
+    const tot=groups.reduce((a,g)=>a+g.b,0);
+    await fbDoc('__kv').set({kv:groups[0].kv,times:groups[0].times,qn:extra,by:fbClientId,at:Date.now()});
+    for(let i=1;i<groups.length;i++)await fbDoc('__kvq'+(i-1)).set({kv:groups[i].kv,times:groups[i].times,by:fbClientId,at:Date.now()});
+    for(let i=extra;i<fbKvqCnt;i++){try{await fbDoc('__kvq'+i).delete();}catch(e){}}
+    fbKvqCnt=extra;
+    const qB=Object.keys(kv).filter(fbIsQ).reduce((a,k)=>a+fbU8(k)+fbU8(kv[k]),0);
+    window.fbKvLast={ok:true,at:Date.now(),err:'',mainKB:Math.round(groups[0].b/1024),qKB:Math.round(qB/1024),qn:extra};
+    syncLog('↑ 설정/마스터 '+Math.round(tot/1024)+'KB · 문서 '+groups.length+'개');
+    return true;
+  }catch(e){window.fbKvLast={ok:false,at:Date.now(),err:e.message||String(e),mainKB:0,qKB:0,qn:0};syncLog('업로드 오류 kv: '+e.message);return false;}
+}
+/* 견적 품목·제조원가 문서(__kvq*) 전체 읽기 (server=true면 서버에서 직접 확인) */
+async function fbKvqGet(server){
+  const col=fbDb.collection('dgrns_rooms').doc(fbRoom).collection('data'),FP=firebase.firestore.FieldPath.documentId();
+  const q=col.orderBy(FP).startAt('__kvq').endAt('__kvq\uf8ff');let sn;
+  try{sn=await (server?q.get({source:'server'}):q.get());}catch(e){if(server)throw e;sn=await q.get();}
+  const kv={},times={};let n=0;sn.forEach(d=>{const x=d.data()||{};Object.assign(kv,x.kv||{});Object.assign(times,x.times||{});n++;});
+  return {kv,times,n};
+}
+function fbKvqListen(){
+  const col=fbDb.collection('dgrns_rooms').doc(fbRoom).collection('data'),FP=firebase.firestore.FieldPath.documentId();
+  fbUnsub.push(col.orderBy(FP).startAt('__kvq').endAt('__kvq\uf8ff').onSnapshot(snap=>{
+    if(snap.metadata.hasPendingWrites)return;
+    snap.docChanges().forEach(ch=>{if(ch.type==='removed')return;const d=ch.doc.data()||{};if(!d.kv||d.by===fbClientId)return;fbApplyKv(d.kv,d.times);try{syncLog('↓ 견적 품목·제조원가 '+Object.keys(d.kv).length+'건');}catch(e){}});
+  },err=>syncLog('구독 오류 견적 품목: '+err.message)));
+}
 // 원격 스토어 수신 → 로컬 반영
 /* 팀에서 받은 내용이 이 PC 자료를 크게 지우는 경우 자동 반영하지 않고 확인받는다 */
 let fbHold={};
@@ -33421,8 +33540,9 @@ function fbListen(){
     if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d||d.by===fbClientId)return;fbGuardApply(store,d.items);
   },err=>syncLog('구독 오류 '+store+': '+err.message)));});
   fbUnsub.push(fbDoc('__kv').onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d||d.by===fbClientId)return;fbApplyKv(d.kv,d.times);
+    if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d)return;if(d.qn!=null)fbKvqCnt=Math.max(fbKvqCnt,+d.qn||0);if(d.by===fbClientId)return;fbApplyKv(d.kv,d.times);
   },err=>syncLog('구독 오류 kv: '+err.message)));
+  try{fbKvqListen();}catch(e){syncLog('견적 품목 동기화 시작 오류: '+e.message);}
   try{fbPhotoListen();}catch(e){syncLog('사진 동기화 시작 오류: '+e.message);}
 }
 async function fbConnect(cfg,room){
@@ -33471,7 +33591,9 @@ async function fbInitialSync(){
     if(!mine.length&&items.length){await fbApplyStore(st,items);got++;}
     else if(items.length!==mine.length)ask.push({st,inN:items.length,myN:mine.length,items});
   }
-  try{const kv=await fbDoc('__kv').get();if(kv.exists)fbApplyKv((kv.data()||{}).kv,(kv.data()||{}).times);}catch(e){}
+  let mainKv={};try{const kv=await fbDoc('__kv').get();if(kv.exists){mainKv=(kv.data()||{}).kv||{};fbApplyKv(mainKv,(kv.data()||{}).times);}}catch(e){}
+  try{const q=await fbKvqGet();if(Object.keys(q.kv).length)fbApplyKv(q.kv,q.times);
+    if(Object.keys(fbCollectKv()).some(k=>fbIsQ(k)&&!(k in q.kv)&&!(k in mainKv)))setTimeout(()=>{try{fbPushKv();}catch(e){}},1500);}catch(e){}   // 분리 문서가 아직 없으면(처음 한 번) 이 PC의 견적 품목을 올림
   if(got)toast('팀 데이터 '+got+'종을 받았습니다');
   if(!cloudTotal){syncLog('새 팀 저장소가 비어 있습니다 · '+fbRoom);toast('새 Firebase에 연결됐습니다 · 초기 자료를 등록해 주세요');}
   if(ask.length){
@@ -33484,7 +33606,7 @@ async function fbInitialSync(){
       }
     }
   }
-  for(const st of migrate){try{await fbPushStore(st);syncLog('잔업신청 저장 방식을 반월 분할로 전환했습니다');}catch(e){}}
+  for(const st of migrate){try{await fbPushStore(st);syncLog((CAP_NAMES[st]||st)+' 저장 방식을 분할 저장으로 전환했습니다');}catch(e){}}
   syncChip();
 }
 function fbDisconnect(){fbOn=false;setTimeout(syncChip,0);fbUnsub.forEach(u=>{try{u();}catch(e){}});fbUnsub=[];
@@ -33540,6 +33662,7 @@ async function syncPullAll(){if(!fbOn){alert('먼저 연결하세요');return;}
   if(!confirm('팀 저장소의 전체 데이터를 이 PC로 받습니다. 이 PC의 기존 데이터가 덮어써집니다. 계속할까요?'))return;
   try{for(const s of FB_STORES){const rr=await fbReadItems(s);if(rr.exists)await fbApplyStore(s,rr.items);}
     const kv=await fbDoc('__kv').get();if(kv.exists)fbApplyKv((kv.data()||{}).kv,null,true);
+    try{const q=await fbKvqGet();if(Object.keys(q.kv).length)fbApplyKv(q.kv,null,true);}catch(e){}
     toast('팀 데이터 전체 받기 완료');}catch(e){alert('받기 오류: '+e.message);}}
 /* 📋 팀 설정(설정+팀코드) 한 덩어리 복사 / 붙여넣기 — 팀 코드 오타 방지 */
 function syncCopyCfg(){
@@ -33726,14 +33849,21 @@ async function capMeasure(){
     if(FB_SHARDED[st]){   // 반월 분할 문서별로 측정
       const g={};a.forEach(x=>{const k=fbShardOf(st,x);(g[k]=g[k]||[]).push(x);});
       let big=null;Object.keys(g).forEach(k=>{const b=Math.round(capU8(JSON.stringify(g[k]))*CAP_FACTOR);if(!big||b>big.bytes)big={k,bytes:b,n:g[k].length};});
-      if(big)docs.push({k:st,name:(CAP_NAMES[st]||st)+' (일자별 분할 · 최대 '+(big.k.split('__')[1]||'')+', 총 '+Object.keys(g).length+'일/'+a.length+'건)',n:a.length,bytes:big.bytes,pct:big.bytes/CAP_DOC_LIMIT*100});
+      const un=FB_SHARDED[st]==='m'?'월':'일';
+      if(big)docs.push({k:st,name:(CAP_NAMES[st]||st)+' ('+un+'별 분할 · 최대 '+(big.k.split('__')[1]||'')+', 총 '+Object.keys(g).length+un+'/'+a.length+'건)',n:a.length,bytes:big.bytes,pct:big.bytes/CAP_DOC_LIMIT*100,eta:'분할 저장 — 한도 걱정 없음'});
       continue;}
     const b=Math.round(capU8(JSON.stringify(a))*CAP_FACTOR);
-    docs.push({k:st,name:CAP_NAMES[st]||st,n:a.length,bytes:b,pct:b/CAP_DOC_LIMIT*100});
+    let eta='';try{   // 기록일 기준 증가 속도로 문서 1개 한도(1MB) 도달 시점 추정
+      const ds=a.map(x=>String((x&&(x.date||x.at||x.start))||'').slice(0,10)).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
+      if(ds.length>=20){const yrs=Math.max(0.5,(Date.now()-new Date(ds[0]).getTime())/31557600000),perYr=b/yrs,left=CAP_DOC_LIMIT-b;
+        const y=left/perYr;eta=y>=20?'20년 이상 여유':'약 '+(y<1?(Math.max(1,Math.round(y*12))+'개월'):y.toFixed(1)+'년')+' 뒤 한도 (연 +'+Math.round(perYr/1024)+'KB)';}
+    }catch(e){}
+    docs.push({k:st,name:CAP_NAMES[st]||st,n:a.length,bytes:b,pct:b/CAP_DOC_LIMIT*100,eta});
   }
-  const kv=fbCollectKv(),kvKeys=Object.keys(kv).map(k=>({k,b:capU8(k)+capU8(kv[k])})).sort((a,b)=>b.b-a.b);
-  const kvB=Math.round(kvKeys.reduce((a,x)=>a+x.b,0)*CAP_FACTOR);
-  docs.push({k:'__kv',name:'설정·마스터·모식도·일일사용현황 수정분(묶음)',n:kvKeys.length,bytes:kvB,pct:kvB/CAP_DOC_LIMIT*100,kvTop:kvKeys.slice(0,5)});
+  const kv=fbCollectKv(),kvAll=Object.keys(kv).map(k=>({k,b:capU8(k)+capU8(kv[k])})).sort((a,b)=>b.b-a.b);
+  const kvG=fbKvGroups(kv,{}),kvTot=Math.round(kvAll.reduce((a,x)=>a+x.b,0)*CAP_FACTOR);
+  const kvMax=Math.round(Math.max.apply(null,kvG.map(g=>g.b))*CAP_FACTOR);   // 실제 업로드는 문서당 약 700KB 이하로 자동 분할
+  docs.push({k:'__kv',name:'설정·마스터·모식도·견적 품목·원가 등(묶음, 합계 '+(kvTot/1024).toFixed(0)+'KB → '+kvG.length+'개 문서로 자동 분할)',n:kvAll.length,bytes:kvMax,pct:kvMax/CAP_DOC_LIMIT*100,kvTop:kvAll.slice(0,5),eta:'자동 분할 — 문서 1개 한도 걱정 없음'});
   let lsChars=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);lsChars+=k.length+(localStorage.getItem(k)||'').length;}}catch(e){}
   let est=null,persisted=null;
   try{if(navigator.storage&&navigator.storage.estimate)est=await navigator.storage.estimate();}catch(e){}
@@ -33748,14 +33878,14 @@ async function capRender(toastIt){
   const verdict=mp>=80?`<b style="color:#dc2626">🔴 위험</b> — "${esc(M.max.name)}"가 ${mp.toFixed(1)}%입니다. 즉시 연도별 분할 저장 전환을 요청해 주십시오.`
     :mp>=50?`<b style="color:#d97706">🟠 주의</b> — "${esc(M.max.name)}"가 ${mp.toFixed(1)}%입니다. 연도별 분할 저장 전환을 요청해 주십시오.`
     :`<b style="color:#16a34a">🟢 양호</b> — 가장 높은 항목 "${esc(M.max.name)}" ${mp.toFixed(1)}%. 현재는 조치가 필요하지 않습니다.`;
-  const rows=M.docs.slice().sort((a,b)=>b.pct-a.pct).map(d=>`<tr><td><b>${esc(d.name)}</b></td><td class="n">${d.n.toLocaleString()}</td><td class="n">${(d.bytes/1024).toFixed(1)} KB</td><td style="width:34%">${capBar(d.pct)}</td><td class="n" style="font-weight:800;color:${capColor(d.pct)}">${d.pct.toFixed(1)}%</td></tr>`).join('');
+  const rows=M.docs.slice().sort((a,b)=>b.pct-a.pct).map(d=>`<tr><td><b>${esc(d.name)}</b></td><td class="n">${d.n.toLocaleString()}</td><td class="n">${(d.bytes/1024).toFixed(1)} KB</td><td style="width:34%">${capBar(d.pct)}</td><td class="n" style="font-weight:800;color:${capColor(d.pct)}">${d.pct.toFixed(1)}%</td><td style="font-size:11.5px;color:var(--muted)">${esc(d.eta||'')}</td></tr>`).join('');
   const kvd=M.docs.find(d=>d.k==='__kv');
   const kvTop=kvd&&kvd.kvTop?kvd.kvTop.map(x=>`${esc(x.k.replace(/^dgrns_/,''))} ${(x.b/1024).toFixed(1)}KB`).join(' · '):'';
   const lsB=M.lsChars*2,lsPct=lsB/(10*1024*1024)*100;   // 브라우저 localStorage 한도 약 5백만 문자(≈10MB UTF-16)
   const us=M.est&&M.est.usage||0,qu=M.est&&M.est.quota||0,qp=qu?us/qu*100:0;
   const per=M.persisted===true?'<span style="color:#16a34a">✔ 보호됨(자동 삭제 방지)</span>':(M.persisted===false?'<span style="color:#d97706">⚠ 미보호 — [🛡 저장공간 보호 요청]을 눌러 주십시오</span>':'<span style="color:var(--muted)">확인 불가</span>');
   box.innerHTML=`<div style="margin-bottom:8px">${verdict}</div>
-    <div class="tablewrap"><table class="mini" style="min-width:0"><thead><tr><th>팀 공유 문서</th><th class="n">건수</th><th class="n">추정 크기</th><th>한도(1,024KB) 대비</th><th class="n">사용률</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="tablewrap"><table class="mini" style="min-width:0"><thead><tr><th>팀 공유 문서</th><th class="n">건수</th><th class="n">추정 크기</th><th>한도(1,024KB) 대비</th><th class="n">사용률</th><th>예상 한도 도달</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${kvTop?`<div style="font-size:11.5px;color:var(--muted);margin-top:4px">※ 묶음 문서의 큰 항목: ${kvTop}</div>`:''}
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:12.5px">
       <div style="flex:1;min-width:260px"><b>이 PC 저장소(IndexedDB·사진 포함)</b><div style="margin:4px 0">${capBar(qp)}</div>${(us/1048576).toFixed(1)}MB 사용 / 허용 약 ${qu?(qu/1048576).toFixed(0):'?'}MB · <b style="color:${capColor(qp)}">${qp.toFixed(2)}%</b></div>
@@ -39616,7 +39746,7 @@ function nfaItemTable(D,x,all){
   t+='</table>';
   return {html:t,n:L.length,nChg:nChg,nAll:D.items.length};
 }
-function nfaHtml(q){
+function nfaHtml(q,mode){
   const DD=nfaRound()?0:1,D=nfaPeriod(q),sty='border:1px solid #f9a825;border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#fff';
   const head=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#b45309">🧮 활동량 입력형 판매계획 — 생산량·보수 이벤트만 넣으면 품목 판매량 산출</div><span style="flex:1"></span>`
     +`<label style="font-size:12px" title="끄면 CH÷수명의 소수 대수(기대값)로 계산, 켜면 정수 대수로 계산"><input type="checkbox" ${nfaRound()?'checked':''} onchange="nfaOpt('round',this.checked)"> 보수 대수 정수로 계산</label>`
@@ -39625,11 +39755,11 @@ function nfaHtml(q){
   if(!D)return `<div style="${sty}">${head}<div style="font-size:12px;color:var(--muted)">이 기간은 사업계획 월별 데이터가 없어 활동량 계획을 만들 수 없습니다.</div></div>`;
   const ms=D.ms,arr=D.arr,multi=ms.length>1,yel='inp-yel';
   const inp=(o,kind,sub,ov,ph,w,warn)=>{const on=nfaHas(ov);return `<input type="number" step="any" min="0" class="iinp${on?' '+yel:''}" style="width:${w||68}px${(warn&&!on&&o.mj)?';border:2px solid #f97316;background:#fff7ed':''}" value="${on?ov:''}" placeholder="${ph}" onchange="nfaSet('${o.ym}','${kind}','${sub}',this.value)">`;};
-  const f1=nfFx(),sub=s=>`<div style="font-size:10px;color:#94a3b8;white-space:nowrap">${s}</div>`;
-  const colHead=`<tr><th style="min-width:210px">항목</th>${arr.map(o=>`<th class="n">${o.m}월</th>`).join('')}${multi?'<th class="n">기간 합계</th>':''}<th style="min-width:200px">산출·입력 방법</th></tr>`;
+  const f1=nfFx(),sub=s=>`<div class="nfsub" style="font-size:10px;color:#94a3b8;white-space:nowrap">${s}</div>`;
+  const colHead=`<tr><th style="min-width:170px">항목</th>${arr.map(o=>`<th class="n">${o.m}월</th>`).join('')}${multi?'<th class="n">기간 합계</th>':''}<th style="min-width:150px">산출·입력 방법(마우스를 올리면 전체 표시)</th></tr>`;
   const secRow=s=>`<tr style="background:#e3eaf3"><td colspan="${arr.length+(multi?3:2)}" style="font-weight:800">${s}</td></tr>`;
-  const row=(lab,cells,tot,note,b)=>`<tr><td style="${b?'font-weight:700':'padding-left:14px'}">${lab}</td>${cells}${multi?`<td class="n" style="font-weight:700">${tot}</td>`:''}<td style="font-size:11px;color:#64748b">${note||''}</td></tr>`;
-  let t=`<table class="bomtbl" style="min-width:auto">${colHead}`;
+  const row=(lab,cells,tot,note,b)=>`<tr><td style="${b?'font-weight:700':'padding-left:14px'}">${lab}</td>${cells}${multi?`<td class="n" style="font-weight:700">${tot}</td>`:''}<td class="nfnote" title="${esc(String(note||'').replace(/<[^>]+>/g,''))}">${note||''}</td></tr>`;
+  let t=`<table class="bomtbl nfa-t${multi?' multi':''}" style="min-width:auto">${colHead}`;
   // 생산
   t+=secRow('① 제강 생산량');
   t+=row('생산량(톤)',arr.map(o=>{const on=o.prodSrc==='수정';return `<td class="n"><input type="number" step="any" class="iinp${on?' '+yel:''}" style="width:84px" value="${on?o.prod:''}" placeholder="${Math.round(o.prodP)}" onchange="spSetFc(${o.y},${o.m},'prod','',this.value)">${sub('계획 '+Math.round(o.prodP).toLocaleString())}</td>`;}).join(''),
@@ -39673,7 +39803,7 @@ function nfaHtml(q){
   const S=D.S,tot={pa:0,fa:0,pw:0,fw:0};Object.keys(S).forEach(k=>['pa','fa','pw','fw'].forEach(f=>tot[f]+=S[k][f]));
   const dcell=(v,d)=>`<td class="n" style="${spCls(v)}">${Math.abs(v)<(d===0?0.5:0.05)?'-':nfSg(v,d)}</td>`;
   const srow=(lab,o,b)=>`<tr style="${b?'background:#eef2f6;font-weight:800':''}"><td style="${b?'':'padding-left:14px'}">${lab}</td><td class="n">${f1(o.pa)}</td><td class="n" style="font-weight:700">${f1(o.fa)}</td>${dcell(o.fa-o.pa,DD)}<td class="n">${f1(o.pw)}</td><td class="n" style="font-weight:700">${f1(o.fw)}</td>${dcell(o.fw-o.pw,DD)}</tr>`;
-  let st=`<table class="bomtbl" style="min-width:auto"><tr><th>구분</th><th class="n">계획 금액(백만원)</th><th class="n">예상 금액</th><th class="n">증감</th><th class="n">계획 중량(톤)</th><th class="n">예상 중량</th><th class="n">증감</th></tr>`;
+  let st=`<table class="bomtbl nfa-t" style="min-width:auto"><tr><th>구분</th><th class="n">계획 금액(백만원)</th><th class="n">예상 금액</th><th class="n">증감</th><th class="n">계획 중량(톤)</th><th class="n">예상 중량</th><th class="n">증감</th></tr>`;
   if(multi)arr.forEach(o=>{st+=srow(o.m+'월 (품목 합계)',{pa:o.T.pa,fa:o.T.fa,pw:o.T.pw,fw:o.T.fw});});
   st+=srow('래들(LD)',S.LD)+srow('턴디쉬(TD)',S.TD)+srow('전기로(EAF)',S.EAF)+srow('품목 합계',tot,true);
   st+=`<tr style="background:#fef9c3;font-weight:800"><td>동국제강 제강 판매예상 (계획 합계 환산)</td><td class="n">${f1(D.planA)}</td><td class="n">${f1(D.a)}</td>${dcell(D.a-D.planA,DD)}<td class="n">${f1(D.planW)}</td><td class="n">${f1(D.w)}</td>${dcell(D.w-D.planW,DD)}</tr>`;
@@ -39684,12 +39814,45 @@ function nfaHtml(q){
   const mjA=arr.filter(o=>o.mj),mjOpen=mjA.filter(o=>{const r=NFA[o.ym]||{};return !(r.p&&Object.keys(r.p).length)&&!nfaHas(r.wk)&&!nfaHas(r.roj)&&!nfaHas(r.bal);});
   const major=mjA.length?`<div style="border:1px solid #fdba74;background:#fff7ed;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:12px;line-height:1.6"><b style="color:#c2410c">🛠 ${mjA.map(o=>o.m+'월').join('·')} 대보수 예정</b> — 영구장·대수리·주간보수·로저전극·발코니 등 <b>이벤트는 자동 계산 대상이 아니므로 주황색 칸에 직접 입력</b>해 주세요. ${mjOpen.length?'<b style="color:#c2410c">'+mjOpen.map(o=>o.m+'월').join('·')+'은 아직 입력된 이벤트가 없어 사업계획 월 대수가 그대로 적용 중입니다.</b>':'이벤트 입력이 확인되었습니다.'}</div>`:'';
   const concl=`<b>${esc(spLabel(q))}</b> 생산 ${Math.round(D.prod).toLocaleString()}톤(${f1(D.CH)}CH) 기준 래들 신축 <b>${f1(ld)}대</b>(계획 ${f1(ldp)}대), 턴디쉬 <b>${f1(td)}대</b>(계획 ${f1(tdp)}대) → 동국제강 제강 판매예상 <b>${f1(D.a)}백만원 · ${f1(D.w)}톤</b>, 사업계획(${f1(D.planA)}백만원 · ${f1(D.planW)}톤) 대비 <b style="${spCls(D.a-D.planA)}">${nfSg(D.a-D.planA,DD)}백만원 · ${nfSg(D.w-D.planW,DD)}톤</b> (생산량 ${nfSg(D.eff.prod.a,DD)} · 수명 ${nfSg(D.eff.life.a,DD)} · 보수 이벤트 ${nfSg(D.eff.ev.a,DD)} · 단가 ${nfSg(D.eff.price.a,DD)}백만원).`;
-  return `<div style="${sty}">${head}${major}<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">${concl}</div>`
-    +`<div style="font-size:11px;color:var(--muted);margin-bottom:6px"><span style="display:inline-block;width:14px;height:10px;background:#ffeb3b;border:1px solid #f9a825;vertical-align:middle"></span> 노란색 = 직접 입력한 값(비우면 자동·사업계획 기본값). 칸 아래 작은 글씨는 사업계획 월 대수와 자동 계산값입니다.</div>`
-    +`<div class="tablewrap">${t}</div>`+nfaPriceBlock(q,D)+`<div class="subhead" style="margin-top:10px">사업계획 대비 판매예상 (설비별)</div><div class="tablewrap">${st}</div>`
-    +`<div class="subhead" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">품목별 수량·중량·단가 비교 <span class="hint" style="font-weight:400">${it.n}개 표시 / 변동 ${it.nChg}개 / 전체 ${it.nAll}개 (금액 증감 큰 순)</span><label style="font-size:12px;font-weight:400"><input type="checkbox" ${(NFA._opt&&NFA._opt.all)?'checked':''} onchange="nfaOpt('all',this.checked)"> 변동 없는 품목도 표시</label></div><div class="tablewrap" style="max-height:60vh;overflow:auto">${it.html}</div>`
-    +`<div style="font-size:11px;color:var(--muted);margin:6px 2px 4px">※ 보수 대수 = 조업 CH × 적용률 ÷ 평균수명(래들 신축은 래들 사용현황 12개월 평균, 콘·SL 보수는 최근 실적 평균 주기, 전기로 마모장은 1,800CH당 1회). 물량표에 연결된 품목은 <b>계획 수량 + (예상 대수 − 계획 대수) × 물량표 소요량</b>, 연결되지 않은 품목은 계획 수량 × 활동량 비(래들=신축 대수, 턴디쉬=보수 대수, 열간보수재=주간보수 횟수, 그 외 전기로=조업 CH)로 환산합니다. 수량은 동국제강 몫(다원화 제외), 금액은 품목별 기준(수량×단가 또는 중량×단가)을 그대로 따릅니다.</div></div>`;
+  const _hd=head+major,_cc=`<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">${concl}</div>`;
+  const _lg=`<div style="font-size:11px;color:var(--muted);margin-bottom:6px"><span style="display:inline-block;width:14px;height:10px;background:#ffeb3b;border:1px solid #f9a825;vertical-align:middle"></span> 노란색 = 직접 입력한 값(비우면 자동·사업계획 기본값). 칸 아래 작은 글씨는 사업계획 월 대수와 자동 계산값입니다.</div>`;
+  const _in=`<div class="tablewrap">${t}</div>`;
+  const _pr=nfaPriceBlock(q,D);
+  const _sm=`<div class="subhead" style="margin-top:10px">사업계획 대비 판매예상 (설비별)</div><div class="tablewrap">${st}</div>`;
+  const _it=`<div class="subhead" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">품목별 수량·중량·단가 비교 <span class="hint" style="font-weight:400">${it.n}개 표시 / 변동 ${it.nChg}개 / 전체 ${it.nAll}개 (금액 증감 큰 순)</span><label style="font-size:12px;font-weight:400"><input type="checkbox" ${(NFA._opt&&NFA._opt.all)?'checked':''} onchange="nfaOpt('all',this.checked)"> 변동 없는 품목도 표시</label></div><div class="tablewrap" style="max-height:60vh;overflow:auto">${it.html}</div>`;
+  const _ft=`<div style="font-size:11px;color:var(--muted);margin:6px 2px 4px">※ 보수 대수 = 조업 CH × 적용률 ÷ 평균수명(래들 신축은 래들 사용현황 12개월 평균, 콘·SL 보수는 최근 실적 평균 주기, 전기로 마모장은 1,800CH당 1회). 물량표에 연결된 품목은 <b>계획 수량 + (예상 대수 − 계획 대수) × 물량표 소요량</b>, 연결되지 않은 품목은 계획 수량 × 활동량 비(래들=신축 대수, 턴디쉬=보수 대수, 열간보수재=주간보수 횟수, 그 외 전기로=조업 CH)로 환산합니다. 수량은 동국제강 몫(다원화 제외), 금액은 품목별 기준(수량×단가 또는 중량×단가)을 그대로 따릅니다.</div>`;
+  const _chk=nfPrevChk(q,D);
+  if(mode==='parts')return {sty:sty,head:_hd,concl:_cc,legend:_lg,input:_in,price:_pr,sum:_sm,items:_it,foot:_ft,chk:_chk,D:D};
+  return `<div style="${sty}">${_hd}${_cc}${_lg}${_in}${_pr}${_sm}${_it}${_ft}</div>`;
 }
+
+/* 전월 대비 점검 — 생산량은 줄었는데 금액이 늘어나는 경우 등 원인을 숫자로 분해해서 보여 준다 */
+function nfPrevChk(q,D){
+  try{
+    const o=D.arr[0],y=o.y,m0=o.m,pm=m0>1?m0-1:12,py=m0>1?y:y-1,n0=v=>Math.round(v).toLocaleString(),sg=v=>nfSg(v,0);
+    const act=spAct(py,pm,'dg'),pf=spFc(py,pm,'dg'),hasA=act.a>0;
+    const pv={a:hasA?act.a:pf.a,w:hasA?act.w:pf.w,prod:hasA?spProdAct(py,pm):spProdFc(py,pm).v,src:hasA?'실적':'예상'};
+    // 사업계획의 월별 톤당 금액 → 생산과 무관한 계획 지출(대보수·이벤트성) 추정
+    const per=[];for(let m=1;m<=12;m++){const a=spPlan(y,m,'dg').a,p=spProdPlan(y,m);if(a>0&&p>0)per.push(a/p);}
+    per.sort((a,b)=>a-b);const med=per.length?per[Math.floor(per.length/2)]:0;
+    const lump=Math.max(0,o.planA-med*o.prodP),linked=o.planA-lump;
+    const dProd=o.prod-pv.prod,dA=o.a-pv.a,E=D.eff;
+    const rows=D.items.slice().sort((a,b)=>(b.fa-b.pa)-(a.fa-a.pa));
+    const up=rows.filter(r=>r.fa-r.pa>0.5).slice(0,4).map(r=>esc((r.name||'')+(r.spec!=null&&r.spec!==''?' '+r.spec:''))+' '+sg(r.fa-r.pa)).join(' · ');
+    const warns=[];
+    if(dProd<0&&dA>0)warns.push(`<b style="color:#b91c1c">⚠ 전월 대비 생산량은 ${n0(-dProd)}톤 줄었는데 금액은 ${n0(dA)}백만원 늘었습니다.</b>`);
+    if(o.mj&&o.prodP>0&&o.prod>o.prodP*1.2)warns.push(`<b style="color:#c2410c">⚠ 대보수월인데 생산량을 사업계획(${n0(o.prodP)}톤)보다 ${n0(o.prod-o.prodP)}톤(${nfSg((o.prod/o.prodP-1)*100,0)}%) 많게 입력했습니다.</b> 사업계획 ${m0}월 금액에는 생산과 무관한 대보수·이벤트성 지출이 약 ${n0(lump)}백만원 들어 있어, 정상 조업 소모분과 <b>동시에</b> 더해집니다. 대보수로 가동이 줄어든다면 생산량을 조정하고, 대보수 자재가 다른 달 사용분이면 해당 이벤트·품목을 조정하세요.`);
+    const html=`<div style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:12px;line-height:1.65;background:#f8fafc">`
+      +`<b>🔎 전월 대비 점검 (${m0}월 ↔ ${pm}월 ${pv.src})</b><br>`
+      +`${pm}월 ${pv.src}: 생산 ${n0(pv.prod)}톤 · 금액 <b>${n0(pv.a)}</b>백만원(톤당 ${(pv.prod>0?pv.a/pv.prod*1000:0).toFixed(1)}천원) → ${m0}월 예상: 생산 ${n0(o.prod)}톤 · 금액 <b>${n0(o.a)}</b>백만원(톤당 ${(o.prod>0?o.a/o.prod*1000:0).toFixed(1)}천원) · 증감 생산 <b>${sg(dProd)}</b>톤 / 금액 <b style="${spCls(dA)}">${sg(dA)}</b>백만원`
+      +(warns.length?'<br>'+warns.join('<br>'):'')
+      +`<br><span style="color:#475569">구성: ${m0}월 예상 ${n0(o.a)} = 사업계획 ${n0(o.planA)}(생산 연동 약 ${n0(linked)} + 생산 무관 계획 지출 약 ${n0(lump)}) · 생산량 ${sg(E.prod.a)} · 수명·패턴 ${sg(E.life.a)} · 보수 이벤트 ${sg(E.ev.a)} · 단가 ${sg(E.price.a)}</span>`
+      +(up?`<br><span style="color:#475569">계획 대비 증가 큰 품목: ${up}</span>`:'')
+      +`</div>`;
+    return html;
+  }catch(e){console.error(e);return '';}
+}
+
 function nfaExport(){
   const p={y:NF_ST.y,t:NF_ST.t,n:NF_ST.n},D=nfaPeriod(p);if(!D){toast('내보낼 데이터가 없습니다');return;}
   const it=nfaItemTable(D,true,true);
@@ -39718,7 +39881,7 @@ function nfTbl(p,x){
   const nvF=v=>nfaRound()?spN(v):spN1(v),nr1=v=>nfaRound()?Math.round(v):Math.round(v*10)/10,ms=spMonths(p),bg='background:#dbe4f0;font-weight:bold;text-align:center;';
   const th=(s,a)=>x?`<th${a||''} style="${bg}">${s}</th>`:`<th${a||''}>${s}</th>`;
   const v1=v=>x?`<td style="mso-number-format:'${nfaRound()?'#,##0':'#,##0.0'}';text-align:center">${nr1(v)}</td>`:`<td class="n">${nvF(v)}</td>`;
-  let t=x?`<table border="1"><tr><td colspan="9" style="font-size:14pt;font-weight:bold;border:none">■ 포항사업소 ${esc(spLabel(p))} 예상 실적 (단위: 백만원 · 톤)</td></tr>`:`<table class="bomtbl" style="min-width:auto">`;
+  let t=x?`<table border="1"><tr><td colspan="9" style="font-size:14pt;font-weight:bold;border:none">■ 포항사업소 ${esc(spLabel(p))} 예상 실적 (단위: 백만원 · 톤)</td></tr>`:`<table class="bomtbl nfa-t" style="min-width:auto">`;
   t+=`<tr>${th('월')}${th('구분')}${th('계획금액')}${th('예상금액')}${th('증감')}${th('계획중량')}${th('예상중량')}${th('증감')}${th('출처')}</tr>`;
   const tot={};SP_CATS.forEach(c=>tot[c.k]={pa:0,fa:0,pw:0,fw:0});let pp=0,pf=0;
   ms.forEach(m=>{
@@ -39752,7 +39915,7 @@ function nfVendHtml(q){
   const GR=[{k:'po1',l:'포스코-기존'},{k:'po2',l:'포스코-신규'},{k:'rt',l:'시중'}];
   const sg=(v)=>Math.abs(v)<(dd?0.05:0.5)?'-':nfSg(v,dd);
   const inp=(m,k,i,f,ov,ph,w)=>{const on=ov!=null&&ov!=='';return `<input type="number" step="any" class="iinp" style="width:${w||88}px;${on?'background:#fef08a;font-weight:700':''}" value="${on?ov:''}" placeholder="${ph}" onchange="nfVendSet(${q.y},${m},'${k}',${i},'${f}',this.value)">`;};
-  let t=`<table class="bomtbl" style="min-width:auto"><tr><th>월</th><th>구분</th><th>업체</th><th class="n">계획 금액(백만)</th><th class="n">예상 금액(백만)</th><th class="n">증감</th><th class="n">계획 중량(톤)</th><th class="n">예상 중량(톤)</th><th class="n">증감</th><th>최근 3개월 입고 월평균(백만 · 톤)</th></tr>`;
+  let t=`<table class="bomtbl nf-v" style="min-width:auto"><tr><th>월</th><th>구분</th><th>업체</th><th class="n">계획 금액(백만)</th><th class="n">예상 금액(백만)</th><th class="n">증감</th><th class="n">계획 중량(톤)</th><th class="n">예상 중량(톤)</th><th class="n">증감</th><th>최근 3개월 입고 월평균(백만 · 톤)</th></tr>`;
   const T={};GR.forEach(g=>T[g.k]={pa:0,fa:0,pw:0,fw:0});
   const avg={};
   GR.forEach(g=>{let a=0,w=0,n=0;const y0=q.y,m0=Math.min.apply(null,ms);for(let j=1;j<=3;j++){let yy=y0,mm=m0-j;if(mm<1){mm+=12;yy--;}let o=null;try{o=piMonthSum(spYm(yy,mm),g.k);}catch(e){}if(o&&o.n>0){a+=o.a;w+=o.w;n++;}}avg[g.k]=n?{a:a/n,w:w/n,n:n}:null;});
@@ -39793,10 +39956,23 @@ function nfRender(){
   const p={y:NF_ST.y,t:NF_ST.t,n:NF_ST.n},box=document.getElementById('nfBox');if(!box)return;
   try{
     document.getElementById('nfLbl').textContent=spLabel(p)+' 예상 실적';
-    box.innerHTML=nfaHtml(p)+nfAutoHtml(p)+nfVendHtml(p)+`<div class="tablewrap">${nfTbl(p,false)}</div>`
-      +`<div style="font-size:11px;color:var(--muted);margin:6px 2px 12px">※ <b>기본값 = 사업계획</b>(2026년은 V7 월별 판매계획, 2027년~는 사업계획 엔진: 동국제강 다원화 반영·포스코·시중). 칸에 값을 넣으면 그 값(노란색)이 예상으로 확정되고, 비우면 사업계획 기본값으로 돌아갑니다. 여기서 정한 값은 [판매실적분석]의 "차월 예상 실적" 블록·누적·엑셀에 그대로 반영됩니다. 월 단위로 입력한 값은 분기·반기 합계에 자동 합산됩니다.</div>`;
+    const P=nfaHtml(p,'parts');
+    if(typeof P==='string'){box.innerHTML=P+nfAutoHtml(p)+nfVendHtml(p)+`<div class="tablewrap">${nfTbl(p,false)}</div>`;return;}
+    const O=NF_ST.open=NF_ST.open||{},det=(k,title,inner)=>`<details class="nf-det" ${O[k]?'open':''} ontoggle="NF_ST.open['${k}']=this.open"><summary>${title}</summary>${inner}</details>`;
+    const note=`<div style="font-size:11px;color:var(--muted);margin:4px 2px 4px">※ <b>기본값 = 사업계획</b>(2026년은 V7 월별 판매계획, 2027년~는 사업계획 엔진). 칸에 값을 넣으면 그 값(노란색)이 예상으로 확정되고, 비우면 사업계획 기본값으로 돌아갑니다. 월 단위 입력값은 분기·반기 합계에 자동 합산됩니다.</div>`;
+    box.innerHTML=`<div class="nf-grid"><div>`
+      +`<div class="nf-card">${P.head}${P.legend}${P.input}</div>`
+      +`</div><div>`
+      +`<div class="nf-card"><div style="font-size:12.5px;line-height:1.6;margin-bottom:6px">${P.concl.replace(/^<div[^>]*>/,'').replace(/<\/div>$/,'')}</div>${P.chk}${P.sum}</div>`
+      +nfVendHtml(p)
+      +`<div class="tablewrap">${nfTbl(p,false)}</div>${note}`
+      +`</div></div>`
+      +det('price','💲 단가 변동 효과 분석 · 품목마스터 연결',P.price)
+      +det('items','📋 품목별 수량·중량·단가 비교',P.items+P.foot)
+      +det('auto','🤖 자동 예상 (평균 수명·가동 래들 패턴) · COMMENT 문구',nfAutoHtml(p));
   }catch(e){console.error(e);box.innerHTML='<div class="empty">화면을 그리는 중 오류가 발생했습니다: '+esc(String(e.message||e))+'</div>';}
 }
+
 function nfExport(){
   const p={y:NF_ST.y,t:NF_ST.t,n:NF_ST.n};
   spDownload('포항사업소_차월예상실적_'+spLabel(p).replace(/\s/g,''),nfTbl(p,true));
