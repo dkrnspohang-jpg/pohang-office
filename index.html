@@ -1021,6 +1021,9 @@
   /* 2026-10-28(rpt157): 견적 품목·제조원가 / 견적검토서·견적서(엑셀 양식) */
   .qi-ov{position:fixed;inset:0;background:rgba(15,22,30,.55);z-index:140;display:none;overflow:auto;padding:24px}
   .qi-ov.show{display:block}
+  .yrtag{display:inline-block;font-size:10px;font-weight:800;border-radius:8px;padding:0 6px;margin-left:4px;vertical-align:1px;white-space:nowrap}
+  .yrtag.y25{background:#e0e7ff;color:#3730a3}.yrtag.y26{background:#dcfce7;color:#166534}
+  .xlp tr.xf.xy td{background:#f1f5f9}
   .qi-box{max-width:1000px;margin:0 auto;background:var(--panel);color:var(--ink);border-radius:12px;padding:18px 20px;box-shadow:0 12px 50px rgba(0,0,0,.3)}
   .qi-tb{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel)}
   .qi-tb th,.qi-tb td{border:1px solid var(--line);padding:6px 8px;text-align:center;vertical-align:middle}
@@ -21005,7 +21008,7 @@ const PIDB={"P":[{"k":"A10","n":"A-10","raw":["A-10"],"t":"정형","t0":"내장�
 const PIDB_OV_KEY='dgrns_pidb_ov';
 let pidbOv=(()=>{try{const o=JSON.parse(localStorage.getItem(PIDB_OV_KEY)||'{}')||{};o.q=o.q||{};o.d=o.d||{};o.dx=o.dx||[];o.sp=o.sp||{};o.t=o.t||{};o.g=o.g||{};o.dq=o.dq||{};o.cp=o.cp||[];return o;}catch(e){return {q:{},d:{},dx:[],sp:{},t:{},g:{},dq:{},cp:[]};}})();
 function pidbOvSave(){try{localStorage.setItem(PIDB_OV_KEY,JSON.stringify(pidbOv));}catch(e){alert('저장공간이 부족합니다.');return;}try{flashSave();}catch(e){}}
-let pidbUI={q:'',site:'',eq:'',ty:'',bid:'',dw:'',sp:'',grp:'',perf:'',dk:'',byear:'26',bsite:'',rival:''};
+let pidbUI={q:'',site:'',eq:'',ty:'',bid:'',dw:'',sp:'',grp:'',perf:'',dk:'',byear:(()=>{try{return localStorage.getItem('dgrns_pidb_byr')||'';}catch(e){return '';}})(),bsite:'',rival:''};
 let pidbReg=new Set(),pidbIdx=null,pidbInited=false,pidbDc=null,pidbOpenK={},pidbLv=null,pidbSynced=false,pidbPm=null;
 function pidbCanEdit(){try{return docCanManage();}catch(e){return false;}}
 function pidbNk(s){return String(s==null?'':s).replace(/\(.*?\)/g,'').toUpperCase().replace(/[^A-Z0-9가-힣]/g,'');}
@@ -21606,7 +21609,7 @@ function pidbInit(){
 }
 function pidbUiSet(){
   const g=id=>(document.getElementById(id)||{}).value||'';
-  pidbUI={q:g('pidb_q'),site:g('pidb_site'),eq:g('pidb_eq'),ty:g('pidb_ty'),bid:g('pidb_bid'),dw:g('pidb_dw'),sp:g('pidb_sp'),grp:g('pidb_grp'),perf:g('pidb_perf'),dk:g('pidb_dk'),byear:g('pidb_year'),bsite:g('pidb_bsite'),rival:g('pidb_rival')};
+  pidbUI={q:g('pidb_q'),site:g('pidb_site'),eq:g('pidb_eq'),ty:g('pidb_ty'),bid:g('pidb_bid'),dw:g('pidb_dw'),sp:g('pidb_sp'),grp:g('pidb_grp'),perf:g('pidb_perf'),dk:g('pidb_dk'),byear:g('pidb_year')||pidbUI.byear||'',bsite:g('pidb_bsite'),rival:g('pidb_rival')};
   pidbRender();
 }
 function pidbRender(){
@@ -22071,7 +22074,17 @@ function pidbBAlloc(r){const v=poscoField(r,'alloc')||'',ch=poscoFieldChanged(r,
   return `<input type="text" class="dtxt" style="width:60px;text-align:center${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="80:20" title="${ch?'원본 '+esc(r.alloc||'-')+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','alloc',this.value)">`;}
 function pidbBVend(r){const v=poscoField(r,'baseVendor')||'',ch=poscoFieldChanged(r,'baseVendor');
   return `<input type="text" list="pvDL" class="dtxt" style="width:118px${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="현재 납품업체" title="${ch?'원본 '+esc(r.baseVendor||'-')+' · 비우면 원본값으로 복귀':'클릭해서 현재 납품업체 수정 (예: 조선/퓨처엠)'}" onchange="setPoscoField('${esc(r.item)}','baseVendor',this.value)">`;}
-const pidbBYear=r=>'';
+const pidbYrOn=()=>{try{return localStorage.getItem('dgrns_pidb_yrshow')!=='0';}catch(e){return true;}};
+const pidbBYear=r=>pidbYrOn()&&r&&r.year?`<span class="yrtag y${esc(r.year)}" title="${esc(r.year)}년 입찰 결과">${esc(r.year)}년</span>`:'';
+function pidbYrTog(){try{localStorage.setItem('dgrns_pidb_yrshow',pidbYrOn()?'0':'1');}catch(e){}pidbKeepRender();}
+function pidbYearSet(y){pidbUI.byear=y;try{localStorage.setItem('dgrns_pidb_byr',y);}catch(e){}pidbKeepRender();}
+/* 25년 / 26년 / 전체 금액 합산 */
+function pidbYrSum(rows){const o={};rows.forEach(r=>{const y=r.year||'';const q=o[y]=o[y]||{n:0,q:0,a:0,dk:0};q.n++;q.q+=(+poscoField(r,'qty')||0);q.a+=(r.amount||0);q.dk+=(r.dkWin||0);});return o;}
+function pidbYrBar(rows){const o=pidbYrSum(rows),ks=Object.keys(o).sort();if(!ks.length)return '';
+  const f=v=>(v/1e8).toFixed(1)+'억',t=ks.reduce((a,y)=>({n:a.n+o[y].n,a:a.a+o[y].a,dk:a.dk+o[y].dk}),{n:0,a:0,dk:0});
+  return '<span class="lg yrs">'+ks.map(y=>`<b>${esc(y)}년</b> ${o[y].n}건 · 금액 ${f(o[y].a)} · 동국 낙찰 ${f(o[y].dk)}`).join(' &nbsp;|&nbsp; ')+(ks.length>1?` &nbsp;|&nbsp; <b>합산</b> ${t.n}건 · 금액 ${f(t.a)} · 동국 낙찰 ${f(t.dk)}`:'')+'</span>';}
+function pidbYrTxt(rows){const o=pidbYrSum(rows),ks=Object.keys(o).sort(),f=v=>(v/1e8).toFixed(1);
+  return ks.length>1?' · '+ks.map(y=>`${y}년 ${f(o[y].a)}억(동국 ${f(o[y].dk)}억)`).join(' / '):'';}
 /* 규격별 단가 = kg 단가 × 단중 (기준·낙찰·당사 제출) + 현재 품목단가 */
 function pidbBSpecRow(r,nc,L,ed){
   const p=pidbP(pidbNk(r.item));
@@ -22141,7 +22154,7 @@ function pidbBidPageB(mode){
   const vl=v=>v==='동국'?'동국':v;
   const {canBid,cannotBid}=poscoSplit(rows),all=canBid.concat(cannotBid);
   const mm=a=>a>0?(a<1e6?(a/1e6).toFixed(1):Math.round(a/1e6).toLocaleString()):'';
-  const vs={},ck=0;V.forEach(v=>vs[v]=0);let sQ=0,sA=0,sT=0;
+  const vs={},ck=0,ys={};V.forEach(v=>vs[v]=0);let sQ=0,sA=0,sT=0;
   const NC=(xls?0:1)+8+(V.length+1)+(V.length+1)+2;
   const yr=(pidbUI.byear||'');
   const hd1=`<tr>${xls?'':'<th class="gy" rowspan="2" style="width:30px"><input type="checkbox" id="pidb_chkall" title="표시된 품목 전체 체크/해제" onclick="pidbPinAll(this.checked)"></th>'}`
@@ -22155,6 +22168,7 @@ function pidbBidPageB(mode){
     const chg=(kw>0&&kb>0)?(kw-kb)/kb:null;
     const ws={};r.winners.forEach(x=>{if(x.pct>0)ws[x.v]=x;});
     let tot=0;V.forEach(v=>{if(ws[v]){vs[v]+=ws[v].amt;tot+=ws[v].amt;}});sT+=tot;sQ+=q;sA+=(r.amount||0);
+    {const yk=ys[r.year||'']=ys[r.year||'']||{n:0,q:0,a:0,t:0,v:{}};yk.n++;yk.q+=q;yk.a+=(r.amount||0);yk.t+=tot;V.forEach(v=>{if(ws[v])yk.v[v]=(yk.v[v]||0)+ws[v].amt;});}
     const nmBg=(can&&!(kw>0))?' style="background:#fff2a8"':'';
     const inp=(f,w)=>xls?pidbN(poscoField(r,f)):pidbBEdit(r,f,w);
     const cls=can?'':' class="xg"';
@@ -22179,17 +22193,19 @@ function pidbBidPageB(mode){
   let b=all.map(rowH).join('');
   if(!rows.length)b=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 입찰 품목이 없습니다.</div></td></tr>`;
   const base=(xls?0:1)+6;
-  const ft1=`<tr class="xf"><td colspan="${base}" style="text-align:center;font-weight:800">합계 <span class="s">(${rows.length}건)</span></td><td class="n" style="font-weight:800">${pN(sQ)}</td><td class="n" style="font-weight:800">${pN(sA)}</td>${V.map(()=>'<td></td>').join('')}<td></td>`
-    +V.map(v=>`<td class="n" style="color:#c00000;font-weight:800">${vs[v]>0?Math.round(vs[v]/1e6).toLocaleString():''}</td>`).join('')+`<td class="n" style="color:#c00000;font-weight:800">${Math.round(sT/1e6).toLocaleString()}</td><td></td><td></td></tr>`;
+  const yrRow=(lab,o,sub)=>`<tr class="xf${sub?' xy':''}"><td colspan="${base}" style="text-align:center;font-weight:800">${lab}</td><td class="n" style="font-weight:800">${pN(o.q)}</td><td class="n" style="font-weight:800">${pN(o.a)}</td>${V.map(()=>'<td></td>').join('')}<td></td>`
+    +V.map(v=>`<td class="n" style="color:#c00000;font-weight:800">${(o.v[v]||0)>0?Math.round(o.v[v]/1e6).toLocaleString():''}</td>`).join('')+`<td class="n" style="color:#c00000;font-weight:800">${Math.round(o.t/1e6).toLocaleString()}</td><td></td><td></td></tr>`;
+  const yks=Object.keys(ys).sort();
+  const ft1=(yks.length>1?yks.map(y=>yrRow(`${esc(y)}년 소계 <span class="s">(${ys[y].n}건)</span>`,ys[y],true)).join(''):'')+yrRow(`${yks.length>1?'25+26년 ':''}합계 <span class="s">(${rows.length}건)</span>`,{q:sQ,a:sA,t:sT,v:vs},false);
   const ft2=`<tr class="xf"><td colspan="${base+2}" style="text-align:center">비고(비율%)</td>${V.map(()=>'<td></td>').join('')}<td></td>`
     +V.map(v=>`<td class="n" style="color:#c00000;font-weight:700">${sT>0&&vs[v]>0?Math.round(vs[v]/sT*100)+'%':''}</td>`).join('')+`<td class="n" style="color:#c00000;font-weight:700">${sT>0?'100%':''}</td><td></td><td></td></tr>`;
   pidbVisK=rows.map(r=>pidbNk(r.item));
   const nq=rows.reduce((a,r)=>{const p=pidbP(pidbNk(r.item));return a+(p?p.qs.length:0);},0);
   const dk=rows.reduce((a,r)=>a+(r.dkWin||0),0);
-  const top=`<div class="xlp-top"><span class="tt">▣ 포스코 26년 범용B 내화물 입찰 결과</span><span class="lg"><i style="background:${PIDB_YEL}"></i>1위사 <i style="background:${PIDB_BLU}"></i>2위사 <i style="background:#e2efda"></i>동국 미참여 품목 <i style="background:#fff2a8"></i>낙찰가 미확정</span><span class="lg">○ : 입찰 가능 업체 · (단위: 백만원)</span></div>`;
+  const top=`<div class="xlp-top"><span class="tt">▣ 포스코 26년 범용B 내화물 입찰 결과</span><span class="lg"><i style="background:${PIDB_YEL}"></i>1위사 <i style="background:${PIDB_BLU}"></i>2위사 <i style="background:#e2efda"></i>동국 미참여 품목 <i style="background:#fff2a8"></i>낙찰가 미확정</span><span class="lg">○ : 입찰 가능 업체 · (단위: 백만원)</span>${pidbYrBar(rows)}</div>`;
   const tbl=`<table class="xlp bid"><thead>${hd1}${hd2}</thead><tbody>${b}${rows.length?ft1+ft2:''}</tbody></table>`;
   return {html:xls?tbl:top+tbl,np:rows.length,nq,
-    txt:`입찰 ${rows.length}건 · 낙찰금액 합계 ${(sA/1e8).toFixed(1)}억 (동국 ${(dk/1e8).toFixed(1)}억)`};
+    txt:`입찰 ${rows.length}건 · 낙찰금액 합계 ${(sA/1e8).toFixed(1)}억 (동국 ${(dk/1e8).toFixed(1)}억)`+pidbYrTxt(rows)};
 }
 function pidbBidTableB(){return pidbBidPageB('view');}
 /* ============ ③ 스펙 원페이지 (rpt67) — 엑셀 「정형품 자재규격 / 부정형품 자재규격」과 같은 한 장 ============
@@ -22442,6 +22458,8 @@ function pidbCompUi(){
   let h=`<div class="pidb-bar"><div class="rw"><span class="seg big">${sg(pidbBM==='r',"pidbBmSet('r')",'📊 26년 범용B 입찰 결과 <small>25·26년 통합</small>','25년·26년 입찰 결과를 한 목록으로 통합해 보여줍니다')}${sg(pidbBM==='p',"pidbBmSet('p')",'🎯 27년 입찰 준비 <small>Q코드별 물량</small>','기존단가=26년 낙찰가 · Q코드별 물량을 넣으면 품목 전체 물량이 자동 수정됩니다')}</span>`;
   if(pidbBM==='r'){
     h+=`<span class="seg">${sg(pidbBL==='c',"pidbBlSet('c')",'🗂 현황표','기존 입찰현황 모양(입찰가능업체·낙찰 순위업체·배분금액)')}${sg(pidbBL==='x',"pidbBlSet('x')",'📑 엑셀형(○)','엑셀 입찰결과표 모양(업체별 ○·낙찰금액 백만원)')}</span>
+      <span class="seg">${sg(!pidbUI.byear,"pidbYearSet('')",'전체','25·26년 통합 보기')}${sg(pidbUI.byear==='25',"pidbYearSet('25')",'25년','25년 입찰 결과만')}${sg(pidbUI.byear==='26',"pidbYearSet('26')",'26년','26년 입찰 결과만')}</span>
+      <button class="btn sm${pidbYrOn()?' primary':''}" onclick="pidbYrTog()" title="품명 옆에 25년/26년 표시를 켜고 끕니다(나중에 합칠 때는 끄세요)">📅 연도 표시</button>
       <button class="btn sm${pidbCompOpen?' primary':''}" onclick="pidbCompTog()" title="동국 입찰순위·경쟁사 비교·입찰가능업체 관리">🏆 경쟁현황·업체관리 ${pidbCompOpen?'▲':'▼'}</button>`;
   }else{
     h+=`<button class="btn sm primary" onclick="p27PasteOpen()" title="포스코에서 받은 Q코드별 물량표를 엑셀에서 복사해 붙여넣습니다">📋 Q코드별 물량 붙여넣기</button>
@@ -22489,7 +22507,7 @@ function pidbBidPageCard(){
     const vp=poscoField(r,'baseVendor');
     let h=`<tr${r.dkWin>0?' style="background:#f0fdf4"':''}>
       <td class="ck"><input type="checkbox" ${pidbPin[k]?'checked':''} title="체크해 두면 [체크한 것만 보기]로 모아 볼 수 있습니다" onclick="pidbPinSet('${esc(k)}',this.checked)"></td>
-      <td class="l nm" title="눌러서 규격별 단가·스펙·사용처·도면 펼치기 (낙찰 ${esc(r.year)}년)"><span class="bo-nm" data-k="${esc(pidbBKey(r))}" onclick="pidbBidTog(this.dataset.k)"><span class="car">${open?'▼':'▶'}</span> <b>${ek}</b></span> <a href="#" class="pidb-ed" title="내화물 기준정보 · 포스코 품목단가에서 보기" onclick="poscoGotoMaster('${ek}');return false">↗</a></td>
+      <td class="l nm" title="눌러서 규격별 단가·스펙·사용처·도면 펼치기 (낙찰 ${esc(r.year)}년)"><span class="bo-nm" data-k="${esc(pidbBKey(r))}" onclick="pidbBidTog(this.dataset.k)"><span class="car">${open?'▼':'▶'}</span> <b>${ek}</b></span>${pidbBYear(r)} <a href="#" class="pidb-ed" title="내화물 기준정보 · 포스코 품목단가에서 보기" onclick="poscoGotoMaster('${ek}');return false">↗</a></td>
       <td>${poscoSiteSel(r.item)}</td>
       <td class="vc" onclick="editPoscoBid('${ek}')" title="클릭해서 입찰가능업체·순위를 수정">${vendorPlainTags(r)}</td>
       <td class="vc" onclick="editPoscoBid('${ek}')" title="클릭해서 입찰가능업체·순위를 수정">${vendorRankTags(r)}</td>
@@ -22507,12 +22525,14 @@ function pidbBidPageCard(){
   if(cannotBid.length)b+=`<tr class="grp g2"><td colspan="${NC}">기타 품목 (${cannotBid.length}건)</td></tr>`+cannotBid.map(rowH).join('');
   if(!rows.length)b=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 입찰 품목이 없습니다.</div></td></tr>`;
   const sQ=rows.reduce((a,r)=>a+(+poscoField(r,'qty')||0),0),sA=rows.reduce((a,r)=>a+(r.amount||0),0),dk=rows.reduce((a,r)=>a+(r.dkWin||0),0);
-  const ft=rows.length?`<tr class="xf"><td colspan="6" style="text-align:center;font-weight:800">합계 <span class="s">(${rows.length}건)</span></td><td class="n" style="font-weight:800">${pN(sQ)}</td><td></td><td></td><td></td><td class="n" style="font-weight:800">${pN(sA)}</td><td></td><td class="l" style="font-weight:800;color:#1d4ed8">동국 낙찰 ${pN(dk)}</td></tr>`:'';
+  const yrs=pidbYrSum(rows),ykc=Object.keys(yrs).sort();
+  const cft=(lab,o,sub)=>`<tr class="xf${sub?' xy':''}"><td colspan="6" style="text-align:center;font-weight:800">${lab}</td><td class="n" style="font-weight:800">${pN(o.q)}</td><td></td><td></td><td></td><td class="n" style="font-weight:800">${pN(o.a)}</td><td></td><td class="l" style="font-weight:800;color:#1d4ed8">동국 낙찰 ${pN(o.dk)}</td></tr>`;
+  const ft=rows.length?(ykc.length>1?ykc.map(y=>cft(`${y}년 소계 <span class="s">(${yrs[y].n}건)</span>`,yrs[y],true)).join(''):'')+cft(`합계 <span class="s">(${rows.length}건)</span>`,{q:sQ,a:sA,dk:dk},false):'';
   pidbVisK=rows.map(r=>pidbNk(r.item));
   const nq=rows.reduce((a,r)=>{const p=pidbP(pidbNk(r.item));return a+(p?p.qs.length:0);},0);
-  const top=`<div class="xlp-top"><span class="tt">▣ 포스코 26년 범용B 내화물 입찰 결과</span><span class="lg">25·26년 통합 · 금액 = 낙찰단가 × 물량 · * 낙찰가 미확정(기존단가 기준)</span></div>`;
+  const top=`<div class="xlp-top"><span class="tt">▣ 포스코 26년 범용B 내화물 입찰 결과</span><span class="lg">25·26년 통합 · 금액 = 낙찰단가 × 물량 · * 낙찰가 미확정(기존단가 기준)</span>${pidbYrBar(rows)}</div>`;
   const tbl=`<table class="xlp bid crd"><thead><tr><th class="gy ck"><input type="checkbox" id="pidb_chkall" title="표시된 품목 전체 체크/해제" onclick="pidbPinAll(this.checked)"></th><th class="gy">품명 <span class="s">(눌러서 규격·스펙)</span></th><th class="gy">제철소</th><th class="gy">입찰가능업체</th><th class="gy">낙찰 순위업체</th><th class="gy">기존단가<br><span class="s">원/kg</span></th><th class="gy">물량(kg)</th><th class="gy ywl">낙찰단가<br><span class="s">원/kg</span></th><th class="gy">당사<br>제출단가</th><th class="gy">당사−낙찰</th><th class="gy">낙찰금액(원)<br><span class="s">낙찰단가×물량</span></th><th class="gy">배분율</th><th class="gy">낙찰업체 · 배분금액(원)</th></tr></thead><tbody>${b}${ft}</tbody></table>`;
-  return {html:top+tbl,np:rows.length,nq,txt:`입찰 ${rows.length}건 · 낙찰금액 합계 ${(sA/1e8).toFixed(1)}억 (동국 ${(dk/1e8).toFixed(1)}억)`};
+  return {html:top+tbl,np:rows.length,nq,txt:`입찰 ${rows.length}건 · 낙찰금액 합계 ${(sA/1e8).toFixed(1)}억 (동국 ${(dk/1e8).toFixed(1)}억)`+pidbYrTxt(rows)};
 }
 /* ---------- 27년 입찰 준비 ---------- */
 function p27Site(q,item){const s=p27Q(q).site;return s||'';}
@@ -31394,8 +31414,13 @@ function fxFindLab(ws,re,tol){
 }
 function fxCol(ws,x0,x1,y0,y1,tol){
   const sel=ws.filter(w=>{const cx=(w.x0+w.x1)/2,cy=(w.y0+w.y1)/2;return cx>=x0&&cx<x1&&cy>=y0&&cy<y1&&(w.c==null||w.c>=35)&&/[가-힣A-Za-z0-9]/.test(w.t);});
-  const out=[];fxLines(sel,tol).forEach(l=>{if(fxGood(l.t)&&!out.includes(l.t))out.push(l.t);});return out;
+  const out=[];fxLines(sel,tol).forEach(l=>{if(fxGood(l.t)&&!out.some(o=>fxSim(o,l.t)))out.push(l.t);});return out;
 }
+/* 같은 문장이 약간 다르게 읽힌 것(공백·한두 글자 차이)은 한 번만 */
+function fxSim(a,b){a=String(a).replace(/\s/g,'');b=String(b).replace(/\s/g,'');if(a===b)return true;if(Math.abs(a.length-b.length)>3)return false;
+  const m=a.length,n=b.length;let pr=[];for(let j=0;j<=n;j++)pr[j]=j;
+  for(let i=1;i<=m;i++){const cu=[i];for(let j=1;j<=n;j++)cu[j]=Math.min(pr[j]+1,cu[j-1]+1,pr[j-1]+(a[i-1]===b[j-1]?0:1));pr=cu;}
+  return pr[n]<=Math.max(2,Math.round(Math.max(m,n)*0.15));}
 function fxNum(t){t=String(t).trim();if(/^\d{1,3}(?:[.,]\d{3})+$/.test(t))return parseInt(t.replace(/[.,]/g,''),10);return /^\d+(?:\.\d+)?$/.test(t)?parseFloat(t):0;}
 function fxMeta(s,eng,kor,g){
   const all=(eng||[]).concat(kor||[]);if(!all.length)return;
@@ -31407,8 +31432,9 @@ function fxMeta(s,eng,kor,g){
   const bS=(cxS+cxB)/2,sx0=Math.max(g.xb+cg*0.35,2*cxS-bS),sx1=bS,bx0=bS,bx1=cxB+(cxB-bS);
   const yT=g.yH+p*0.55,yM=g.y9-p*0.45,yL=g.y9+p*0.45,yE=g.y9+p*7.5;
   const skip=l=>/영업|작성|직성/.test(l);
-  const basis=fxCol(kor,sx0,sx1,yT,yM,tolL).concat(fxCol(kor,sx0,sx1,yL,yE,tolL).filter(l=>!skip(l)));
-  let note=fxCol(kor,bx0,bx1,yT,yM,tolL).concat(fxCol(kor,bx0,bx1,yL,yE,tolL).filter(l=>!skip(l)));
+  const fxU=a=>a.filter((t,i)=>!a.slice(0,i).some(o=>fxSim(o,t)));
+  const basis=fxU(fxCol(kor,sx0,sx1,yT,yM,tolL).concat(fxCol(kor,sx0,sx1,yL,yE,tolL).filter(l=>!skip(l))));
+  let note=fxU(fxCol(kor,bx0,bx1,yT,yM,tolL).concat(fxCol(kor,bx0,bx1,yL,yE,tolL).filter(l=>!skip(l))));
   /* 배합비 코드·수율 (영문 엔진 결과 우선) */
   const txt=ws=>fxLines(ws.filter(w=>(w.c==null||w.c>=20)&&(w.x0+w.x1)/2>=bx0&&(w.x0+w.x1)/2<bx1&&(w.y0+w.y1)/2>=yT&&(w.y0+w.y1)/2<yE),tolL).map(l=>l.t).join(' ');
   const whole=ws=>fxLines(ws.filter(w=>w.c==null||w.c>=20),tolL).map(l=>l.t).join(' ');
@@ -31419,8 +31445,9 @@ function fxMeta(s,eng,kor,g){
   [scope,txt(eng),txt(kor)].some(t=>{if(!t)return false;let m=/수\s*율\s*[:：]?\s*(\d{2,3}(?:\.\d+)?)\s*%?/.exec(t)||/(\d{2,3}(?:\.\d+)?)\s*%/.exec(t);if(m&&+m[1]>=30&&+m[1]<=100){yld=m[1];return true;}return false;});
   note=note.filter(l=>!/배\s*[합압함암]\s*비/.test(l)&&!FX_BL.test(up(l)));
   if(blend&&!s.blend)s.blend=blend;if(yld&&!s.yld)s.yld=yld;
-  if(basis.length&&!s.basis)s.basis=basis.join(' / ');
-  if(note.length&&!s.note)s.note=note.join(' / ');
+  const FIX=[[/[첨점절]판/g,'철판'],[/발[판만]\s*대/g,'받침대'],[/산\s*[줄졸즐]/g,'산출'],[/[윈웬]\s*재료/g,'원재료'],[/죄신/g,'최신'],[/[첨설점]피/g,'철피'],[/(\d)\s*년\s*(?=[가-힣])/g,'$1년 '],[/기\s*준\s*준/g,'기준'],[/받침대(?=제작)/g,'받침대 '],[/제작(?=필요)/g,'제작 ']],fx=t=>FIX.reduce((q,[re,rp])=>q.replace(re,rp),t);
+  if(basis.length&&!s.basis)s.basis=fx(basis.join(' / '));
+  if(note.length&&!s.note)s.note=fx(note.join(' / '));
   /* 금형제작비(금액이 있으면) */
   const lm=fxFindLab(kor,/[금긍][형령]제작/,tolL);
   if(lm){const nums=all.filter(w=>Math.abs((w.y0+w.y1)/2-lm.cy)<=p*0.6&&(w.x0+w.x1)/2>g.xa-cg*0.7&&(w.x0+w.x1)/2<g.xb+cg*0.7&&/^\d[\d,.]*$/.test(String(w.t).trim()))
@@ -31453,6 +31480,12 @@ async function fcOcrMeta(s,st,label){
   try{st(label+' 품명·배합 읽는 중…');const w=await fcWorker(st);await w.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:'6'});eng=payWords((await w.recognize(r)).data);}catch(e){}
   try{st(label+' 규격·산출 근거·비고 읽는 중… (한글 엔진은 처음 한 번만 내려받습니다)');const k=await fcKorWorker(st);await k.setParameters({tessedit_pageseg_mode:'6'});kor=payWords((await k.recognize(r)).data);}
   catch(e){s.warn.push('한글 읽기 엔진을 불러오지 못해 규격·산출 근거·비고를 읽지 못했습니다 — 인터넷 연결을 확인하거나 직접 입력해 주세요.');}
+  /* 표 아래쪽(판관비·금형제작비 줄)은 전체 읽기에서 빠지는 일이 있어 그 부분만 2배로 키워 한 번 더 읽는다 */
+  try{if(__fcK&&kor.length){const x0=Math.max(0,Math.round(g.xb+(g.xb-g.xa)*0.3)),y0=Math.max(0,Math.round(g.y9+g.pitch*1.4)),x1=r.width,y1=r.height;
+    if(x1-x0>50&&y1-y0>30){const c=document.createElement('canvas');c.width=(x1-x0)*2;c.height=(y1-y0)*2;const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);cx.imageSmoothingQuality='high';cx.drawImage(r,x0,y0,x1-x0,y1-y0,0,0,c.width,c.height);
+      st(label+' 표 아래쪽 한글 다시 읽는 중…');await __fcK.setParameters({tessedit_pageseg_mode:'6'});
+      payWords((await __fcK.recognize(c)).data).forEach(w=>{const q={t:w.t,c:w.c,x0:w.x0/2+x0,x1:w.x1/2+x0,y0:w.y0/2+y0,y1:w.y1/2+y0},cx2=(q.x0+q.x1)/2,cy2=(q.y0+q.y1)/2;
+        if(!kor.some(k=>cx2>=k.x0-2&&cx2<=k.x1+2&&cy2>=k.y0-2&&cy2<=k.y1+2))kor.push(q);});}}}catch(e){}
   fxMeta(s,eng,kor,{W:r.width,xa:g.xa,xb:g.xb,yH:g.y9-g.pitch*10.3,y9:g.y9,pitch:g.pitch,hdr:true});
 }
 async function fcOcrCanvas(cv,st,label){
