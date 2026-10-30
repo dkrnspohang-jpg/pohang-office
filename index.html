@@ -1019,7 +1019,7 @@
   body.prm-etd .qdoc{padding:0;font-size:11px;width:703px;max-width:none;margin:0;box-sizing:border-box}
   body.prm-q .qdoc{width:718px;max-width:none;margin:0;box-sizing:border-box}
   /* 2026-10-28(rpt157): 견적 품목·제조원가 / 견적검토서·견적서(엑셀 양식) */
-  .qi-ov{position:fixed;inset:0;background:rgba(15,22,30,.55);z-index:75;display:none;overflow:auto;padding:24px}
+  .qi-ov{position:fixed;inset:0;background:rgba(15,22,30,.55);z-index:140;display:none;overflow:auto;padding:24px}
   .qi-ov.show{display:block}
   .qi-box{max-width:1000px;margin:0 auto;background:var(--panel);color:var(--ink);border-radius:12px;padding:18px 20px;box-shadow:0 12px 50px rgba(0,0,0,.3)}
   .qi-tb{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel)}
@@ -4134,8 +4134,8 @@ service cloud.firestore {
       </div>
       <div class="frow" style="margin-top:10px;align-items:center;flex-wrap:wrap">
         <div class="field w-ch"><label>판관비율(%)</label><input type="number" id="q_margin" value="8" onchange="renderQuoteItems()"></div>
-        <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;margin-top:14px">
-          <input type="checkbox" id="q_incfixed" checked onchange="renderQuoteItems()"> 제조원가에 직접고정비 포함</label>
+        <div class="field"><label>제조원가 포함 범위</label><select id="q_scope" onchange="qScopeSet(this.value)"><option value="vf">직접변동비 + 직접고정비</option><option value="v">직접변동비까지만</option></select></div>
+        <input type="checkbox" id="q_incfixed" checked style="display:none">
         <div class="field"><label>원가 자동입력 단위</label><select id="q_round" onchange="qReround()"><option value="r">원 단위 반올림 (454.8→455)</option><option value="c">원 단위 올림</option><option value="n">소수 2자리 그대로</option></select></div>
         <div class="field"><label>견적검토서 원가시트 첨부</label><select id="q_sheets"><option value="cmp">현재 + 직전 원가 시트</option><option value="cur">현재 원가 시트만</option><option value="none">첨부 안 함</option></select></div>
         <label style="font-size:12.5px;display:flex;align-items:center;gap:6px;margin-top:14px"><input type="checkbox" id="q_seal" checked> 견적서에 직인 포함</label>
@@ -9905,6 +9905,7 @@ const QI_PRE='dgrns_qi_',QI_SET='dgrns_qi_set';
 const QI_ROWS=[['재료비',0],['노무비',0],['제조경비',1],['전력비',2],['연료비',2],['감가상각비',2],['소모품비',2],['가공비',2],['포장비',2],['부자재',2],['기타경비',2]];
 const QI_FOOT='* 운반비 및 포장비는 판매관리비 임.';
 let qiRecs=[],qiSet={fresh:90,stale:180},qiUI={q:'',st:'',grp:''},qiHist=null,qiCD=null,qiInitDone=false;
+const qiSel=new Set();try{(JSON.parse(localStorage.getItem('pohang_qisel')||'[]')||[]).forEach(x=>qiSel.add(x));}catch(e){}
 let quoteItems=[], currentQuoteId=null, currentDocKind='review';
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('ko-KR',{maximumFractionDigits:d,minimumFractionDigits:0});
 const qiN=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isFinite(n)?n:0;};
@@ -9977,19 +9978,20 @@ function qiInit(){qiLoad();qiRender();qiHistLoad().then(()=>{if(curView==='qitem
 function qiRender(){
   const root=document.getElementById('qi_root');if(!root)return;
   const all=qiRecs,cnt=s=>all.filter(r=>qiState(r)===s).length;
-  let rows=all.filter(r=>(!qiUI.st||qiState(r)===qiUI.st)&&(!qiUI.grp||(r.grp||'')===qiUI.grp)&&(!qiUI.q||(r.name+' '+r.spec+' '+(r.code||'')+' '+(r.disp||'')+' '+(r.grp||'')).toLowerCase().indexOf(qiUI.q.toLowerCase())>=0));
+  let rows=all.filter(r=>(!qiUI.st||qiState(r)===qiUI.st)&&(!qiUI.grp||(r.grp||'')===qiUI.grp)&&(!qiUI.q||(r.name+' '+r.spec+' '+(r.code||'')+' '+(r.blend||'')+' '+(r.disp||'')+' '+(r.grp||'')).toLowerCase().indexOf(qiUI.q.toLowerCase())>=0));
   const grps=[...new Set(all.map(r=>r.grp||'').filter(Boolean))].sort();
   const card=(l,v,sub,c)=>`<div class="card" style="${c?'border-color:'+c:''}"><div class="l">${l}</div><div class="v">${v}<small> 건</small></div>${sub?`<div style="font-size:11px;color:var(--muted)">${sub}</div>`:''}</div>`;
+  window.__qiVis=rows.map(r=>r.id);const sc=qiScope();
   const tr=rows.map(r=>{const c=qiLatest(r),p=qiPrevC(r),a=qiAge(r),h=qiHistOf(r)[0];
     let dl='';if(c&&p){const d=qiTot(c)-qiTot(p),dv=(+c.v||0)-(+p.v||0);dl=`<div style="font-size:10.5px;color:${dv>0?'#b42318':(dv<0?'#1f8a4c':'#64748b')}">직전 대비 변동비 ${dv>0?'+':''}${qiF1(dv)} (${p.v?((dv/p.v*100).toFixed(1)):'0'}%)</div>`;}
     const nrv=(r.rv||[]).length,hs=h?`<div>${fmt(h.price)}원</div><div style="font-size:10.5px;color:var(--muted)">${esc(h.d)} ${esc(h.cu)}${h.rate!=null?' · '+(h.rate*100).toFixed(1)+'%':''}</div>${nrv?`<div style="font-size:10.5px;color:#475569">검토 이력 ${nrv}건</div>`:''}`:(nrv?`<div style="font-size:10.5px;color:#475569">검토 이력 ${nrv}건</div>`:'<span style="color:var(--muted)">-</span>');
-    return `<tr><td style="text-align:left"><b>${esc(r.name)}</b>${r.tmp?' <span style="font-size:10.5px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:8px;padding:0 6px" title="품명·규격이 임시입니다 — [수정]에서 확정">🟠 임시</span>':''}${(!c&&r.src)?`<div style="font-size:10.5px;color:#b45309">🆕 ${esc(r.src)} — 제조원가 확인·등록 필요</div>`:''}${r.disp?`<div style="font-size:10.5px;color:var(--muted)">견적서 표기: ${esc(r.disp)}</div>`:''}</td><td>${esc(r.spec)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.code||'')}</td>
-      <td class="n">${c?qiF1(c.v):'-'}</td><td class="n">${c?qiF1(c.f):'-'}</td><td class="n"><b>${c?qiF1(qiTot(c)):'-'}</b>${dl}</td>
+    return `<tr${qiSel.has(r.id)?' style="background:#f0f7ff"':''}><td style="text-align:center"><input type="checkbox" class="qi_ck" ${qiSel.has(r.id)?'checked':''} ${c?'':'title="제조원가가 아직 없는 품목입니다"'} onchange="qiSelSet('${r.id}',this.checked)" style="width:auto"></td><td style="text-align:left"><b>${esc(r.name)}</b>${r.tmp?' <span style="font-size:10.5px;font-weight:800;color:#9a3412;background:#ffedd5;border-radius:8px;padding:0 6px" title="품명·규격이 임시입니다 — [수정]에서 확정">🟠 임시</span>':''}${(!c&&r.src)?`<div style="font-size:10.5px;color:#b45309">🆕 ${esc(r.src)} — 제조원가 확인·등록 필요</div>`:''}${r.disp?`<div style="font-size:10.5px;color:var(--muted)">견적서 표기: ${esc(r.disp)}</div>`:''}</td><td>${esc(r.spec)}</td><td>${esc(r.unit||'')}</td><td>${esc(r.code||'')}${r.blend?`<div style="font-size:10.5px;color:#475569" title="공장 제조원가 서식의 배합비">배합 ${esc(r.blend)}${r.yld?' · 수율 '+esc(r.yld)+'%':''}</div>`:''}</td>
+      <td class="n">${c?qiF1(c.v):'-'}</td><td class="n">${c?qiF1(c.f):'-'}</td><td class="n"><b>${c?qiF1(sc==='v'?(+c.v||0):qiTot(c)):'-'}</b>${sc==='v'&&c?`<div style="font-size:10.5px;color:var(--muted)">고정비 포함 시 ${qiF1(qiTot(c))}</div>`:''}${dl}</td>
       <td>${c?esc(c.d):'-'}<div style="font-size:10.5px;color:var(--muted)">${c&&c.src?esc(c.src):''}</div></td>
       <td>${qiChip(r,true)}<div style="font-size:10.5px;color:var(--muted)">${a!=null?(qiRef(r)!==(c&&c.d)?'동일 확인 '+qiRef(r):'확인 없음'):''}</div></td>
       <td class="n">${hs}</td>
       <td><div class="acts" style="flex-wrap:wrap"><button class="btn sm primary" onclick="qiCostDlg('${r.id}')">원가 갱신</button><button class="btn sm" onclick="qiConfDlg('${r.id}')" ${c?'':'disabled'}>동일 확인</button><button class="btn sm" onclick="qiHistDlg('${r.id}')">이력</button><button class="btn sm" onclick="qiEditDlg('${r.id}')">수정</button></div></td></tr>`;}).join('')
-    ||`<tr><td colspan="11"><div class="empty">${all.length?'조건에 맞는 품목이 없습니다.':'등록된 품목이 없습니다. [＋ 품목·원가 등록] 또는 [기존 견적에서 가져오기]를 눌러 주세요.'}</div></td></tr>`;
+    ||`<tr><td colspan="12"><div class="empty">${all.length?'조건에 맞는 품목이 없습니다.':'등록된 품목이 없습니다. [＋ 품목·원가 등록] 또는 [기존 견적에서 가져오기]를 눌러 주세요.'}</div></td></tr>`;
   root.innerHTML=`<div class="cards">${card('등록 품목',all.length,'')}${card('🟢 최신',cnt('ok'),'기준일 '+qiSet.fresh+'일 이내','#bbf7d0')}${card('🟡 동일 확인 필요',cnt('chk'),qiSet.fresh+'~'+qiSet.stale+'일 경과','#fde68a')}${card('🔴 갱신 필요',cnt('old'),qiSet.stale+'일 초과','#fecaca')}${card('⚪ 원가 미등록',cnt('none'),'')}</div>
   <div class="formbar" style="background:#f6f8fa;font-size:12.5px;line-height:1.7;color:#334155">
     <b>사용 방법</b> — ① 생산파트에서 받은 <b>제조원가 시트</b>를 [원가 갱신]으로 한 번 등록 → ② 이후 견적 입력(<b>견적검토·견적서</b>)에서 품목을 고르면 <b>최신 제조원가가 자동 입력</b>됩니다.
@@ -10005,11 +10007,46 @@ function qiRender(){
     <button class="btn" onclick="qiXls()">📥 엑셀</button>
     <button class="btn" onclick="qiSetDlg()">⚙ 기준일</button>
   </div>
-  <div class="tablewrap"><table class="qi-tb"><thead><tr><th>품목</th><th>규격</th><th>단위</th><th>코드</th><th>직접변동비</th><th>직접고정비</th><th>제조원가 계</th><th>원가 기준일</th><th>상태(경과)</th><th>최근 견적</th><th style="min-width:230px">관리</th></tr></thead><tbody>${tr}</tbody></table></div>`;
+  <div class="formbar" style="background:#eff6ff;border-color:#bfdbfe;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12.5px;margin-top:8px">
+    <b style="color:#1e40af">📋 견적검토 바로가기</b>
+    <span style="color:#475569">품목 ☑ 체크 → 원가 범위 선택 → [견적검토에 담기] 한 번이면 최신 원가가 들어간 견적검토가 열립니다</span>
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="qi_sc" ${sc==='vf'?'checked':''} onchange="qiScopeSet('vf')" style="width:auto"> 직접변동비 + 직접고정비</label>
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="qi_sc" ${sc==='v'?'checked':''} onchange="qiScopeSet('v')" style="width:auto"> 직접변동비까지만</label>
+    <span id="qi_selN" style="font-weight:800;color:#1e40af">선택 ${[...qiSel].filter(id=>qiById(id)).length}건</span>
+    <button class="btn primary" onclick="qiToQuote(false)" title="현재 작성 중인 견적검토에 선택 품목을 추가합니다">📋 견적검토에 담기</button>
+    <button class="btn" onclick="qiToQuote(true)" title="새 견적으로 시작하고 선택 품목을 담습니다">🆕 새 견적으로 시작</button>
+    <button class="btn" onclick="qiSelAll(false,true)">선택 해제</button>
+  </div>
+  <div class="tablewrap"><table class="qi-tb"><thead><tr><th style="width:34px"><input type="checkbox" ${rows.length&&rows.every(r=>qiSel.has(r.id))?'checked':''} onchange="qiSelAll(this.checked)" title="화면에 보이는 품목 모두 선택/해제" style="width:auto"></th><th>품목</th><th>규격</th><th>단위</th><th>코드·배합</th><th>직접변동비</th><th>직접고정비</th><th>${sc==='v'?'견적 적용 원가<br><small>(직접변동비)</small>':'제조원가 계'}</th><th>원가 기준일</th><th>상태(경과)</th><th>최근 견적</th><th style="min-width:230px">관리</th></tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 /* ---------- 공용 대화상자 ---------- */
 function qiOpen(html,wide){const bx=document.getElementById('qiBox');bx.style.maxWidth=wide?'1240px':'';bx.style.width=wide?'96vw':'';bx.innerHTML=html;document.getElementById('qiOverlay').classList.add('show');}
 function qiClose(){document.getElementById('qiOverlay').classList.remove('show');qiCD=null;}
+/* ---------- 체크 선택 → 견적검토 / 원가 포함 범위(직접변동비까지 · 변동비+고정비) ---------- */
+const qiScope=()=>qiSet.ifx===0?'v':'vf';
+function qiScopeSave(v){qiSet.ifx=v==='v'?0:1;try{localStorage.setItem(QI_SET,JSON.stringify(qiSet));}catch(e){}}
+function qiScopeSet(v){qiScopeSave(v);qiRender();}
+function qScopeSet(v){const c=document.getElementById('q_incfixed');if(c)c.checked=v!=='v';qiScopeSave(v);renderQuoteItems();}
+function qiSelSave(){try{localStorage.setItem('pohang_qisel',JSON.stringify([...qiSel]));}catch(e){}}
+function qiSelSet(id,on){if(on)qiSel.add(id);else qiSel.delete(id);qiSelSave();
+  const n=document.getElementById('qi_selN');if(n)n.textContent='선택 '+[...qiSel].filter(x=>qiById(x)).length+'건';}
+function qiSelAll(on,clear){if(clear){qiSel.clear();}else(window.__qiVis||[]).forEach(id=>{if(on)qiSel.add(id);else qiSel.delete(id);});qiSelSave();qiRender();}
+function qiToQuote(fresh){
+  const its=[...qiSel].map(id=>qiById(id)).filter(Boolean);
+  if(!its.length){toast('견적검토에 담을 품목을 ☑ 체크해 주세요');return;}
+  nav('quote');if(fresh)newQuote();
+  const sc=qiScope(),cb=document.getElementById('q_incfixed');if(cb)cb.checked=sc!=='v';
+  let add=0,dup=0,noc=[];
+  its.forEach(it=>{
+    if(quoteItems.some(r=>!r.alt&&r.qi===it.id)){dup++;return;}
+    let i=quoteItems.findIndex(r=>qBlank(r)&&!r.alt&&!r.qi);if(i<0){quoteItems.push(qNew());i=quoteItems.length-1;}
+    const row=quoteItems[i],c=qiLatest(it);
+    row.qi=it.id;row.name=it.name;row.spec=it.spec;row.unit=it.unit||row.unit||'KG';row.disp=row.disp||it.disp||'';row.qty=row.qty||1;
+    if(c){row.var=qiRnd(c.v);row.fix=qiRnd(c.f);row.cd=c.id;}else{row.cd='';noc.push(it.name);}
+    add++;});
+  renderQuoteItems();
+  toast(add+'개 품목을 견적검토에 담았습니다 (원가 범위: '+(sc==='v'?'직접변동비까지':'직접변동비 + 직접고정비')+')'+(dup?' · 이미 있는 '+dup+'건 제외':'')+(noc.length?' · 원가 미등록 '+noc.length+'건은 원가 입력 필요':''));
+}
 function qiAfter(){try{if(curView==='qitems')qiRender();else if(curView==='quote')renderQuoteItems();else if(curView==='salesq'&&slQ){qrvLinkAll();slQRender();}}catch(e){}}
 /* ---------- 제조원가 입력/갱신 ---------- */
 function qiCostDlg(id,qrow){
@@ -10137,7 +10174,7 @@ function qiEditDlg(id){
   const it=qiById(id);if(!it)return;qiCD={id};
   qiOpen(`<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">품목 수정</h3><button class="btn sm" onclick="qiClose()">✕</button></div>
   <div class="frow" style="margin-top:8px;flex-wrap:wrap;gap:8px"><div class="field"><label>품목</label><input id="qe_n" value="${esc(it.name)}" style="width:150px"></div><div class="field"><label>규격</label><input id="qe_s" value="${esc(it.spec)}" style="width:90px"></div><div class="field"><label>단위</label><input id="qe_u" value="${esc(it.unit||'KG')}" style="width:60px"></div>
-    <div class="field"><label>생산 코드</label><input id="qe_c" value="${esc(it.code||'')}" style="width:120px"></div><div class="field"><label>견적서 표기 품명</label><input id="qe_d" value="${esc(it.disp||'')}" style="width:140px"></div><div class="field"><label>분류</label><input id="qe_g" value="${esc(it.grp||'')}" style="width:110px"></div></div>
+    <div class="field"><label>생산 코드</label><input id="qe_c" value="${esc(it.code||'')}" style="width:120px"></div><div class="field"><label>배합비 코드</label><input id="qe_b" value="${esc(it.blend||'')}" style="width:150px"></div><div class="field"><label>수율(%)</label><input id="qe_y" value="${esc(it.yld||'')}" style="width:56px"></div><div class="field"><label>견적서 표기 품명</label><input id="qe_d" value="${esc(it.disp||'')}" style="width:140px"></div><div class="field"><label>분류</label><input id="qe_g" value="${esc(it.grp||'')}" style="width:110px"></div></div>
   <div class="field" style="margin-top:8px"><label>메모</label><input id="qe_m" value="${esc(it.note||'')}" style="width:100%"></div>
   ${it.tmp?'<label style="display:block;margin-top:8px;font-size:12.5px"><input type="checkbox" id="qe_t" style="width:auto"> 품명·규격 확정 (🟠 임시 표시 해제)</label>':''}
   <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px"><span>${canDelete()?`<button class="btn danger" onclick="qiDelItem('${it.id}')">품목 삭제</button>`:''}</span><span><button class="btn" onclick="qiClose()">취소</button> <button class="btn primary" onclick="qiEditSave()">저장</button></span></div>`);
@@ -10146,7 +10183,7 @@ function qiEditSave(){
   const it=qiById(qiCD&&qiCD.id);if(!it)return;const g=i=>document.getElementById(i).value.trim();
   const nm=g('qe_n');if(!nm){toast('품목명을 입력하세요');return;}
   const o=qiFind(nm,g('qe_s'));if(o&&o.id!==it.id){toast('같은 품목·규격이 이미 있습니다');return;}
-  it.name=nm;it.spec=g('qe_s');it.unit=g('qe_u')||'KG';it.code=g('qe_c');it.disp=g('qe_d');it.grp=g('qe_g');it.note=g('qe_m');{const tc=document.getElementById('qe_t');if(tc&&tc.checked)it.tmp=0;}
+  it.name=nm;it.spec=g('qe_s');it.unit=g('qe_u')||'KG';it.code=g('qe_c');it.blend=g('qe_b');it.yld=g('qe_y');it.disp=g('qe_d');it.grp=g('qe_g');it.note=g('qe_m');{const tc=document.getElementById('qe_t');if(tc&&tc.checked)it.tmp=0;}
   if(qiCommit(it)){qiClose();toast('저장했습니다');qiAfter();}
 }
 function qiDelItem(id){if(!canDelete()){alert('삭제는 관리자만 가능합니다.');return;}const it=qiById(id);if(!it||!confirm('「'+it.name+' '+it.spec+'」 품목과 원가 이력을 모두 삭제할까요?'))return;
@@ -10297,6 +10334,7 @@ function qAutoCost(){
 }
 function renderQuoteItems(){
   const b=document.getElementById('quoteBody');if(!b)return;
+  {const sl=document.getElementById('q_scope');if(sl)sl.value=incFixed()?'vf':'v';}
   try{const na=qAutoCost();if(na)setTimeout(()=>toast('제조원가 '+na+'건을 등록된 최신 값으로 자동 입력했습니다'),0);}catch(e){}
   const dl=document.getElementById('qiPickDL');
   if(dl){const s=qiRecs.map(r=>`<option value="${esc(qPickLabel(r))}">`);qiNames().forEach(n=>{if(!qiRecs.some(r=>r.name===n))s.push(`<option value="${esc(n)}">`);});dl.innerHTML=s.join('');}
@@ -10344,7 +10382,7 @@ function newQuote(){currentQuoteId=null;currentQuoteSt='임시저장';document.g
   document.getElementById('q_delivery').value='별도 협의';document.getElementById('q_incoterm').value='도착도';
   document.getElementById('q_valid').value='1개월';document.getElementById('q_payment').value='정기결제';
   document.getElementById('q_overview').value='';document.getElementById('q_costbasis').value='';
-  document.getElementById('q_margin').value=8;document.getElementById('q_incfixed').checked=true;
+  document.getElementById('q_margin').value=8;document.getElementById('q_incfixed').checked=qiScope()!=='v';
   document.getElementById('q_round').value='r';document.getElementById('q_seal').checked=true;document.getElementById('q_sheets').value='cmp';
   document.getElementById('q_date').value=todayStr();quoteItems=[qNew()];renderQuoteItems();}
 function gatherQuote(){const g=id=>document.getElementById(id).value;return {id:currentQuoteId||uid(),
@@ -31170,7 +31208,7 @@ let fcSheets=[],__fcW=null;
 const fcNum=s=>{s=String(s==null?'':s).replace(/[\s,]/g,'');if(s===''||/^[-–—]+$/.test(s))return 0;const n=parseFloat(s);return isFinite(n)?n:0;};
 const fcNz=s=>String(s==null?'':s).replace(/\s+/g,'');
 function fcBlank(src,warn){const rows={};FC_ROWS.forEach(k=>{rows[k]=['',''];});
-  return {src:src||'',mode:'manual',name:'',spec:'',plant:'',date:'',wt:'',rows,sub:['',''],ea:['',''],pack:['',''],packIn:false,ok:false,img:'',warn:warn?[warn]:[]};}
+  return {src:src||'',mode:'manual',name:'',spec:'',plant:'',blend:'',yld:'',basis:'',note:'',mold:['',''],date:'',wt:'',rows,sub:['',''],ea:['',''],pack:['',''],packIn:false,ok:false,img:'',warn:warn?[warn]:[]};}
 /* 줄 간격: 인접 숫자 사이 간격을 최소 간격의 정수배로 보고 평균(글자 위치 흔들림에 강함) */
 function fcPitch(A,J,I){
   const gs=[];for(let k=J+1;k<=I;k++){const g=A[k].yc-A[k-1].yc;if(g>10)gs.push(g);}
@@ -31181,7 +31219,7 @@ function fcPitch(A,J,I){
 function fcParseOcr(ws,W){
   const toks=[];let date='';
   ws.forEach(w=>{const raw=String(w.t||'');const dm=/20\d\d[-.]\d\d[-.]\d\d/.exec(raw);if(dm&&!date)date=dm[0].replace(/\./g,'-');
-    const s=raw.replace(/^[:;|\/!]+/,'').replace(/[:;|\/!]+$/,'');
+    const s=raw.replace(/^[:;|\/!]+/,'').replace(/[:;|\/!.,]+$/,'');
     if(!/^\d+(?:[.,]\d{3})*$/.test(s))return;
     const d=s.replace(/[.,]/g,'');if(d.length<2)return;toks.push({v:parseInt(d,10),x1:w.x1,yc:(w.y0+w.y1)/2,len:d.length});});
   const tol=Math.max(12,W*0.012),cl=[];
@@ -31195,13 +31233,14 @@ function fcParseOcr(ws,W){
   let J=-1,I=-1;
   outer:for(let j=0;j<Math.min(3,A.length);j++){let sum=0;
     for(let i=j;i<A.length;i++){if(i-j>=3&&Math.abs(A[i].v-sum)<=Math.max(3,A[i].v*0.003)){J=j;I=i;break outer;}sum+=A[i].v;}}
-  let mg0=0,y9,pitch;
+  let mg0=0,y9,pitch,loose=false;
   if(J<0){   /* 제조경비 합계 칸을 못 읽은 경우: EA 합계(= 항목 합 × 단중)를 기준으로 줄 위치를 잡는다 */
-    const e=A.findIndex(t=>t.v>=20000);
+    let e=A.findIndex(t=>t.v>=20000);
+    if(e<0){let m=0;A.forEach((t,i)=>{if(t.v>A[m].v)m=i;});if(A[m].v>=1000)e=m;}   /* EA 합계는 열에서 가장 큰 숫자 */
     if(e<2)return null;
     for(let j=1;j<=Math.min(3,e-2);j++){const wt=A[j-1].v;let sum=0;for(let i=j;i<e;i++)sum+=A[i].v;
       if(wt>0&&Math.abs(A[e].v-sum*wt)<=A[e].v*0.006){J=j;break;}}
-    if(J<0)return null;
+    if(J<0){J=1;loose=true;}   /* 합계가 안 맞아도(한두 칸 misread) 포기하지 않고 위치로 채운 뒤 틀린 칸만 고치게 한다 */
     pitch=fcPitch(A,J,e-1);if(!pitch)return null;y9=A[e].yc-pitch;I=-1;
   }else{
     pitch=fcPitch(A,J,I);if(!pitch)return null;y9=A[I].yc;if(Math.round((A[I].yc-A[J].yc)/pitch)>9)return null;
@@ -31217,7 +31256,18 @@ function fcParseOcr(ws,W){
   let pr=tail.some(t=>rowOf(t)===13)?13:(new Set(tail.map(rowOf)).size===1?rowOf(tail[0]):0);
   if(pr){A.forEach(t=>{if(rowOf(t)===pr)s.pack[0]=t.v;});B.forEach(t=>{if(rowOf(t)===pr)s.pack[1]=t.v;});}
   if(J===0&&!s.wt)s.warn.push('제품단중(kg)을 읽지 못했습니다. 직접 입력해 주세요.');
+  if(loose){s.loose=true;s.warn.push('일부 숫자가 서식 합계와 맞지 않습니다 — 아래 ✖ 표시를 보고 틀린 칸만 원본(왼쪽)과 대조해 고쳐 주세요.');}
   return s;
+}
+/* 스캔이 기울어진 정도(도): 숫자 열의 오른쪽 끝이 아래로 갈수록 얼마나 밀리는지로 추정 */
+function fcSkew(ws,W){
+  const toks=[];ws.forEach(w=>{const s=String(w.t||'').replace(/^[:;|\/!]+/,'').replace(/[:;|\/!]+$/,'');if(!/^\d+(?:[.,]\d{3})*$/.test(s))return;const d=s.replace(/[.,]/g,'');if(d.length<3)return;toks.push({x:w.x1,y:(w.y0+w.y1)/2});});
+  const tol=Math.max(20,W*0.03),cl=[];
+  toks.slice().sort((a,b)=>a.x-b.x).forEach(t=>{const c=cl[cl.length-1];if(c&&t.x-c.xm<=tol){c.t.push(t);c.xm=c.t.reduce((s,q)=>s+q.x,0)/c.t.length;}else cl.push({t:[t],xm:t.x});});
+  const c=cl.filter(c=>c.t.length>=5).sort((a,b)=>b.t.length-a.t.length)[0];if(!c)return 0;
+  const n=c.t.length,mx=c.t.reduce((s,q)=>s+q.x,0)/n,my=c.t.reduce((s,q)=>s+q.y,0)/n;let sxy=0,syy=0;
+  c.t.forEach(q=>{sxy+=(q.x-mx)*(q.y-my);syy+=(q.y-my)*(q.y-my);});
+  return syy>0?Math.atan(sxy/syy)*180/Math.PI:0;
 }
 /* ---- ② 항목명이 글자로 있는 경우(엑셀·글자 PDF) → 항목명 위치로 읽기 ---- */
 function fcParseLabeled(ws){
@@ -31244,7 +31294,8 @@ function fcParseLabeled(ws){
   const all=ws.map(w=>String(w.t)).join(' ');const dm=/20\d\d[-.]\s?\d\d[-.]\s?\d\d/.exec(all);if(dm)s.date=dm[0].replace(/[.\s]/g,m=>m==='.'?'-':'');
   const side=lbl=>{const w=ws.filter(x=>fcNz(x.t)===lbl)[0];if(!w)return '';
     return ws.filter(x=>Math.abs(cy(x)-cy(w))<=tol&&cx(x)>cx(w)&&String(x.t).trim()).sort((a,b)=>a.x0-b.x0).map(x=>String(x.t).trim()).join(' ');};
-  s.name=side('품명');s.plant=side('규격');
+  s.name=side('품명');s.plant=side('규격');s.spec=s.plant;
+  try{fxMeta(s,ws,ws,{W:Math.max.apply(null,ws.map(w=>w.x1)),xa:xa,xb:xb,yH:cy(hA),y9:lastY+gap*1.2,pitch:gap,hdr:false});}catch(e){}
   return s;
 }
 /* ---- 검산 ---- */
@@ -31288,6 +31339,14 @@ async function fcWorker(st){
     logger:m=>{if(st&&m&&m.status&&m.progress!=null&&/load|init/.test(m.status))st('읽기 엔진 준비 중… '+Math.round(m.progress*100)+'%');}});
   return __fcW;
 }
+function fcPre(cv){   /* 스캔 숫자 인식률 향상: 회색조 + 대비 */
+  try{const c=document.createElement('canvas');c.width=cv.width;c.height=cv.height;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+    x.filter='grayscale(1) contrast(1.5) brightness(1.05)';x.drawImage(cv,0,0);return c;}catch(e){return cv;}
+}
+function fcRotAng(cv,deg){   /* 작은 각도 회전(기울기 보정): 크기는 그대로, 빈 곳은 흰색 */
+  const c=document.createElement('canvas');c.width=cv.width;c.height=cv.height;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(cv,-cv.width/2,-cv.height/2);return c;
+}
 function fcRot(cv,deg){
   if(!deg)return cv;const c=document.createElement('canvas'),q=deg===180;c.width=q?cv.width:cv.height;c.height=q?cv.height:cv.width;
   const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(cv,-cv.width/2,-cv.height/2);return c;
@@ -31307,28 +31366,130 @@ function fcRepair(s){
       else s.warn.push(nm+' 항목 합('+fmt(Math.round(sum))+')이 합계('+fmt(sub)+')보다 '+fmt(d)+' 모자랍니다 — 비어 있는 칸을 원본과 대조해 입력하세요');}
   });
 }
+/* ===== 서식 글자 정보: 품명·규격·배합(코드·수율)·산출 근거·비고·금형제작비 =====
+   스캔(그림) PDF: 영문 엔진(품명·배합코드)과 한글 엔진(규격·산출 근거·비고)을 한 번씩 더 돌려 단어 위치로 칸을 찾는다.
+   엑셀·글자 PDF: 항목명 위치로 같은 칸을 읽는다. 읽은 글자는 오인식될 수 있어 대화상자에서 원본과 대조하며 고칠 수 있다. */
+const fxHan=t=>(String(t||'').match(/[가-힣]/g)||[]).length;
+const fxAln=t=>(String(t||'').match(/[A-Za-z0-9]/g)||[]).length;
+const fxClean=t=>String(t==null?'':t).replace(/[|¦~_`'"“”‘’《》『』「」¶•ㆍ■□◆▲▶]/g,' ').replace(/\s+/g,' ').trim();
+const fxGood=t=>{const h=fxHan(t),a=fxAln(t);return h>=2||(h>=1&&a>=2)||a>=5;};
+const FX_BL=/[A-Z]{1,3}-[A-Z0-9]{1,3}-\d{2}-\d{2,3}(?:-[A-Z0-9]{1,4})?/;
+const FX_PLANT={'포함':'포항','포할':'포항','포황':'포항','포향':'포항','마사':'마산','마삭':'마산','광야':'광양','광량':'광양'};
+function fxLines(ws,tol){
+  const a=ws.slice().sort((p,q)=>(p.y0+p.y1)-(q.y0+q.y1)),L=[];
+  a.forEach(w=>{const cy=(w.y0+w.y1)/2,l=L.find(l=>Math.abs(l.cy-cy)<=tol);
+    if(l){l.w.push(w);l.cy=(l.cy*(l.w.length-1)+cy)/l.w.length;}else L.push({cy,w:[w]});});
+  L.forEach(l=>{l.w.sort((p,q)=>p.x0-q.x0);let t='';
+    l.w.forEach((w,i)=>{const pv=l.w[i-1];if(pv&&!(/[가-힣]$/.test(String(pv.t))&&/^[가-힣]/.test(String(w.t))&&w.x0-pv.x1<=0.3*Math.max(1,pv.y1-pv.y0)))t+=' ';t+=w.t;});
+    l.t=fxClean(t);});
+  return L.sort((p,q)=>p.cy-q.cy);
+}
+/* 글자 사이가 벌어진 항목명("산 출 근 거")도 찾도록 공백을 뺀 줄에서 찾는다 */
+function fxFindLab(ws,re,tol){
+  for(const l of fxLines(ws.filter(w=>w.t),tol)){let str='';const map=[];
+    l.w.forEach((w,i)=>{for(const ch of String(w.t).replace(/\s+/g,'')){str+=ch;map.push(i);}});
+    const m=re.exec(str);
+    if(m){const a=l.w[map[m.index]],b=l.w[map[m.index+m[0].length-1]];return {x0:a.x0,x1:b.x1,cx:(a.x0+b.x1)/2,cy:l.cy};}}
+  return null;
+}
+function fxCol(ws,x0,x1,y0,y1,tol){
+  const sel=ws.filter(w=>{const cx=(w.x0+w.x1)/2,cy=(w.y0+w.y1)/2;return cx>=x0&&cx<x1&&cy>=y0&&cy<y1&&(w.c==null||w.c>=35)&&/[가-힣A-Za-z0-9]/.test(w.t);});
+  const out=[];fxLines(sel,tol).forEach(l=>{if(fxGood(l.t)&&!out.includes(l.t))out.push(l.t);});return out;
+}
+function fxNum(t){t=String(t).trim();if(/^\d{1,3}(?:[.,]\d{3})+$/.test(t))return parseInt(t.replace(/[.,]/g,''),10);return /^\d+(?:\.\d+)?$/.test(t)?parseFloat(t):0;}
+function fxMeta(s,eng,kor,g){
+  const all=(eng||[]).concat(kor||[]);if(!all.length)return;
+  const hs=(kor.length?kor:eng).map(w=>w.y1-w.y0).sort((a,b)=>a-b),hm=hs.length?hs[hs.length>>1]:16,p=g.pitch||hm*1.5,tolL=Math.max(6,hm*0.6),W=g.W||0;
+  const cg=Math.max(1,g.xb-g.xa),near=w=>Math.abs((w.y0+w.y1)/2-g.yH)<=p*1.3&&(w.x0+w.x1)/2>g.xb;
+  const lS=fxFindLab(kor.filter(near),/[산살삼]?[출술]근[거기]/,tolL),lB=fxFindLab(kor.filter(near),/비고/,tolL);
+  let cxS=lS?lS.cx:g.xb+1.97*cg,cxB=lB?lB.cx:g.xb+4.29*cg;
+  if(cxB<=cxS+cg*0.5){cxS=g.xb+1.97*cg;cxB=g.xb+4.29*cg;}
+  const bS=(cxS+cxB)/2,sx0=Math.max(g.xb+cg*0.35,2*cxS-bS),sx1=bS,bx0=bS,bx1=cxB+(cxB-bS);
+  const yT=g.yH+p*0.55,yM=g.y9-p*0.45,yL=g.y9+p*0.45,yE=g.y9+p*7.5;
+  const skip=l=>/영업|작성|직성/.test(l);
+  const basis=fxCol(kor,sx0,sx1,yT,yM,tolL).concat(fxCol(kor,sx0,sx1,yL,yE,tolL).filter(l=>!skip(l)));
+  let note=fxCol(kor,bx0,bx1,yT,yM,tolL).concat(fxCol(kor,bx0,bx1,yL,yE,tolL).filter(l=>!skip(l)));
+  /* 배합비 코드·수율 (영문 엔진 결과 우선) */
+  const txt=ws=>fxLines(ws.filter(w=>(w.c==null||w.c>=20)&&(w.x0+w.x1)/2>=bx0&&(w.x0+w.x1)/2<bx1&&(w.y0+w.y1)/2>=yT&&(w.y0+w.y1)/2<yE),tolL).map(l=>l.t).join(' ');
+  const whole=ws=>fxLines(ws.filter(w=>w.c==null||w.c>=20),tolL).map(l=>l.t).join(' ');
+  const up=t=>String(t).toUpperCase().replace(/[\s_]+/g,'');
+  let blend='',scope='';
+  [txt(eng),txt(kor),whole(eng),whole(kor)].some(t=>{const m=FX_BL.exec(up(t.replace(/(\d)\s*-\s*(?=[A-Z0-9])/gi,'$1-').replace(/([A-Z])\s*-\s*/gi,'$1-')));if(m){blend=m[0];scope=t;return true;}return false;});
+  let yld='';
+  [scope,txt(eng),txt(kor)].some(t=>{if(!t)return false;let m=/수\s*율\s*[:：]?\s*(\d{2,3}(?:\.\d+)?)\s*%?/.exec(t)||/(\d{2,3}(?:\.\d+)?)\s*%/.exec(t);if(m&&+m[1]>=30&&+m[1]<=100){yld=m[1];return true;}return false;});
+  note=note.filter(l=>!/배\s*[합압함암]\s*비/.test(l)&&!FX_BL.test(up(l)));
+  if(blend&&!s.blend)s.blend=blend;if(yld&&!s.yld)s.yld=yld;
+  if(basis.length&&!s.basis)s.basis=basis.join(' / ');
+  if(note.length&&!s.note)s.note=note.join(' / ');
+  /* 금형제작비(금액이 있으면) */
+  const lm=fxFindLab(kor,/[금긍][형령]제작/,tolL);
+  if(lm){const nums=all.filter(w=>Math.abs((w.y0+w.y1)/2-lm.cy)<=p*0.6&&(w.x0+w.x1)/2>g.xa-cg*0.7&&(w.x0+w.x1)/2<g.xb+cg*0.7&&/^\d[\d,.]*$/.test(String(w.t).trim()))
+      .sort((a,b)=>a.x0-b.x0).map(w=>fxNum(w.t)).filter(v=>v>0);
+    if(nums.length&&!(+s.mold[0]>0)){s.mold=[nums[0],nums[1]||0];}}
+  /* 서식 위쪽 칸: 품명(첫 줄)·규격(둘째 줄) — 스캔 서식만 */
+  if(g.hdr&&W){
+    const x0=W*0.36,x1=W*0.72,yl=g.yH-p*1.1;
+    const sel=a=>a.filter(w=>{const cx=(w.x0+w.x1)/2,cy=(w.y0+w.y1)/2;return cx>=x0&&cx<x1&&cy<yl&&(w.c==null||w.c>=30)&&/[가-힣A-Za-z0-9]/.test(w.t);});
+    const eT=l=>l.w.filter(w=>/^[A-Za-z0-9\/#.\-()&+]+$/.test(w.t)).map(w=>w.t).join(' ').replace(/^[7I1l]\/(?=[A-Z])/,'T/').trim();
+    const rows=[];
+    fxLines(sel(eng),tolL*1.3).forEach(l=>{const t=eT(l);if(fxAln(t)>=2)rows.push({cy:l.cy,e:t});});
+    fxLines(sel(kor),tolL*1.3).forEach(l=>{if(!fxGood(l.t))return;const r=rows.find(r=>Math.abs(r.cy-l.cy)<=tolL*2.2);if(r)r.k=l.t;else rows.push({cy:l.cy,k:l.t});});
+    rows.sort((a,b)=>a.cy-b.cy);
+    const r1=rows[0],r2=rows[1];
+    if(r1&&!String(s.name||'').trim()){const nm=(r1.k&&fxHan(r1.k)>=2)?r1.k:(r1.e||'');if(fxAln(nm)+fxHan(nm)>=2)s.name=fxClean(nm);}
+    if(r2&&!String(s.spec||'').trim()){let sp=(r2.k&&fxHan(r2.k)>=1)?r2.k:(r2.e||'');sp=fxClean(sp);sp=FX_PLANT[sp]||sp;if(sp){s.spec=sp;s.plant=sp;}}
+  }
+  if(s.plant&&FX_PLANT[s.plant])s.plant=FX_PLANT[s.plant];if(s.spec&&FX_PLANT[s.spec])s.spec=FX_PLANT[s.spec];
+}
+let __fcK=null;
+async function fcKorWorker(st){
+  if(__fcK)return __fcK;await payTessLoad();
+  __fcK=await Tesseract.createWorker('kor',1,{langPath:window.FC_TESS_KOR||'https://cdn.jsdelivr.net/npm/@tesseract.js-data/kor@1.0.0/4.0.0_best_int',
+    logger:m=>{if(st&&m&&m.status&&m.progress!=null&&/load|init/.test(m.status))st('한글 읽기 엔진 준비 중… '+Math.round(m.progress*100)+'%');}});
+  return __fcK;
+}
+async function fcOcrMeta(s,st,label){
+  const r=s._cv||s._cvp,g=s._geo;if(!r||!g)return;let eng=[],kor=[];
+  try{st(label+' 품명·배합 읽는 중…');const w=await fcWorker(st);await w.setParameters({tessedit_char_whitelist:'',tessedit_pageseg_mode:'6'});eng=payWords((await w.recognize(r)).data);}catch(e){}
+  try{st(label+' 규격·산출 근거·비고 읽는 중… (한글 엔진은 처음 한 번만 내려받습니다)');const k=await fcKorWorker(st);await k.setParameters({tessedit_pageseg_mode:'6'});kor=payWords((await k.recognize(r)).data);}
+  catch(e){s.warn.push('한글 읽기 엔진을 불러오지 못해 규격·산출 근거·비고를 읽지 못했습니다 — 인터넷 연결을 확인하거나 직접 입력해 주세요.');}
+  fxMeta(s,eng,kor,{W:r.width,xa:g.xa,xb:g.xb,yH:g.y9-g.pitch*10.3,y9:g.y9,pitch:g.pitch,hdr:true});
+}
 async function fcOcrCanvas(cv,st,label){
   const w=await fcWorker(st);let best=null,bestScore=-1;
   const tries=cv.height>cv.width?[90,270,0,180]:[0,180,90,270];
   for(const deg of tries){
     const r=fcRot(cv,deg);st(label+' 읽는 중… (방향 '+deg+'°)');
     await w.setParameters({tessedit_char_whitelist:'0123456789.,:-/ ',tessedit_pageseg_mode:'6'});
-    const res=await w.recognize(r),s=fcParseOcr(payWords(res.data),r.width);
+    const rp=fcPre(r),res=await w.recognize(rp),ws0=payWords(res.data);let s=fcParseOcr(ws0,r.width),rb=r,rpp=rp;
+    if(s){fcRepair(s);}
+    if(!s||fcScore(s)<FC_FULL){   /* 전처리 없이 원본 그대로도 한 번 읽어 더 잘 읽힌 쪽을 쓴다 */
+      try{const resR=await w.recognize(r),sR=fcParseOcr(payWords(resR.data),r.width);if(sR){fcRepair(sR);if(!s||fcScore(sR)>fcScore(s)){s=sR;rb=r;rpp=r;}}}catch(e){}
+    }
+    if(!s||fcScore(s)<FC_FULL){   /* 기울어진 스캔이면 각도를 보정해 한 번 더 읽는다 */
+      const ang=fcSkew(ws0,r.width);
+      if(Math.abs(ang)>=0.4&&Math.abs(ang)<=8){
+        st(label+' 기울기 보정('+ang.toFixed(1)+'°) 후 다시 읽는 중…');
+        const r2=fcRotAng(r,ang),rp2=fcPre(r2),res2=await w.recognize(rp2),s2=fcParseOcr(payWords(res2.data),r2.width);
+        if(s2){fcRepair(s2);if(!s||fcScore(s2)>fcScore(s)){s=s2;rb=r2;rpp=rp2;}}
+      }
+    }
     if(!s)continue;
-    s._cv=r;fcRepair(s);const sc=fcScore(s);
+    s._cv=rb;s._cvp=rpp;const sc=fcScore(s);
     if(sc>bestScore){best=s;bestScore=sc;}
     if(sc>=FC_FULL)break;
   }
   if(best&&bestScore<FC_FULL&&best._geo){   /* 2차: 숫자 칸(전체원가·변동비 두 열)만 잘라 다시 읽기 */
-    try{const r=best._cv,g=best._geo,W=r.width,H=r.height,x0=Math.max(0,Math.round(g.xa-W*0.09)),x1=Math.min(W,Math.round(g.xb+W*0.014)),y0=Math.max(0,Math.round(g.y9-g.pitch*13)),y1=Math.min(H,Math.round(g.y9+g.pitch*6.5));
+    try{const r=best._cvp||best._cv,g=best._geo,W=r.width,H=r.height,x0=Math.max(0,Math.round(g.xa-W*0.09)),x1=Math.min(W,Math.round(g.xb+W*0.014)),y0=Math.max(0,Math.round(g.y9-g.pitch*13)),y1=Math.min(H,Math.round(g.y9+g.pitch*6.5));
       const c2=document.createElement('canvas');c2.width=x1-x0;c2.height=y1-y0;const gx=c2.getContext('2d');gx.fillStyle='#fff';gx.fillRect(0,0,c2.width,c2.height);gx.drawImage(r,x0,y0,x1-x0,y1-y0,0,0,x1-x0,y1-y0);
       st(label+' 숫자 칸 다시 읽는 중…');await w.setParameters({tessedit_char_whitelist:'0123456789.,-/ ',tessedit_pageseg_mode:'6'});
       const res2=await w.recognize(c2),ws2=payWords(res2.data).map(q=>({t:q.t,x0:q.x0+x0,x1:q.x1+x0,y0:q.y0+y0,y1:q.y1+y0})),s2=fcParseOcr(ws2,W);
-      if(s2){s2.date=best.date;s2._cv=r;fcRepair(s2);if(fcScore(s2)>=bestScore){best=s2;bestScore=fcScore(s2);}}}catch(e){}
+      if(s2){s2.date=best.date;s2._cv=best._cv;s2._cvp=r;fcRepair(s2);if(fcScore(s2)>=bestScore){best=s2;bestScore=fcScore(s2);}}}catch(e){}
   }
   if(!best){const s=fcBlank('','이 방향에서 표를 찾지 못했습니다. 서식을 똑바로(또는 90° 회전해) 스캔한 파일로 다시 올리거나 값을 직접 입력해 주세요.');s._cv=fcRot(cv,tries[0]);return s;}
-  /* 품명 칸(서식 위쪽 가운데)만 확대해 영문·숫자로 읽기 */
-  try{const r=best._cv,W=r.width,H=r.height,x0=Math.round(W*0.40),x1=Math.round(W*0.70),y0=Math.round(H*0.08),y1=Math.round(H*0.14),sc=2;
+  try{await fcOcrMeta(best,st,label);}catch(e){}
+  /* 품명 칸(서식 위쪽 가운데)만 확대해 영문·숫자로 읽기 — 위에서 못 읽었을 때만 */
+  if(!String(best.name||'').trim())try{const r=best._cvp||best._cv,W=r.width,H=r.height,x0=Math.round(W*0.40),x1=Math.round(W*0.70),y0=Math.round(H*0.08),y1=Math.round(H*0.14),sc=2;
     const c2=document.createElement('canvas');c2.width=(x1-x0)*sc;c2.height=(y1-y0)*sc;const g=c2.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c2.width,c2.height);g.imageSmoothingQuality='high';g.drawImage(r,x0,y0,x1-x0,y1-y0,0,0,c2.width,c2.height);
     st(label+' 품명 읽는 중…');await w.setParameters({tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-. ',tessedit_pageseg_mode:'7'});
     const t=await w.recognize(c2);best.name=String((t.data&&t.data.text)||'').replace(/\s+/g,' ').trim();}catch(e){}
@@ -31370,11 +31531,11 @@ async function fcLoad(input){
   const files=[...(input.files||[])];input.value='';if(!files.length)return;
   if(qiRo()){toast('열람 전용 화면입니다');return;}
   const st=m=>{const e=document.getElementById('fc_st');if(e)e.textContent=m;};
-  qiOpen(`<h3 style="margin:0">🏭 공장 제조원가 서식 읽는 중…</h3><div id="fc_st" style="margin-top:12px;font-size:13px;color:#334155">준비 중…</div><div style="margin-top:8px;font-size:11.5px;color:var(--muted)">처음 한 번만 읽기 엔진을 내려받습니다(이후 브라우저에 보관). 파일은 이 PC 안에서만 처리됩니다.</div>`);
+  qiOpen(`<h3 style="margin:0">🏭 공장 제조원가 서식 읽는 중…</h3><div id="fc_st" style="margin-top:12px;font-size:13px;color:#334155">준비 중…</div><div style="margin-top:8px;font-size:11.5px;color:var(--muted)">처음 한 번만 읽기 엔진을 내려받습니다(이후 브라우저에 보관). 서식 파일은 외부로 업로드되지 않고 이 화면에서 읽으며, 읽은 숫자와 서식 이미지는 [등록] 후 팀 저장소를 통해 모든 PC에 공유됩니다.</div>`);
   const all=[];
   for(const f of files){try{(await fcReadFile(f,st)).forEach(s=>all.push(s));}catch(e){const s=fcBlank(f.name,(e&&e.message)||String(e));all.push(s);}}
   all.forEach(s=>{if(!s.date)s.date=todayStr();s.packIn=false;
-    if(!String(s.name||'').trim()){const b=String(s.src||'').replace(/\.[a-z0-9]+(\s*\d+쪽)?(\s*\[.*\])?$/i,'').replace(/\s*\d+쪽$/,'').trim();s.name=b||'공장원가';}
+    if(!String(s.name||'').trim()){const b=String(s.src||'').replace(/\.[a-z0-9]+(\s*\d+쪽)?(\s*\[.*\])?$/i,'').replace(/\s*\d+쪽$/,'').trim();s.name=b||'공장원가';s.nameFile=1;}
     try{const ch=fcCheck(s);s.auto=ch.length>0&&ch.every(c=>c.ok);s.ok=s.auto;}catch(e){s.auto=false;}});   // 자동 검증(합계 대조) 통과 → 자동 체크
   fcSheets=all;fcDlg();
 }
@@ -31382,7 +31543,7 @@ async function fcLoad(input){
 function fcDlg(){
   const body=fcSheets.map((s,i)=>fcCardHtml(s,i)).join('');
   qiOpen(`<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🏭 공장 제조원가 서식 읽기 결과 <span style="font-size:12px;font-weight:500;color:var(--muted)">(${fcSheets.length}건)</span></h3><button class="btn sm" onclick="qiClose()">✕</button></div>
-  <div style="font-size:12px;color:#475569;margin-top:6px;line-height:1.6">원본(왼쪽)과 읽은 값(오른쪽)을 대조해 틀린 숫자는 고치고, 읽은 값이 서식 합계와 <b>자동으로 맞으면 ☑가 미리 체크</b>되어 바로 등록할 수 있고, 어긋난 건만 원본과 대조해 고친 뒤 체크하세요. <b>품목명·규격은 임시</b>로 등록되며 [견적 품목·제조원가 관리 &gt; 수정]에서 바꿀 수 있습니다.</div>
+  <div style="font-size:12px;color:#475569;margin-top:6px;line-height:1.6">원본(왼쪽)과 읽은 값(오른쪽)을 대조해 틀린 숫자는 고치고, 읽은 값이 서식 합계와 <b>자동으로 맞으면 ☑가 미리 체크</b>되어 바로 등록할 수 있고, 어긋난 건만 원본과 대조해 고친 뒤 체크하세요. 서식에서 읽은 <b>품명·규격·배합·산출 근거·비고</b>가 함께 등록되고, 같은 품명·규격이 이미 있으면 그 품목의 <b>최신 원가</b>로 갱신됩니다. 글자는 오인식될 수 있으니 원본과 대조해 고쳐 주세요.</div>
   <div style="max-height:68vh;overflow:auto;margin-top:8px">${body}</div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn" onclick="qiClose()">취소</button><button class="btn" onclick="fcSave(false)">보관소에만 등록</button><button class="btn primary" onclick="fcSave(true)">등록하고 견적 행에도 넣기</button></div>`,true);
   fcSheets.forEach((s,i)=>fcRecalc(i));
@@ -31396,10 +31557,15 @@ function fcCardHtml(s,i){
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
    ${s.img?`<div style="flex:1 1 300px;min-width:260px"><img src="${s.img}" style="width:100%;border:1px solid #cbd5e1;border-radius:6px;cursor:zoom-in" onclick="window.open(this.src,'_blank')" title="클릭하면 크게 봅니다"></div>`:''}
    <div style="flex:1 1 380px;min-width:340px">
-    <div class="frow" style="gap:8px;flex-wrap:wrap"><div class="field"><label>품목(임시)</label><input value="${esc(s.name)}" oninput="fcSets(${i},'name',this.value)" style="width:150px"></div>
-      <div class="field"><label>규격(임시)</label><input value="${esc(s.spec)}" oninput="fcSets(${i},'spec',this.value)" style="width:90px" placeholder="${esc(s.plant||'')}"></div>
+    <div class="frow" style="gap:8px;flex-wrap:wrap"><div class="field"><label>품목${s.nameFile?' <span style="color:#b45309">(파일명 사용 — 서식 품명 확인)</span>':'(서식 품명)'}</label><input value="${esc(s.name)}" oninput="fcSets(${i},'name',this.value)" style="width:170px"></div>
+      <div class="field"><label>규격</label><input value="${esc(s.spec)}" oninput="fcSets(${i},'spec',this.value)" style="width:90px" placeholder="${esc(s.plant||'')}"></div>
       <div class="field"><label>제품단중(kg)</label><input value="${esc(s.wt)}" oninput="fcSets(${i},'wt',this.value)" style="width:80px;text-align:right"></div>
       <div class="field w-date"><label>작성일(원가 기준일)</label><input type="date" value="${esc(s.date)}" onchange="fcSets(${i},'date',this.value)"></div></div>
+    <div class="frow" style="gap:8px;flex-wrap:wrap;margin-top:6px"><div class="field"><label>배합비 코드</label><input value="${esc(s.blend||'')}" oninput="fcSets(${i},'blend',this.value)" style="width:160px" placeholder="예) BU-S1-03-32-BL" title="영문·숫자 혼동(S↔5, O↔0 등)이 있을 수 있어 원본과 대조해 주세요"></div>
+      <div class="field"><label>수율(%)</label><input value="${esc(s.yld||'')}" oninput="fcSets(${i},'yld',this.value)" style="width:60px;text-align:right"></div>
+      ${(+(s.mold&&s.mold[0])>0)?`<div class="field"><label>금형제작비</label><div style="font-size:12.5px;padding-top:4px">${fmt(s.mold[0])}원</div></div>`:''}</div>
+    <div class="field" style="margin-top:4px"><label>산출 근거 <span style="font-weight:400;color:var(--muted)">(견적검토서 [원가산출 기준]에 반영)</span></label><textarea rows="2" oninput="fcSets(${i},'basis',this.value)" style="width:100%;font-size:12.5px">${esc(s.basis||'')}</textarea></div>
+    <div class="field" style="margin-top:4px"><label>비고</label><textarea rows="2" oninput="fcSets(${i},'note',this.value)" style="width:100%;font-size:12.5px">${esc(s.note||'')}</textarea></div>
     <table class="qi-tb" style="margin-top:6px"><thead><tr><th>항목</th><th>전체원가<br><small>원/kg</small></th><th>변동비<br><small>원/kg</small></th><th>고정비<br><small>원/kg</small></th></tr></thead><tbody>${rowH}
       <tr style="font-weight:800;background:#fef9c3"><td style="text-align:left">제조경비 합계</td><td>${cell('sub',0)}</td><td>${cell('sub',1)}</td><td class="n" id="fc_sf_${i}">-</td></tr>
       <tr style="font-weight:800;background:#fef9c3"><td style="text-align:left">EA 합계(원/EA)</td><td>${cell('ea',0)}</td><td>${cell('ea',1)}</td><td class="n" id="fc_ef_${i}">-</td></tr>
@@ -31429,12 +31595,18 @@ async function fcSave(addRows){
   for(const s of sel){
     const cc=fcCalc(s);if(!(cc.wt>0)||!(cc.t>0)){toast('「'+s.name+'」 제품단중·원가 값을 확인하세요');return;}
     const nm=String(s.name).trim().replace(/\s+/g,' '),sp=String(s.spec||'').trim();
-    let it=qiFind(nm,sp);const isNew=!it;
-    if(!it)it={id:'qi_'+uid(),name:nm,spec:sp,unit:'EA',costs:[],conf:[],qh:[],tmp:1,note:'공장 제조원가 서식으로 자동 등록 — 품명·규격은 임시(확인 후 [수정])',by:qiWho(),cr:new Date().toISOString()};
+    let it=qiFind(nm,sp);
+    if(!it&&s.src&&!s.nameFile){   /* 예전에 같은 파일을 파일명 임시 품명으로 등록했다면 그 품목을 서식 품명·규격으로 바로잡아 이어 쓴다 */
+      const o=qiRecs.find(r=>r.tmp&&(r.costs||[]).some(x=>String(x.src||'').indexOf(s.src)>=0));
+      if(o){o.name=nm;o.spec=sp;o.costs=(o.costs||[]).filter(x=>String(x.src||'').indexOf(s.src)<0);it=o;}}   /* 같은 파일로 잘못 읽어 등록했던 원가는 새로 읽은 값으로 교체 */
+    const isNew=!it;
+    if(!it)it={id:'qi_'+uid(),name:nm,spec:sp,unit:'EA',costs:[],conf:[],qh:[],tmp:s.nameFile?1:0,note:String(s.note||'').trim()||'공장 제조원가 서식으로 자동 등록',by:qiWho(),cr:new Date().toISOString()};
+    if(!isNew&&!s.nameFile)it.tmp=0;
+    if(String(s.blend||'').trim()){it.blend=String(s.blend).trim();it.yld=String(s.yld||'').trim();}
     let img='';if(s.img){try{img=await savePhotoBlob(s.img,'공장 제조원가 서식 '+nm);}catch(e){}}
     const det=fcDet(s,cc),dn={};if(fcNum(s.rows['임가공비'][0])>0)dn['가공비']='임가공비 포함';
-    const c={id:'c'+uid(),d:s.date||todayStr(),v:cc.v,f:cc.f,det,dn,bs:'',src:'공장 제조원가 서식('+(s.plant||'포항')+') · '+s.src,foot:QI_FOOT,img,
-      fc:{wt:cc.wt,rows:JSON.parse(JSON.stringify(s.rows)),sub:[cc.subT,cc.subV],ea:[cc.eaT,cc.eaV],pack:[cc.pT,cc.pV],pk:s.packIn?1:0,plant:s.plant||'',mode:s.mode},by:qiWho(),at:new Date().toISOString()};
+    const c={id:'c'+uid(),d:s.date||todayStr(),v:cc.v,f:cc.f,det,dn,bs:String(s.basis||'').trim(),src:'공장 제조원가 서식('+(s.plant||'포항')+') · '+s.src,foot:QI_FOOT,img,
+      fc:{wt:cc.wt,rows:JSON.parse(JSON.stringify(s.rows)),sub:[cc.subT,cc.subV],ea:[cc.eaT,cc.eaV],pack:[cc.pT,cc.pV],pk:s.packIn?1:0,plant:s.plant||'',mode:s.mode,blend:String(s.blend||'').trim(),yld:String(s.yld||'').trim(),basis:String(s.basis||'').trim(),note:String(s.note||'').trim(),mold:[fcNum(s.mold&&s.mold[0]),fcNum(s.mold&&s.mold[1])]},by:qiWho(),at:new Date().toISOString()};
     const dup=it.costs.findIndex(x=>x.d===c.d);
     if(dup>=0){if(!confirm('「'+nm+'」 '+c.d+' 기준일의 원가가 이미 있습니다. 새 값으로 덮어쓸까요?'))continue;it.costs[dup]=c;}else it.costs.push(c);
     if(!qiCommit(it))return;reg.push({it,c,isNew});
@@ -31445,7 +31617,7 @@ async function fcSave(addRows){
       quoteItems[i]=Object.assign(qNew(),{});qiApplyCost(i,x.it,x.c);});
   }
   qiHist=null;qiHistLoad().then(qiAfter);qiAfter();renderQuoteItems();
-  toast(reg.length?('공장 제조원가 '+reg.length+'건을 견적 품목·제조원가에 등록했습니다 (품명·규격 임시)'+(addRows?' — 견적 행에도 넣었습니다. 아래 [공장 제조원가 검토]에서 체크하세요':'')):'등록된 항목이 없습니다');
+  toast(reg.length?('공장 제조원가 '+reg.length+'건을 견적 품목·제조원가에 최신 원가로 등록했습니다'+(reg.some(x=>x.it.tmp)?' (파일명 품명 — 품명·규격 확인)':'')+(addRows?' — 견적 행에도 넣었습니다':'')):'등록된 항목이 없습니다');
   if(reg.length)fcShare(reg);
 }
 /* 등록한 원가(기록 + 공장 서식 이미지)가 팀 저장소(Firebase)에 올라갔는지 서버에서 확인하고 결과를 알려 준다 */
@@ -31473,30 +31645,36 @@ function fcShareMsg(ok,html){
 }
 function qiApplyCost(i,it,c){const row=quoteItems[i];row.qi=it.id;row.name=it.name;row.spec=it.spec;row.unit=it.unit||'EA';row.disp=it.disp||'';row.qty=row.qty||1;row.var=qiRnd(c.v);row.fix=qiRnd(c.f);row.cd=c.id;}
 /* ---- 견적검토 내용(내부결재)용 체크 문구 ---- */
-function fcLines(it,c){
-  const f=c&&c.fc;if(!f)return [];const nm=it.name+(it.spec?' '+it.spec:''),u=String(it.unit||'EA'),fm=v=>fmt(Math.round(+v||0));
+function fcLines(it,c,incf){
+  const f=c&&c.fc;if(!f)return [];const nm=it.name+(it.spec?' '+it.spec:''),u=String(it.unit||'EA'),fm=v=>fmt(Math.round(+v||0)),both=incf!==false;
   const L=[],kk=FC_ROWS.filter(k=>fcNum(f.rows[k][0])>0).map(k=>k+' '+fm(f.rows[k][0])).join(' / ');
-  L.push(`[${nm}] 공장 제조원가 서식(${f.plant||'포항'}, 작성 ${c.d}) 기준 — 제조원가 ${fm(c.v+c.f)}원/${u} = 직접변동비 ${fm(c.v)}원 + 직접고정비 ${fm(c.f)}원`);
-  L.push(`[${nm}] 원/kg 환산(제품단중 ${fm(f.wt)}kg): 직접변동비 ${fm(f.sub[1])}원/kg · 직접고정비 ${fm(f.sub[0]-f.sub[1])}원/kg (전체 ${fm(f.sub[0])}원/kg${kk?' : '+kk:''})`);
+  L.push(both?`[${nm}] 공장 제조원가 서식(${f.plant||'포항'}, 작성 ${c.d}) 기준 — 제조원가 ${fm(c.v+c.f)}원/${u} = 직접변동비 ${fm(c.v)}원 + 직접고정비 ${fm(c.f)}원`
+    :`[${nm}] 공장 제조원가 서식(${f.plant||'포항'}, 작성 ${c.d}) 기준 — 직접변동비 ${fm(c.v)}원/${u}까지만 반영 (직접고정비 ${fm(c.f)}원/${u} 제외)`);
+  L.push(both?`[${nm}] 원/kg 환산(제품단중 ${fm(f.wt)}kg): 직접변동비 ${fm(f.sub[1])}원/kg · 직접고정비 ${fm(f.sub[0]-f.sub[1])}원/kg (전체 ${fm(f.sub[0])}원/kg${kk?' : '+kk:''})`
+    :`[${nm}] 원/kg 환산(제품단중 ${fm(f.wt)}kg): 직접변동비 ${fm(f.sub[1])}원/kg (직접고정비 ${fm(f.sub[0]-f.sub[1])}원/kg 제외)`);
   if(fcNum(f.pack[0])>0)L.push(f.pk?`[${nm}] 포장비 ${fm(f.pack[0])}원/kg 직접변동비에 포함`:`[${nm}] 포장비 ${fm(f.pack[0])}원/kg(약 ${fm(f.pack[0]*f.wt)}원/${u})은 판매관리비로 구분되어 제조원가에서 제외`);
+  if(f.blend)L.push(`[${nm}] 배합 ${f.blend}${f.yld?' (수율 '+f.yld+'%)':''}`);
+  if(f.basis)L.push(`[${nm}] 원가 산출 근거: ${f.basis}`);
   return L;
 }
+const FC_AUTO_RE=/^\s*(?:\d+\)\s*)?\[[^\]]+\]\s*(?:공장 제조원가 서식|원\/kg 환산|포장비|배합 |원가 산출 근거)/;
+function fcAutoOn(){try{return localStorage.getItem('pohang_fcauto')!=='0';}catch(e){return true;}}
+function fcAutoSet(on){try{localStorage.setItem('pohang_fcauto',on?'1':'0');}catch(e){}fcReviewRender();}
+/* 공장 서식으로 등록된 품목은 검토 문구를 [원가산출 기준]에 자동으로 넣는다 — 사용자는 원가 범위(변동비까지 / +고정비)만 고르면 된다 */
 function fcReviewRender(){
   const box=document.getElementById('q_fcbox');if(!box)return;
-  const L=[];qRes().forEach(r=>{if(r.alt||qBlank(r)||!r.qi)return;const it=qiById(r.qi);if(!it)return;const cs=qiSorted(it);const c=cs.find(x=>x.id===r.cd)||cs[0];if(c&&c.fc)fcLines(it,c).forEach(t=>{if(!L.includes(t))L.push(t);});});
+  const incf=incFixed(),L=[];qRes().forEach(r=>{if(r.alt||qBlank(r)||!r.qi)return;const it=qiById(r.qi);if(!it)return;const cs=qiSorted(it);const c=cs.find(x=>x.id===r.cd)||cs[0];if(c&&c.fc)fcLines(it,c,incf).forEach(t=>{if(!L.includes(t))L.push(t);});});
   window.__fcLines=L;
+  const ta=document.getElementById('q_costbasis'),on=fcAutoOn();
+  if(ta){const cur=String(ta.value||'').split('\n'),isA=x=>FC_AUTO_RE.test(qMkPlain(x)),keep=cur.filter(x=>!isA(x));
+    while(keep.length&&!qMkPlain(keep[keep.length-1]).trim())keep.pop();
+    if(cur.some(isA)||(on&&L.length)){const nv=(on?keep.concat(L):keep).join('\n');if(nv!==cur.join('\n'))ta.value=nv;}}
   if(!L.length){box.innerHTML='';return;}
-  const cur=String((document.getElementById('q_costbasis')||{}).value||'').split('\n').map(x=>qMkPlain(x).trim());
-  box.innerHTML=`<div style="border:1px dashed #f59e0b;background:#fffbeb;border-radius:9px;padding:8px 12px;font-size:12.5px;line-height:1.7"><b style="color:#b45309">🏭 공장 제조원가 검토 사항</b> <span style="color:var(--muted)">— 체크한 문장이 위 [원가산출 기준]에 들어가 견적검토서(내부결재)에 출력됩니다</span>
-    <button class="btn sm" style="margin-left:8px" onclick="fcAll(true)">모두 체크</button><button class="btn sm" onclick="fcAll(false)">모두 해제</button>
-    ${L.map((t,i)=>`<label style="display:block;cursor:pointer"><input type="checkbox" style="width:auto" ${cur.includes(t.trim())?'checked':''} onchange="fcToggle(${i},this.checked)"> ${esc(t)}</label>`).join('')}</div>`;
+  box.innerHTML=`<div style="border:1px dashed #f59e0b;background:#fffbeb;border-radius:9px;padding:8px 12px;font-size:12.5px;line-height:1.7"><b style="color:#b45309">🏭 공장 제조원가 검토 사항</b>
+    <span style="color:var(--muted)">— 선택한 원가 범위(<b>${incf?'직접변동비 + 직접고정비':'직접변동비까지만'}</b>)에 맞춰 아래 문장이 위 [원가산출 기준]에 자동 반영됩니다. 범위는 위의 [제조원가 포함 범위]에서 고르세요.</span>
+    <label style="margin-left:8px;cursor:pointer"><input type="checkbox" style="width:auto" ${on?'checked':''} onchange="fcAutoSet(this.checked)"> 자동 반영</label>
+    ${L.map(t=>`<div style="color:#475569">· ${esc(t)}</div>`).join('')}</div>`;
 }
-function fcToggle(i,on){
-  const t=(window.__fcLines||[])[i];if(!t)return;const ta=document.getElementById('q_costbasis'),ls=ta.value.split('\n');
-  if(on){if(!ls.some(x=>qMkPlain(x).trim()===t.trim()))ta.value=(ta.value.trim()?ta.value.replace(/\s+$/,'')+'\n':'')+t;}
-  else ta.value=ls.filter(x=>qMkPlain(x).trim()!==t.trim()).join('\n');
-}
-function fcAll(on){(window.__fcLines||[]).forEach((_,i)=>fcToggle(i,on));fcReviewRender();}
 /* ---- 견적 저장 = 임시저장 + 품목·제조원가 자동 이전 ---- */
 let currentQuoteSt='임시저장';
 function qiAutoFromQuote(){
@@ -33262,6 +33440,33 @@ const FB_SHARDED={ot:1,leave:'m'};   // 'm' = 월별(YYYY-MM) 문서로 분할, 
 function fbShardOf(store,x){if(!FB_SHARDED[store])return store;
   const d=String((x&&(x.date||x.at))||'').slice(0,10);
   return /^\d{4}-\d{2}-\d{2}$/.test(d)?store+'__'+(FB_SHARDED[store]==='m'?d.slice(0,7):d):store+'__misc';}
+/* 2026-10-30(rpt178): 팀 저장소 압축 저장 — 결재 서명 이미지 등이 들어 있는 큰 문서는 gzip(+base64)으로 줄여 올린다.
+   이 PC에 저장된 자료와 화면 표시는 그대로이며, 받을 때 자동으로 풀어 쓴다. 작은 문서(약 20KB 미만)·압축 이득이 없는 문서는 예전 방식 그대로 올린다. */
+const FB_Z_MIN=20000;
+const FB_Z_STORES={leave:1,ot:1};   // 결재 서명 이미지가 반복 저장되어 용량의 90% 이상을 차지하는 보관소만 압축(그 외는 기존 방식 유지). 설정·마스터(kv)는 별도로 압축
+const fbZOk=()=>typeof CompressionStream!=='undefined'&&typeof DecompressionStream!=='undefined';
+async function fbZ(text){
+  if(!fbZOk())return null;
+  try{const bytes=new TextEncoder().encode(text);
+    const buf=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+    let bin='';for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
+    return btoa(bin);}catch(e){return null;}
+}
+async function fbUnz(b64){
+  const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+/* obj[field]를 압축해 {zd:'…', zf:field} 로 바꿔 돌려준다(압축이 이득일 때만). 아니면 그대로 */
+async function fbPack(obj,field){
+  try{const raw=JSON.stringify(obj[field]);if(raw.length<FB_Z_MIN)return obj;
+    const z=await fbZ(raw);if(!z||z.length>=fbU8(raw)*0.9)return obj;
+    const o=Object.assign({},obj);delete o[field];o.zd=z;o.zf=field;return o;}catch(e){return obj;}
+}
+async function fbField(d,field){
+  d=d||{};if(d.zd&&d.zf===field){try{return JSON.parse(await fbUnz(d.zd));}catch(e){syncLog('압축 해제 오류 '+field+': '+e.message);return field==='items'?[]:{};}}
+  return d[field]||(field==='items'?[]:{});
+}
+const fbItemsOf=d=>fbField(d,'items'),fbKvOf=d=>fbField(d,'kv');
 const fbShardSig={};let fbLegacyCleared=false;
 const fbSigOf=a=>JSON.stringify((a||[]).slice().sort((x,y)=>String(x&&x.id)<String(y&&y.id)?-1:1));
 function fbShardQuery(store){const fp=firebase.firestore.FieldPath.documentId();
@@ -33269,20 +33474,21 @@ function fbShardQuery(store){const fp=firebase.firestore.FieldPath.documentId();
 async function fbReadItems(store){
   const sn=await fbDoc(store).get();
   const r={exists:false,items:[],at:0,legacyN:0,docs:0};
-  if(!FB_SHARDED[store]){if(sn.exists){const d=sn.data()||{};r.exists=true;r.items=d.items||[];r.at=d.at||0;}return r;}
+  if(!FB_SHARDED[store]){if(sn.exists){const d=sn.data()||{};r.exists=true;r.items=await fbItemsOf(d);r.at=d.at||0;}return r;}
   const map=new Map();
-  if(sn.exists){const d=sn.data()||{};r.exists=true;r.at=d.at||0;r.legacyN=(d.items||[]).length;if(d.migrated&&!r.legacyN)fbLegacyCleared=true;(d.items||[]).forEach(x=>{if(x&&x.id!=null)map.set(x.id,x);});}
-  const q=await fbShardQuery(store).get();
-  q.forEach(ds=>{const d=ds.data()||{};r.exists=true;r.docs++;r.at=Math.max(r.at,d.at||0);fbShardSig[ds.id]=fbSigOf(d.items);(d.items||[]).forEach(x=>{if(x&&x.id!=null)map.set(x.id,x);});});
+  if(sn.exists){const d=sn.data()||{},li=await fbItemsOf(d);r.exists=true;r.at=d.at||0;r.legacyN=li.length;if(d.migrated&&!r.legacyN)fbLegacyCleared=true;li.forEach(x=>{if(x&&x.id!=null)map.set(x.id,x);});}
+  const q=await fbShardQuery(store).get(),dl=[];
+  q.forEach(ds=>{dl.push(ds);});
+  for(const ds of dl){const d=ds.data()||{},it=await fbItemsOf(d);if(FB_Z_STORES[store]&&!d.zd&&it.length&&JSON.stringify(it).length>=FB_Z_MIN)r.plainBig=true;r.exists=true;r.docs++;r.at=Math.max(r.at,d.at||0);fbShardSig[ds.id]=fbSigOf(it);it.forEach(x=>{if(x&&x.id!=null)map.set(x.id,x);});}
   r.items=[...map.values()];return r;
 }
 async function fbWriteItems(store,items,extra){
   const at=Date.now();
-  if(!FB_SHARDED[store]){await fbDoc(store).set(Object.assign({items,by:fbClientId,at},extra||{}));return;}
+  if(!FB_SHARDED[store]){const o=Object.assign({items,by:fbClientId,at},extra||{});await fbDoc(store).set(FB_Z_STORES[store]?await fbPack(o,'items'):o);return;}
   const g={};(items||[]).forEach(x=>{const k=fbShardOf(store,x);(g[k]=g[k]||[]).push(x);});
   const old=[];try{(await fbShardQuery(store).get()).forEach(ds=>old.push(ds.id));}catch(e){}
   for(const k of Object.keys(g)){const sg=fbSigOf(g[k]);if(fbShardSig[k]===sg&&!extra)continue;   // 바뀐 날짜만 기록
-    await fbDoc(k).set(Object.assign({items:g[k],by:fbClientId,at},extra||{}));fbShardSig[k]=sg;}
+    const o=Object.assign({items:g[k],by:fbClientId,at},extra||{});await fbDoc(k).set(FB_Z_STORES[store]?await fbPack(o,'items'):o);fbShardSig[k]=sg;}
   for(const id of old)if(!g[id]&&fbShardSig[id]!==fbSigOf([])){await fbDoc(id).set({items:[],by:fbClientId,at});fbShardSig[id]=fbSigOf([]);}   // 비워진 날짜
   if(!fbLegacyCleared||extra){await fbDoc(store).set({items:[],migrated:true,by:fbClientId,at});fbLegacyCleared=true;}   // 구 단일 문서 비움
 }
@@ -33295,7 +33501,7 @@ window.fbOnWrite=function(store){if(!fbOn||fbApplying)return;if(FB_STORES.indexO
 window.fbOnKv=function(){if(!fbOn||fbApplying)return;clearTimeout(fbTimers.__kv);fbTimers.__kv=setTimeout(fbPushKv,700);};
 /* 업로드 전에 팀 저장소를 한 번 읽어 병합한다.
    → 두 사람이 같은 순간에 서로 다른 항목을 저장해도 한쪽이 지워지지 않음 */
-async function fbPushStore(store){
+async function fbPushStore(store,force){
   if(!fbOn)return;
   try{
     const items=await txAll(store);
@@ -33314,7 +33520,7 @@ async function fbPushStore(store){
         }
       }
     }catch(e){}
-    await fbWriteItems(store,merged);
+    await fbWriteItems(store,merged,force?{}:undefined);
     syncLog('↑ '+store+' ('+merged.length+')'+(added?' · 팀 신규 '+added+'건 병합':''));
   }catch(e){syncLog('업로드 오류 '+store+': '+e.message);}
 }
@@ -33336,7 +33542,7 @@ function fbCollectKvTimes(kv){const t={};Object.keys(kv||{}).forEach(k=>{t[k]=kv
 const fbIsQ=k=>typeof k==='string'&&k.indexOf('dgrns_qi_')===0;
 let fbKvqCnt=0;window.fbKvLast={ok:null,at:0,err:'',mainKB:0,qKB:0,qn:0};
 const fbU8=t=>{try{return new TextEncoder().encode(String(t)).length;}catch(e){return String(t).length*3;}};
-const FB_KV_DOC_MAX=700000;   // 문서 1개당 최대 바이트(한도 1,048,576 바이트의 약 2/3, 한글은 글자당 3바이트로 계산)
+const FB_KV_DOC_MAX=600000;   // 문서 1개당 최대 바이트(한도 1,048,576 바이트의 약 2/3, 한글은 글자당 3바이트로 계산)
 /* 전체 설정·마스터 키를 이름순으로 채워 문서 여러 개로 나눈다. 첫 문서는 기존 '__kv', 넘치는 분량은 '__kvq0, __kvq1…' */
 function fbKvGroups(kv,tm){
   const keys=Object.keys(kv).sort((x,y)=>(fbIsQ(x)?1:0)-(fbIsQ(y)?1:0)||(x<y?-1:x>y?1:0));
@@ -33351,8 +33557,8 @@ async function fbPushKv(){
   try{
     const kv=fbCollectKv(),tm=fbCollectKvTimes(kv),groups=fbKvGroups(kv,tm),extra=groups.length-1;
     const tot=groups.reduce((a,g)=>a+g.b,0);
-    await fbDoc('__kv').set({kv:groups[0].kv,times:groups[0].times,qn:extra,by:fbClientId,at:Date.now()});
-    for(let i=1;i<groups.length;i++)await fbDoc('__kvq'+(i-1)).set({kv:groups[i].kv,times:groups[i].times,by:fbClientId,at:Date.now()});
+    await fbDoc('__kv').set(await fbPack({kv:groups[0].kv,times:groups[0].times,qn:extra,by:fbClientId,at:Date.now()},'kv'));
+    for(let i=1;i<groups.length;i++)await fbDoc('__kvq'+(i-1)).set(await fbPack({kv:groups[i].kv,times:groups[i].times,by:fbClientId,at:Date.now()},'kv'));
     for(let i=extra;i<fbKvqCnt;i++){try{await fbDoc('__kvq'+i).delete();}catch(e){}}
     fbKvqCnt=extra;
     const qB=Object.keys(kv).filter(fbIsQ).reduce((a,k)=>a+fbU8(k)+fbU8(kv[k]),0);
@@ -33366,14 +33572,15 @@ async function fbKvqGet(server){
   const col=fbDb.collection('dgrns_rooms').doc(fbRoom).collection('data'),FP=firebase.firestore.FieldPath.documentId();
   const q=col.orderBy(FP).startAt('__kvq').endAt('__kvq\uf8ff');let sn;
   try{sn=await (server?q.get({source:'server'}):q.get());}catch(e){if(server)throw e;sn=await q.get();}
-  const kv={},times={};let n=0;sn.forEach(d=>{const x=d.data()||{};Object.assign(kv,x.kv||{});Object.assign(times,x.times||{});n++;});
+  const kv={},times={};let n=0;const dl=[];sn.forEach(d=>{dl.push(d);});
+  for(const d of dl){const x=d.data()||{};Object.assign(kv,await fbKvOf(x));Object.assign(times,x.times||{});n++;}
   return {kv,times,n};
 }
 function fbKvqListen(){
   const col=fbDb.collection('dgrns_rooms').doc(fbRoom).collection('data'),FP=firebase.firestore.FieldPath.documentId();
   fbUnsub.push(col.orderBy(FP).startAt('__kvq').endAt('__kvq\uf8ff').onSnapshot(snap=>{
     if(snap.metadata.hasPendingWrites)return;
-    snap.docChanges().forEach(ch=>{if(ch.type==='removed')return;const d=ch.doc.data()||{};if(!d.kv||d.by===fbClientId)return;fbApplyKv(d.kv,d.times);try{syncLog('↓ 견적 품목·제조원가 '+Object.keys(d.kv).length+'건');}catch(e){}});
+    snap.docChanges().forEach(ch=>{if(ch.type==='removed')return;const d=ch.doc.data()||{};if((!d.kv&&!d.zd)||d.by===fbClientId)return;fbKvOf(d).then(kv=>{fbApplyKv(kv,d.times);try{syncLog('↓ 설정/마스터 추가 문서 '+Object.keys(kv).length+'개 항목');}catch(e){}});});
   },err=>syncLog('구독 오류 견적 품목: '+err.message)));
 }
 // 원격 스토어 수신 → 로컬 반영
@@ -33537,10 +33744,10 @@ function fbListen(){
       },err=>syncLog('구독 오류 '+store+': '+err.message)));
       return;}
     fbUnsub.push(fbDoc(store).onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d||d.by===fbClientId)return;fbGuardApply(store,d.items);
+    if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d||d.by===fbClientId)return;fbItemsOf(d).then(it=>fbGuardApply(store,it));
   },err=>syncLog('구독 오류 '+store+': '+err.message)));});
   fbUnsub.push(fbDoc('__kv').onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d)return;if(d.qn!=null)fbKvqCnt=Math.max(fbKvqCnt,+d.qn||0);if(d.by===fbClientId)return;fbApplyKv(d.kv,d.times);
+    if(snap.metadata.hasPendingWrites)return;const d=snap.data();if(!d)return;if(d.qn!=null)fbKvqCnt=Math.max(fbKvqCnt,+d.qn||0);if(d.by===fbClientId)return;fbKvOf(d).then(kv=>fbApplyKv(kv,d.times));
   },err=>syncLog('구독 오류 kv: '+err.message)));
   try{fbKvqListen();}catch(e){syncLog('견적 품목 동기화 시작 오류: '+e.message);}
   try{fbPhotoListen();}catch(e){syncLog('사진 동기화 시작 오류: '+e.message);}
@@ -33580,18 +33787,19 @@ async function fbConnect(cfg,room){
 /* 연결 직후 1회 : 팀 저장소 내용을 실제로 받아온다 (구독만으로는 기존 데이터가 오지 않음) */
 async function fbInitialSync(){
   if(!fbOn)return;
-  let got=0, ask=[], cloudTotal=0, migrate=[];
+  let got=0, ask=[], cloudTotal=0, migrate=[], zmig=[];
   for(const st of FB_STORES){
     let rr;try{rr=await fbReadItems(st);}catch(e){continue;}
     if(!rr.exists)continue;
     const items=rr.items||[];
     if(FB_SHARDED[st]&&rr.legacyN>0)migrate.push(st);
+    if(rr.plainBig&&fbZOk())zmig.push(st);
     cloudTotal+=items.length;
     let mine=[];try{mine=await txAll(st);}catch(e){}
     if(!mine.length&&items.length){await fbApplyStore(st,items);got++;}
     else if(items.length!==mine.length)ask.push({st,inN:items.length,myN:mine.length,items});
   }
-  let mainKv={};try{const kv=await fbDoc('__kv').get();if(kv.exists){mainKv=(kv.data()||{}).kv||{};fbApplyKv(mainKv,(kv.data()||{}).times);}}catch(e){}
+  let mainKv={};try{const kv=await fbDoc('__kv').get();if(kv.exists){const kd=kv.data()||{};mainKv=await fbKvOf(kd);fbApplyKv(mainKv,kd.times);if(!kd.zd&&fbZOk()&&JSON.stringify(mainKv).length>=FB_Z_MIN)setTimeout(()=>{try{fbPushKv();}catch(e){}},3000);}}catch(e){}   // 압축 전 형식이면 1회 압축본으로 다시 올림
   try{const q=await fbKvqGet();if(Object.keys(q.kv).length)fbApplyKv(q.kv,q.times);
     if(Object.keys(fbCollectKv()).some(k=>fbIsQ(k)&&!(k in q.kv)&&!(k in mainKv)))setTimeout(()=>{try{fbPushKv();}catch(e){}},1500);}catch(e){}   // 분리 문서가 아직 없으면(처음 한 번) 이 PC의 견적 품목을 올림
   if(got)toast('팀 데이터 '+got+'종을 받았습니다');
@@ -33606,6 +33814,7 @@ async function fbInitialSync(){
       }
     }
   }
+  for(const st of zmig){if(migrate.indexOf(st)>=0)continue;try{await fbPushStore(st,true);syncLog((CAP_NAMES[st]||st)+' 팀 저장소 문서를 압축 저장으로 전환했습니다');}catch(e){}}
   for(const st of migrate){try{await fbPushStore(st);syncLog((CAP_NAMES[st]||st)+' 저장 방식을 분할 저장으로 전환했습니다');}catch(e){}}
   syncChip();
 }
@@ -33661,7 +33870,7 @@ async function syncPushAll(){
 async function syncPullAll(){if(!fbOn){alert('먼저 연결하세요');return;}
   if(!confirm('팀 저장소의 전체 데이터를 이 PC로 받습니다. 이 PC의 기존 데이터가 덮어써집니다. 계속할까요?'))return;
   try{for(const s of FB_STORES){const rr=await fbReadItems(s);if(rr.exists)await fbApplyStore(s,rr.items);}
-    const kv=await fbDoc('__kv').get();if(kv.exists)fbApplyKv((kv.data()||{}).kv,null,true);
+    const kv=await fbDoc('__kv').get();if(kv.exists)fbApplyKv(await fbKvOf(kv.data()||{}),null,true);
     try{const q=await fbKvqGet();if(Object.keys(q.kv).length)fbApplyKv(q.kv,null,true);}catch(e){}
     toast('팀 데이터 전체 받기 완료');}catch(e){alert('받기 오류: '+e.message);}}
 /* 📋 팀 설정(설정+팀코드) 한 덩어리 복사 / 붙여넣기 — 팀 코드 오타 방지 */
@@ -33842,17 +34051,21 @@ function capU8(s){try{return new TextEncoder().encode(s).length;}catch(e){return
 function capColor(p){return p>=80?'#dc2626':p>=50?'#d97706':'#16a34a';}
 function capBar(p){const w=Math.min(100,Math.max(0,p));return `<div style="background:#e5e7eb;border-radius:6px;height:12px;min-width:140px;overflow:hidden"><div style="width:${w}%;height:100%;background:${capColor(p)}"></div></div>`;}
 let CAP_LAST=null;
+async function capSz(json){   // 팀 저장소에 실제로 올라가는 크기(압축이 이득이면 압축 크기)
+  const raw=capU8(json);if(json.length<FB_Z_MIN)return raw;
+  const z=await fbZ(json);return z&&z.length<raw*0.9?z.length:raw;
+}
 async function capMeasure(){
   const docs=[];
   for(const st of FB_STORES){
     let a=[];try{a=await txAll(st);}catch(e){}
     if(FB_SHARDED[st]){   // 반월 분할 문서별로 측정
       const g={};a.forEach(x=>{const k=fbShardOf(st,x);(g[k]=g[k]||[]).push(x);});
-      let big=null;Object.keys(g).forEach(k=>{const b=Math.round(capU8(JSON.stringify(g[k]))*CAP_FACTOR);if(!big||b>big.bytes)big={k,bytes:b,n:g[k].length};});
+      let big=null;for(const k of Object.keys(g)){const b=Math.round((FB_Z_STORES[st]?await capSz(JSON.stringify(g[k])):capU8(JSON.stringify(g[k])))*CAP_FACTOR);if(!big||b>big.bytes)big={k,bytes:b,n:g[k].length};}
       const un=FB_SHARDED[st]==='m'?'월':'일';
-      if(big)docs.push({k:st,name:(CAP_NAMES[st]||st)+' ('+un+'별 분할 · 최대 '+(big.k.split('__')[1]||'')+', 총 '+Object.keys(g).length+un+'/'+a.length+'건)',n:a.length,bytes:big.bytes,pct:big.bytes/CAP_DOC_LIMIT*100,eta:'분할 저장 — 한도 걱정 없음'});
+      if(big)docs.push({k:st,name:(CAP_NAMES[st]||st)+' ('+un+'별 분할 · 최대 '+(big.k.split('__')[1]||'')+', 총 '+Object.keys(g).length+un+'/'+a.length+'건)',n:a.length,bytes:big.bytes,pct:big.bytes/CAP_DOC_LIMIT*100,eta:'기간별 문서로 나눠 저장 중'});
       continue;}
-    const b=Math.round(capU8(JSON.stringify(a))*CAP_FACTOR);
+    const b=Math.round((FB_Z_STORES[st]?await capSz(JSON.stringify(a)):capU8(JSON.stringify(a)))*CAP_FACTOR);
     let eta='';try{   // 기록일 기준 증가 속도로 문서 1개 한도(1MB) 도달 시점 추정
       const ds=a.map(x=>String((x&&(x.date||x.at||x.start))||'').slice(0,10)).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
       if(ds.length>=20){const yrs=Math.max(0.5,(Date.now()-new Date(ds[0]).getTime())/31557600000),perYr=b/yrs,left=CAP_DOC_LIMIT-b;
@@ -33862,8 +34075,9 @@ async function capMeasure(){
   }
   const kv=fbCollectKv(),kvAll=Object.keys(kv).map(k=>({k,b:capU8(k)+capU8(kv[k])})).sort((a,b)=>b.b-a.b);
   const kvG=fbKvGroups(kv,{}),kvTot=Math.round(kvAll.reduce((a,x)=>a+x.b,0)*CAP_FACTOR);
-  const kvMax=Math.round(Math.max.apply(null,kvG.map(g=>g.b))*CAP_FACTOR);   // 실제 업로드는 문서당 약 700KB 이하로 자동 분할
-  docs.push({k:'__kv',name:'설정·마스터·모식도·견적 품목·원가 등(묶음, 합계 '+(kvTot/1024).toFixed(0)+'KB → '+kvG.length+'개 문서로 자동 분할)',n:kvAll.length,bytes:kvMax,pct:kvMax/CAP_DOC_LIMIT*100,kvTop:kvAll.slice(0,5),eta:'자동 분할 — 문서 1개 한도 걱정 없음'});
+  const kvZ=[];for(const g of kvG)kvZ.push(Math.round((await capSz(JSON.stringify(g.kv)))*CAP_FACTOR));
+  const kvMax=Math.max.apply(null,kvZ),kvZT=kvZ.reduce((a,x)=>a+x,0);
+  docs.push({k:'__kv',name:'설정·마스터·모식도·견적 품목·원가 등(묶음, 원본 '+(kvTot/1024).toFixed(0)+'KB → 압축 후 '+(kvZT/1024).toFixed(0)+'KB, 문서 '+kvG.length+'개)',n:kvAll.length,bytes:kvMax,pct:kvMax/CAP_DOC_LIMIT*100,kvTop:kvAll.slice(0,5),eta:'압축·자동 분할로 관리 중'});
   let lsChars=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);lsChars+=k.length+(localStorage.getItem(k)||'').length;}}catch(e){}
   let est=null,persisted=null;
   try{if(navigator.storage&&navigator.storage.estimate)est=await navigator.storage.estimate();}catch(e){}
@@ -33892,6 +34106,7 @@ async function capRender(toastIt){
       <div style="flex:1;min-width:260px"><b>이 PC 설정 저장(localStorage)</b><div style="margin:4px 0">${capBar(lsPct)}</div>${(lsB/1048576).toFixed(2)}MB 사용 / 약 10MB · <b style="color:${capColor(lsPct)}">${lsPct.toFixed(1)}%</b></div>
       <div style="flex:1;min-width:220px"><b>저장공간 보호</b><div style="margin-top:4px">${per}</div></div>
     </div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6">※ 막대는 <b>문서 1개</b>가 한도(1MB)의 몇 %인지입니다. 크기는 팀 저장소에 올라가는 <b>압축 후</b> 크기입니다. '나눠 저장 중' 항목은 달·날이 바뀌면 새 문서가 생기므로 한 문서가 한도에 닿지 않습니다(막대는 가장 큰 1개 문서 기준).</div>
     <div style="font-size:11px;color:var(--muted);margin-top:6px">※ 크기는 JSON 길이에 안전 계수 ${CAP_FACTOR}를 곱한 추정값입니다. 측정 시각 ${new Date().toLocaleString('ko-KR')}</div>`;
   if(toastIt)toast('저장 용량을 다시 측정했습니다 · 최대 '+mp.toFixed(1)+'%');
 }
