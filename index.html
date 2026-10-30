@@ -2223,6 +2223,8 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <button class="btn primary" onclick="addStockRow('신동내화')">＋ 품목 추가</button>
       <button class="btn primary" onclick="sdPickMaster()" title="내화물 기본정보(품목마스터)에 있는 품목 중 아직 신동 재고표에 없는 품목을 골라 한 번에 추가합니다">＋ 마스터에서 추가</button>
       <button class="btn primary" style="display:none" onclick="saveStockAll('신동내화')" title="칸마다 입력 즉시 자동 저장되지만, 저장 완료를 눈으로 확인하고 싶을 때 누르세요">💾 저장</button>
+      <button class="btn" onclick="document.getElementById('usFile').click()" title="실제 출고 확정수량(매출확정 엑셀, 여러 개 선택 가능)으로 월 평균 사용량을 계산해 확정합니다. 기간(분기·6개월·연간·2년·직접)을 고를 수 있습니다">📊 월사용량 반영</button>
+      <input type="file" id="usFile" accept=".xlsx" multiple style="display:none" onchange="usLoad(this)">
       <button class="btn" onclick="document.getElementById('stkXlsFile').click()" title="신동내화 정기 발주 검토 엑셀(전체 영업소 통합본)을 넣으면 우리 품목만 자동으로 찾아 현재고·기발주·예상사용량을 갱신합니다">📥 신동 엑셀 반영</button>
       <input type="file" id="stkXlsFile" accept=".xlsx" style="display:none" onchange="importStockXlsx(this)">
       <button class="btn" onclick="autoSetStockTarget('신동내화')" title="적정재고는 이제 예상사용량×3개월로 자동 계산됩니다(이 버튼은 한 번에 다시 맞출 때 사용)">📐 적정재고 다시 계산</button>
@@ -2264,6 +2266,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       </select>
       <span class="spacer"></span>
       <button class="btn primary" onclick="addStockRow('베수비우스')">＋ 품목 추가</button>
+      <button class="btn" onclick="document.getElementById('usFile').click()" title="실제 출고 확정수량(매출확정 엑셀)으로 월 평균 사용량을 계산해 확정합니다. 기간(분기·6개월·연간·2년·직접)을 고를 수 있습니다">📊 월사용량 반영</button>
       <button class="btn primary" style="display:none" onclick="saveStockAll('베수비우스')" title="칸마다 입력 즉시 자동 저장되지만, 저장 완료를 눈으로 확인하고 싶을 때 누르세요">💾 저장</button>
       <label class="vs-ctl" title="발주량 검토(검토A·검토B)의 목표 재고 개월수 — 월 사용량 × 이 개월수를 목표 재고로 봅니다">목표재고 <input type="number" id="vs_months" class="selbox" style="width:58px" min="1" max="12" step="0.5" onchange="vsSetMonths(this.value)">개월</label>
       <label class="vs-ctl" title="양식 머리글(창고재고 기준일)과 엑셀에 표시되는 날짜">재고 기준일 <input type="date" id="vs_asof" class="selbox" onchange="vsSetAsOf(this.value)"></label>
@@ -31062,7 +31065,7 @@ function bpV2TodoAlert(why){
   const L=bpV2TodoPending();if(!L.length)return;
   alert('📌 V2 작성 시 수정할 사항이 있습니다'+(why?' ('+why+')':'')+'\n\n'+L.map((x,i)=>(i+1)+'. '+x.t+'\n   '+x.d).join('\n\n')+'\n\n※ 사업계획 화면 상단의 안내 박스에서 확인 완료로 체크할 수 있습니다.');
 }
-const APP_VERSION = "2026.10.29.rpt170";
+const APP_VERSION = "2026.10.30.rpt172";
 
 // 권한 체계 (2026-09-16 업데이트)
 // 현장직(사원~기성): 근태관리만 접근 가능
@@ -31590,6 +31593,124 @@ async function ensureSdTarget(){
   if(n){try{flashSave();}catch(e){}if(document.getElementById('stockBody_sd')){try{renderStock('신동내화');}catch(e){}}}
   return n;
 }
+/* 2026-10-30 (rpt172): 월 사용량 확정 — 실제 출고 확정수량(매출확정 엑셀) ÷ 개월 수 = 월 평균을 예상사용량(월)에 확정으로 반영.
+   · 신동·베수비우스 공통. 확정된 행(expLock)은 [신동 엑셀 반영]이 예상사용량을 덮어쓰지 않음(🔒 표시 클릭 시 해제).
+   · 같은 품명·규격의 배합 구분(ES-1A/ES-1B/TW 등)은 한 품목으로 합산. 'PGT-' 접두어는 무시.
+   · [📊 월사용량 반영] 버튼: 출고 엑셀(여러 개 · 전체 출고 파일 가능)을 고르고 기간(전체·분기·6개월·연간·2년·직접)을 정해 다시 반영.
+   · 첫 실행 시 2026.01~09월 출고(8개 파일)를 1회 자동 반영(US_SEED). */
+const US_SEED={ver:'use-2026-0109',label:'2026.01~09 평균',months:9,data:{"AMC-BS|LW9": 200, "AMC-BS|LW9-5": 200, "AMC-BS|LW95": 2352, "AMC-B|LW250": 1920, "AMC-B|LW280": 6120, "AMC-B|LW300": 7560, "AMC-B|LW300-1/2": 2112, "AMC-FB|LW25-5FS": 200, "AMC-FB|LW251FS": 14400, "AMC-FB|LW25FS": 100, "BT|LW15": 20, "BT|LW15-5": 20, "BT|LW150": 1152, "BT|LW151": 2688, "BT|LW18": 20, "BT|LW18-5": 20, "BT|LW180": 1152, "BT|LW181": 4752, "BT|LW200": 1296, "BT|LW21": 300, "BT|LW21(160H)": 200, "BT|LW21-5": 400, "BT|LW21-5(160H)": 200, "BT|LW210": 1872, "BT|LW210(160H)": 876, "BT|LW211": 43830, "BT|LW211(160H)": 15048, "BT|LW21K": 300, "FM7C|452": 1440, "FM7C|453": 800, "FM7C|604D": 420, "FM7C|K5": 3120, "FM7C|K51/2": 100, "FM7C|K6": 480, "HAU-BS|LW90": 1344, "HAU-BS|LW95": 6048, "MAC-W|LW21": 200, "MAC-W|LW21-5": 500, "MAC-W|LW210": 2448, "MAC-W|LW211": 49968, "MAC-W|LW21K": 300, "TDSLIDEGATE|AR-MTMP": 480, "TDSLIDEGATE|C-52LOWERPLATE(G)": 700, "TDSLIDEGATE|C-52MIDDLEPLATE(AL)": 480, "TDSLIDEGATE|C-52MIDDLEPLATE(Z)": 252, "TDSLIDEGATE|C-52MTNP(Z)": 203, "TDSLIDEGATE|C-52S-TUBE350MM*40T": 272, "TDSLIDEGATE|C-52S-TUBE400MM*40T": 277, "TDSLIDEGATE|C-52S-TUBE420L*40T": 136, "TDSLIDEGATE|C-52SESBLOOM(장)": 252, "TDSLIDEGATE|FUNNELSHROUD": 2, "TDSLIDEGATE|GASKET": 180, "TDSLIDEGATE|SESBEAM100(장)": 494, "TDSLIDEGATE|롱노즐": 710}};
+const US_ALIAS={'TDSLIDEGATE|C-52GASKET':'TDSLIDEGATE|GASKET','TDSLIDEGATE|롱노즐(베스)':'TDSLIDEGATE|롱노즐'};
+function usKey(name,spec){const n=sdNm(name).replace(/\s+/g,'').toUpperCase(),sp=String(spec==null?'':spec).replace(/\s+/g,'').toUpperCase();const k=n+'|'+sp;return US_ALIAS[k]||k;}
+function usAvg(total,months){const v=Math.round((+total||0)/Math.max(1,months));return (+total>0&&v<1)?1:v;}
+function usBadge(r){return r.expLock?`<div onclick="usUnlock('${r.id}')" title="실제 출고 확정수량 기준 월 평균으로 확정된 값입니다(${esc(r.expSrc||'')}). 엑셀 반영 시 덮어쓰지 않습니다. 누르면 확정 해제" style="font-size:10px;color:#15803d;font-weight:700;cursor:pointer;margin-top:2px">🔒 확정(${esc(r.expSrc||'평균')})</div>`:'';}
+async function ensureSdFixedUse(){
+  let n=0;
+  for(const r of stockData){
+    if(!(r.supplier==='신동내화'||r.supplier==='베수비우스'))continue;
+    if(r.expFix&&r.expFix!=='pgtbt-2026-0109')continue;
+    const t=US_SEED.data[usKey(stockName(r),stockSpec(r))];if(t==null)continue;
+    r.expUse=usAvg(t,US_SEED.months);r.expLock=true;r.expFix=US_SEED.ver;r.expSrc=US_SEED.label;
+    if(r.supplier==='신동내화')r.target=sdTarget(r);r.upd=todayStr();
+    try{await putRec('stock',r);}catch(e){}n++;
+  }
+  if(n){try{flashSave();}catch(e){}['신동내화','베수비우스'].forEach(sp=>{if(document.getElementById('stockBody_'+stockSfx(sp))){try{renderStock(sp);}catch(e){}}});}
+  return n;
+}
+async function usUnlock(id){
+  const r=stockData.find(x=>x.id===id);if(!r)return;
+  if(!confirm('이 품목의 월 사용량 확정을 해제할까요?\n해제하면 다음 [신동 엑셀 반영] 때 엑셀 값으로 다시 갱신됩니다.'))return;
+  r.expLock=false;r.upd=todayStr();await putRec('stock',r);flashSave();renderStock(r.supplier);
+}
+/* ---- [📊 월사용량 반영] : 출고 엑셀 → 기간 선택 → 월 평균 확정 ---- */
+const US={rows:[],files:[]};
+function usSerialToYM(v){
+  if(typeof v==='number'&&v>20000){const d=new Date(Math.round((v-25569)*86400000));return d.getUTCFullYear()*12+d.getUTCMonth();}
+  const m=/^(\d{4})[-./](\d{1,2})/.exec(String(v==null?'':v).trim());return m?(+m[1])*12+(+m[2]-1):null;
+}
+function usYMStr(ym){return Math.floor(ym/12)+'-'+String(ym%12+1).padStart(2,'0');}
+function usStrYM(v){const m=/^(\d{4})-(\d{2})/.exec(v||'');return m?(+m[1])*12+(+m[2]-1):null;}
+async function usLoad(input){
+  const fs=[...(input.files||[])];if(!fs.length)return;
+  US.rows=[];US.files=[];let bad=[];
+  for(const f of fs){
+    try{
+      const grid=await xlsxParseFirstSheet(f),h=grid[1]||{};
+      const cN=xlsxFindCol(h,'품명'),cS=xlsxFindCol(h,'규격'),cQ=xlsxFindCol(h,'확정수량'),cD=xlsxFindCol(h,'확정일자');
+      if(cN<0||cS<0||cQ<0||cD<0){bad.push(f.name);continue;}
+      let n=0;
+      for(const k of Object.keys(grid).map(Number).sort((a,b)=>a-b)){
+        if(k<2)continue;const r=grid[k];const nm=r[cN],q=+r[cQ];const ym=usSerialToYM(r[cD]);
+        if(nm==null||String(nm).trim()===''||ym==null||!isFinite(q)||String(r[cS]==null?'':r[cS]).trim()==='')continue;
+        US.rows.push({nm:String(nm).trim(),sp:String(r[cS]).trim(),q,ym});n++;
+      }
+      US.files.push(f.name+' ('+n+'행)');
+    }catch(e){bad.push(f.name);}
+  }
+  input.value='';
+  if(bad.length)alert('읽지 못한 파일: '+bad.join(', ')+'\n매출확정 출고 엑셀(품명·규격·확정수량·확정일자 열)이 맞는지 확인해 주세요.');
+  if(!US.rows.length){toast('반영할 출고 자료가 없습니다');return;}
+  usDialog();
+}
+function usDialog(){
+  const yms=US.rows.map(r=>r.ym),mn=Math.min(...yms),mx=Math.max(...yms);
+  let ov=document.getElementById('usOv');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='usOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;width:min(900px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.3)">
+    <div style="padding:14px 18px 4px;font-weight:800;font-size:16px">📊 월사용량 반영 (실제 출고 확정수량 기준)</div>
+    <div style="padding:0 18px 8px;font-size:12px;color:#64748b">파일 ${US.files.length}개 · 출고 ${US.rows.length}행 · ${usYMStr(mn)} ~ ${usYMStr(mx)} · 재고표(신동·베수비우스)에 있는 품명·규격만 반영하고, 같은 규격의 배합 구분은 합산합니다.</div>
+    <div style="padding:0 18px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px">
+      <b>기간</b><input type="month" id="usS" value="${usYMStr(mn)}" onchange="usRender()"> ~ <input type="month" id="usE" value="${usYMStr(mx)}" onchange="usRender()">
+      <span id="usM" style="font-weight:700;color:#1d4ed8"></span>
+      <span style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn sm" onclick="usPreset(0)">전체</button><button class="btn sm" onclick="usPreset(3)">최근 분기(3개월)</button><button class="btn sm" onclick="usPreset(6)">최근 6개월</button><button class="btn sm" onclick="usPreset(12)">최근 1년</button><button class="btn sm" onclick="usPreset(24)">최근 2년</button></span>
+    </div>
+    <label style="padding:0 18px 8px;font-size:12px;color:#475569"><input type="checkbox" id="usZ" onchange="usRender()"> 해당 기간에 출고가 없는 재고 품목은 0으로 반영(기본: 값 유지)</label>
+    <div id="usBody" style="overflow:auto;padding:0 18px;flex:1;min-height:220px;border-top:1px solid #e5e9ef;border-bottom:1px solid #e5e9ef"></div>
+    <div style="padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center"><span id="usN" style="margin-right:auto;font-size:12px;color:#64748b"></span><button class="btn" onclick="document.getElementById('usOv').remove()">닫기</button><button class="btn primary" onclick="usApply()">월 사용량 확정 반영</button></div></div>`;
+  document.body.appendChild(ov);usRender();
+}
+function usPreset(n){
+  const yms=US.rows.map(r=>r.ym),mn=Math.min(...yms),mx=Math.max(...yms);
+  const e0=usStrYM(document.getElementById('usE').value),e=e0==null?mx:e0,st=n?Math.max(mn,e-n+1):mn;
+  document.getElementById('usS').value=usYMStr(st);document.getElementById('usE').value=usYMStr(e);usRender();
+}
+function usCalc(){
+  const s=usStrYM(document.getElementById('usS').value),e=usStrYM(document.getElementById('usE').value);
+  if(s==null||e==null||e<s)return null;
+  const months=e-s+1,tot={},names={};
+  for(const r of US.rows){const k=usKey(r.nm,r.sp);names[k.split('|')[0]]=1;if(r.ym>=s&&r.ym<=e){tot[k]=(tot[k]||0)+r.q;}}
+  const zero=document.getElementById('usZ').checked;
+  const hit=[],noShip=[],used=new Set();
+  for(const r of stockData){
+    if(!(r.supplier==='신동내화'||r.supplier==='베수비우스'))continue;
+    const k=usKey(stockName(r),stockSpec(r)),nk=k.split('|')[0];
+    if(tot[k]!=null){used.add(k);hit.push({r,t:tot[k],avg:usAvg(tot[k],months)});}
+    else if(names[nk]){noShip.push(r);if(zero)hit.push({r,t:0,avg:0});}
+  }
+  const extra=Object.keys(tot).filter(k=>!used.has(k));
+  const lab=(Math.floor(s/12)===Math.floor(e/12)?usYMStr(s).replace('-','.')+'~'+usYMStr(e).slice(5):usYMStr(s).replace('-','.')+'~'+usYMStr(e).replace('-','.'))+' 평균';
+  return {s,e,months,hit,noShip,extra,tot,label:lab};
+}
+function usRender(){
+  const c=usCalc(),body=document.getElementById('usBody');if(!body)return;
+  if(!c){body.innerHTML='<div style="padding:30px;text-align:center;color:#dc2626">기간을 확인해 주세요(시작월 ≤ 종료월)</div>';document.getElementById('usM').textContent='';return;}
+  document.getElementById('usM').textContent=c.months+'개월 · 월 평균 = 기간 출고 ÷ '+c.months;
+  const rows=c.hit.slice().sort((a,b)=>stockName(a.r).localeCompare(stockName(b.r),'ko')||stockSpec(a.r).localeCompare(stockSpec(b.r),'ko'));
+  body.innerHTML=`<table class="bomtbl" style="width:100%;font-size:12.5px"><thead><tr><th>구분</th><th>품명</th><th>규격</th><th class="n">기간 출고</th><th class="n">월 평균(확정)</th><th class="n">현재 값</th><th class="n">변동</th></tr></thead><tbody>${
+    rows.map(x=>{const cur=+x.r.expUse||0,df=x.avg-cur;return `<tr><td>${x.r.supplier==='베수비우스'?'베스':'신동'}</td><td><b>${esc(stockName(x.r))}</b></td><td>${esc(stockSpec(x.r))}</td><td class="n">${iN(x.t)}</td><td class="n" style="font-weight:800;color:#15803d">${iN(x.avg)}</td><td class="n">${iN(cur)}</td><td class="n" style="color:${df>0?'#dc2626':df<0?'#2563eb':'#94a3b8'}">${df?((df>0?'+':'')+iN(df)):'-'}</td></tr>`;}).join('')||'<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">일치하는 재고 품목이 없습니다</td></tr>'}</tbody></table>
+    ${c.noShip.length?`<div style="font-size:12px;color:#92400e;margin:10px 0;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:8px 10px"><b>기간 내 출고가 없는 재고 품목 ${c.noShip.length}건</b>(${document.getElementById('usZ').checked?'0으로 반영':'값 유지'}): ${c.noShip.map(r=>esc(stockName(r)+' '+stockSpec(r))+' (현재 '+iN(+r.expUse||0)+')').join(' / ')}</div>`:''}
+    ${c.extra.length?`<div style="font-size:12px;color:#475569;margin:10px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px"><b>출고는 있으나 재고표에 없는 품목 ${c.extra.length}건</b>(반영 안 함): ${c.extra.map(k=>esc(k.replace('|',' · '))+' '+iN(c.tot[k])).join(' / ')}</div>`:''}`;
+  document.getElementById('usN').textContent=`반영 대상 ${c.hit.length}건 · 라벨 "${c.label}"`;
+}
+async function usApply(){
+  const c=usCalc();if(!c||!c.hit.length){toast('반영할 품목이 없습니다');return;}
+  let n=0;
+  for(const x of c.hit){const r=x.r;r.expUse=x.avg;r.expLock=true;r.expFix='manual';r.expSrc=c.label;if(r.supplier==='신동내화')r.target=sdTarget(r);r.upd=todayStr();await putRec('stock',r);n++;}
+  const ov=document.getElementById('usOv');if(ov)ov.remove();
+  flashSave();['신동내화','베수비우스'].forEach(sp=>{if(document.getElementById('stockBody_'+stockSfx(sp))){try{renderStock(sp);}catch(e){}}});
+  toast(`월 사용량 ${n}건 확정 반영 (${c.label}) · 신동 적정재고는 ×3개월로 자동 재계산`);
+}
 async function editStock(id,k,v){
   const r=stockData.find(x=>x.id===id);if(!r)return;
   if(k==='target'&&r.supplier==='신동내화')return; /* 자동 계산 */
@@ -31684,6 +31805,7 @@ async function sdPickApply(){
   for(const id of ids){const pm=prodData.find(x=>x.id===id);if(!pm||have.has(id))continue;
     const nr={id:uid(),supplier:'신동내화',prodId:pm.id,name:pm.name,spec:pm.spec||'',mix:pm.mix||'',unit:'EA',target:0,cur:0,onOrder:0,expUse:0,orderQty:0,mill:0,batch:0,mfg:0,vNote:'',note:'',upd:todayStr(),seq:Date.now()+n};
     stockData.unshift(nr);await putRec('stock',nr);n++;}
+  try{await ensureSdFixedUse();}catch(e){}
   const ov=document.getElementById('sdPickOv');if(ov)ov.remove();
   flashSave();renderStock('신동내화');toast(n+'건 추가 · [📥 신동 엑셀 반영]을 누르면 재고·예상사용량이 채워집니다');
 }
@@ -31767,7 +31889,7 @@ function renderStock(sup){
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.cur||0}" oninput="editStock('${r.id}','cur',this.value)"></td>
       <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.onOrder||0}" oninput="editStock('${r.id}','onOrder',this.value)"></td>
       <td class="n" id="stkSec_sd_${r.id}" style="font-weight:600">${iN(sdSecured(r))}</td>
-      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.expUse||0}" oninput="editStock('${r.id}','expUse',this.value)"></td>
+      <td class="n"><input type="number" style="width:100%;text-align:right" value="${r.expUse||0}" oninput="editStock('${r.id}','expUse',this.value)">${usBadge(r)}</td>
       <td class="n" id="stkPct_sd_${r.id}">${sdPctHtml(sdSecured(r),r)}</td>
       <td class="n" id="stkDays_${sfx}_${r.id}" style="color:${stockDaysColor(r)};font-weight:600">${stockDaysLabel(r)}</td>
       <td class="n" id="stkXo_sd_${r.id}" style="background:#fdf6e3;font-weight:600;color:#7c5a1e">${r.xlsOrd==null?'<span style="color:var(--muted);font-weight:400">-</span>':iN(+r.xlsOrd||0)}</td>
@@ -31840,7 +31962,7 @@ function vsRowHtml(r,nameCell,specCell,mixCell){
   return `<tr>
     <td>${nameCell}</td><td>${specCell}</td><td>${mixCell}</td><td>${esc(stockUnit(r))}</td>
     <td class="n">${num('target')}</td>
-    <td class="n vs-use">${num('expUse','font-weight:700')}</td>
+    <td class="n vs-use">${num('expUse','font-weight:700')}${usBadge(r)}</td>
     <td class="n vs-mill">${num('mill')}</td>
     <td class="n">${num('cur')}</td>
     <td class="n vs-ord">${num('onOrder')}</td>
@@ -32223,9 +32345,10 @@ async function importStockXlsx(input){
       stockData.unshift(nr);await putRec('stock',nr);
     }
     for(const [r,s] of plan){
-      r.cur=s.cur;r.onOrder=s.onOrder;r.expUse=s.expUse;if(ordCol>0){r.orderQty=s.ord;r.xlsOrd=s.ord;}r.target=sdTarget(r);r.upd=todayStr();
+      r.cur=s.cur;r.onOrder=s.onOrder;if(!r.expLock)r.expUse=s.expUse;if(ordCol>0){r.orderQty=s.ord;r.xlsOrd=s.ord;}r.target=sdTarget(r);r.upd=todayStr();
       await putRec('stock',r);
     }
+    try{await ensureSdFixedUse();}catch(e){}
     flashSave();renderStock('신동내화');
     toast(`신동 엑셀 반영 완료 · ${upd}건 갱신`+(addPlan.length?` · ${addPlan.length}건 신규 편입`:'')+(mixBad.length?` · 배합 불일치 ${mixBad.length}건`:'')+(missList.length?` · ${missList.length}건 자료 없음`:''));
     if(mixBad.length)alert('배합비가 엑셀과 맞지 않아 값이 유지된 품목 '+mixBad.length+'건입니다.\n내화물 기본정보의 배합을 엑셀 표기에 맞게 고치신 뒤 다시 반영해 주세요.\n\n'+mixBad.slice(0,15).join('\n')+(mixBad.length>15?`\n… 외 ${mixBad.length-15}건`:''));
@@ -32488,7 +32611,7 @@ async function fbReloadStore(store){
   else if(store==='eaf'){eafData=await txAll('eaf');try{eafNormTon();}catch(e){}}
   else if(store==='inv'){invData=await txAll('inv');}
   else if(store==='invin'){invInData=await txAll('invin');}
-  else if(store==='stock'){stockData=await txAll('stock');try{await ensureSdTarget();}catch(e){}}
+  else if(store==='stock'){stockData=await txAll('stock');try{await ensureSdFixedUse();}catch(e){}try{await ensureSdTarget();}catch(e){}}
   else if(store==='emp'){empData=await txAll('emp');
     /* 2026-09-21: Firebase/가져오기로 직원 명부가 (재)적재된 직후에도 서명 일괄반영을 다시 시도.
        최초 접속처럼 로컬이 비어있던 상태에서 로그인 시점의 loadAttend()가 빈 명단에 대해 먼저
@@ -37492,7 +37615,7 @@ function permPreview(){
     try{await autoCleanBareLadleNos();}catch(e){}
     await migrateVendor();try{await migrateBoardAbs();}catch(e){console.warn('migrateBoardAbs',e);}await loadSchedule();await loadBom();await bomSpecReconcile();try{plRestore();plUpdateSoon();}catch(e){}await loadEaf();await loadInv();
     try{invInData=await txAll('invin');}catch(e){invInData=[];}
-    try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();await ensureStockPgtFm7c();try{await ensureSdTarget();}catch(e){}}catch(e){stockData=[];}
+    try{stockData=await txAll('stock');await ensureStockSeed();await ensureVesuviusLinks();await ensureStockPgtFm7c();try{await ensureSdFixedUse();}catch(e){}try{await ensureSdTarget();}catch(e){}}catch(e){stockData=[];}
     await loadAttend();await loadHo();await loadPlanActual();
   }catch(err){document.getElementById('saveTxt').textContent='저장소 사용불가(미리보기)';document.getElementById('saveDot').style.background='#c2410c';}
   refreshLadle();refreshTundish();
