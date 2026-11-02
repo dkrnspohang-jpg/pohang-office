@@ -1600,6 +1600,28 @@
 /* 2026-11-02: 모든 화면 표 머리글(그룹 머리글 포함) 가운데 정렬 — 인라인으로 left를 직접 지정한 칸만 예외 */
 table thead th:not([style*="text-align:left"]):not([style*="text-align: left"]),table tr:not(:has(td))>th:not([style*="text-align:left"]):not([style*="text-align: left"]),table th[colspan]:not([style*="text-align:left"]):not([style*="text-align: left"]),table th[rowspan]:not([style*="text-align:left"]):not([style*="text-align: left"]){text-align:center}
 .xl-on table.bomtbl tr:not(:has(td))>th:not([style*="text-align:left"]):not([style*="text-align: left"]),.xl-on table.bomtbl th[colspan]:not([style*="text-align:left"]):not([style*="text-align: left"]),.xl-on table.bomtbl th[rowspan]:not([style*="text-align:left"]):not([style*="text-align: left"]){text-align:center}
+
+  /* ===== 2026-11-02 업무진행현황 · 엑셀 양식 ===== */
+  .wpx{overflow:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:14px}
+  table.wpxt{border-collapse:collapse;font-size:12px;min-width:1560px;width:100%}
+  table.wpxt th,table.wpxt td{border:1px solid #b4c6d8;padding:3px 5px;vertical-align:top}
+  table.wpxt th{background:#d9e1f2;color:#1f3864;font-weight:800;text-align:center;white-space:nowrap;vertical-align:middle}
+  table.wpxt th.ref{background:#ececec;color:#475569}
+  table.wpxt td.g{background:#f4f7fb;font-weight:700;text-align:center;vertical-align:middle;min-width:64px}
+  table.wpxt td.ttl{min-width:190px;font-weight:700}
+  table.wpxt [contenteditable]{outline:none;white-space:pre-wrap;min-height:16px;border-radius:3px}
+  table.wpxt [contenteditable]:hover{background:#fffbe6}
+  table.wpxt [contenteditable]:focus{background:#fff;box-shadow:0 0 0 2px #93c5fd}
+  table.wpxt td.m{min-width:96px;width:96px;font-size:10.8px;line-height:1.4;cursor:text;position:relative;padding-top:9px}
+  table.wpxt td.m .bar{position:absolute;left:0;right:0;top:0;height:6px;background:#e5e9ef;cursor:pointer}
+  table.wpxt td.m:hover .bar{height:8px}
+  table.wpxt td.m textarea{width:100%;min-height:80px;box-sizing:border-box;font-size:11px;font-family:inherit;border:1px solid #93c5fd;border-radius:4px;padding:3px}
+  table.wpxt td.ref{white-space:nowrap;vertical-align:middle;background:#fafafa}
+  table.wpxt td.ref .iinp{width:104px}
+  table.wpxt td.act{white-space:nowrap;vertical-align:middle;text-align:center}
+  table.wpxt td.act .btn{padding:1px 6px;font-size:11px}
+  .wpx-lg{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:#475569;margin:2px 2px 8px}
+  .wpx-lg i{display:inline-block;width:26px;height:9px;border-radius:2px}
 </style>
 </head>
 <body>
@@ -3186,18 +3208,20 @@ service cloud.firestore {
       <select class="selbox" id="wp_cust" onchange="wpFilterChange()"></select>
       <input class="search" id="wp_q" placeholder="업무명·내용·담당 검색" oninput="wpFilterChange()">
       <button class="btn" onclick="wpAdd()">＋ 업무 추가</button>
-      <button class="btn" onclick="wpExportXls()">📥 엑셀</button>
+      <button class="btn" onclick="wpExportXlsx()" title="원본 엑셀(영업소별 주요업무 진행현황) 양식 그대로 .xlsx — 연도별 시트, 시작·기한·상태는 참고 열">📥 엑셀(.xlsx)</button>
       <button class="btn" onclick="undoOpen()">↶ 되돌리기</button>
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="wp_count"></span>
     </div>
     <div class="costgrid" id="wpCards"></div>
-    <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 8px">※ 원본(26년도 포항영업소 업무진행현황 261001)의 47개 업무를 불러왔습니다. 원본에는 상태·담당·기간 열이 없어 '추정' 표시 항목은 확인 후 상태를 바꿔 저장해 주세요. 월 칸을 누르면 막대·메모 표시가 바뀝니다.</div>
+    <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 8px">※ 원본(26년도 포항영업소 업무진행현황 261001)의 47개 업무를 불러왔습니다. 원본에는 상태·담당·기간 열이 없어 '추정' 표시 항목은 확인 후 상태를 바꿔 저장해 주세요. [엑셀 양식] 탭은 원본 엑셀과 같은 구성이며 이슈·월별 진행내용을 칸에서 바로 수정·추가할 수 있습니다(시작·기한은 오른쪽 참고 열).</div>
     <div class="subtabs" id="wpSubtabs">
-      <button class="subtab active" data-sp="list" onclick="wpTab('list')">📋 업무 목록</button>
+      <button class="subtab active" data-sp="xl" onclick="wpTab('xl')">📑 엑셀 양식</button>
+      <button class="subtab" data-sp="list" onclick="wpTab('list')">📋 업무 목록</button>
       <button class="subtab" data-sp="tl" onclick="wpTab('tl')">🗓️ 월별 타임테이블</button>
       <button class="subtab" data-sp="series" onclick="wpTab('series')">🔗 연속성·변경이력</button>
     </div>
-    <div class="subpanel active" id="wsp-list"><div class="tablewrap"><table class="bomtbl" style="min-width:1180px">
+    <div class="subpanel active" id="wsp-xl"><div id="wpXlBox"></div></div>
+    <div class="subpanel" id="wsp-list"><div class="tablewrap"><table class="bomtbl" style="min-width:1180px">
       <thead><tr><th>No</th><th>거래처</th><th>주요 이슈사항</th><th>담당</th><th>시작</th><th>기한</th><th>상태</th><th class="n">진척</th><th>1~12월</th><th>최근 진행내용</th><th>관리</th></tr></thead><tbody id="wpBody"></tbody></table></div></div>
     <div class="subpanel" id="wsp-tl"><div class="tablewrap"><table class="bomtbl" id="wpTlTbl" style="min-width:980px"></table></div><div id="wpTt"></div></div>
     <div class="subpanel" id="wsp-series"><div style="font-weight:800;font-size:13px;margin:4px 0 6px">연속 업무 (연도별 상태)</div><div class="tablewrap" id="wpSeries"></div><div style="font-weight:800;font-size:13px;margin:14px 0 6px">변경 이력 (상태·기한·담당·진척)</div><div class="tablewrap" id="wpHist"></div></div>
@@ -10628,7 +10652,7 @@ function downloadXls(name,tableHtml){
 function qxBook(){
   const fonts=['<font><sz val="11"/><name val="맑은 고딕"/></font>'],fills=['<fill><patternFill patternType="none"/></fill>','<fill><patternFill patternType="gray125"/></fill>'],
     borders=['<border><left/><right/><top/><bottom/><diagonal/></border>'],xfs=['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'],cache={},sheets=[];
-  const NF={int:3,d2:2,pct:164,d1:165,acct:166,md:167};
+  const NF={int:3,d2:2,pct:164,d1:165,acct:166,md:167,p0:9};
   const idx=(a,x)=>{let i=a.indexOf(x);if(i<0){a.push(x);i=a.length-1;}return i;};
   const argb=h=>'FF'+String(h).replace('#','').toUpperCase();
   const ST=o=>{o=o||{};const k=JSON.stringify(o);if(cache[k]!==undefined)return cache[k];
@@ -28417,7 +28441,7 @@ function wpLoad(){try{const s=JSON.parse(localStorage.getItem('dgrns_workprog')|
 let wpS=wpLoad();
 let wpHist=(()=>{try{return JSON.parse(localStorage.getItem('dgrns_workprog_hist')||'[]');}catch(e){return [];}})();
 let wpUi=(()=>{try{return JSON.parse(localStorage.getItem('dgrns_workprog_ui')||'{}');}catch(e){return {};}})();
-let wpSub='list';
+let wpSub='xl';
 function wpSave(){try{localStorage.setItem('dgrns_workprog',JSON.stringify(wpS));}catch(e){}flashSave();}
 function wpSaveHist(){if(wpHist.length>300)wpHist=wpHist.slice(-300);try{localStorage.setItem('dgrns_workprog_hist',JSON.stringify(wpHist));}catch(e){}}
 function wpSaveUi(){try{localStorage.setItem('dgrns_workprog_ui',JSON.stringify(wpUi));}catch(e){}}
@@ -28493,7 +28517,7 @@ function wpTab(sp){
 function wpRender(){
   if(!document.getElementById('wp_year'))return;
   wpCards();
-  if(wpSub==='list')wpRenderList();else if(wpSub==='tl')wpRenderTimeline();else wpRenderSeries();
+  if(wpSub==='xl')wpRenderXl();else if(wpSub==='list')wpRenderList();else if(wpSub==='tl')wpRenderTimeline();else wpRenderSeries();
 }
 function wpCards(){
   const all=wpItems().filter(x=>(wpUi.year||'2026')==='all'||String(x.year)===String(wpUi.year||'2026'));
@@ -28574,6 +28598,175 @@ function wpOpenDetail(id){
   ov.classList.add('show');
 }
 function wpDetailClose(){const ov=document.getElementById('wpOverlay');if(ov)ov.classList.remove('show');wpRender();}
+
+/* ===== 2026-11-02: 업무진행현황 — 원본 엑셀(영업소/거래처/주요 이슈사항/1~12월 진행) 양식 화면 + .xlsx 내려받기 =====
+   · 시작·기한·상태는 오른쪽 '참고' 열 (원본 엑셀에는 없는 항목)
+   · 이슈 제목·거래처·구분·월별 진행내용을 칸에서 바로 수정 · ＋로 아래에 이슈 추가 · ▲▼ 순서 이동 */
+let wpXlFocus=null;
+const WP_TINT={'진행중':'#cfe0fb','완료':'#cdeed8','보류':'#fde0cc','중단':'#f9d0d0','예정':'#e2e8f0'};
+function wpMonthMap(it){
+  const o={};let cur=null;
+  (it.detail||'').split('\n').forEach(l=>{const m=/^\[(\d{4})-(\d{2})\]\s*-?\s*(.*)$/.exec(l);
+    if(m){cur=(+m[1]===+it.year)?+m[2]:null;if(cur&&m[3].trim())(o[cur]=o[cur]||[]).push(m[3].trim());}
+    else if(cur&&l.trim())(o[cur]=o[cur]||[]).push(l.trim());});
+  return o;
+}
+function wpSetMonthText(id,mo,text){
+  const it=wpGet(id);if(!it)return;
+  const ym=it.year+'-'+String(mo).padStart(2,'0'),ents=[];let cur='';
+  (it.detail||'').split('\n').forEach(l=>{const m=/^\[(\d{4}-\d{2})\]\s*-?\s*(.*)$/.exec(l);if(m){cur=m[1];ents.push({ym:cur,t:m[2]});}else if(l.trim())ents.push({ym:cur,t:l.trim()});});
+  const keep=ents.filter(e=>e.ym!==ym);
+  const add=String(text||'').split('\n').map(s=>s.replace(/^\s*[-•]\s*/,'').trim()).filter(Boolean).map(t=>({ym:ym,t:t}));
+  let pos=0;keep.forEach((e,i)=>{if(e.ym&&e.ym<=ym)pos=i+1;});
+  keep.splice(pos,0,...add);
+  const detail=keep.map(e=>e.ym?'['+e.ym+'] - '+e.t:e.t).join('\n');
+  const mm=(it.mm||'000000000000').split(''),k=mm[mo-1]||'0',has=add.length>0;
+  mm[mo-1]=has?((k==='1'||k==='3')?'3':'2'):(k==='3'?'1':k==='2'?'0':k);
+  wpS.rows[id]=Object.assign(wpS.rows[id]||{id:id},{detail:detail,mm:mm.join('')});
+  wpHistPush(id,'진행내용',(it.detail||'').split('\n').filter(l=>l.indexOf('['+ym+']')===0).join(' / '),add.map(e=>e.t).join(' / '),'');
+  wpSave();wpRender();
+}
+function wpxBar(id,i){
+  const it=wpGet(id);if(!it)return;const a=(it.mm||'000000000000').split('');
+  a[i]={'0':'1','1':'0','2':'3','3':'2'}[a[i]||'0'];wpEdit(id,'mm',a.join(''));
+}
+function wpxCell(td){
+  if(td.querySelector('textarea'))return;
+  const id=td.dataset.id,mo=+td.dataset.m,it=wpGet(id);if(!it)return;
+  const cur=(wpMonthMap(it)[mo]||[]).map(s=>'- '+s).join('\n');
+  const t=td.querySelector('.t');t.innerHTML='';
+  const ta=document.createElement('textarea');ta.value=cur;ta.placeholder='- 진행 내용 (한 줄에 한 항목)';t.appendChild(ta);
+  ta.focus();ta.onclick=e=>e.stopPropagation();
+  let done=false;const fin=()=>{if(done)return;done=true;if(ta.value.trim()!==cur.trim())wpSetMonthText(id,mo,ta.value);else wpRender();};
+  ta.onblur=fin;ta.onkeydown=e=>{if(e.key==='Escape'){done=true;wpRender();}else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();ta.blur();}};
+}
+function wpxTitle(el,id){const v=el.innerText.replace(/\s+$/,'').trim();if(!v){wpRender();return;}wpEdit(id,'title',v);}
+function wpxGrp(el,field){
+  const ids=(el.dataset.ids||'').split(',').filter(Boolean),v=el.innerText.trim(),old=el.dataset.old||'';
+  if(v===old)return;
+  ids.forEach(id=>{wpS.rows[id]=Object.assign(wpS.rows[id]||{id:id},{[field]:v});});
+  wpSave();wpRender();
+}
+function wpRenumber(year){
+  const L=wpItems().filter(x=>+x.year===+year).sort((a,b)=>a.no-b.no);
+  L.forEach((x,i)=>{if(x.no!==i+1)wpS.rows[x.id]=Object.assign(wpS.rows[x.id]||{id:x.id},{no:i+1});});
+}
+function wpxAdd(id){   // 이 행 바로 아래에 같은 거래처·구분의 이슈 추가
+  const it=wpGet(id);if(!it)return;
+  const nid='wpu-'+uid();
+  wpS.rows[nid]={id:nid,year:it.year,no:it.no+0.5,office:it.office,customer:it.customer,category:it.category||'',title:'새 이슈',detail:'',start:it.start||'',due:'',status:'진행중',mm:'000000000000',owner:'',progress:null,note:'',confirmed:true,seed:false};
+  wpRenumber(it.year);wpHistPush(nid,'추가','','새 이슈','');wpXlFocus=nid;wpSave();wpRender();
+}
+function wpxAddCust(year){
+  const nm=(prompt('추가할 거래처명을 입력하세요 (예: 포스코, 동국포항)')||'').trim();if(!nm)return;
+  const L=wpItems().filter(x=>+x.year===+year),mx=Math.max.apply(null,[0].concat(L.map(x=>x.no))),nid='wpu-'+uid();
+  wpS.rows[nid]={id:nid,year:+year,no:mx+1,office:(L[0]&&L[0].office)||'포항사업소',customer:nm,category:'',title:'새 이슈',detail:'',start:'',due:'',status:'진행중',mm:'000000000000',owner:'',progress:null,note:'',confirmed:true,seed:false};
+  wpHistPush(nid,'추가','','새 이슈','');wpXlFocus=nid;wpSave();wpRender();
+}
+function wpxMove(id,d){
+  const it=wpGet(id);if(!it)return;
+  const L=wpItems().filter(x=>+x.year===+it.year).sort((a,b)=>a.no-b.no),i=L.findIndex(x=>x.id===id),j=i+d;
+  if(j<0||j>=L.length)return;
+  const a=L[i],b=L[j];
+  wpS.rows[a.id]=Object.assign(wpS.rows[a.id]||{id:a.id},{no:b.no});wpS.rows[b.id]=Object.assign(wpS.rows[b.id]||{id:b.id},{no:a.no});
+  wpSave();wpRender();
+}
+function wpRenderXl(){
+  const box=document.getElementById('wpXlBox');if(!box)return;
+  const L=wpFiltered();
+  if(!L.length){box.innerHTML='<div class="empty">조건에 맞는 업무가 없습니다.</div>';return;}
+  const years=[...new Set(L.map(x=>+x.year))].sort((a,b)=>b-a);
+  let h='<div class="wpx-lg"><b>보는 법</b><span>이슈 제목·거래처·구분은 글자를 눌러 바로 수정 · 월 칸을 누르면 진행내용 입력(Ctrl+Enter 저장) · 칸 윗줄(막대)을 누르면 진행 기간 표시 ON/OFF</span><span style="display:inline-flex;gap:4px;align-items:center">막대 색 = 상태</span>'
+    +Object.keys(WP_ST).map(s=>`<span style="display:inline-flex;gap:3px;align-items:center"><i style="background:${WP_ST[s].c}"></i>${s}</span>`).join('')+'</div>';
+  years.forEach(y=>{
+    const rows=L.filter(x=>+x.year===y).sort((a,b)=>a.no-b.no),yy=String(y).slice(2);
+    const office=(rows[0]&&rows[0].office)||'포항사업소';
+    let t=`<table class="wpxt"><thead><tr><th rowspan="2">영업소</th><th rowspan="2">거래처</th><th rowspan="2" colspan="2">주요 이슈사항</th><th colspan="12">진행사항(${yy}년)</th><th colspan="3" class="ref">참고 (시작·기한·상태)</th><th rowspan="2" class="ref">관리</th></tr><tr>${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th class="ref">시작</th><th class="ref">기한</th><th class="ref">상태</th></tr></thead><tbody>`;
+    // 병합 그룹 계산
+    const n=rows.length,custSpan=Array(n).fill(0),catSpan=Array(n).fill(0);
+    for(let i=0;i<n;){let j=i;while(j+1<n&&rows[j+1].customer===rows[i].customer)j++;custSpan[i]=j-i+1;
+      for(let a=i;a<=j;){let b=a;const cg=rows[a].category||'';if(cg){while(b+1<=j&&(rows[b+1].category||'')===cg)b++;}catSpan[a]=b-a+1;a=b+1;}
+      i=j+1;}
+    rows.forEach((it,i)=>{
+      const st=WP_ST[it.status]||WP_ST['예정'],mp=wpMonthMap(it),over=wpMonthOver(it);
+      let tr=`<tr>`;
+      if(i===0)tr+=`<td class="g" rowspan="${n}"><div contenteditable="true" data-old="${esc(office)}" data-ids="${rows.map(r=>r.id).join(',')}" onblur="wpxGrp(this,'office')">${esc(office)}</div></td>`;
+      if(custSpan[i]){const ids=rows.slice(i,i+custSpan[i]).map(r=>r.id).join(',');
+        tr+=`<td class="g" rowspan="${custSpan[i]}"><div contenteditable="true" data-old="${esc(it.customer||'')}" data-ids="${ids}" onblur="wpxGrp(this,'customer')">${esc(it.customer||'')}</div></td>`;}
+      if(it.category){
+        if(catSpan[i]){const ids=rows.slice(i,i+catSpan[i]).map(r=>r.id).join(',');
+          tr+=`<td class="g" rowspan="${catSpan[i]}"><div contenteditable="true" data-old="${esc(it.category)}" data-ids="${ids}" onblur="wpxGrp(this,'category')">${esc(it.category)}</div></td>`;}
+        tr+=`<td class="ttl"><div contenteditable="true" onblur="wpxTitle(this,'${it.id}')" id="wpxT_${it.id}">${esc(it.title)}</div>${(it.seed&&!it.confirmed)?' <span title="상태·기간은 원본 문구로 추정한 값입니다" style="font-size:9.5px;color:#b45309;background:#fef3c7;border-radius:3px;padding:0 4px">추정</span>':''}</td>`;
+      }else{
+        tr+=`<td class="ttl" colspan="2"><div contenteditable="true" onblur="wpxTitle(this,'${it.id}')" id="wpxT_${it.id}">${esc(it.title)}</div>${(it.seed&&!it.confirmed)?' <span title="상태·기간은 원본 문구로 추정한 값입니다" style="font-size:9.5px;color:#b45309;background:#fef3c7;border-radius:3px;padding:0 4px">추정</span>':''}</td>`;
+      }
+      for(let m=1;m<=12;m++){
+        const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3',note=k==='2'||k==='3',lines=mp[m]||[];
+        const body=lines.length?lines.map(s=>'- '+esc(s)).join('<br>'):(note?`<span style="color:${st.c}">●</span>`:'');
+        tr+=`<td class="m" data-id="${it.id}" data-m="${m}" onclick="wpxCell(this)" style="${bar?'background:'+(WP_TINT[it.status]||'#e2e8f0'):''}"><div class="bar" onclick="event.stopPropagation();wpxBar('${it.id}',${m-1})" title="${m}월 진행 기간 표시 켜기/끄기" style="${bar?'background:'+st.c:''}"></div><div class="t">${body}</div></td>`;
+      }
+      tr+=`<td class="ref"><input type="month" class="iinp" value="${esc(it.start||'')}" onchange="wpEdit('${it.id}','start',this.value)"></td>`
+        +`<td class="ref"><input type="month" class="iinp" style="${over?'border-color:#dc2626':''}" value="${esc(it.due||'')}" onchange="wpEdit('${it.id}','due',this.value)"></td>`
+        +`<td class="ref"><select class="selbox" style="color:${st.c};background:${st.bg};font-weight:700;min-width:70px" onchange="wpEdit('${it.id}','status',this.value)">${Object.keys(WP_ST).map(s=>`<option${s===it.status?' selected':''}>${s}</option>`).join('')}</select></td>`
+        +`<td class="act"><button class="btn" title="위로" onclick="wpxMove('${it.id}',-1)">▲</button><button class="btn" title="아래로" onclick="wpxMove('${it.id}',1)">▼</button><button class="btn" title="이 아래에 이슈 추가" onclick="wpxAdd('${it.id}')">＋</button><button class="btn" title="상세·삭제" onclick="wpOpenDetail('${it.id}')">상세</button></td></tr>`;
+      t+=tr;
+    });
+    t+='</tbody></table>';
+    h+=`<div style="font-weight:800;font-size:13px;margin:6px 2px">■ 영업소별 주요업무 진행현황 (${y}년) <button class="btn sm" style="margin-left:8px" onclick="wpxAddCust(${y})">＋ 거래처·이슈 추가</button></div><div class="wpx">${t}</div>`;
+  });
+  h+='<div style="font-size:11px;color:var(--muted);margin:0 2px 8px">* 개선업무 or 신규업무의 연속성을 보기 위함(월 실적 자료 작성시 최신업데이트必) · 시작·기한·상태는 원본 엑셀에 없는 참고 항목입니다. 변경은 입력 즉시 저장됩니다.</div>';
+  box.innerHTML=h;
+  if(wpXlFocus){const e=document.getElementById('wpxT_'+wpXlFocus);wpXlFocus=null;if(e){e.focus();try{const r=document.createRange();r.selectNodeContents(e);const s=getSelection();s.removeAllRanges();s.addRange(r);}catch(x){}}}
+}
+/* ---- 엑셀(.xlsx): 원본 양식 (영업소·거래처·구분·주요 이슈사항·1~12월 진행) + 참고 열(시작·기한·상태·진척) ---- */
+function wpXlsSheet(bk,y,rows){
+  const cw=14.5,W=[10,11,11,34].concat(Array(12).fill(cw)).concat([9,9,8,8]);
+  const S=bk.sheet(y+'년',{cols:W,land:true,fitH:1}),yy=String(y).slice(2);
+  const hs={b:1,sz:10,fill:'#d9e1f2',color:'#1f3864',bd:'a',h:'center',v:'center',wrap:true},hr={b:1,sz:10,fill:'#ececec',color:'#475569',bd:'a',h:'center',v:'center'};
+  const P=(r,c,v,o,r2,c2)=>{S.put(r,c,v,o);if((r2&&r2>r)||(c2&&c2>c))S.merge(r,c,r2||r,c2||c,o);};
+  P(1,1,`■ 영업소별 주요업무 진행현황 (${y}년) — 기준 ${todayStr()}`,{b:1,sz:13,h:'left'},1,12);S.height(1,22);
+  P(3,1,'영업소',hs,4,1);P(3,2,'거래처',hs,4,2);P(3,3,'주요 이슈사항',hs,4,4);P(3,5,`진행사항(${yy}년)`,hs,3,16);P(3,17,'참고 (시작·기한·상태)',hr,3,20);
+  for(let m=1;m<=12;m++)S.put(4,4+m,m+'월',hs);
+  [['시작',17],['기한',18],['상태',19],['진척(%)',20]].forEach(a=>S.put(4,a[1],a[0],hr));
+  const n=rows.length;let r=5;const R0=5;
+  const ctr={sz:10,b:1,bd:'a',h:'center',v:'center',wrap:true,fill:'#f4f7fb'};
+  // 그룹 병합 범위 계산
+  const custSpan=Array(n).fill(0),catSpan=Array(n).fill(0);
+  for(let i=0;i<n;){let j=i;while(j+1<n&&rows[j+1].customer===rows[i].customer)j++;custSpan[i]=j-i+1;
+    for(let a=i;a<=j;){let b=a;const cg=rows[a].category||'';if(cg){while(b+1<=j&&(rows[b+1].category||'')===cg)b++;}catSpan[a]=b-a+1;a=b+1;}
+    i=j+1;}
+  rows.forEach((it,i)=>{
+    const st=WP_ST[it.status]||WP_ST['예정'],mp=wpMonthMap(it);
+    let lines=qxTextH(it.title,it.category?34:45);
+    for(let m=1;m<=12;m++){const t=(mp[m]||[]).map(s=>'- '+s).join('\n');lines=Math.max(lines,qxTextH(t,cw));}
+    S.height(r,Math.max(34,lines*12+6));
+    if(i===0)P(R0,1,it.office||'포항사업소',ctr,R0+n-1,1);
+    if(custSpan[i])P(r,2,it.customer||'',ctr,r+custSpan[i]-1,2);
+    const tt={sz:10,b:1,bd:'a',h:'left',v:'center',wrap:true};
+    if(it.category){
+      if(catSpan[i])P(r,3,it.category,ctr,r+catSpan[i]-1,3);
+      S.put(r,4,it.title||'',tt);
+    }else{P(r,3,it.title||'',tt,r,4);}
+    for(let m=1;m<=12;m++){
+      const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3',note=k==='2'||k==='3',ls=mp[m]||[];
+      const txt=ls.length?ls.map(s=>'- '+s).join('\n'):(note?'●':'');
+      S.put(r,4+m,txt,{sz:9,bd:'a',h:ls.length?'left':'center',v:ls.length?'top':'center',wrap:true,fill:bar?(WP_TINT[it.status]||'#e2e8f0'):undefined,color:note&&!ls.length?st.c:'#1e293b'});
+    }
+    const rf={sz:10,bd:'a',h:'center',v:'center'};
+    S.put(r,17,it.start||'',rf);S.put(r,18,it.due||'',rf);
+    S.put(r,19,it.status||'',{sz:10,b:1,bd:'a',h:'center',v:'center',fill:st.bg,color:st.c});
+    S.put(r,20,it.progress==null?'':+it.progress,rf);
+    r++;
+  });
+  r++;S.put(r,1,'* 개선업무 or 신규업무의 연속성을 보기 위함(월 실적 자료 작성시 최신업데이트必)',{sz:9,h:'left'});
+  r++;S.put(r,1,'* 월 칸의 색(막대) = 진행 기간, 색상은 상태(진행중 파랑·완료 초록·보류 주황·중단 빨강·예정 회색). 시작·기한·상태·진척은 참고 열입니다.',{sz:9,h:'left'});
+}
+async function wpExportXlsx(){
+  const L=wpFiltered();if(!L.length){toast('내보낼 업무가 없습니다');return;}
+  const bk=qxBook(),years=[...new Set(L.map(x=>+x.year))].sort((a,b)=>b-a);
+  years.forEach(y=>wpXlsSheet(bk,y,L.filter(x=>+x.year===y).sort((a,b)=>a.no-b.no)));
+  await qxSave(bk,'업무진행현황_'+(wpUi.year==='all'?'전체':(wpUi.year||'2026'))+'_'+todayStr().replace(/-/g,''));
+}
 function wpExportXls(){
   const L=wpFiltered();const cur=wpUi.year==='all'?'전체':(wpUi.year||'2026');
   let t=`<table><tr><th colspan="20">■ 영업소별 주요업무 진행현황 (${cur}) — 기준 ${todayStr()}</th></tr><tr><th>연도</th><th>영업소</th><th>거래처</th><th>구분</th><th>주요 이슈사항</th><th>담당</th><th>시작</th><th>기한</th><th>상태</th><th>진척(%)</th>${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th>최근 진행내용</th></tr>`;
@@ -32071,11 +32264,86 @@ function spRojTimeline(y){
     if(P&&P.roj>0.05)pl.push(m);if(A&&A.roj>0)ac.push(m);}
   return {pl,ac};
 }
+/* ===== 2026-11-02: 포스코(기존·신규)·시중 COMMENT 자동 작성 (제강 외 영역) =====
+   · 실적(당월·누적): 사업계획 vs 전산 실적 — 포스코는 품목(품목군)별, 시중은 거래처별 증감 상위 항목을 근거로 제시
+   · 예상(차월): 사업계획 vs 예상 입력(업체별/합계) — 입력이 없으면 사업계획 수준임을 밝히고 최근 3개월 실적 추세를 함께 제시 */
+const VC_NAME={po1:'포스코(기존)',po2:'포스코(신규)',rt:'시중'};
+function vcNorm(s){return String(s||'').replace(/\(주\)|㈜|주식회사|\s+/g,'').trim();}
+function vcItemKey(s){return String(s||'').replace(/\(.*?\)/g,'').replace(/\s+/g,'').replace(/D$/i,'').toUpperCase();}
+function vcSum(ms,y,fn){let a=0,w=0;ms.forEach(m=>{const v=fn(y,m)||{};a+=+v.a||0;w+=+v.w||0;});return {a:a,w:w};}
+function vcGroups(y,months,k){   // 포스코: 품목군(cat)별 / 시중: 거래처별 — 계획(사업계획 시드) ↔ 실적(전산 거래처·품목)
+  const seed=spVendSeed(k),vn=k==='po1'?'포스코(기존)':k==='po2'?'포스코퓨처엠':null,byV=(k==='rt'),G={};
+  const g=(key,name)=>G[key]||(G[key]={name:name,pa:0,pw:0,aa:0,aw:0});
+  months.forEach(m=>{
+    seed.forEach((it,i)=>{if(it.del||(vn&&it.vendor!==vn))return;let mo;try{mo=bizplanExtMo(seed,i,m-1,String(y));}catch(e){return;}
+      if(!mo||!(mo.a||mo.w))return;const nm=byV?it.vendor:it.cat,o=g(byV?vcNorm(nm):vcItemKey(nm),nm);o.pa+=(mo.a||0)/1e6;o.pw+=(mo.w||0)/1000;});
+    (ERP.d[spYm(y,m)]||[]).forEach(r=>{if(erpCat(r)!==k)return;
+      const nm=byV?String(r[0]||'').replace(/\(주\)|㈜|주식회사/g,'').trim():String(r[3]||'').replace(/D$/,'').trim();
+      const o=g(byV?vcNorm(r[0]):vcItemKey(r[3]),nm);o.aa+=(+r[6]||0)/1e6;o.aw+=(+r[5]||0)/1000;});
+  });
+  return Object.values(G).map(o=>Object.assign(o,{d:o.aa-o.pa,dw:o.aw-o.pw}));
+}
+function vcDrv(G,up,unit){   // 주요 증가·감소 항목 문구
+  const tag=o=>o.pa<=0.05&&o.aa>0.05?'(계획 외)':(o.pa>0.05&&o.aa<=0.05?'(미출고)':'');
+  const f=(arr)=>arr.map(o=>`${o.name}${tag(o)} ${mcS1(o.d)}백만원`).join('·');
+  const same=G.filter(o=>up?o.d>=0.5:o.d<=-0.5).sort((a,b)=>up?b.d-a.d:a.d-b.d).slice(0,3);
+  const opp=G.filter(o=>up?o.d<=-0.5:o.d>=0.5).sort((a,b)=>up?a.d-b.d:b.d-a.d).slice(0,1);
+  if(!same.length&&!opp.length)return '';
+  return ` — ${same.length?'주요 '+(up?'증가':'감소')+': '+f(same):''}${opp.length?(same.length?' (반면 ':' (')+f(opp)+')':''}`;
+}
+function vcLines(p,ms){   // 실적 COMMENT용 — {inc:[],dec:[]}
+  const out={inc:[],dec:[],note:''},y=p.y;
+  const hasAct=m=>!!ERP.d[spYm(y,m)]||['po1','po2','rt'].some(k=>{try{return spAct(y,m,k).a>0;}catch(e){return false;}});
+  const msV=ms.filter(hasAct);if(!msV.length)return out;
+  const msE=msV.filter(m=>ERP.d[spYm(y,m)]);
+  ['po1','po2','rt'].forEach(k=>{
+    const pl=vcSum(msV,y,(yy,m)=>spPlan(yy,m,k)),ac=vcSum(msV,y,(yy,m)=>spAct(yy,m,k));
+    const da=ac.a-pl.a,dw=ac.w-pl.w;if(!(pl.a>0.05||ac.a>0.05))return;
+    if(Math.abs(da)<0.5&&Math.abs(dw)<0.5)return;
+    const up=Math.abs(da)>=0.5?da>0:dw>0,rate=pl.a>0?ac.a/pl.a*100:null;
+    const G=msE.length?vcGroups(y,msE,k):[];
+    const vc=k==='rt'?'거래처':'품목';
+    const t=`- ${VC_NAME[k]} 판매 ${mcN1(ac.a)}백만원·${mcN1(ac.w)}톤 (사업계획 ${mcN1(pl.a)}백만원 대비 ${mcS1(da)}백만원·${mcS1(dw)}톤${rate!=null?' · 달성율 '+mcN(rate,1)+'%':''}) ${up?'증가':'감소'}${vcDrv(G,up)}`;
+    (up?out.inc:out.dec).push(t);
+  });
+  if(msE.length&&msE.length<msV.length)out.note=`- ※ 포스코·시중 품목·거래처별 내역은 전산 실적이 집계된 ${msE.join('·')}월 기준`;
+  return out;
+}
+function vcRecentAvg(y,m0,k){   // 직전 3개월 월평균 실적(백만원) — 실적이 있는 달만
+  let s=0,n=0,yy=y,mm=m0;
+  for(let i=0;i<3;i++){mm--;if(mm<1){mm=12;yy--;}let v=null;try{v=spAct(yy,mm,k);}catch(e){}if(v&&v.a>0&&(ERP.d[spYm(yy,mm)]||spRecGet(spYm(yy,mm)))){s+=v.a;n++;}}
+  return n?{a:s/n,n:n}:null;
+}
+function vcFcLines(q){   // 예상 COMMENT용 — {inc:[],dec:[],flat:[]}
+  const out={inc:[],dec:[],flat:[]},ms=spMonths(q),y=q.y,has=v=>v!=null&&v!=='';
+  ['po1','po2','rt'].forEach(k=>{
+    const pl=vcSum(ms,y,(yy,m)=>spPlan(yy,m,k)),fc=vcSum(ms,y,(yy,m)=>spFc(yy,m,k));
+    if(!(pl.a>0.05||fc.a>0.05))return;
+    const srcs=[...new Set(ms.map(m=>spFc(y,m,k).src))],isPlan=srcs.length===1&&srcs[0]==='사업계획';
+    const da=fc.a-pl.a,dw=fc.w-pl.w,rc=vcRecentAvg(y,Math.min.apply(null,ms),k),pm=pl.a/ms.length;
+    const trend=rc?` · 최근 ${rc.n}개월 월평균 실적 ${mcN1(rc.a)}백만원(월 계획 ${mcN1(pm)}백만원 대비 ${pm>0?mcS(rc.a/pm*100-100,0)+'%':'-'})`:'';
+    if(Math.abs(da)<0.5&&Math.abs(dw)<0.5){
+      out.flat.push(`- ${VC_NAME[k]} 예상 ${mcN1(fc.a)}백만원·${mcN1(fc.w)}톤 — ${isPlan?'별도 예상 입력이 없어 사업계획 수준 적용':'사업계획 수준'}${trend}`);return;
+    }
+    const up=Math.abs(da)>=0.5?da>0:dw>0;
+    // 거래처별 입력(시중·포스코 업체별)이 있으면 증감 상위 거래처 제시
+    let drv='';
+    try{const rows=[];spVendList(k).forEach(v=>{let pa=0,fa=0;ms.forEach(m=>{const r=spRecGet(spYm(y,m)),vd=r&&r.fc&&r.fc.vend&&r.fc.vend[k],e=(vd&&vd[v])||{},p=spVendPlan(y,m,k,v);pa+=p.a;fa+=has(e.a)?+e.a:p.a;});rows.push({name:v,pa:pa,aa:fa,d:fa-pa});});
+      drv=vcDrv(rows.filter(o=>Math.abs(o.d)>=0.5),up);}catch(e){}
+    const how=isPlan?'':srcs.join('/');
+    const t=`- ${VC_NAME[k]} 예상 ${mcN1(fc.a)}백만원·${mcN1(fc.w)}톤 (사업계획 ${mcN1(pl.a)}백만원 대비 ${mcS1(da)}백만원·${mcS1(dw)}톤${how?' · '+how:''}) ${up?'증가':'감소'}${drv}${trend}`;
+    (up?out.inc:out.dec).push(t);
+  });
+  return out;
+}
 function spAutoCmText(p,blk){
   const ms=blk==='cum'?Array.from({length:Math.max.apply(null,spMonths(p))},(_,i)=>i+1):spMonths(p);
   const lab=blk==='cum'?(p.y+'년 1~'+Math.max.apply(null,ms)+'월 누적'):spLabel(p,true);
-  const R=spItemCmpRows(p.y,ms,blk==='cum');
-  if(!R.length)return null;
+  const R=spItemCmpRows(p.y,ms,blk==='cum'),V=vcLines(p,ms);
+  if(!R.length){   // 제강 품목 입고 실적이 없어도 포스코·시중 내용은 작성
+    if(!V.inc.length&&!V.dec.length)return null;
+    return {prod:'',inc:(V.inc.length?V.inc:['- 해당 사항 없음']).concat(V.note&&V.inc.length?[V.note]:[]).join('\n'),dec:(V.dec.length?V.dec:['- 해당 사항 없음']).join('\n'),rows:[],lab,DR:null,C:{}};
+  }
   const D0=spItemCmp(p.y,ms),msU=ms.filter(m=>D0.groups.some(g=>g.am[m].a>0));
   const DR=spMtDrivers(p.y,msU),DRall=spMtDrivers(p.y,ms);
   // ── 1) 제강 생산량: 사업계획 대비 실적 생산량(톤)만 비교 ──
@@ -32119,7 +32387,8 @@ function spAutoCmText(p,blk){
   const inc=ord.filter(c=>sig(c)&&(c.da>0||(c.da===0&&c.dw>0))).map(c=>line(c,true));
   const dec=ord.filter(c=>sig(c)&&c.da<0).map(c=>line(c,false));
   const note=msU.length<ms.length?`- ※ 설비·품목 비교는 품목별 입고 실적이 집계된 ${msU.join('·')}월 기준`:'';
-  return {prod:prod.join('\n'),inc:(inc.length?inc:['- 해당 사항 없음']).concat(note&&inc.length?[note]:[]).join('\n'),dec:(dec.length?dec:['- 해당 사항 없음']).join('\n'),rows:R,lab,DR,C};
+  const inc2=inc.concat(V.inc),dec2=dec.concat(V.dec);
+  return {prod:prod.join('\n'),inc:(inc2.length?inc2:['- 해당 사항 없음']).concat(note&&inc.length?[note]:[]).concat(V.note&&V.inc.length+V.dec.length?[V.note]:[]).join('\n'),dec:(dec2.length?dec2:['- 해당 사항 없음']).join('\n'),rows:R,lab,DR,C};
 }
 const mcN1=v=>mcN(v,0),mcS1=v=>mcS(v,0);   // 2026-10-30: 대수·금액·중량 모두 정수(반올림)
 function spMtDrivers(y,months){
@@ -39650,7 +39919,7 @@ function spDownload(name,html){
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('엑셀 파일을 다운로드했습니다');
 }
 const spBr=s=>esc(s||'').replace(/\n/g,'<br style="mso-data-placement:same-cell">');
-function spExportSum(){
+function spExportSumXls(){
   const p=spCur(),np=spNext(p),cm=spCmGet(p),iss=spIssues(p);
   const bg='background:#dbe4f0;font-weight:bold;text-align:center;';
   let h=spSumTbl(p,true).replace('</table>','');
@@ -39665,6 +39934,120 @@ function spExportSum(){
   h+=`<table><tr><td style="font-weight:bold;border:none">● ${p.y}년 월별 계획·실적 (금액, 백만원)</td></tr></table>`+spMoTbl(p.y,'a',true)+'<br>';
   h+=`<table><tr><td style="font-weight:bold;border:none">● ${p.y}년 월별 계획·실적 (중량, 톤)</td></tr></table>`+spMoTbl(p.y,'w',true);
   spDownload('포항사업소_판매실적분석_'+spLabel(p).replace(/\s/g,''),h);
+}
+/* ===== 2026-11-02: 월말 실적분석 엑셀(.xlsx) — 프로그램 화면 색상 그대로 · 구분 열 통합(16칸) · 가로 A4 한 페이지 =====
+   · 화면 표를 숨김 영역에 그려 xlPaint(계획=파랑·실적=초록·예상=주황·달성율 신호등)를 적용한 뒤, 계산된 색상을 그대로 셀 서식으로 옮깁니다.
+   · 1쪽: 요약 + COMMENT + 주요 ISSUE / 2쪽: 설비별 보수 + 월별 계획·실적(금액·중량) */
+function spSumTblC(p){   // 구분 열을 1칸으로 통합한 요약표(내보내기 전용)
+  const D=spSumData(p),np=D.np;
+  const th=(s,a)=>`<th${a||''}>${s}</th>`;
+  const num=v=>`<td class="n">${spN(v)}</td>`;
+  const rate=(a,pl)=>`<td class="n" style="${pl>0?spCls(a-pl):''}">${spR(a,pl)}</td>`;
+  const blk=(o,withW)=>num(o.pa)+num(o.aa)+rate(o.aa,o.pa)+(withW?num(o.pw)+num(o.aw)+rate(o.aw,o.pw):'');
+  const lab=s=>`<td style="font-weight:700;background:#f6f8fa">${s}</td>`;
+  let t=`<table class="bomtbl" style="min-width:auto">`;
+  t+=`<tr>${th('구분',' rowspan="3"')}${th(esc(spLabel(p,true))+' 실적',' colspan="6"')}${th(esc(spLabel(np,true))+' 예상 실적',' colspan="6"')}${th(p.y+'년 누적 실적',' colspan="3"')}</tr>`;
+  t+=`<tr>${th('금액',' colspan="3"')}${th('중량',' colspan="3"')}${th('금액',' colspan="3"')}${th('중량',' colspan="3"')}${th('금액',' colspan="3"')}</tr>`;
+  t+=`<tr>${['계획','실적','달성율','계획','실적','달성율','계획','예상','달성율','계획','예상','달성율','계획','실적','달성율'].map(s=>th(s)).join('')}</tr>`;
+  const pr=o=>num(o.pa)+num(o.aa)+rate(o.aa,o.pa);
+  t+=`<tr>${lab('제강생산량(톤)')}${pr(D.cur.prod)}<td colspan="3"></td>${pr(D.fc.prod)}<td colspan="3"></td>${pr(D.cum.prod)}</tr>`;
+  const row=(c,l)=>{const wRf=c.k==='rf';return `<tr>${lab(l)}${blk(D.cur[c.k],!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.fc[c.k],!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.cum[c.k],false)}</tr>`;};
+  const C=SP_CATS;
+  t+=row(C[0],'동국제강(제강)')+row(C[1],'포스코(기존)')+row(C[2],'포스코(신규)')+row(C[3],'시중')+row(C[4],'축로');
+  t+=`<tr>${lab('합계(축로제외)')}${blk(D.cur.tot,true)}${blk(D.fc.tot,true)}${blk(D.cum.tot,false)}</tr>`;
+  return t+'</table>';
+}
+function qxFromDom(S,tb,r0,spans){   // 화면 표(색상 적용 후) → xlsx 시트 (병합·색·굵기·정렬·숫자서식)
+  const rows=[...tb.rows],grid=rows.map(()=>[]),cells=[];let maxC=0;
+  rows.forEach((tr,ri)=>{let c=0;[...tr.cells].forEach(cell=>{while(grid[ri][c])c++;const cs=cell.colSpan||1,rs=cell.rowSpan||1;cells.push({cell:cell,r:ri,c:c,cs:cs,rs:rs});for(let i=0;i<rs;i++)for(let j=0;j<cs;j++)if(grid[ri+i])grid[ri+i][c+j]=1;c+=cs;maxC=Math.max(maxC,c);});});
+  const sp=spans||[],start=[1];for(let i=0;i<maxC;i++)start.push(start[i]+(sp[i]||1));
+  const hex=v=>{const m=/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(v||'');if(!m)return null;if(m[4]!=null&&+m[4]===0)return null;return '#'+[m[1],m[2],m[3]].map(x=>(+x).toString(16).padStart(2,'0')).join('');};
+  cells.forEach(o=>{
+    const cell=o.cell,cs0=getComputedStyle(cell),inp=cell.querySelector('input,textarea,select');
+    let txt=inp?(inp.tagName==='SELECT'?((inp.options[inp.selectedIndex]||{}).text||''):inp.value):cell.textContent;
+    txt=String(txt||'').replace(/ /g,' ').trim();if(!inp)txt=txt.replace(/\s*\n\s*/g,' ');
+    let v=txt,fmt;
+    if(/^[-+]?[\d,]+(\.\d+)?$/.test(txt)&&txt!==''){v=+txt.replace(/,/g,'');fmt=/\./.test(txt)?'d1':'int';}
+    else if(/^[-+]?\d+(\.\d+)?%$/.test(txt)){v=parseFloat(txt)/100;fmt='p0';}
+    else if(txt==='-')v='';
+    const bg=hex(cs0.backgroundColor),fg=hex(cs0.color)||'#000000',ta=cs0.textAlign;
+    const num=typeof v==='number';
+    const st={b:(+cs0.fontWeight>=600)||cs0.fontWeight==='bold',sz:10,color:fg,fill:bg||undefined,bd:'a',h:(ta==='left'||ta==='start')&&!num&&cell.tagName!=='TH'?'left':'center',v:'center',wrap:true};
+    if(fmt)st.fmt=fmt;
+    const r=r0+o.r,c1=start[o.c],c2=start[o.c+o.cs]-1,r2=r+o.rs-1;
+    S.put(r,c1,v,st);if(c2>c1||r2>r)S.merge(r,c1,r2,c2,st);
+  });
+  return r0+rows.length;
+}
+function qxTextH(txt,widthUnits){   // 병합 셀 줄바꿈 높이 추정(엑셀은 병합 셀 자동 높이가 없음)
+  const wl=s=>[...s].reduce((a,ch)=>a+(ch.charCodeAt(0)>255?1.8:1),0);let n=0;
+  String(txt||'').split('\n').forEach(l=>{n+=Math.max(1,Math.ceil(wl(l)/Math.max(8,widthUnits)));});
+  return n;
+}
+async function spExportSumX(){
+  const p=spCur(),np=spNext(p),cm=spCmGet(p),iss=spIssues(p);
+  const th0=document.documentElement.getAttribute('data-theme');
+  const host=document.createElement('div');host.style.cssText='position:absolute;left:-12000px;top:0;width:1800px;background:#fff';document.body.appendChild(host);
+  try{
+    document.documentElement.setAttribute('data-theme','light');document.body.classList.add('xl-on');
+    host.innerHTML=`<div id="qd1">${spSumTblC(p)}</div><div id="qd2">${spMtTbl(p,false)}</div><div id="qd3">${spMoTbl(p.y,'a',false)}</div><div id="qd4">${spMoTbl(p.y,'w',false)}</div>`;
+    xlPaint(host);
+    const bk=qxBook();
+    // ── 1쪽 ──
+    const W1=[16].concat(Array(15).fill(9.2)),S1=bk.sheet('월말실적분석',{cols:W1,land:true,fitH:1});
+    const ttl=`■ 포항사업소 ${spLabel(p).replace(p.y+'년 ','')} 실적 및 ${spLabel(np).replace(np.y+'년 ','')} 예상 실적`;
+    S1.put(1,1,ttl,{b:1,sz:14,h:'left'});S1.merge(1,1,1,16,{b:1,sz:14,h:'left'});S1.height(1,24);
+    S1.put(3,1,'● 요약 (단위:백만원 · 중량 톤)',{b:1,sz:10,h:'left'});S1.merge(3,1,3,16,{b:1,sz:10,h:'left'});
+    let r=qxFromDom(S1,host.querySelector('#qd1 table'),4,null);
+    // 색상 안내
+    const lg=(c,t,bg,fg)=>S1.put(r,c,t,{b:1,sz:9,fill:bg,color:fg,bd:'a',h:'center'});
+    S1.put(r,1,'색상 안내',{b:1,sz:9,h:'right'});lg(2,'계획','#bdd7ee','#1f3864');lg(3,'실적','#c6e0b4','#274e13');lg(4,'예상','#f8cbad','#833c0b');
+    S1.put(r,6,'달성율 →',{sz:9,h:'right'});S1.merge(r,6,r,6,{sz:9,h:'right'});lg(7,'100%↑','#c6efce','#006100');lg(8,'90~99%','#ffeb9c','#7f4f00');lg(9,'90%↓','#ffc7ce','#9c0006');lg(10,'0%','#f2f2f2','#7f7f7f');
+    r+=2;
+    // COMMENT (양식: 당월 B:G · 예상 H:M · 누적 N:P)
+    const hd=(c1,c2,t,bg)=>{const o={b:1,sz:10,color:'#ffffff',fill:bg,bd:'a',h:'center',v:'center'};S1.put(r,c1,t,o);if(c2>c1)S1.merge(r,c1,r,c2,o);};
+    const labS={b:1,sz:10,color:'#1f3864',fill:'#d9e1f2',bd:'a',h:'center',v:'center',wrap:true};
+    S1.put(r,1,'COMMENT',labS);hd(2,6,spLabel(p,true)+' 실적','#1f4e79');hd(7,11,spLabel(np,true)+' 예상 실적','#c55a11');hd(12,16,p.y+'년 누적 실적','#548235');r++;
+    const tint={cur:'#f3f8fd',fc:'#fff6ef',cum:'#f4f9ef'};
+    [['● 제강 생산량','prod'],['● 증가요인','inc'],['● 감소요인','dec']].forEach(b=>{
+      const f=b[1],wcur=5*9.2,wfc=5*9.2,wcum=5*9.2;
+      const n=Math.max(qxTextH(cm.cur[f],wcur),qxTextH(cm.fc[f],wfc),qxTextH(cm.cum[f],wcum),1);
+      const bs=k=>({sz:9,fill:tint[k],bd:'a',h:'left',v:'top',wrap:true});
+      S1.put(r,1,b[0],labS);
+      S1.put(r,2,cm.cur[f]||'',bs('cur'));S1.merge(r,2,r,6,bs('cur'));
+      S1.put(r,7,cm.fc[f]||'',bs('fc'));S1.merge(r,7,r,11,bs('fc'));
+      S1.put(r,12,cm.cum[f]||'',bs('cum'));S1.merge(r,12,r,16,bs('cum'));
+      S1.height(r,Math.max(20,n*12+4));r++;
+    });
+    r++;
+    // 주요 ISSUE
+    S1.put(r,1,'● 주요 ISSUE 사항',{b:1,sz:10,h:'left'});r++;
+    const ih={b:1,sz:10,color:'#ffffff',fill:'#1f4e79',bd:'a',h:'center',v:'center'};
+    S1.put(r,1,'구분',ih);S1.put(r,2,'항목',ih);S1.merge(r,2,r,5,ih);S1.put(r,6,'ISSUE 내용',ih);S1.merge(r,6,r,16,ih);r++;
+    iss.forEach(o=>{
+      const n=Math.max(qxTextH(o.x,11*9.2),qxTextH(o.t,4*9.2),1);
+      S1.put(r,1,o.g||'',labS);
+      const bt={sz:9,bd:'a',h:'left',v:'top',wrap:true};
+      S1.put(r,2,o.t||'',Object.assign({b:1},bt));S1.merge(r,2,r,5,Object.assign({b:1},bt));
+      S1.put(r,6,o.x||'',bt);S1.merge(r,6,r,16,bt);
+      S1.height(r,Math.max(20,n*12+4));r++;
+    });
+    // ── 2쪽 ──
+    const W2=[9,17].concat(Array(13).fill(8.6)),S2=bk.sheet('보수·월별',{cols:W2,land:true,fitH:1});
+    S2.put(1,1,`● 설비별 보수 계획 대비 실적 — ${spLabel(p)}`,{b:1,sz:11,h:'left'});S2.merge(1,1,1,15,{b:1,sz:11,h:'left'});
+    let r2=qxFromDom(S2,host.querySelector('#qd2 table'),2,[1,1,1,1,1,2,8]);
+    r2+=1;S2.put(r2,1,`● ${p.y}년 월별 계획·실적 (금액, 백만원)`,{b:1,sz:11,h:'left'});r2++;
+    r2=qxFromDom(S2,host.querySelector('#qd3 table'),r2,null);
+    r2+=1;S2.put(r2,1,`● ${p.y}년 월별 계획·실적 (중량, 톤)`,{b:1,sz:11,h:'left'});r2++;
+    qxFromDom(S2,host.querySelector('#qd4 table'),r2,null);
+    await qxSave(bk,'포항사업소_판매실적분석_'+spLabel(p).replace(/\s/g,''));
+  }finally{
+    document.documentElement.removeAttribute('data-theme');if(th0)document.documentElement.setAttribute('data-theme',th0);
+    host.remove();
+  }
+}
+function spExportSum(){
+  spExportSumX().catch(e=>{console.error(e);toast('엑셀(.xlsx) 생성 실패 — 기존 방식으로 내보냅니다: '+(e&&e.message||e));try{spExportSumXls();}catch(e2){}});
 }
 // ── 차월 예상실적 화면 ──────────────────────────────
 /* ============ 2026-10-12: 차월·차분기·차반기 예상실적 "자동 산출" ============
@@ -39868,9 +40251,10 @@ function nfAnalysis(q){
     items.push({a:D.dA.EAF,t:`제강 생산량 ${Math.abs(dd)<1?'계획 수준에 따른':nfSg(dd,0)+'톤(조업 CH '+nfSg(D.CHf-D.CHp,0)+'CH) '+(dd>0?'증가':'감소')+'에 따른'} 전기로 내화물 사용량 (로저전극 ${F1(D.roj.f)}회·발코니 ${F1(D.bal.f)}회 예상 / 계획 ${F1(D.roj.p)}·${F1(D.bal.p)}회)`});
     items.push({a:D.dA.TD,t:`턴디쉬 기능성 내화물(형강재)·축조재 ${F1(D.td150.f+D.tdSec.f)}대 예상 (계획 ${F1(D.td150.p+D.tdSec.p)}대 : 150각 ${F1(D.td150.f)}·B/L/BB ${F1(D.tdSec.f)}${D.T.a150?', 150각 평균수명 '+F1(D.T.a150)+'CH':''}) 사용량`});
   }
-  const inc=items.filter(i=>i.a>(DD?0.05:0.5)).sort((x,y)=>y.a-x.a).map(i=>`- ${i.t} ${nfSg(i.a,DD)}백만원 증가`);
-  const dec=items.filter(i=>i.a<-(DD?0.05:0.5)).sort((x,y)=>x.a-y.a).map(i=>`- ${i.t} ${nfSg(i.a,DD)}백만원 감소`);
-  const flat=items.filter(i=>Math.abs(i.a)<=(DD?0.05:0.5)).map(i=>`- ${i.t} 변동 없음`);
+  let VF={inc:[],dec:[],flat:[]};try{VF=vcFcLines(q);}catch(e){}
+  const inc=items.filter(i=>i.a>(DD?0.05:0.5)).sort((x,y)=>y.a-x.a).map(i=>`- ${i.t} ${nfSg(i.a,DD)}백만원 증가`).concat(VF.inc);
+  const dec=items.filter(i=>i.a<-(DD?0.05:0.5)).sort((x,y)=>x.a-y.a).map(i=>`- ${i.t} ${nfSg(i.a,DD)}백만원 감소`).concat(VF.dec);
+  const flat=items.filter(i=>Math.abs(i.a)<=(DD?0.05:0.5)).map(i=>`- ${i.t} 변동 없음`).concat(VF.flat);
   return {D:D,prod:prod.join('\n'),inc:(inc.length?inc:['- 해당 사항 없음']).join('\n'),dec:(dec.concat(flat).length?dec.concat(flat):['- 해당 사항 없음']).join('\n')};
 }
 function nfAutoToggle(on){NF_AUTO_ON=!!on;try{localStorage.setItem('dgrns_nf_auto',on?'1':'0');}catch(e){}nfClear();spRenderAll();}
