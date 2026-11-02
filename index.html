@@ -28609,6 +28609,13 @@ function wpDetailClose(){const ov=document.getElementById('wpOverlay');if(ov)ov.
    · 시작·기한·상태는 오른쪽 '참고' 열 (원본 엑셀에는 없는 항목)
    · 이슈 제목·거래처·구분·월별 진행내용을 칸에서 바로 수정 · ＋로 아래에 이슈 추가 · ▲▼ 순서 이동 */
 let wpXlFocus=null;
+function wpEffSpan(it,mp){   // 내용·표시가 있는 첫 달 ~ 마지막 달을 모두 상태 색으로 채움(내용만 있고 막대 표시가 없던 칸 포함)
+  const e=Array(13).fill(false);let f=0,l=0;
+  for(let m=1;m<=12;m++){const k=wpMm(it.mm,m-1);if(k!=='0'||(mp[m]&&mp[m].length)){if(!f)f=m;l=m;}}
+  if(f)for(let m=f;m<=l;m++)e[m]=true;
+  return {e:e,last:l};
+}
+const WP_END={'완료':'✔ 완료','보류':'⏸ 보류','중단':'■ 중단'};
 const WP_TINT={'진행중':'#cfe0fb','완료':'#cdeed8','보류':'#fde0cc','중단':'#f9d0d0','예정':'#e2e8f0'};
 function wpMonthMap(it){
   const o={};let cur=null;
@@ -28682,7 +28689,7 @@ function wpRenderXl(){
   const L=wpFiltered();
   if(!L.length){box.innerHTML='<div class="empty">조건에 맞는 업무가 없습니다.</div>';return;}
   const years=[...new Set(L.map(x=>+x.year))].sort((a,b)=>b-a);
-  let h='<div class="wpx-lg"><b>보는 법</b><span>이슈 제목·거래처·구분은 글자를 눌러 바로 수정 · 월 칸을 누르면 진행내용 입력(Ctrl+Enter 저장) · 칸 윗줄(막대)을 누르면 진행 기간 표시 ON/OFF</span><span style="display:inline-flex;gap:4px;align-items:center">막대 색 = 상태</span>'
+  let h='<div class="wpx-lg"><b>보는 법</b><span>이슈 제목·거래처·구분은 글자를 눌러 바로 수정 · 월 칸을 누르면 진행내용 입력(Ctrl+Enter 저장) · 내용이 있는 첫 달~마지막 달은 상태 색으로 자동 채움 · 마지막 달에 완료/보류/중단 표시</span><span style="display:inline-flex;gap:4px;align-items:center">막대 색 = 상태</span>'
     +Object.keys(WP_ST).map(s=>`<span style="display:inline-flex;gap:3px;align-items:center"><i style="background:${WP_ST[s].c}"></i>${s}</span>`).join('')+`<span style="flex:1"></span><button class="btn sm" onclick="wpXlRefToggle()" title="시작·기한·상태 열을 접어 진행사항 칸을 넓힙니다">${wpXlRef?'◀ 참고열 접기':'▶ 참고열(시작·기한·상태) 보기'}</button></div>`;
   years.forEach(y=>{
     const rows=L.filter(x=>+x.year===y).sort((a,b)=>a.no-b.no),yy=String(y).slice(2);
@@ -28706,9 +28713,11 @@ function wpRenderXl(){
       }else{
         tr+=`<td class="ttl" colspan="2"><div contenteditable="true" onblur="wpxTitle(this,'${it.id}')" id="wpxT_${it.id}">${esc(it.title)}</div>${(it.seed&&!it.confirmed)?' <span title="상태·기간은 원본 문구로 추정한 값입니다" style="font-size:9.5px;color:#b45309;background:#fef3c7;border-radius:3px;padding:0 4px">추정</span>':''}</td>`;
       }
+      const SP=wpEffSpan(it,mp);
       for(let m=1;m<=12;m++){
-        const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3',note=k==='2'||k==='3',lines=mp[m]||[];
-        const body=lines.length?lines.map(s=>'- '+esc(s)).join('<br>'):(note?`<span style="color:${st.c}">●</span>`:'');
+        const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3'||SP.e[m],note=k==='2'||k==='3',lines=mp[m]||[];
+        let body=lines.length?lines.map(s=>'- '+esc(s)).join('<br>'):(note?`<span style="color:${st.c}">●</span>`:'');
+        if(m===SP.last&&WP_END[it.status])body+=`<div style="text-align:right;margin-top:2px"><span style="font-size:9.5px;font-weight:800;color:${st.c};background:#fff;border:1px solid ${st.c};border-radius:3px;padding:0 4px">${WP_END[it.status]}</span></div>`;
         tr+=`<td class="m" data-id="${it.id}" data-m="${m}" onclick="wpxCell(this)" style="${bar?'background:'+(WP_TINT[it.status]||'#e2e8f0'):''}"><div class="bar" onclick="event.stopPropagation();wpxBar('${it.id}',${m-1})" title="${m}월 진행 기간 표시 켜기/끄기" style="${bar?'background:'+st.c:''}"></div><div class="t">${body}</div></td>`;
       }
       tr+=`<td class="ref refc"><input type="month" class="iinp" value="${esc(it.start||'')}" onchange="wpEdit('${it.id}','start',this.value)"></td>`
@@ -28753,9 +28762,11 @@ function wpXlsSheet(bk,y,rows){
       if(catSpan[i])P(r,3,it.category,ctr,r+catSpan[i]-1,3);
       S.put(r,4,it.title||'',tt);
     }else{P(r,3,it.title||'',tt,r,4);}
+    const SPX=wpEffSpan(it,mp);
     for(let m=1;m<=12;m++){
-      const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3',note=k==='2'||k==='3',ls=mp[m]||[];
-      const txt=ls.length?ls.map(s=>'- '+s).join('\n'):(note?'●':'');
+      const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3'||SPX.e[m],note=k==='2'||k==='3',ls=mp[m]||[];
+      let txt=ls.length?ls.map(s=>'- '+s).join('\n'):(note?'●':'');
+      if(m===SPX.last&&WP_END[it.status])txt+=(txt?'\n':'')+'['+WP_END[it.status]+']';
       S.put(r,4+m,txt,{sz:9,bd:'a',h:ls.length?'left':'center',v:ls.length?'top':'center',wrap:true,fill:bar?(WP_TINT[it.status]||'#e2e8f0'):undefined,color:note&&!ls.length?st.c:'#1e293b'});
     }
     const rf={sz:10,bd:'a',h:'center',v:'center'};
@@ -28765,7 +28776,7 @@ function wpXlsSheet(bk,y,rows){
     r++;
   });
   r++;S.put(r,1,'* 개선업무 or 신규업무의 연속성을 보기 위함(월 실적 자료 작성시 최신업데이트必)',{sz:9,h:'left'});
-  r++;S.put(r,1,'* 월 칸의 색(막대) = 진행 기간, 색상은 상태(진행중 파랑·완료 초록·보류 주황·중단 빨강·예정 회색). 시작·기한·상태·진척은 참고 열입니다.',{sz:9,h:'left'});
+  r++;S.put(r,1,'* 월 칸의 색 = 진행 기간(내용이 있는 첫 달~마지막 달 자동 채움), 색상은 상태(진행중 파랑·완료 초록·보류 주황·중단 빨강·예정 회색), 마지막 달에 완료·보류·중단 표시. 시작·기한·상태·진척은 참고 열입니다.',{sz:9,h:'left'});
 }
 async function wpExportXlsx(){
   const L=wpFiltered();if(!L.length){toast('내보낼 업무가 없습니다');return;}
