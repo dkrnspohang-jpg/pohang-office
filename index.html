@@ -2164,7 +2164,9 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <div class="toolrow">
         <input class="search" id="pb_search" placeholder="품목코드·규격·Q코드 검색" oninput="renderPoscoBase()">
         <button class="btn" onclick="downloadPoscoBase()">📥 엑셀</button>
-        <span class="ddw"><button class="btn" title="Q코드 가져오기" onclick="ddT(this,event)">⬇ 가져오기 ▾</button><div class="ddm"><button class="ddi" onclick="poscoImportBidQBtn()">⬇ 본입찰용 Q코드 가져오기<small>포스코 폴더 [범용B 입찰 List _ 본입찰용] Q코드 145건(사양·단중·단가 포함) 중 이 화면에 없는 것만 추가</small></button><button class="ddi" onclick="poscoImportFromPlan(false)">⬇ 사업계획 Q코드 가져오기<small>사업계획 [포스코·시중] 탭의 Q코드·규격·단중·단가 중 없는 것만 추가(입력값은 덮어쓰지 않음)</small></button></div></span>
+        <button class="btn primary" title="포스코 계약단가 엑셀(설비자재구매실 [원재료가 연동제 검토] — '범용' 시트)을 읽어 Q코드·규격·단중·KG/EA 단가를 반영합니다" onclick="document.getElementById('pcCtFile').click()">📥 계약단가 엑셀 읽기</button>
+        <input type="file" id="pcCtFile" accept=".xlsx" class="hidden" onchange="poscoCtRead(this)">
+        <span class="ddw"><button class="btn" title="Q코드 가져오기" onclick="ddT(this,event)">⬇ 가져오기 ▾</button><div class="ddm"><button class="ddi" onclick="document.getElementById('pcCtFile').click()">📥 포스코 계약단가 엑셀 읽기<small>[원재료가 연동제 검토] 파일의 Q코드·규격·단중·KG/EA 단가를 반영(포스코 입고실적 품목과 연동)</small></button><button class="ddi" onclick="poscoImportBidQBtn()">⬇ 본입찰용 Q코드 가져오기<small>포스코 폴더 [범용B 입찰 List _ 본입찰용] Q코드 145건(사양·단중·단가 포함) 중 이 화면에 없는 것만 추가</small></button><button class="ddi" onclick="poscoImportFromPlan(false)">⬇ 사업계획 Q코드 가져오기<small>사업계획 [포스코·시중] 탭의 Q코드·규격·단중·단가 중 없는 것만 추가(입력값은 덮어쓰지 않음)</small></button></div></span>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="pb_count"></span>
       </div>
       <div class="toolrow" style="margin-top:6px;background:#f1f5f9;border-radius:8px;padding:7px 10px">
@@ -4302,6 +4304,7 @@ service cloud.firestore {
 
 <!-- 견적서 문서 오버레이 -->
 <div class="qi-ov" id="qiOverlay" onclick="if(event.target===this)qiClose()"><div class="qi-box" id="qiBox"></div></div>
+<div class="qi-ov" id="pcOverlay" onclick="if(event.target===this)poscoCtClose()"><div class="qi-box" id="pcBox" style="max-width:1180px"></div></div>
 <div class="qdoc-overlay" id="qdocOverlay">
   <div class="qdoc-toolbar">
     <button class="btn" onclick="downloadDocExcel()">📥 엑셀 다운로드</button>
@@ -19757,8 +19760,8 @@ function downloadPerf(){
 }
 
 /* ============ 업계 뉴스 (자동 업데이트) ============ */
-const NEWS_UPDATED="2026-10-29";
-const NEWS_SEED=[{date:"2026-10-29",cat:"제철/제강",title:"현대제철·포스코 美 루이지애나 전기로 일관제철소(연 270만톤) 대기배출 허가 취득…연방검토 11/30·상업생산 2029년 목표",why:"국내 제철사의 전기로 기반 해외 증설 본격화 — 중장기 전기로 내화물 신규 수요처 확대 신호, 스펙·수명관리 요구 변화 대비",url:"https://www.g-enews.com/article/Global-Biz/2026/10/202610291338591060fbbec65dfb_1"},{date:"2026-10-29",cat:"내화물 기술·시장",title:"포스코, 광양·포항 철스크랩價 최대 1.5만원 인하…전기로 주원료 약세 지속",why:"전기로 제강사 원가·조업 심리에 직결 — 내화물 단가협상·물량 전망에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576616"},{date:"2026-10-29",cat:"제철/제강",title:"美 도금강판 관세 70%대 위협…동국씨엠·KG스틸 법적 대응 검토(단독)",why:"고객 동국 계열의 대미 수출·가동률 리스크 — 조업·투자심리 변화가 내화물 물량·단가에 영향",url:"https://www.snmnews.com/news/articleView.html?idxno=576641"},{date:"2026-10-29",cat:"내화물 기술·시장",title:"철강업계, 기후대응위에 수소제철·전력비·세제 지원 건의",why:"수소환원·전기로 전환 정책 지원은 중장기 내화물 신규 수요처 확대 신호 — 설비 전환 속도·스펙 변화 모니터링",url:"https://www.snmnews.com/news/articleView.html?idxno=576636"},{date:"2026-10-29",cat:"제철/제강",title:"글로벌 조강 생산 3개월 연속 감소…중국 외 생산도 5개월만에 감소 전환",why:"전방 철강 생산 둔화는 내화물 소모·교체 수요 축소로 직결 — 물량 계획에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576409"},{date:"2026-10-29",cat:"내화물 기술·시장",title:"수소환원제철 핵심 기술개발 현황 공유…친환경 제철 전환 가속",why:"차세대 제철 공정 전환은 내화물 스펙·개발 방향 변화로 연결 — 제안·기술 대응 참고",url:"https://www.snmnews.com/news/articleView.html?idxno=576575"},{date:"2026-10-27",cat:"내화물 기술·시장",title:"10월 넷째 주 국내 철스크랩價 전 등급 톤당 1만원↓…현대제철·동국제강 등 8차 인하 반영, 포스코·세아베스틸은 미참여로 저점 기대감",why:"전기로 제강사(동국제강 등)의 스크랩 원가·조업 심리에 직결 — 내화물 단가협상·물량 전망에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576407"},{date:"2026-10-27",cat:"제철/제강",title:"배관용강관 11월 가격 인상…세아제강·현대스틸파이프·넥스틸 할인율 3~5%p 축소, 원·부자재價·환율 상승 반영",why:"철강사 제조원가 상승·가격 인상 국면 확인 — 내화물 원가연동·단가 인상 협상 논거로 활용 가능",url:"https://www.snmnews.com/news/articleView.html?idxno=576391"},{date:"2026-10-27",cat:"내화물 기술·시장",title:"원/달러 환율 1,323.10원 전일比 1.50원↓·WTI 선물 배럴당 103.27달러 3.80달러↑(10/23 기준)",why:"수입 내화물 원료(마그네시아 등) 조달원가는 환율·유가에 민감 — 환율 하락은 원가 부담 완화 요인",url:"https://www.snmnews.com/news/articleView.html?idxno=576410"},{date:"2026-10-27",cat:"내화물 기술·시장",title:"JSW JFE 인도 삼발푸르 일관제철소 500만톤 증설 확정…연 조강능력 450만→950만톤",why:"글로벌 조강능력 확대는 마그네시아 등 내화물 원료 수요·가격에 상방 압력 — 원료 수급 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576415"},{date:"2026-10-26",cat:"제철/제강",title:"4분기 현대제철·포스코 열연설비 정비로 국내 판재류 공급 10~15%↓ 전망…국제유가·해상운임·해외 철강價 동반 상승",why:"고객 제철사의 열연설비 정비(대보수)는 대형 내화물 신규 수요로 직결 — 물량·납기 사전 대비 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576348"},{date:"2026-10-26",cat:"제철/제강",title:"내년 국내 후판 수요 800만톤+ 8년 만에 최대 기대…조선 건조량 견조가 소비 견인",why:"조선향 후판 수요 견조는 제철사 조업·가동률 유지 신호 — 열연·후판 공정 내화물 소모 수요 안정에 긍정적",url:"https://www.snmnews.com/news/articleView.html?idxno=576341"},{date:"2026-10-24",cat:"제철/제강",title:"포스코노조, 11월 2일 오후 7시부터 무기한·단계적 파업 예고…22일 10차 교섭 결렬",why:"포스코 조업 차질 시 포항·광양 납기·물량 변동 리스크 — 영업·납품 일정 사전 대비 및 재파업 동향 주시 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576360"},{date:"2026-10-24",cat:"내화물 기술·시장",title:"형강價 3주 연속 하락, 낙폭은 축소…봉형강 수요 부진 지속(주간시장동향-형강)",why:"봉형강·형강 약세 지속은 전기로 제강사 조업·투자 심리 위축 신호 — 내화물 물량·단가 협상 환경 지속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576322"},{date:"2026-10-25",cat:"제철/제강",title:"포스코·현대제철 9월 열연 내수판매 7.1%↓ 약 585천톤…6개월째 60만톤대 행진 멈추고 생산은 2년4개월來 최저",why:"주요 고객 제철사의 조업·생산 둔화는 열연공정 내화물 소모·교체 수요 축소로 직결 — 물량·단가 협상에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=575616"},{date:"2026-10-24",cat:"제철/제강",title:"현대제철 30일·포스코홀딩스 11월 2일 3분기 실적발표(컨퍼런스콜) 일정 확정",why:"주요 고객 제강사의 3분기 조업·수익성 지표 확인 시점 — 내화물 단가 협상과 개수(설비투자) 물량 방향 가늠에 활용",url:"https://www.snmnews.com/news/articleView.html?idxno=576338"},{date:"2026-10-24",cat:"제철/제강",title:"동국제강그룹 3사 주주환원 확대·기업가치 제고 발표…동국제강은 설비 가동효율 개선·고정비 절감·수출 확대 추진",why:"주요 고객사 동국제강의 설비 효율화 기조는 내화물 수명관리·스펙 요구 변화로 연결 — 단가 협상·재무전략 파악 필요",url:"https://newsway.co.kr/news/view?ud=2026102215264957988"},{date:"2026-10-24",cat:"제철/제강",title:"무역위, 中 아연도금냉연 반덤핑 최종판정…22.34~33.67% 5년 관세 건의, 동국씨엠 등 국내 3사 제소",why:"국내 제강사 내수 보호·조업 방어에 우호적이며 동국 계열 수혜 기대 — 고객사 가동률·투자심리 개선 신호",url:"https://www.snmnews.com/news/articleView.html?idxno=576347"},{date:"2026-10-24",cat:"내화물 기술·시장",title:"철근 유통價 2주 연속 하락 톤당 80만~81만원…제강사 감산에도 수요부진에 반등 실패, 월말 추가 하락 우려",why:"봉형강 약세·전기로 제강사 감산 지속은 내화물 물량·단가 협상 환경 악화 신호 — 조업률 모니터링 지속 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576320"},{date:"2026-10-24",cat:"제철/제강",title:"세아제강, 4분기 美 강관 수출 성수기 회복 기대…영업익 전분기比 31.6%↑ 전망, 美 시추리그 증가",why:"강관사 수출·가동률 회복은 철강 전반 조업 심리 개선 신호 — 거래처 저변 동향 참고용",url:"https://www.snmnews.com/news/articleView.html?idxno=576355"},{date:"2026-10-20",cat:"제철/제강",title:"포스코 3분기 영업익 27%↑·현대제철 2%↑ 전망…4분기엔 포스코 광양 2고로 개수로 성장 둔화 예상",why:"고객사 조업 지표이자 광양 2고로 개수(대보수)는 대형 내화물 신규 수요로 직결 — 물량·납기 사전 대비 필요",url:"https://newsway.co.kr/news/view?ud=2026101516335839433"},{date:"2026-10-20",cat:"제철/제강",title:"철강 빅2 희비…포스코 실적 개선 vs 현대제철 건설경기 침체로 부진, 현대제철 임단협은 먼저 타결",why:"제강사별 수익성·투자심리 차이는 내화물 단가 협상력과 설비투자(개수 물량)에 영향 — 고객사별 대응 차별화 필요",url:"https://www.kukinews.com/article/view/kuk202610150197"},{date:"2026-10-20",cat:"경쟁사",title:"조선내화, 포스코와 350.9억 규모 내화물 공급계약 체결(포항·광양, 2026.10~2027.3)…최근 매출 6.6% 수준",why:"경쟁사가 포스코 포항·광양 내화물 물량을 반기 단위로 확보 — 우리 포스코향 입찰·단가 포지션 점검 필요",url:"https://www.digitaltoday.co.kr/disclosure/articleView.html?idxno=705168"},{date:"2026-10-20",cat:"내화물 기술·시장",title:"10월 셋째 주 국내 철스크랩價 보합…대한제강 8차 인하 예고, 봉형강 급락에 반등은 제한적",why:"전기로 주원료 스크랩 약세·봉형강 부진 지속은 제강사 가동률·수익성 압박 — 내화물 물량·단가 협상 환경 지속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576086"},{date:"2026-10-20",cat:"내화물 기술·시장",title:"석탄 줄이고 전기로·수소환원 전환 가속…포스코 전량 적용 시 국내 전력판매량 35% 필요, 전력 확보가 최대 관건",why:"전기로·수소환원 확대는 중장기 내화물 신규 수요처 확대 신호이나 전력 병목이 전환 속도를 좌우 — 설비 스펙·수명관리 요구 변화 대비",url:"https://news.mtn.co.kr/news-detail/2026100114473872105"},{date:"2026-10-03",cat:"내화물 기술·시장",title:"현대제철, 10월 철스크랩價 7차 인하 예고…전 등급 톤당 1만원↓ 10월13일 적용(인천·당진·포항)",why:"전기로 주원료 스크랩 약세가 3개월째 지속 — 제강사 수익성·가동률과 직결되는 내화물 물량·단가 협상 환경 계속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=575438"},{date:"2026-10-03",cat:"제철/제강",title:"철강사 10월 성수기 가격 인상…현대제철 H형강 5만·판재 4만, 동국제강 철근 1만원↑ 다만 유통가 격차가 변수",why:"고객사 동국제강 등 제강사의 가격 인상 반영 여부는 조업·수익성 가늠자 — 내화물 수요·단가 협상에 영향",url:"https://m.inews24.com/v/2010435"},{date:"2026-10-03",cat:"제철/제강",title:"포스코·현대제철 저탄소 철강 전환 가속…수소환원·전기로 확대, 대규모 무탄소 전력 확보가 관건",why:"주요 제철사의 전기로·수소환원 전환 확대는 중장기 내화물 신규 수요처 확대 신호 — 스펙·수명관리 요구 변화 대비 필요",url:"https://www.newsis.com/view/NISX20260929_0003806684"},{date:"2026-10-03",cat:"내화물 기술·시장",title:"정부, 연말까지 철강 등 5대 다배출 업종 GX 로드맵 발표 예정…철강은 수소환원제철·저탄소 제품 전환이 축",why:"철강 탈탄소 정책·투자 로드맵은 전기로·수소환원 설비 확대로 이어져 내화물 수요 구조 변화에 영향",url:"https://etoday.co.kr/news/view/2630365"},{date:"2026-10-03",cat:"내화물 기술·시장",title:"철근 기준價 1년 만에 하락 전환…10월 톤당 1만9천원↓ 100만6천원, 스크랩 약세·수요 부진 반영",why:"봉형강 시황 약세 지속은 전기로 제강사 조업·투자 심리 위축으로 이어져 내화물 수요에 하방 압력",url:"https://www.snmnews.com/news/articleView.html?idxno=575308"},{date:"2026-09-29",cat:"내화물 기술·시장",title:"9월 다섯째 주 국내 철스크랩價 주요 제강사 6차 인하로 전 등급 톤당 1만원 추가 하락…시장은 저점 다지기 관측",why:"스크랩 가격 하락세가 지속되며 전기로 제강사 조업·수익성에 영향 — 내화물 물량·단가 협상 환경 계속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=575198"},{date:"2026-09-21",cat:"제철/제강",title:"포스코 노조 1·2차 부분파업 21일 오전 7시 전면 종료…조업 정상화, 임단협은 결렬 상태 지속",why:"포스코 조업 정상화로 납기·물량 변동 리스크 완화 — 다만 임단협 미타결로 재파업 가능성은 계속 주시 필요",url:"https://www.news1.kr/local/daegu-gyeongbuk/6296769"},{date:"2026-09-21",cat:"제철/제강",title:"포스코 광양에 4800억 투입 8번째 자동차강판 도금라인(8CGL) 신설…연 45만t·2028년 준공, 전기로 소재 연계 저탄소 강판 대응",why:"광양 신규 라인·전기로 소재 연계 투자는 향후 내화물 신규 수요처 확대 신호",url:"https://biz.heraldcorp.com/article/10865912"},{date:"2026-09-21",cat:"경쟁사",title:"포스코퓨처엠, 광양제철소 연와보수 협력작업 909.6억원 수주 공시(매출액 대비 3.1%)",why:"경쟁사 포스코퓨처엠의 대형 연와보수 수주 — 포스코 내화물 축조·보수 시장 경쟁 심화, 입찰 대응 전략 점검 필요",url:"https://news.nate.com/view/20260716n28525"},{date:"2026-09-21",cat:"내화물 기술·시장",title:"9월 셋째 주 국내 철스크랩價 전 등급 톤당 1만원 하락…봉형강 약세·제강사 단가 인하 지속",why:"전기로 주원료 스크랩 약세는 제강사 수익성·가동률에 영향 — 내화물 물량·단가 협상 환경 변화 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=574732"},{date:"2026-09-21",cat:"내화물 기술·시장",title:"9월 셋째 주 철근 유통價 톤당 84만~85만원으로 1만원 재하락…추석 연휴·수요 부진에 성수기 무색",why:"봉형강 시황 약세 지속은 전기로 제강사 조업·투자 심리 위축으로 이어져 내화물 수요에 하방 압력",url:"https://www.snmnews.com/news/articleView.html?idxno=574908"},{date:"2026-09-16",cat:"제철/제강",title:"포스코 노조, 120시간 2차 부분파업 돌입…임금교섭 여전히 평행선",why:"포스코 조업 차질 시 납기·물량 변동 가능성 있어 영업·납품 일정에 주의 필요",url:"https://biz.sbs.co.kr/article/20000334908"},{date:"2026-09-02",cat:"제철/제강",title:"동국제강, 전기로 100% 체제로 2030년 탄소감축 목표 조기 달성…하이퍼 전기로로 효율 개선 추진",why:"주요 고객사 동국제강의 전기로 효율화 투자 방향은 내화물 스펙·수명관리 요구 변화로 이어질 수 있음",url:"https://www.asiatoday.co.kr/kn/view.php?key=20260903010001020"},{date:"2026-03-13",cat:"제철/제강",title:"포스코, 광양제철소에 6420억 투입 전기로 신설… 5월 가동 목표, 하이렉스 수소환원제철에도 1조3360억 투자",why:"포스코의 전기로·저탄소 전환 확대는 향후 내화물 수요처 확대 가능성을 시사",url:"https://www.snmnews.com/news/articleView.html?idxno=566361"},{date:"2026-01-02",cat:"내화물 기술·시장",title:"2026년 철강시장, 세계철강협회 수요 1%대 증가 전망…중국發 공급과잉·보호무역이 변수",why:"전방 철강 수요 둔화는 내화물 물량·단가 협상에도 영향을 줄 수 있어 시황 모니터링 필요",url:"https://www.ferrotimes.com/news/articleView.html?idxno=45548"},{date:"2026-09-06",cat:"제철/제강",title:"현대제철·포스코, 美 루이지애나 전기로 제철소 첫삽 — 탄소저감 강판 270만t",why:"국내 제철사 전기로 확대 = 전기로 내화물 수요 확대 신호",url:"https://www.imaeil.com/page/view/2026090616001271448"},{date:"2026-05-10",cat:"제철/제강",title:"포스코 광양 전기로 2026년 가동 초읽기 (하이렉스·AI 제철소)",why:"광양 전기로 가동 시 EBT·발코니·로저전극 등 전기로 내화물 신규 수요",url:"https://v.daum.net/v/20260510120338290"},{date:"2026-03-12",cat:"제철/제강",title:"포스코 국내 조강 생산능력 11년 만에 4,000만톤 아래로",why:"생산량 감소는 내화물 원단위·공급물량과 직결 — 물량 계획에 반영",url:"https://www.thebigdata.co.kr/view.php?ud=202603121044375352570d99e4c8_23"},{date:"2026-04-23",cat:"경쟁사",title:"조선내화, 포스코 수소환원제철 '숨은 조력자'로 부각",why:"주력 경쟁사 포지션 — 포스코 전략 내화물 동향 파악",url:"https://v.daum.net/v/20260423191317186"},{date:"2026-04-23",cat:"내화물 기술·시장",title:"포스코그룹, 친환경 철강 시대 차세대 내화물 기술 소개",why:"수소환원·전기로 전환에 따른 내화물 기술 트렌드 — 제안·개발 방향 참고",url:"https://newsroom.posco.com/kr/%EC%B9%9C%ED%99%98%EA%B2%BD-%EC%B2%A0%EA%B0%95-%EC%8B%9C%EB%8C%80%EB%A5%BC-%EC%97%B4%EC%96%B4%EA%B0%80%EB%8A%94-%EC%B0%A8%EC%84%B8%EB%8C%80-%EB%82%B4%ED%99%94%EB%AC%BC-%EA%B8%B0%EC%88%A0/"},];
+const NEWS_UPDATED="2026-11-01";
+const NEWS_SEED=[{date:"2026-11-01",cat:"제철/제강",title:"포스코 노사 2026 임단협 잠정합의…11월 2일 예정 파업 전격 철회, 기본급 2.6% 인상·조합원 찬반투표 예정",why:"포스코 조업 중단 리스크 해소로 포항·광양 납기·물량 불확실성 완화 — 전 세션 무기한 파업 예고가 해소돼 재가동 안정 속 내화물 공급 일정 정상화 전망",url:"https://kbmaeil.com/article/20261030500297"},{date:"2026-11-01",cat:"제철/제강",title:"현대제철, 3분기 영업익 871억원 전분기比 51%↑…고부가 자동차강판 비중 확대, 4분기 수익성 추가 개선 기대",why:"주고객 현대제철의 3분기 수익성이 전분기比 회복되고 4분기 원재료가 안정 전망 — 전년比 감익 우려 대비 조업·구매 심리 개선 신호로 단가 협상 환경 재점검 필요",url:"https://dealsite.co.kr/articles/171718"},{date:"2026-10-31",cat:"제철/제강",title:"현대제철, 3분기 영업익 전년比 6.5%↓…美 루이지애나 58억달러 전기로 투자 지속 속 국내 현금창출력 확보가 핵심 과제",why:"주고객 현대제철의 수익성 둔화·차입 부담은 단가 인하·구매 압박으로 이어질 수 있어 영업 협상 사전 대비 필요",url:"https://www.newsway.co.kr/news/view?ud=2026103016360839324"},{date:"2026-10-31",cat:"제철/제강",title:"동국제강, 상반기 봉형강 수출단가가 내수 추월(AI 데이터센터發 美 철근 수요 급증)…인천 조업일수는 감축",why:"핵심 고객 동국제강의 수출 호조는 포항 전기로 가동·내화물 수요에 긍정적이나 인천 감산·4분기 비수기는 변수",url:"https://ceoscoredaily.com/page/view/2026101510402244772"},{date:"2026-10-31",cat:"내화물 기술·시장",title:"소성 마그네시아, 철강용 내화물이 수요의 60~70%…고순도재 가격 강세·마그네시아카본재 재활용 확대로 톤수 성장은 제한(연 3.2% 전망)",why:"주원료 마그네시아 가격·재활용 동향은 우리 제품 원가와 친환경 제안 전략의 핵심 변수",url:"https://www.indexbox.io/blog/calcined-magnesia-market-forecast-to-2035-refractory-demand-and-electronics-grade-shift-drive-growth/"},{date:"2026-10-31",cat:"경쟁사",title:"포스코퓨처엠, 3분기 영업익 전년比 85%↓(약 102억원) 전망…SK온·삼성SDI LFP 양극재 대형 수주로 내년 반등 기대",why:"내화물·연와보수도 영위하는 경쟁 그룹사의 수익성 급락 — 내화물 부문 가격·수주 전략 변화 주시",url:"https://dealsite.co.kr/articles/170619"},{date:"2026-10-30",cat:"제철/제강",title:"동국제강, 3분기 영업익 299억원 전년比 22%↑…반도체·AI데이터센터向 봉형강 생산·판매 확대",why:"핵심 고객 동국제강의 전기로 봉형강 조업이 견조 — 전기로·래들 내화물 수요 유지, 4Q 수익성 중심 영업 지속 전망",url:"https://www.g-enews.com/article/Industry/2026/10/202610301450258226112616b072_1"},{date:"2026-10-30",cat:"제철/제강",title:"동국제강, 포항공장 H형강 수출 신규규격 개발·인천 체코 CCZ 인증…후판 Ti Clad 특수강 확대",why:"주고객 포항공장의 수출·고부가 제품 라인업 확대 → 전기로·압연 가동 지속과 내화물 스펙 다변화·영업 접점 확대 기회",url:"https://www.m-i.kr/news/articleView.html?idxno=2012692"},{date:"2026-10-30",cat:"내화물 기술·시장",title:"중국산 저가 도금재 유입·환율 변동에 동국씨엠 3분기 적자전환(영업손실 60억원)…보호무역 심화",why:"판재·도금 시황 악화는 국내 철강 전반의 가동·투자심리 가늠자 — 내화물 물량·단가 전망에 하방 리스크로 반영",url:"https://www.m-i.kr/news/articleView.html?idxno=2012692"},{date:"2026-10-30",cat:"경쟁사",title:"포스코퓨처엠, LG엔솔과 양·음극재 72만t 빅딜 추진…LFP·인조흑연으로 배터리 소재 영토 확장",why:"경쟁사 포스코퓨처엠의 자원·투자가 배터리 소재에 집중 — 내화물(생석회 등) 사업 증설·우선순위 변화 모니터링 포인트",url:"https://www.kmib.co.kr/article/20261030500569"},{date:"2026-10-29",cat:"제철/제강",title:"현대제철·포스코 美 루이지애나 전기로 일관제철소(연 270만톤) 대기배출 허가 취득…연방검토 11/30·상업생산 2029년 목표",why:"국내 제철사의 전기로 기반 해외 증설 본격화 — 중장기 전기로 내화물 신규 수요처 확대 신호, 스펙·수명관리 요구 변화 대비",url:"https://www.g-enews.com/article/Global-Biz/2026/10/202610291338591060fbbec65dfb_1"},{date:"2026-10-29",cat:"내화물 기술·시장",title:"포스코, 광양·포항 철스크랩價 최대 1.5만원 인하…전기로 주원료 약세 지속",why:"전기로 제강사 원가·조업 심리에 직결 — 내화물 단가협상·물량 전망에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576616"},{date:"2026-10-29",cat:"제철/제강",title:"美 도금강판 관세 70%대 위협…동국씨엠·KG스틸 법적 대응 검토(단독)",why:"고객 동국 계열의 대미 수출·가동률 리스크 — 조업·투자심리 변화가 내화물 물량·단가에 영향",url:"https://www.snmnews.com/news/articleView.html?idxno=576641"},{date:"2026-10-29",cat:"내화물 기술·시장",title:"철강업계, 기후대응위에 수소제철·전력비·세제 지원 건의",why:"수소환원·전기로 전환 정책 지원은 중장기 내화물 신규 수요처 확대 신호 — 설비 전환 속도·스펙 변화 모니터링",url:"https://www.snmnews.com/news/articleView.html?idxno=576636"},{date:"2026-10-29",cat:"제철/제강",title:"글로벌 조강 생산 3개월 연속 감소…중국 외 생산도 5개월만에 감소 전환",why:"전방 철강 생산 둔화는 내화물 소모·교체 수요 축소로 직결 — 물량 계획에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576409"},{date:"2026-10-29",cat:"내화물 기술·시장",title:"수소환원제철 핵심 기술개발 현황 공유…친환경 제철 전환 가속",why:"차세대 제철 공정 전환은 내화물 스펙·개발 방향 변화로 연결 — 제안·기술 대응 참고",url:"https://www.snmnews.com/news/articleView.html?idxno=576575"},{date:"2026-10-27",cat:"내화물 기술·시장",title:"10월 넷째 주 국내 철스크랩價 전 등급 톤당 1만원↓…현대제철·동국제강 등 8차 인하 반영, 포스코·세아베스틸은 미참여로 저점 기대감",why:"전기로 제강사(동국제강 등)의 스크랩 원가·조업 심리에 직결 — 내화물 단가협상·물량 전망에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576407"},{date:"2026-10-27",cat:"제철/제강",title:"배관용강관 11월 가격 인상…세아제강·현대스틸파이프·넥스틸 할인율 3~5%p 축소, 원·부자재價·환율 상승 반영",why:"철강사 제조원가 상승·가격 인상 국면 확인 — 내화물 원가연동·단가 인상 협상 논거로 활용 가능",url:"https://www.snmnews.com/news/articleView.html?idxno=576391"},{date:"2026-10-27",cat:"내화물 기술·시장",title:"원/달러 환율 1,323.10원 전일比 1.50원↓·WTI 선물 배럴당 103.27달러 3.80달러↑(10/23 기준)",why:"수입 내화물 원료(마그네시아 등) 조달원가는 환율·유가에 민감 — 환율 하락은 원가 부담 완화 요인",url:"https://www.snmnews.com/news/articleView.html?idxno=576410"},{date:"2026-10-27",cat:"내화물 기술·시장",title:"JSW JFE 인도 삼발푸르 일관제철소 500만톤 증설 확정…연 조강능력 450만→950만톤",why:"글로벌 조강능력 확대는 마그네시아 등 내화물 원료 수요·가격에 상방 압력 — 원료 수급 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576415"},{date:"2026-10-26",cat:"제철/제강",title:"4분기 현대제철·포스코 열연설비 정비로 국내 판재류 공급 10~15%↓ 전망…국제유가·해상운임·해외 철강價 동반 상승",why:"고객 제철사의 열연설비 정비(대보수)는 대형 내화물 신규 수요로 직결 — 물량·납기 사전 대비 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576348"},{date:"2026-10-26",cat:"제철/제강",title:"내년 국내 후판 수요 800만톤+ 8년 만에 최대 기대…조선 건조량 견조가 소비 견인",why:"조선향 후판 수요 견조는 제철사 조업·가동률 유지 신호 — 열연·후판 공정 내화물 소모 수요 안정에 긍정적",url:"https://www.snmnews.com/news/articleView.html?idxno=576341"},{date:"2026-10-24",cat:"제철/제강",title:"포스코노조, 11월 2일 오후 7시부터 무기한·단계적 파업 예고…22일 10차 교섭 결렬",why:"포스코 조업 차질 시 포항·광양 납기·물량 변동 리스크 — 영업·납품 일정 사전 대비 및 재파업 동향 주시 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576360"},{date:"2026-10-24",cat:"내화물 기술·시장",title:"형강價 3주 연속 하락, 낙폭은 축소…봉형강 수요 부진 지속(주간시장동향-형강)",why:"봉형강·형강 약세 지속은 전기로 제강사 조업·투자 심리 위축 신호 — 내화물 물량·단가 협상 환경 지속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576322"},{date:"2026-10-25",cat:"제철/제강",title:"포스코·현대제철 9월 열연 내수판매 7.1%↓ 약 585천톤…6개월째 60만톤대 행진 멈추고 생산은 2년4개월來 최저",why:"주요 고객 제철사의 조업·생산 둔화는 열연공정 내화물 소모·교체 수요 축소로 직결 — 물량·단가 협상에 반영 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=575616"},{date:"2026-10-24",cat:"제철/제강",title:"현대제철 30일·포스코홀딩스 11월 2일 3분기 실적발표(컨퍼런스콜) 일정 확정",why:"주요 고객 제강사의 3분기 조업·수익성 지표 확인 시점 — 내화물 단가 협상과 개수(설비투자) 물량 방향 가늠에 활용",url:"https://www.snmnews.com/news/articleView.html?idxno=576338"},{date:"2026-10-24",cat:"제철/제강",title:"동국제강그룹 3사 주주환원 확대·기업가치 제고 발표…동국제강은 설비 가동효율 개선·고정비 절감·수출 확대 추진",why:"주요 고객사 동국제강의 설비 효율화 기조는 내화물 수명관리·스펙 요구 변화로 연결 — 단가 협상·재무전략 파악 필요",url:"https://newsway.co.kr/news/view?ud=2026102215264957988"},{date:"2026-10-24",cat:"제철/제강",title:"무역위, 中 아연도금냉연 반덤핑 최종판정…22.34~33.67% 5년 관세 건의, 동국씨엠 등 국내 3사 제소",why:"국내 제강사 내수 보호·조업 방어에 우호적이며 동국 계열 수혜 기대 — 고객사 가동률·투자심리 개선 신호",url:"https://www.snmnews.com/news/articleView.html?idxno=576347"},{date:"2026-10-24",cat:"내화물 기술·시장",title:"철근 유통價 2주 연속 하락 톤당 80만~81만원…제강사 감산에도 수요부진에 반등 실패, 월말 추가 하락 우려",why:"봉형강 약세·전기로 제강사 감산 지속은 내화물 물량·단가 협상 환경 악화 신호 — 조업률 모니터링 지속 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576320"},{date:"2026-10-24",cat:"제철/제강",title:"세아제강, 4분기 美 강관 수출 성수기 회복 기대…영업익 전분기比 31.6%↑ 전망, 美 시추리그 증가",why:"강관사 수출·가동률 회복은 철강 전반 조업 심리 개선 신호 — 거래처 저변 동향 참고용",url:"https://www.snmnews.com/news/articleView.html?idxno=576355"},{date:"2026-10-20",cat:"제철/제강",title:"포스코 3분기 영업익 27%↑·현대제철 2%↑ 전망…4분기엔 포스코 광양 2고로 개수로 성장 둔화 예상",why:"고객사 조업 지표이자 광양 2고로 개수(대보수)는 대형 내화물 신규 수요로 직결 — 물량·납기 사전 대비 필요",url:"https://newsway.co.kr/news/view?ud=2026101516335839433"},{date:"2026-10-20",cat:"제철/제강",title:"철강 빅2 희비…포스코 실적 개선 vs 현대제철 건설경기 침체로 부진, 현대제철 임단협은 먼저 타결",why:"제강사별 수익성·투자심리 차이는 내화물 단가 협상력과 설비투자(개수 물량)에 영향 — 고객사별 대응 차별화 필요",url:"https://www.kukinews.com/article/view/kuk202610150197"},{date:"2026-10-20",cat:"경쟁사",title:"조선내화, 포스코와 350.9억 규모 내화물 공급계약 체결(포항·광양, 2026.10~2027.3)…최근 매출 6.6% 수준",why:"경쟁사가 포스코 포항·광양 내화물 물량을 반기 단위로 확보 — 우리 포스코향 입찰·단가 포지션 점검 필요",url:"https://www.digitaltoday.co.kr/disclosure/articleView.html?idxno=705168"},{date:"2026-10-20",cat:"내화물 기술·시장",title:"10월 셋째 주 국내 철스크랩價 보합…대한제강 8차 인하 예고, 봉형강 급락에 반등은 제한적",why:"전기로 주원료 스크랩 약세·봉형강 부진 지속은 제강사 가동률·수익성 압박 — 내화물 물량·단가 협상 환경 지속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=576086"},{date:"2026-10-20",cat:"내화물 기술·시장",title:"석탄 줄이고 전기로·수소환원 전환 가속…포스코 전량 적용 시 국내 전력판매량 35% 필요, 전력 확보가 최대 관건",why:"전기로·수소환원 확대는 중장기 내화물 신규 수요처 확대 신호이나 전력 병목이 전환 속도를 좌우 — 설비 스펙·수명관리 요구 변화 대비",url:"https://news.mtn.co.kr/news-detail/2026100114473872105"},{date:"2026-10-03",cat:"내화물 기술·시장",title:"현대제철, 10월 철스크랩價 7차 인하 예고…전 등급 톤당 1만원↓ 10월13일 적용(인천·당진·포항)",why:"전기로 주원료 스크랩 약세가 3개월째 지속 — 제강사 수익성·가동률과 직결되는 내화물 물량·단가 협상 환경 계속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=575438"},{date:"2026-10-03",cat:"제철/제강",title:"철강사 10월 성수기 가격 인상…현대제철 H형강 5만·판재 4만, 동국제강 철근 1만원↑ 다만 유통가 격차가 변수",why:"고객사 동국제강 등 제강사의 가격 인상 반영 여부는 조업·수익성 가늠자 — 내화물 수요·단가 협상에 영향",url:"https://m.inews24.com/v/2010435"},{date:"2026-10-03",cat:"제철/제강",title:"포스코·현대제철 저탄소 철강 전환 가속…수소환원·전기로 확대, 대규모 무탄소 전력 확보가 관건",why:"주요 제철사의 전기로·수소환원 전환 확대는 중장기 내화물 신규 수요처 확대 신호 — 스펙·수명관리 요구 변화 대비 필요",url:"https://www.newsis.com/view/NISX20260929_0003806684"},{date:"2026-10-03",cat:"내화물 기술·시장",title:"정부, 연말까지 철강 등 5대 다배출 업종 GX 로드맵 발표 예정…철강은 수소환원제철·저탄소 제품 전환이 축",why:"철강 탈탄소 정책·투자 로드맵은 전기로·수소환원 설비 확대로 이어져 내화물 수요 구조 변화에 영향",url:"https://etoday.co.kr/news/view/2630365"},{date:"2026-10-03",cat:"내화물 기술·시장",title:"철근 기준價 1년 만에 하락 전환…10월 톤당 1만9천원↓ 100만6천원, 스크랩 약세·수요 부진 반영",why:"봉형강 시황 약세 지속은 전기로 제강사 조업·투자 심리 위축으로 이어져 내화물 수요에 하방 압력",url:"https://www.snmnews.com/news/articleView.html?idxno=575308"},{date:"2026-09-29",cat:"내화물 기술·시장",title:"9월 다섯째 주 국내 철스크랩價 주요 제강사 6차 인하로 전 등급 톤당 1만원 추가 하락…시장은 저점 다지기 관측",why:"스크랩 가격 하락세가 지속되며 전기로 제강사 조업·수익성에 영향 — 내화물 물량·단가 협상 환경 계속 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=575198"},{date:"2026-09-21",cat:"제철/제강",title:"포스코 노조 1·2차 부분파업 21일 오전 7시 전면 종료…조업 정상화, 임단협은 결렬 상태 지속",why:"포스코 조업 정상화로 납기·물량 변동 리스크 완화 — 다만 임단협 미타결로 재파업 가능성은 계속 주시 필요",url:"https://www.news1.kr/local/daegu-gyeongbuk/6296769"},{date:"2026-09-21",cat:"제철/제강",title:"포스코 광양에 4800억 투입 8번째 자동차강판 도금라인(8CGL) 신설…연 45만t·2028년 준공, 전기로 소재 연계 저탄소 강판 대응",why:"광양 신규 라인·전기로 소재 연계 투자는 향후 내화물 신규 수요처 확대 신호",url:"https://biz.heraldcorp.com/article/10865912"},{date:"2026-09-21",cat:"경쟁사",title:"포스코퓨처엠, 광양제철소 연와보수 협력작업 909.6억원 수주 공시(매출액 대비 3.1%)",why:"경쟁사 포스코퓨처엠의 대형 연와보수 수주 — 포스코 내화물 축조·보수 시장 경쟁 심화, 입찰 대응 전략 점검 필요",url:"https://news.nate.com/view/20260716n28525"},{date:"2026-09-21",cat:"내화물 기술·시장",title:"9월 셋째 주 국내 철스크랩價 전 등급 톤당 1만원 하락…봉형강 약세·제강사 단가 인하 지속",why:"전기로 주원료 스크랩 약세는 제강사 수익성·가동률에 영향 — 내화물 물량·단가 협상 환경 변화 모니터링 필요",url:"https://www.snmnews.com/news/articleView.html?idxno=574732"},{date:"2026-09-21",cat:"내화물 기술·시장",title:"9월 셋째 주 철근 유통價 톤당 84만~85만원으로 1만원 재하락…추석 연휴·수요 부진에 성수기 무색",why:"봉형강 시황 약세 지속은 전기로 제강사 조업·투자 심리 위축으로 이어져 내화물 수요에 하방 압력",url:"https://www.snmnews.com/news/articleView.html?idxno=574908"},{date:"2026-09-16",cat:"제철/제강",title:"포스코 노조, 120시간 2차 부분파업 돌입…임금교섭 여전히 평행선",why:"포스코 조업 차질 시 납기·물량 변동 가능성 있어 영업·납품 일정에 주의 필요",url:"https://biz.sbs.co.kr/article/20000334908"},{date:"2026-09-02",cat:"제철/제강",title:"동국제강, 전기로 100% 체제로 2030년 탄소감축 목표 조기 달성…하이퍼 전기로로 효율 개선 추진",why:"주요 고객사 동국제강의 전기로 효율화 투자 방향은 내화물 스펙·수명관리 요구 변화로 이어질 수 있음",url:"https://www.asiatoday.co.kr/kn/view.php?key=20260903010001020"},{date:"2026-03-13",cat:"제철/제강",title:"포스코, 광양제철소에 6420억 투입 전기로 신설… 5월 가동 목표, 하이렉스 수소환원제철에도 1조3360억 투자",why:"포스코의 전기로·저탄소 전환 확대는 향후 내화물 수요처 확대 가능성을 시사",url:"https://www.snmnews.com/news/articleView.html?idxno=566361"},{date:"2026-01-02",cat:"내화물 기술·시장",title:"2026년 철강시장, 세계철강협회 수요 1%대 증가 전망…중국發 공급과잉·보호무역이 변수",why:"전방 철강 수요 둔화는 내화물 물량·단가 협상에도 영향을 줄 수 있어 시황 모니터링 필요",url:"https://www.ferrotimes.com/news/articleView.html?idxno=45548"},{date:"2026-09-06",cat:"제철/제강",title:"현대제철·포스코, 美 루이지애나 전기로 제철소 첫삽 — 탄소저감 강판 270만t",why:"국내 제철사 전기로 확대 = 전기로 내화물 수요 확대 신호",url:"https://www.imaeil.com/page/view/2026090616001271448"},{date:"2026-05-10",cat:"제철/제강",title:"포스코 광양 전기로 2026년 가동 초읽기 (하이렉스·AI 제철소)",why:"광양 전기로 가동 시 EBT·발코니·로저전극 등 전기로 내화물 신규 수요",url:"https://v.daum.net/v/20260510120338290"},{date:"2026-03-12",cat:"제철/제강",title:"포스코 국내 조강 생산능력 11년 만에 4,000만톤 아래로",why:"생산량 감소는 내화물 원단위·공급물량과 직결 — 물량 계획에 반영",url:"https://www.thebigdata.co.kr/view.php?ud=202603121044375352570d99e4c8_23"},{date:"2026-04-23",cat:"경쟁사",title:"조선내화, 포스코 수소환원제철 '숨은 조력자'로 부각",why:"주력 경쟁사 포지션 — 포스코 전략 내화물 동향 파악",url:"https://v.daum.net/v/20260423191317186"},{date:"2026-04-23",cat:"내화물 기술·시장",title:"포스코그룹, 친환경 철강 시대 차세대 내화물 기술 소개",why:"수소환원·전기로 전환에 따른 내화물 기술 트렌드 — 제안·개발 방향 참고",url:"https://newsroom.posco.com/kr/%EC%B9%9C%ED%99%98%EA%B2%BD-%EC%B2%A0%EA%B0%95-%EC%8B%9C%EB%8C%80%EB%A5%BC-%EC%97%B4%EC%96%B4%EA%B0%80%EB%8A%94-%EC%B0%A8%EC%84%B8%EB%8C%80-%EB%82%B4%ED%99%94%EB%AC%BC-%EA%B8%B0%EC%88%A0/"},];
 const NEWS_CAT_COLOR={'제철/제강':'#1d4ed8','경쟁사':'#c81e1e','내화물 기술·시장':'#15803d'};
 /* 업체별 뉴스 태깅 — 업체가 추가될 때마다 (제철,제강)/(내화물) 등 분류를 붙여 관리, 뉴스 본문에 업체명이 있으면 자동 매칭 */
 const NEWS_COMPANY_DEFAULT=[{name:'포스코',tags:['제철','제강']},{name:'동국제강',tags:['제철','제강']},{name:'현대제철',tags:['제철','제강']},{name:'조선내화',tags:['내화물']},{name:'동국R&S',tags:['내화물']},{name:'포스코퓨처엠',tags:['내화물']}];
@@ -20380,6 +20383,159 @@ function addPoscoMasterRow(item){
   rows.push({spec:'',qcode:'',price:'',priceEA:'',uw:''});
   poscoMaster[item]=rows;savePoscoMaster();renderPoscoBase();
 }
+
+/* ============ 2026-11-02: 포스코 계약단가 엑셀 → 포스코 품목마스터 반영 ============
+   파일: 설비자재구매실 「원재료가 연동제 검토」 '범용' 시트 — Item(=Q코드)·재질명(=품목)·Description·단중·계약물량·재질단가(KG)·계약단가(EA)가
+   26.3Q / 26.4Q 두 구간으로 들어 있음. Q코드 기준으로 품목마스터(포스코 탭)의 규격·단중·단가(KG/EA)를 갱신하고, 없는 Q코드는 추가한다.
+   규격은 Description에서 규격만 뽑아 간단히 표기(CP-6G→6G · MN-2-H41P(115L)→H41P(115L) · LW-180→LW180 · 500KG/BAG→B500).
+   포스코 입고실적 시트는 이 품목마스터 행을 그대로 쓴다(입찰 낙찰 여부와 무관). 단가는 해당 분기 '단가 시점'(스냅샷)과 라이브에 함께 저장. */
+const PCT_ALIAS={'SMG-85C-R':'SMC-85C-R'};
+let PCT=null;
+function poscoSpecFromDesc(item,desc){
+  const d=String(desc||'').trim();if(!d)return '';
+  const m=d.match(/(\d+(?:\.\d+)?)\s*KG\s*\/\s*(BAG|EA)/i);
+  if(/^UNSHAPED/i.test(d)&&m)return /BAG/i.test(m[2])?('B'+(+m[1])):((+m[1])+'KG');   // 포대(BAG)=B500·B1000 / 개(EA)=200KG
+  const tk=d.split(',').map(x=>x.trim()).filter(Boolean),it=String(item||'').trim().toUpperCase();
+  let ix=tk.findIndex(t=>{const u=t.toUpperCase();return u===it||u.indexOf(it+'-OEM')===0;});
+  if(ix<0)return '';
+  let raw='';
+  for(let i=ix+1;i<tk.length;i++){const t=tk[i];if(/^MSDS$/i.test(t))break;if(/^SS\d+$/i.test(t))continue;raw=t;break;}
+  if(!raw)return '';
+  return raw.replace(/^MN-2-/,'').replace(/^(HP|CP|WP|TP)-/,'').replace(/^(A?LW|W)-(?=\d)/,'$1');
+}
+function poscoSpecNorm(x){return String(x||'').toUpperCase().replace(/^MN-?2-?/,'').replace(/^(HP|CP|WP|TP)-?/,'').replace(/[\s\-]/g,'');}
+function pctQKey(h){const m=String(h||'').match(/(\d{2})\s*\.\s*([1-4])\s*Q/i);return m?('20'+m[1]+'Q'+m[2]):'';}
+async function poscoCtRead(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  try{
+    const wb=await xlsxOpenWorkbook(f);
+    let sh=wb.sheets.find(x=>x.name.trim()==='범용')||null,grid=null,hr=-1,cols={};
+    const tryShe=async x=>{const g=await xlsxParseSheetGrid(wb,x.path);for(const rn of Object.keys(g).map(Number).sort((a,b)=>a-b)){const row=g[rn];let it=-1,de=-1;for(const c in row){const v=String(row[c]||'').trim();if(v==='Item')it=+c;if(v==='Description')de=+c;}if(it>0&&de>0)return {g,rn,it,de};}return null;};
+    let found=sh?await tryShe(sh):null;
+    if(!found){for(const x of wb.sheets){found=await tryShe(x);if(found){sh=x;break;}}}
+    if(!found){alert('엑셀에서 "Item"·"Description" 머리글이 있는 시트를 찾지 못했습니다.\n[원재료가 연동제 검토] 파일의 "범용" 시트가 맞는지 확인해 주세요.');input.value='';return;}
+    grid=found.g;hr=found.rn;const H=grid[hr];
+    const lab=(c)=>String(H[c]||'').replace(/\s+/g,'').trim();
+    const poCols=Object.keys(H).map(Number).filter(c=>/기준PO/.test(lab(c))).sort((a,b)=>a-b);
+    const q1=poCols.length>1?pctQKey(H[poCols[0]]):'',q2=pctQKey(H[poCols[poCols.length-1]]);
+    const start2=poCols.length>1?poCols[poCols.length-1]:found.de+1;
+    const findIn=(a,b,name)=>{for(let c=a;c<=b;c++)if(lab(c)===name)return c;return -1;};
+    const maxC=Math.max(...Object.keys(H).map(Number));
+    const c2={mq:findIn(start2,maxC,'계약물량'),kg:findIn(start2,maxC,'재질단가'),ea:findIn(start2,maxC,'계약단가'),uw:findIn(start2,maxC,'단중'),po:start2,adj:findIn(start2,maxC,'연동제조정율')};
+    const e1=poCols.length>1?poCols[poCols.length-1]-1:-1;
+    const c1=poCols.length>1?{kg:findIn(poCols[0],e1,'재질단가'),ea:findIn(poCols[0],e1,'계약단가'),mq:findIn(poCols[0],e1,'계약물량')}:null;
+    if(!(c2.kg>0&&c2.ea>0)){alert('재질단가·계약단가 열을 찾지 못했습니다. 파일 형식을 확인해 주세요.');input.value='';return;}
+    const num=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;};
+    const rows=[];
+    Object.keys(grid).map(Number).filter(n=>n>hr).sort((a,b)=>a-b).forEach(rn=>{
+      const r=grid[rn],q=String(r[found.it]||'').trim().toUpperCase();if(!/^Q\d+/.test(q))return;
+      const sup=String(r[found.it-1]||'').trim();if(sup&&sup.indexOf('동국')<0)return;
+      const name=String(r[found.it+1]||'').trim(),desc=String(r[found.de]||'').trim();
+      rows.push({q:q,name:name,desc:desc,uw:num(r[c2.uw]),kg:num(r[c2.kg]),ea:num(r[c2.ea]),mq:num(r[c2.mq]),po:String(r[c2.po]||'').trim(),adj:c2.adj>0?num(r[c2.adj]):0,
+        kg3:c1&&c1.kg>0?num(r[c1.kg]):0,ea3:c1&&c1.ea>0?num(r[c1.ea]):0,mq3:c1&&c1.mq>0?num(r[c1.mq]):0});
+    });
+    input.value='';
+    if(!rows.length){alert('Q코드 행을 찾지 못했습니다.');return;}
+    poscoCtPlan(rows,{fq:q2||currentQuarterKey(),q3:q1,file:f.name});
+  }catch(err){input.value='';alert('엑셀을 읽는 중 오류가 발생했습니다: '+err.message);}
+}
+function poscoCtPlan(rows,meta){
+  const known=new Set(POSCO_SEED.map(r=>r.item));
+  const wm={};const W=it=>wm[it]||(wm[it]=poscoMasterRows(it).map(x=>({...x})));
+  const claimed=new Set(),out=[];
+  const snapKg=(it,idx,row)=>{const sn=poscoPriceSnaps[meta.fq];const k=poscoRowKey(it,idx);return (sn&&sn.prices&&sn.prices[k]!=null)?+sn.prices[k]:(+row.price||0);};
+  const snapEa=(it,idx,row)=>{const sn=poscoPriceSnaps[meta.fq];const k=poscoRowKey(it,idx);return (sn&&sn.pricesEA&&sn.pricesEA[k]!=null)?+sn.pricesEA[k]:(+row.priceEA||0);};
+  rows.forEach(fx=>{
+    let item=null,idx=-1;
+    for(const it of Object.keys(poscoMaster)){const rr=W(it);const ix=rr.findIndex(r=>String(r.qcode||'').trim().toUpperCase()===fx.q);if(ix>=0){item=it;idx=ix;break;}}
+    if(!item){
+      try{const b=POSCO_BIDQ.find(x=>x[0]===fx.q);if(b&&known.has(b[1]))item=b[1];}catch(e){}
+      if(!item){if(known.has(fx.name))item=fx.name;else if(PCT_ALIAS[fx.name]&&known.has(PCT_ALIAS[fx.name]))item=PCT_ALIAS[fx.name];}
+    }
+    const spec=poscoSpecFromDesc(fx.name,fx.desc)||poscoSpecFromDesc(item||'',fx.desc);
+    if(!item){out.push(Object.assign({},fx,{item:'',idx:-1,spec:spec,kind:'noitem',on:false,diff:['포스코 품목마스터에 없는 품목(재질명 '+fx.name+')']}));return;}
+    const rr=W(item);
+    if(idx<0){
+      const key=poscoSpecNorm(spec);
+      idx=rr.findIndex((r,i)=>!claimed.has(item+'#'+i)&&!String(r.qcode||'').trim()&&key&&poscoSpecNorm(r.spec)===key);
+      if(idx<0)idx=rr.findIndex((r,i)=>!claimed.has(item+'#'+i)&&!String(r.qcode||'').trim()&&!String(r.spec||'').trim());
+    }
+    let kind='upd',old=null;
+    if(idx<0){rr.push({spec:'',qcode:'',price:'',priceEA:'',uw:''});idx=rr.length-1;kind='new';}
+    else{const r0=rr[idx];old={spec:String(r0.spec||''),uw:+r0.uw||0,kg:snapKg(item,idx,r0),ea:snapEa(item,idx,r0),q:String(r0.qcode||'')};
+      if(!old.q&&!old.spec&&!old.uw&&!old.kg&&!old.ea)kind='new';}
+    claimed.add(item+'#'+idx);
+    const diff=[];
+    if(kind==='upd'){
+      if(old.q!==fx.q)diff.push('Q코드 입력');
+      if(old.spec!==spec)diff.push('규격 '+(old.spec||'(없음)')+' → '+spec);
+      if(Math.abs(old.uw-fx.uw)>1e-9)diff.push('단중 '+(old.uw||'-')+' → '+fx.uw);
+      if(Math.round(old.kg)!==Math.round(fx.kg))diff.push('KG '+Math.round(old.kg).toLocaleString()+' → '+Math.round(fx.kg).toLocaleString());
+      if(Math.round(old.ea)!==Math.round(fx.ea))diff.push('EA '+Math.round(old.ea).toLocaleString()+' → '+Math.round(fx.ea).toLocaleString());
+      if(!diff.length)kind='same';
+    }
+    out.push(Object.assign({},fx,{item:item,idx:idx,spec:spec,kind:kind,on:true,diff:diff}));
+  });
+  PCT={rows:out,fq:meta.fq,q3:meta.q3,file:meta.file};
+  poscoCtDlg();
+}
+function poscoCtClose(){const o=document.getElementById('pcOverlay');if(o)o.classList.remove('show');}
+function poscoCtDlg(){
+  const P=PCT;if(!P)return;
+  const N=x=>Math.round(x).toLocaleString();
+  const cnt={new:0,upd:0,same:0,noitem:0};P.rows.forEach(r=>cnt[r.kind]++);
+  const sel=P.rows.filter(r=>r.on&&r.item).length;
+  const lbl={new:'<span style="color:#1d4ed8;font-weight:700">신규 추가</span>',upd:'<span style="color:#b45309;font-weight:700">갱신</span>',same:'<span style="color:#64748b">변경 없음</span>',noitem:'<span style="color:#c81e1e;font-weight:700">⚠ 제외</span>'};
+  const body=P.rows.map((r,i)=>`<tr${r.kind==='noitem'?' style="opacity:.6"':''}>
+    <td><input type="checkbox" ${r.on?'checked':''} ${r.item?'':'disabled'} onchange="PCT.rows[${i}].on=this.checked;poscoCtDlg()"></td>
+    <td style="font-weight:700">${esc(r.item||r.name)}</td><td style="font-family:Consolas,monospace;font-size:11.5px">${esc(r.q)}</td>
+    <td><input class="binp" style="width:130px;font-weight:700" value="${esc(r.spec)}" title="${esc(r.desc)}" onchange="PCT.rows[${i}].spec=this.value.trim()"></td>
+    <td class="n">${r.uw||'-'}</td><td class="n">${N(r.kg)}</td><td class="n">${N(r.ea)}</td><td class="n">${r.mq?N(r.mq):'-'}</td>
+    <td style="text-align:left;font-size:11.5px">${lbl[r.kind]}${r.diff.length?'<div style="color:var(--muted);font-size:11px">'+esc(r.diff.join(' · '))+'</div>':''}</td></tr>`).join('');
+  const ql=quarterLabel(P.fq),cur=P.fq>=currentQuarterKey();
+  document.getElementById('pcBox').innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">📥 포스코 계약단가 반영 확인</h3><span style="font-size:12px;color:var(--muted)">${esc(P.file)}</span><span class="spacer" style="flex:1"></span><button class="btn" onclick="poscoCtClose()">닫기</button></div>
+  <div style="font-size:12.5px;margin:8px 0;line-height:1.7"><b>${esc(ql)} 계약단가</b> 기준 · 총 ${P.rows.length}건 — 신규 ${cnt.new} · 갱신 ${cnt.upd} · 변경없음 ${cnt.same}${cnt.noitem?` · 제외 ${cnt.noitem}`:''}<br>
+  반영 위치: 품목마스터 › 포스코 탭의 Q코드·규격·단중·단가(KG)·단가(EA) — ${esc(ql)} 단가 시점${cur?'과 현재(라이브) 단가':''}에 저장됩니다. 규격은 Description에서 자동 추출했으며 칸에서 바로 고칠 수 있습니다(마우스를 올리면 원문).<br>
+  반영하면 <b>포스코 입고실적</b> 시트의 품목·Q코드·단가가 이 품목마스터 기준으로 바뀝니다(입찰 낙찰 여부와 무관).</div>
+  ${P.q3?`<label style="font-size:12px;display:inline-block;margin-bottom:8px"><input type="checkbox" id="pct_q3"> ${esc(quarterLabel(P.q3))} 계약단가도 해당 분기 시점으로 함께 저장 <span style="color:var(--muted)">(지난 분기 입고 금액 계산용)</span></label>`:''}
+  <div style="overflow:auto;max-height:56vh"><table class="qi-tb"><thead><tr><th></th><th>품목</th><th>Q코드</th><th>규격(자동)</th><th>단중(kg)</th><th>단가(KG)</th><th>단가(EA)</th><th>계약물량</th><th>상태</th></tr></thead><tbody>${body}</tbody></table></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-items:center"><span style="font-size:12px;color:var(--muted)">선택 ${sel}건</span><button class="btn" onclick="poscoCtClose()">취소</button><button class="btn primary" onclick="poscoCtApply()" ${sel?'':'disabled'}>선택 ${sel}건 반영</button></div>`;
+  document.getElementById('pcOverlay').classList.add('show');
+}
+function poscoCtApply(){
+  const P=PCT;if(!P)return;
+  const on=P.rows.filter(r=>r.on&&r.item);if(!on.length)return;
+  const live=P.fq>=currentQuarterKey(),withQ3=!!(P.q3&&(document.getElementById('pct_q3')||{}).checked);
+  const touched={};
+  on.forEach(r=>{
+    const rr=touched[r.item]||(touched[r.item]=poscoMasterRows(r.item).map(x=>({...x})));
+    while(rr.length<=r.idx)rr.push({spec:'',qcode:'',price:'',priceEA:'',uw:''});
+    const row=rr[r.idx];
+    row.qcode=r.q;row.spec=r.spec;row.uw=r.uw?String(r.uw):'';
+    if(live||!(+row.price))row.price=String(r.kg);
+    if(live||!(+row.priceEA))row.priceEA=String(r.ea);
+    row.desc=r.desc;row.po=r.po;row.cq=P.fq.slice(2,4)+'.'+P.fq.slice(5)+'Q';row.cqty=r.mq;delete row.imp;
+  });
+  Object.keys(touched).forEach(it=>{poscoMaster[it]=touched[it];});
+  savePoscoMaster();
+  const setSnap=(key,pick)=>{
+    let sn=poscoPriceSnaps[key];
+    if(!sn){const prices={},pricesEA={};POSCO_SEED.forEach(sr=>{poscoMasterRows(sr.item).forEach((row,idx)=>{const k=poscoRowKey(sr.item,idx);prices[k]=+row.price||0;pricesEA[k]=+row.priceEA||0;});});
+      sn=poscoPriceSnaps[key]={date:todayStr(),label:quarterLabel(key),prices,pricesEA};}
+    sn.prices=sn.prices||{};sn.pricesEA=sn.pricesEA||{};
+    on.forEach(r=>{const v=pick(r);if(!v)return;const k=poscoRowKey(r.item,r.idx);sn.prices[k]=v.kg;sn.pricesEA[k]=v.ea;});
+  };
+  setSnap(P.fq,r=>({kg:r.kg,ea:r.ea}));
+  if(withQ3)setSnap(P.q3,r=>(r.kg3&&r.ea3)?{kg:r.kg3,ea:r.ea3}:null);
+  savePoscoSnaps();
+  // 입고실적: 숨겨 둔 포스코 품목 중 이번에 반영한 Q코드는 다시 표시 · 기존 입고 기록의 품명을 새 규격으로 맞춤
+  try{const h=piHidden();const keys=new Set(on.map(r=>'포스코|'+r.q));if((h['포스코']||[]).some(k=>keys.has(k))){h['포스코']=h['포스코'].filter(k=>!keys.has(k));piW('dgrns_pi_hidden',h);}}catch(e){}
+  try{piData=piLoad();let ch=0;on.forEach(r=>{piData.forEach(x=>{if(x.k==='포스코|'+r.q){const nm=r.item+(r.spec?' '+r.spec:'');if(x.name!==nm){x.name=nm;ch++;}}});});if(ch)piSave();}catch(e){}
+  try{localStorage.setItem('dgrns_posco_ctimp',JSON.stringify({date:todayStr(),q:P.fq.slice(2,4)+'.'+P.fq.slice(5)+'Q',n:on.length,file:P.file}));}catch(e){}
+  try{nfClear();}catch(e){}
+  poscoCtClose();syncPoscoPeriodSelectors();renderPoscoBase();prodmCounts();
+  toast('계약단가 '+on.length+'건을 품목마스터에 반영했습니다 · 포스코 입고실적에 연동됩니다');
+}
 function removePoscoMasterRow(item,idx){
   const rows=poscoMasterRows(item).map(r=>({...r}));
   rows.splice(idx,1);
@@ -20474,7 +20630,7 @@ function poscoBaseItemHtml(r){
   const n=rows.length;
   const viewLive=(poscoPricePeriod==='');
   return rows.map((row,idx)=>{
-    const specCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.spec)}" placeholder="규격 입력" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'spec',this.value)">`;
+    const specCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.spec)}" placeholder="규격 입력"${row.desc?` title="${esc('계약 Description: '+row.desc+(row.po?' · '+row.po:'')+(row.cq?' · '+row.cq+' 기준':''))}"`:''} onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'spec',this.value)">`;
     const qCell=`<input class="binp" style="width:100%;border:1px solid var(--line)" value="${esc(row.qcode)}" placeholder="Q코드" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'qcode',this.value)">`;
     const uwCell=`<input class="binp" style="width:100%;border:1px solid var(--line);text-align:right" value="${esc(row.uw||'')}" placeholder="단중" title="1EA(개)당 중량(kg) — 넣어두면 단가(KG) 입력 시 단가(EA)가 자동 계산됩니다" onchange="setPoscoMasterRow('${esc(r.item)}',${idx},'uw',this.value)">`;
     const kgCell=viewLive
@@ -20511,7 +20667,7 @@ function renderPoscoBase(){
   const rows=poscoBaseFocus?POSCO_SEED.filter(r=>r.item===poscoBaseFocus):poscoBaseRows();
   box.innerHTML=rows.map(poscoBaseItemHtml).join('')
     ||`<tr><td colspan="8"><div class="empty">해당 조건의 품목이 없습니다.</div></td></tr>`;
-  const cnt=document.getElementById('pb_count');if(cnt)cnt.textContent=rows.length+'개 품목 · 단가시점 ['+poscoPeriodLabel(poscoPricePeriod)+']';
+  const cnt=document.getElementById('pb_count');if(cnt){let ct='';try{const o=JSON.parse(localStorage.getItem('dgrns_posco_ctimp')||'null');if(o)ct=' · 계약단가 반영 '+o.date+' ('+o.q+' '+o.n+'건)';}catch(e){}cnt.textContent=rows.length+'개 품목 · 단가시점 ['+poscoPeriodLabel(poscoPricePeriod)+']'+ct;}
   const phEl=document.getElementById('pb_periodHint');
   if(phEl)phEl.textContent=(poscoPricePeriod==='')
     ?'※ "현재(편집중)"에서 단가를 고치면 라이브 단가가 즉시 바뀝니다. 특정 시점부터 적용될 단가를 미리 준비하려면 분기를 고르고 🆕 신규 시점을 눌러 그 시점만 편집하세요.'
@@ -26271,7 +26427,7 @@ function piRegistry(){
     // ① [내화물 품목마스터 › 포스코] — 최우선(단가는 월별로 '단가 시점'을 따라감: piEntryPrice)
     try{Object.keys(poscoMaster||{}).forEach(item=>(poscoMaster[item]||[]).forEach((r,idx)=>{
       if(!(r.qcode||r.spec))return;
-      if(r.imp){const sr=POSCO_SEED.find(x=>x.item===item);if(!sr||!(poscoEff(sr).dkWin>0))return;}   // 본입찰용에서 가져온 Q코드는 동국이 낙찰(납품)받은 품목만 입고 시트에 표시(미낙찰 품목은 품목단가에만 등록)
+      if(r.imp)return;   // 2026-11-02: 본입찰용 Q코드(계약 전)는 품목단가에만 등록 — 입고 시트는 [계약단가 엑셀]로 반영했거나 직접 등록한 품목마스터 행만 표시(입찰 낙찰 여부로 연동하지 않음)
       const ea=+r.priceEA>0&&+r.uw>0;
       add({q:String(r.qcode||'').trim().toUpperCase(),item:item,spec:r.spec||'',unit:ea?'ea':'kg',price:ea?+r.priceEA:(+r.price||0),uw:+r.uw||0,grp:piGrpOfItem(item),cat:piCatOfItem(item),src:'품목마스터',mi:item,mx:idx});}));}catch(e){}
     // ② 2027 사업계획(V-1) 등록 Q코드 — 마스터에 아직 없으면 보충(마스터에 넣으면 마스터 우선)
@@ -26280,9 +26436,7 @@ function piRegistry(){
     try{BIZPLAN_POSCO_SEED.forEach((it,i)=>{if(it.del)return;const per=bizplanExtPer(it);
       add({q:bizplanQcode('posco',i)||'',item:it.cat,spec:it.name,unit:'ea',price:Math.round(per.a),uw:Math.round(per.w*100)/100,grp:it.vendor==='포스코(기존)'?'기존':'신규',cat:piCatOfItem(it.cat),src:'사업계획'});});}catch(e){}
     try{(piCustomAll()['포스코']||[]).forEach(c=>add({q:String(c.q||'').trim().toUpperCase(),item:c.item,spec:c.spec||'',unit:c.unit||'kg',price:+c.price||0,uw:+c.uw||0,grp:c.grp||'신규',cat:piCatOfItem(c.item),src:'직접 등록',custom:true}));}catch(e){}
-    try{POSCO_SEED.filter(r=>r.year==='26'&&r.dkRank==='낙찰').forEach(r=>{
-      if(out.some(o=>o.item===r.item))return;
-      add({q:'',item:r.item,spec:'',unit:'kg',price:+r.winPrice||0,uw:0,grp:'신규',cat:piCatOfItem(r.item),src:'입찰 낙찰가'});});}catch(e){}
+    // 2026-11-02: 입찰 낙찰 품목(Q코드 미등록) 자동 표시는 제거 — 입고 시트는 품목마스터(포스코 탭) 기준
     return out;
   });
 }
@@ -26463,7 +26617,7 @@ function piSheetRender(){
   const gsel=document.getElementById('pi_grpf');if(gsel){gsel.style.display=isP?'':'none';gsel.innerHTML=`<option value="">분류 전체 (${gcnt['기존']+gcnt['신규']})</option><option value="기존"${piSt.grp==='기존'?' selected':''}>포스코 기존 (${gcnt['기존']})</option><option value="신규"${piSt.grp==='신규'?' selected':''}>포스코 신규 (${gcnt['신규']})</option>`;}
   ents=ents.filter(e=>!q||(e.item+' '+e.spec+' '+(e.q||'')).toLowerCase().includes(q)).filter(e=>!piSt.only||e.mq>0).filter(e=>!isP||!piSt.grp||(piSt.grp==='기존'?e.grp==='기존':e.grp!=='기존'));
   const gn={};ents.forEach(e=>{const k=gk(e);gn[k]=(gn[k]||0)+1;});
-  if(isP)ents.sort((a,b)=>{const ga=a.grp==='기존'?0:1,gb=b.grp==='기존'?0:1;if(ga!==gb)return ga-gb;const ia=ORD.indexOf(a.item),ib=ORD.indexOf(b.item);return ((ia<0?9:ia)-(ib<0?9:ib))||String(a.item).localeCompare(b.item)||String(a.spec).localeCompare(b.spec);});
+  if(isP)ents.sort((a,b)=>{const ga=a.grp==='기존'?0:1,gb=b.grp==='기존'?0:1;if(ga!==gb)return ga-gb;const ia=ORD.indexOf(a.item),ib=ORD.indexOf(b.item);return ((ia<0?9:ia)-(ib<0?9:ib))||String(a.item).localeCompare(b.item)||((a.mx!=null&&b.mx!=null)?(a.mx-b.mx):String(a.spec).localeCompare(b.spec));});   // 같은 품목은 품목마스터 순서(=계약 엑셀 순서) 그대로
   piSt.ents=ents;
   const N=x=>Math.round(x).toLocaleString();
   let body='',curG=null,S={d:0,m:0,w:0,q:{}},T={d:0,m:0,w:0,n:0,dn:0,q:{}};
