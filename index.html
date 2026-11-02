@@ -1603,23 +1603,27 @@ table thead th:not([style*="text-align:left"]):not([style*="text-align: left"]),
 
   /* ===== 2026-11-02 업무진행현황 · 엑셀 양식 ===== */
   .wpx{overflow:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:14px}
-  table.wpxt{border-collapse:collapse;font-size:12px;min-width:1560px;width:100%}
-  table.wpxt th,table.wpxt td{border:1px solid #b4c6d8;padding:3px 5px;vertical-align:top}
+  table.wpxt{border-collapse:collapse;font-size:12px;min-width:1150px;width:100%}
+  table.wpxt th,table.wpxt td{border:1px solid #b4c6d8;padding:2px 3px;vertical-align:top}
   table.wpxt th{background:#d9e1f2;color:#1f3864;font-weight:800;text-align:center;white-space:nowrap;vertical-align:middle}
   table.wpxt th.ref{background:#ececec;color:#475569}
-  table.wpxt td.g{background:#f4f7fb;font-weight:700;text-align:center;vertical-align:middle;min-width:64px}
-  table.wpxt td.ttl{min-width:190px;font-weight:700}
+  table.wpxt td.g{background:#f4f7fb;font-weight:700;text-align:center;vertical-align:middle;min-width:34px;max-width:70px;font-size:11px;word-break:keep-all;overflow-wrap:anywhere}
+  table.wpxt td.g.off{width:30px;min-width:30px;max-width:30px;padding:2px 0}
+  table.wpxt td.g.off div{writing-mode:vertical-rl;margin:0 auto;letter-spacing:2px}
+  table.wpxt td.ttl{min-width:120px;max-width:170px;font-weight:700;font-size:11.5px;line-height:1.35}
   table.wpxt [contenteditable]{outline:none;white-space:pre-wrap;min-height:16px;border-radius:3px}
   table.wpxt [contenteditable]:hover{background:#fffbe6}
   table.wpxt [contenteditable]:focus{background:#fff;box-shadow:0 0 0 2px #93c5fd}
-  table.wpxt td.m{min-width:96px;width:96px;font-size:10.8px;line-height:1.4;cursor:text;position:relative;padding-top:9px}
+  table.wpxt td.m{min-width:100px;font-size:11px;line-height:1.35;cursor:text;position:relative;padding:8px 3px 2px}
   table.wpxt td.m .bar{position:absolute;left:0;right:0;top:0;height:6px;background:#e5e9ef;cursor:pointer}
   table.wpxt td.m:hover .bar{height:8px}
   table.wpxt td.m textarea{width:100%;min-height:80px;box-sizing:border-box;font-size:11px;font-family:inherit;border:1px solid #93c5fd;border-radius:4px;padding:3px}
   table.wpxt td.ref{white-space:nowrap;vertical-align:middle;background:#fafafa}
   table.wpxt td.ref .iinp{width:104px}
-  table.wpxt td.act{white-space:nowrap;vertical-align:middle;text-align:center}
-  table.wpxt td.act .btn{padding:1px 6px;font-size:11px}
+  .wpx.noref .refc{display:none}
+  table.wpxt th.mgt{width:46px;min-width:46px;padding:2px}
+  table.wpxt td.act{width:46px;min-width:46px;vertical-align:middle;text-align:center;padding:1px}
+  table.wpxt td.act .btn{padding:0 3px;font-size:10px;min-width:20px;height:18px;line-height:16px;margin:1px}
   .wpx-lg{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:#475569;margin:2px 2px 8px}
   .wpx-lg i{display:inline-block;width:26px;height:9px;border-radius:2px}
 </style>
@@ -28441,7 +28445,8 @@ function wpLoad(){try{const s=JSON.parse(localStorage.getItem('dgrns_workprog')|
 let wpS=wpLoad();
 let wpHist=(()=>{try{return JSON.parse(localStorage.getItem('dgrns_workprog_hist')||'[]');}catch(e){return [];}})();
 let wpUi=(()=>{try{return JSON.parse(localStorage.getItem('dgrns_workprog_ui')||'{}');}catch(e){return {};}})();
-let wpSub='xl';
+let wpSub='xl';let wpXlRef=(function(){try{return localStorage.getItem('dgrns_wpxref')==='1';}catch(e){return false;}})();
+function wpXlRefToggle(){wpXlRef=!wpXlRef;try{localStorage.setItem('dgrns_wpxref',wpXlRef?'1':'0');}catch(e){}wpRenderXl();}
 function wpSave(){try{localStorage.setItem('dgrns_workprog',JSON.stringify(wpS));}catch(e){}flashSave();}
 function wpSaveHist(){if(wpHist.length>300)wpHist=wpHist.slice(-300);try{localStorage.setItem('dgrns_workprog_hist',JSON.stringify(wpHist));}catch(e){}}
 function wpSaveUi(){try{localStorage.setItem('dgrns_workprog_ui',JSON.stringify(wpUi));}catch(e){}}
@@ -28591,6 +28596,7 @@ function wpOpenDetail(id){
       <label>구분</label><input class="iinp" style="text-align:left" value="${esc(it.category||'')}" onchange="wpEdit('${id}','category',this.value)">
       <label>업무명</label><input class="iinp" style="text-align:left;width:100%" value="${esc(it.title)}" onchange="wpEdit('${id}','title',this.value)">
       <label>비고</label><input class="iinp" style="text-align:left;width:100%" value="${esc(it.note||'')}" onchange="wpEdit('${id}','note',this.value)">
+      <label>기간·상태</label><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input type="month" class="iinp" style="width:130px" value="${esc(it.start||'')}" onchange="wpEdit('${id}','start',this.value)"><span>~</span><input type="month" class="iinp" style="width:130px" value="${esc(it.due||'')}" onchange="wpEdit('${id}','due',this.value)"><select class="selbox" onchange="wpEdit('${id}','status',this.value)">${Object.keys(WP_ST).map(x=>`<option${x===it.status?' selected':''}>${x}</option>`).join('')}</select></div>
       <label style="align-self:start">진행 내용</label><textarea class="iinp" style="width:100%;height:230px;text-align:left;font-size:12px;line-height:1.5" onchange="wpEdit('${id}','detail',this.value)" placeholder="[2026-10] - 내용  (월별로 한 줄씩)">${esc(it.detail||'')}</textarea>
     </div>
     ${it.reason?`<div style="font-size:11px;color:#b45309;margin-top:8px">상태 추정 근거: ${esc(it.reason)}</div>`:''}
@@ -28677,11 +28683,11 @@ function wpRenderXl(){
   if(!L.length){box.innerHTML='<div class="empty">조건에 맞는 업무가 없습니다.</div>';return;}
   const years=[...new Set(L.map(x=>+x.year))].sort((a,b)=>b-a);
   let h='<div class="wpx-lg"><b>보는 법</b><span>이슈 제목·거래처·구분은 글자를 눌러 바로 수정 · 월 칸을 누르면 진행내용 입력(Ctrl+Enter 저장) · 칸 윗줄(막대)을 누르면 진행 기간 표시 ON/OFF</span><span style="display:inline-flex;gap:4px;align-items:center">막대 색 = 상태</span>'
-    +Object.keys(WP_ST).map(s=>`<span style="display:inline-flex;gap:3px;align-items:center"><i style="background:${WP_ST[s].c}"></i>${s}</span>`).join('')+'</div>';
+    +Object.keys(WP_ST).map(s=>`<span style="display:inline-flex;gap:3px;align-items:center"><i style="background:${WP_ST[s].c}"></i>${s}</span>`).join('')+`<span style="flex:1"></span><button class="btn sm" onclick="wpXlRefToggle()" title="시작·기한·상태 열을 접어 진행사항 칸을 넓힙니다">${wpXlRef?'◀ 참고열 접기':'▶ 참고열(시작·기한·상태) 보기'}</button></div>`;
   years.forEach(y=>{
     const rows=L.filter(x=>+x.year===y).sort((a,b)=>a.no-b.no),yy=String(y).slice(2);
     const office=(rows[0]&&rows[0].office)||'포항사업소';
-    let t=`<table class="wpxt"><thead><tr><th rowspan="2">영업소</th><th rowspan="2">거래처</th><th rowspan="2" colspan="2">주요 이슈사항</th><th colspan="12">진행사항(${yy}년)</th><th colspan="3" class="ref">참고 (시작·기한·상태)</th><th rowspan="2" class="ref">관리</th></tr><tr>${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th class="ref">시작</th><th class="ref">기한</th><th class="ref">상태</th></tr></thead><tbody>`;
+    let t=`<table class="wpxt"><thead><tr><th rowspan="2">영업소</th><th rowspan="2">거래처</th><th rowspan="2" colspan="2">주요 이슈사항</th><th colspan="12">진행사항(${yy}년)</th><th colspan="3" class="ref refc">참고 (시작·기한·상태)</th><th rowspan="2" class="ref mgt">관리</th></tr><tr>${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th class="ref refc">시작</th><th class="ref refc">기한</th><th class="ref refc">상태</th></tr></thead><tbody>`;
     // 병합 그룹 계산
     const n=rows.length,custSpan=Array(n).fill(0),catSpan=Array(n).fill(0);
     for(let i=0;i<n;){let j=i;while(j+1<n&&rows[j+1].customer===rows[i].customer)j++;custSpan[i]=j-i+1;
@@ -28690,7 +28696,7 @@ function wpRenderXl(){
     rows.forEach((it,i)=>{
       const st=WP_ST[it.status]||WP_ST['예정'],mp=wpMonthMap(it),over=wpMonthOver(it);
       let tr=`<tr>`;
-      if(i===0)tr+=`<td class="g" rowspan="${n}"><div contenteditable="true" data-old="${esc(office)}" data-ids="${rows.map(r=>r.id).join(',')}" onblur="wpxGrp(this,'office')">${esc(office)}</div></td>`;
+      if(i===0)tr+=`<td class="g off" rowspan="${n}"><div contenteditable="true" data-old="${esc(office)}" data-ids="${rows.map(r=>r.id).join(',')}" onblur="wpxGrp(this,'office')">${esc(office)}</div></td>`;
       if(custSpan[i]){const ids=rows.slice(i,i+custSpan[i]).map(r=>r.id).join(',');
         tr+=`<td class="g" rowspan="${custSpan[i]}"><div contenteditable="true" data-old="${esc(it.customer||'')}" data-ids="${ids}" onblur="wpxGrp(this,'customer')">${esc(it.customer||'')}</div></td>`;}
       if(it.category){
@@ -28705,14 +28711,14 @@ function wpRenderXl(){
         const body=lines.length?lines.map(s=>'- '+esc(s)).join('<br>'):(note?`<span style="color:${st.c}">●</span>`:'');
         tr+=`<td class="m" data-id="${it.id}" data-m="${m}" onclick="wpxCell(this)" style="${bar?'background:'+(WP_TINT[it.status]||'#e2e8f0'):''}"><div class="bar" onclick="event.stopPropagation();wpxBar('${it.id}',${m-1})" title="${m}월 진행 기간 표시 켜기/끄기" style="${bar?'background:'+st.c:''}"></div><div class="t">${body}</div></td>`;
       }
-      tr+=`<td class="ref"><input type="month" class="iinp" value="${esc(it.start||'')}" onchange="wpEdit('${it.id}','start',this.value)"></td>`
-        +`<td class="ref"><input type="month" class="iinp" style="${over?'border-color:#dc2626':''}" value="${esc(it.due||'')}" onchange="wpEdit('${it.id}','due',this.value)"></td>`
-        +`<td class="ref"><select class="selbox" style="color:${st.c};background:${st.bg};font-weight:700;min-width:70px" onchange="wpEdit('${it.id}','status',this.value)">${Object.keys(WP_ST).map(s=>`<option${s===it.status?' selected':''}>${s}</option>`).join('')}</select></td>`
-        +`<td class="act"><button class="btn" title="위로" onclick="wpxMove('${it.id}',-1)">▲</button><button class="btn" title="아래로" onclick="wpxMove('${it.id}',1)">▼</button><button class="btn" title="이 아래에 이슈 추가" onclick="wpxAdd('${it.id}')">＋</button><button class="btn" title="상세·삭제" onclick="wpOpenDetail('${it.id}')">상세</button></td></tr>`;
+      tr+=`<td class="ref refc"><input type="month" class="iinp" value="${esc(it.start||'')}" onchange="wpEdit('${it.id}','start',this.value)"></td>`
+        +`<td class="ref refc"><input type="month" class="iinp" style="${over?'border-color:#dc2626':''}" value="${esc(it.due||'')}" onchange="wpEdit('${it.id}','due',this.value)"></td>`
+        +`<td class="ref refc"><select class="selbox" style="color:${st.c};background:${st.bg};font-weight:700;min-width:70px" onchange="wpEdit('${it.id}','status',this.value)">${Object.keys(WP_ST).map(s=>`<option${s===it.status?' selected':''}>${s}</option>`).join('')}</select></td>`
+        +`<td class="act"><button class="btn" title="위로" onclick="wpxMove('${it.id}',-1)">▲</button><button class="btn" title="아래로" onclick="wpxMove('${it.id}',1)">▼</button><button class="btn" title="이 아래에 이슈 추가" onclick="wpxAdd('${it.id}')">＋</button><button class="btn" title="상세 · 시작/기한/상태 편집 · 삭제" onclick="wpOpenDetail('${it.id}')">⋯</button></td></tr>`;
       t+=tr;
     });
     t+='</tbody></table>';
-    h+=`<div style="font-weight:800;font-size:13px;margin:6px 2px">■ 영업소별 주요업무 진행현황 (${y}년) <button class="btn sm" style="margin-left:8px" onclick="wpxAddCust(${y})">＋ 거래처·이슈 추가</button></div><div class="wpx">${t}</div>`;
+    h+=`<div style="font-weight:800;font-size:13px;margin:6px 2px">■ 영업소별 주요업무 진행현황 (${y}년) <button class="btn sm" style="margin-left:8px" onclick="wpxAddCust(${y})">＋ 거래처·이슈 추가</button></div><div class="wpx${wpXlRef?'':' noref'}">${t}</div>`;
   });
   h+='<div style="font-size:11px;color:var(--muted);margin:0 2px 8px">* 개선업무 or 신규업무의 연속성을 보기 위함(월 실적 자료 작성시 최신업데이트必) · 시작·기한·상태는 원본 엑셀에 없는 참고 항목입니다. 변경은 입력 즉시 저장됩니다.</div>';
   box.innerHTML=h;
