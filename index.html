@@ -394,6 +394,9 @@
   table.stk tbody tr td.fc{background:#fafafa;text-align:right}
   table.stk tbody tr td.sum{background:#fef9c3;font-weight:800;text-align:right}
   table.stk tbody tr td.ovr{background:#fed7aa}
+  table.stk tbody tr td.adj{background:#ede9fe !important;box-shadow:inset 0 0 0 2px #7c3aed;position:relative;font-weight:800}
+  table.stk tbody tr td.adj::before{content:attr(data-ad);position:absolute;left:1px;bottom:0;font-size:9px;line-height:11px;font-weight:800;color:#fff;background:#7c3aed;padding:0 3px;border-radius:3px}
+  table.stk tbody tr td.sum[onclick]:hover{box-shadow:inset 0 0 0 2px #a78bfa}
   table.stk tbody tr td.stk-lkc{position:relative;outline:2px solid #16a34a;outline-offset:-2px}
   table.stk tbody tr td.stk-lkc::after{content:attr(data-lk);position:absolute;left:1px;top:0;max-width:calc(100% - 3px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;line-height:11px;font-weight:800;color:#fff;background:#16a34a;padding:0 3px;border-radius:0 0 3px 0;pointer-events:none}
   /* 2026-10-26 (rpt140): 연동 작업대 — 시트 칸을 눌러 월별 원단위 품목과 연결 */
@@ -3340,6 +3343,7 @@ service cloud.firestore {
         <button class="btn" id="stk_rowbtn" onclick="stkRowToggle()" title="품목(줄)을 추가·삭제하고 열 정렬(가운데 맞춤)을 바꿉니다 — 아래 줄의 수식·병합·연동 칸이 자동으로 이동">📐 줄·정렬 편집</button>
         <button class="btn primary" onclick="sxOpen(stkYm())" title="엑셀 원단위 파일과 대조한 연동 현황 · 연결/수정/확인 (전체화면)">🧭 연동 센터</button>
         <button class="btn" onclick="stkMapOpen()">🔗 연동 설정</button>
+        <button class="btn" onclick="stkPullPrev()" title="전월 재고량 시트의 수량(노란 입력 칸)을 이번 달 시트로 가져옵니다">⏪ 전월 재고 가져오기</button>
         <button class="btn" onclick="stkSyncNow()">월말재고로 반영</button>
         <button class="btn" onclick="stkExcel()">📥 엑셀</button>
         <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="stk_info"></span>
@@ -16094,7 +16098,8 @@ function stkLkRefMap(ym){   // {칸: [{code,n,u,ex}]}
     (String(map[code]).match(/[A-Z]{1,2}\d+/g)||[]).forEach(ref=>{(out[ref]=out[ref]||[]).push({code,n:it.n,u:it.u,ex:map[code]});});});
   return out;
 }
-function stkMk(ov){
+function stkIsSumRef(ref){const m=/^([A-Z]+)(\d+)$/.exec(ref);if(!m)return false;const c=INV_STK.cells,x=c[ref];if(!x||x[0]!=='f')return false;return ['B','H'].some(k=>{const y=c[k+m[2]];return y&&y[1]==='계';});}
+function stkMk(ov,adj){
   const cells=INV_STK.cells,cache={},stack=new Set();
   function raw(ref){if(ov&&ov[ref]!==undefined)return ov[ref];const c=cells[ref];return c?c[1]:undefined;}
   function ev(expr){
@@ -16115,11 +16120,13 @@ function stkMk(ov){
     if(typeof r==='number')v=r;
     else if(typeof r==='string'){const t=r.trim();if(t[0]==='='){stack.add(ref);v=ev(t.slice(1));stack.delete(ref);}else{const n=parseFloat(t.replace(/,/g,''));v=isNaN(n)?0:n;}}
     if(!isFinite(v))v=0;
+    if(adj&&adj[ref]){const a=adj[ref];v=(a.mode==='set')?(+a.v||0):v+(+a.v||0);}   // 2026-11-03: 합계 중량 강제 조정(가감/직접 지정)
+    if(stkIsSumRef(ref))v=Math.round(v);   // 2026-11-03: 합계(계) 중량은 소수점 없이 반올림
     return cache[ref]=v;
   }
   return {V,ev,raw};
 }
-function stkCtx(ym){const r=stkRec(ym);return stkMk(r?r.ov||{}:{});}
+function stkCtx(ym){const r=stkRec(ym);return stkMk(r?r.ov||{}:{},r&&r.adj);}
 function stkFmt(v){if(v==null||!isFinite(v))return '';const a=Math.abs(v);if(a>=1000)return v.toLocaleString('ko-KR',{maximumFractionDigits:2});return String(Math.round(v*10000)/10000);}
 function stkYm(){const e=document.getElementById('stk_ym');return(e&&e.value)||(document.getElementById('inv_ym')||{}).value||curYm();}
 function stkEditOn(){const e=document.getElementById('stk_edit');return !!(e&&e.checked);}
@@ -16139,7 +16146,7 @@ function stkRowsList(){
 }
 /* 표 HTML 생성 — mode 'view'(입력 칸 포함) | 'xls'(값만) */
 function stkTableHtml(ym,mode){
-  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{}),ov=rec.ov||{};
+  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{},rec.adj),ov=rec.ov||{},ADJ=rec.adj||{},M0=Object.keys(ADJ).length?stkMk(ov):null;
   const view=mode==='view',mgm=view&&stkMgMode,rowm=view&&stkRowMode&&!stkMgMode;
   const edit=view&&stkEditOn()&&!mgm,ro=view&&invConfLocked(ym);
   const MG=stkMerges(),cells=INV_STK.cells,rows=stkRowsList(),LAB=stkMgStore().lab;
@@ -16176,6 +16183,11 @@ function stkTableHtml(ym,mode){
       else if(kind==='n')cls.push('sn');
       else if(kind==='f')cls.push(sumRow?'sum':'fc');
       if(hasOv&&kind==='f')cls.push('ovr');
+      const ad=ADJ[ref],adjOk=view&&!mgm&&!rowm&&!ro&&kind==='f'&&sumRow&&!txt;
+      if(ad&&kind==='f'){cls.push('adj');}
+      const adjT=(ad&&M0)?`\n⚙ 합계 중량 ${ad.mode==='set'?'직접 지정':'가감'} ${ad.mode==='set'?stkFmt(+ad.v):((+ad.v>0?'+':'')+stkFmt(+ad.v))}${ad.memo?' · '+ad.memo:''}  (원래 합계 ${stkFmt(M0.V(ref))})`:'';
+      const adA=(ad&&M0)?` data-ad="${esc('⚙ '+(ad.mode==='set'?'지정':((+ad.v>0?'+':'')+stkFmt(+ad.v))))}"`:'';
+      const adC=adjOk?` onclick="stkAdjOpen('${ref}')" style="cursor:pointer"`:'';
       if(view&&!hdRow&&ref!=='A1'){const al=AL[(r>=STK_BOT?'b':'t')+stkColL(c)];if(al&&al!=='x')cls.push('al-'+al);}
       const lkr=LKR[ref];
       if(lkr)cls.push('stk-lkc');
@@ -16201,11 +16213,94 @@ function stkTableHtml(ym,mode){
         continue;
       }
       if(inner){h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${lkT?` title="${esc(lkT.trim())}"`:''}>${inner}</td>`;}
-      else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA} ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT)}"`:''}>${esc(disp)}</td>`;}
+      else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${adA}${adC} ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT+adjT+(adjOk&&!ad?'\n(클릭: 합계 중량 조정)':''))}"`:''}>${esc(disp)}</td>`;}
     }
     flush();h+='</tr>';
   });
   return h+'</tbody></table>';
+}
+
+/* ===== 2026-11-03: 합계(계) 중량 강제 조정 · 전월 재고 가져오기 ===== */
+function stkAdjClose(){const o=document.getElementById('stkAdjOv');if(o)o.remove();}
+function stkAdjOpen(ref){
+  const ym=stkYm(),rec=stkRec(ym);if(!rec)return;
+  if(invConfLocked(ym)){toast('확정된 달은 수정할 수 없습니다 — [월별 원단위]에서 확정 해제');return;}
+  const M0=stkMk(rec.ov||{}),base=M0.V(ref),cur=(rec.adj||{})[ref]||null,LKR=stkLkRefMap(ym),nm=(LKR[ref]||[]).map(x=>x.n).join(', ');
+  stkAdjClose();
+  const ov=document.createElement('div');ov.id='stkAdjOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const mode=cur?cur.mode:'add',val=cur?cur.v:'';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:16px 18px;max-width:480px;width:94%;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:13px">
+    <div style="font-size:15px;font-weight:800;margin-bottom:6px">⚙ 합계 중량 조정 <span style="font-weight:600;color:#64748b">(칸 ${ref})</span></div>
+    <div style="color:#475569;margin-bottom:8px;line-height:1.5">${nm?'연결된 월별 원단위 품목: <b>'+esc(nm)+'</b><br>':''}시트 합계를 실사·장부 기준에 맞게 <b>강제로 낮추거나 높여</b> 월말재고에 반영합니다. 조정값은 이 달에만 적용됩니다.</div>
+    <div style="display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center">
+      <label>원래 합계</label><b id="stkAdjBase">${stkFmt(base)}</b>
+      <label>조정 방식</label><div><label style="margin-right:12px"><input type="radio" name="stkAdjM" value="add" ${mode==='add'?'checked':''} onchange="stkAdjPrev()"> 가감(＋/－)</label><label><input type="radio" name="stkAdjM" value="set" ${mode==='set'?'checked':''} onchange="stkAdjPrev()"> 합계값 직접 지정</label></div>
+      <label>값</label><input type="number" step="any" id="stkAdjV" class="iinp" style="text-align:left;width:160px" value="${val===''?'':val}" placeholder="예: -10000 또는 41000" oninput="stkAdjPrev()">
+      <label>조정 후 합계</label><div><b id="stkAdjAfter" style="font-size:15px;color:#6d28d9"></b> <span id="stkAdjDiff" style="color:#64748b"></span></div>
+      <label>사유(메모)</label><input class="iinp" id="stkAdjMemo" style="text-align:left;width:100%" value="${esc(cur&&cur.memo||'')}" placeholder="예: 실사 차이, 전월 이월 보정">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn sm" onclick="stkAdjDel('${ref}',true)" ${cur?'':'disabled'}>조정 해제</button><button class="btn sm" onclick="stkAdjClose()">취소</button><button class="btn sm primary" onclick="stkAdjSave('${ref}')">저장</button></div></div>`;
+  ov.dataset.base=base;document.body.appendChild(ov);stkAdjPrev();
+  setTimeout(()=>{const e=document.getElementById('stkAdjV');if(e){e.focus();e.select();}},30);
+}
+function stkAdjPrev(){
+  const o=document.getElementById('stkAdjOv');if(!o)return;
+  const base=+o.dataset.base,m=(document.querySelector('input[name="stkAdjM"]:checked')||{}).value||'add',vs=document.getElementById('stkAdjV').value,v=vs===''?null:+vs;
+  const af=v==null?base:(m==='set'?v:base+v);
+  document.getElementById('stkAdjAfter').textContent=stkFmt(af);
+  const d=af-base;document.getElementById('stkAdjDiff').textContent=Math.abs(d)<1e-9?'(변동 없음)':'('+(d>0?'+':'')+stkFmt(d)+')';
+}
+async function stkAdjSave(ref){
+  const ym=stkYm(),a=stkAll();if(!a[ym])a[ym]={on:1,ov:{}};const rec=a[ym];
+  const mode=(document.querySelector('input[name="stkAdjM"]:checked')||{}).value||'add',vs=document.getElementById('stkAdjV').value,memo=document.getElementById('stkAdjMemo').value.trim();
+  if(vs===''||!isFinite(+vs)){toast('조정 값을 숫자로 입력하세요');return;}
+  const v=+vs;
+  try{await undoSnap('합계 중량 조정 · '+ym+' '+ref,'bulk');}catch(e){}
+  rec.adj=rec.adj||{};
+  if(mode==='add'&&v===0)delete rec.adj[ref];else rec.adj[ref]={mode:mode,v:v,memo:memo};
+  if(!Object.keys(rec.adj).length)delete rec.adj;
+  rec.ts=Date.now();stkSaveAll(a);flashSave();stkAdjClose();stkRender();
+  if(rec.on!==0){const n=await stkSync(ym,true);toast(`합계 중량 조정을 저장했습니다 — 월말재고 ${n}품목 반영`);stkBanner(ym);}else toast('합계 중량 조정을 저장했습니다 (월말재고 연동이 꺼져 있어 반영은 보류)');
+}
+async function stkAdjDel(ref,fromDlg){
+  const ym=stkYm(),a=stkAll(),rec=a[ym];if(!rec||!rec.adj||!rec.adj[ref])return;
+  if(!fromDlg&&!confirm(`칸 ${ref}의 합계 중량 조정을 해제하고 원래 합계로 되돌립니다.`))return;
+  try{await undoSnap('합계 중량 조정 해제 · '+ym+' '+ref,'bulk');}catch(e){}
+  delete rec.adj[ref];if(!Object.keys(rec.adj).length)delete rec.adj;
+  rec.ts=Date.now();stkSaveAll(a);flashSave();stkAdjClose();stkRender();
+  if(rec.on!==0){const n=await stkSync(ym,true);toast(`조정을 해제했습니다 — 월말재고 ${n}품목 반영`);stkBanner(ym);}
+}
+async function stkPullPrev(){
+  const ym=stkYm();
+  if(!stkHas(ym)){toast('이번 달 시트가 없습니다 — 먼저 [전월 값으로 시작]을 누르세요');return;}
+  if(invConfLocked(ym)){toast('확정된 달은 수정할 수 없습니다 — [월별 원단위]에서 확정 해제');return;}
+  const a=stkAll();let p=prevYm(ym),n=0,src=null;
+  while(n++<36){if(a[p]||p==='2026-09'){src=stkMk((stkRec(p)||{ov:{}}).ov||{});break;}if(p<='2026-09')break;p=prevYm(p);}
+  if(!src){toast('가져올 전월 시트가 없습니다');return;}
+  const cur=stkMk((stkRec(ym)||{ov:{}}).ov||{}),refs=[...STK_SLOTS],plan=[];
+  refs.forEach(ref=>{
+    const pv=src.raw(ref),cv=cur.raw(ref),pe=(pv===undefined||pv===null||pv===''),ce=(cv===undefined||cv===null||cv==='');
+    if(pe&&ce)return;if(String(pv)===String(cv))return;
+    plan.push({ref:ref,pv:pe?null:pv,empty:ce});
+  });
+  if(!plan.length){toast(`${p} 시트와 수량이 모두 같습니다 (가져올 값 없음)`);return;}
+  const nEmpty=plan.filter(x=>x.empty).length,nDiff=plan.length-nEmpty;
+  let onlyBlank=true;
+  if(nDiff>0){
+    if(!confirm(`${p} 재고량 수량을 ${ym} 시트로 가져옵니다.\n\n· 빈 칸 ${nEmpty}칸 / 현재 값이 다른 칸 ${nDiff}칸\n\n[확인] 빈 칸만 채우기 (현재 입력값 유지)\n[취소] 다음 단계에서 전체 덮어쓰기 선택`)){
+      if(!confirm(`현재 입력된 ${nDiff}칸을 포함해 ${p} 수량으로 모두 덮어쓸까요?\n(이번 달에 이미 입력한 수량이 사라집니다. 되돌리기 가능)`))return;
+      onlyBlank=false;
+    }
+  }else if(!confirm(`${p} 재고량 수량 ${nEmpty}칸을 ${ym} 시트의 빈 칸으로 가져옵니다.`))return;
+  try{await undoSnap('전월 재고 가져오기 · '+ym,'bulk');}catch(e){}
+  const a2=stkAll(),rec=a2[ym];rec.ov=rec.ov||{};let k=0;
+  plan.forEach(x=>{if(onlyBlank&&!x.empty)return;
+    const base=INV_STK.cells[x.ref]?INV_STK.cells[x.ref][1]:undefined;
+    if(x.pv===null){delete rec.ov[x.ref];}else if((base===undefined?null:base)===x.pv){delete rec.ov[x.ref];}else rec.ov[x.ref]=x.pv;
+    k++;});
+  rec.from=p;rec.ts=Date.now();stkSaveAll(a2);flashSave();stkRender();
+  let c=0;if(rec.on!==0)c=await stkSync(ym,true);
+  toast(`${p} 수량 ${k}칸을 가져왔습니다${rec.on!==0?' — 월말재고 '+c+'품목 반영':''}`);
 }
 function stkRender(){
   const wrap=document.getElementById('stk_wrap');if(!wrap)return;
@@ -16254,7 +16349,9 @@ function stkBanner(ym){
       if(!lst.length)return '';
       return `<details style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#166534;font-weight:700">🔗 원단위 월말재고로 넘어가는 칸 ${lst.length}건 보기 (초록 테두리 칸)</summary>
       <div style="max-height:220px;overflow:auto;margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>원단위 품목</th><th>단위</th><th>넘어가는 칸(식)</th><th class="n">넘어가는 값</th></tr></thead><tbody>${lst.map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.u)}</td><td>${esc(x.ex)}</td><td class="n"><b>${x.v==null?'-':stkFmt(x.v)}</b> ${esc(x.u==='KG'||x.u==='kg'?'kg':x.u)}</td></tr>`).join('')}</tbody></table></div></details>`;})()}
-    <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">노란 칸이 입력 칸입니다. 수량 칸에 <b>=192*2+161</b> 처럼 엑셀 수식도 입력할 수 있고(칸을 누르면 수식이 보입니다), <b>↑ ↓ ← → · Enter</b> 로 칸을 이동합니다. 주황 칸은 소계 수식을 수기로 고친 칸입니다(엑셀의 −10000 같은 조정).</div>`;
+    ${(()=>{const ad=rec.adj||{},ks=Object.keys(ad);if(!ks.length)return '';const M0=stkMk(rec.ov||{}),LKR=stkLkRefMap(ym);
+      return `<details open style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#6d28d9;font-weight:800">⚙ 합계 중량 조정 ${ks.length}건 (보라 칸) — 월말재고에 조정값이 반영됩니다</summary><div style="margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>칸</th><th>연결 원단위 품목</th><th class="n">원래 합계</th><th>조정</th><th class="n">조정 후</th><th>사유</th><th></th></tr></thead><tbody>${ks.map(r=>{const a=ad[r],b=M0.V(r),af=a.mode==='set'?+a.v:b+(+a.v);const nm=(LKR[r]||[]).map(x=>x.n).join(', ');return `<tr><td>${r}</td><td>${esc(nm)||'-'}</td><td class="n">${stkFmt(b)}</td><td>${a.mode==='set'?'직접 지정':'가감 '+((+a.v>0?'+':'')+stkFmt(+a.v))}</td><td class="n"><b>${stkFmt(af)}</b> (${(af-b>0?'+':'')+stkFmt(af-b)})</td><td>${esc(a.memo||'')}</td><td>${locked?'':`<button class="btn sm" onclick="stkAdjOpen('${r}')">수정</button> <button class="btn sm" onclick="stkAdjDel('${r}')">해제</button>`}</td></tr>`;}).join('')}</tbody></table></div></details>`;})()}
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">노란 칸이 입력 칸입니다. <b>합계(계) 중량 칸을 누르면 합계를 가감(±)하거나 직접 지정</b>할 수 있습니다(보라 칸). 수량 칸에 <b>=192*2+161</b> 처럼 엑셀 수식도 입력할 수 있고(칸을 누르면 수식이 보입니다), <b>↑ ↓ ← → · Enter</b> 로 칸을 이동합니다. 주황 칸은 소계 수식을 수기로 고친 칸입니다(엑셀의 −10000 같은 조정).</div>`;
   if(info)info.textContent=nOv?`기본 양식과 다른 칸 ${nOv}개`:'';
 }
 async function stkToggleOn(on){
@@ -16299,7 +16396,7 @@ function stkCommit(ym,ref,t){
 }
 function stkRefreshCells(ym){
   const wrap=document.getElementById('stk_wrap');if(!wrap||!stkHas(ym))return;
-  const rec=stkRec(ym),ov=rec.ov||{},M=stkMk(ov),cells=INV_STK.cells,mm=+ym.slice(5);
+  const rec=stkRec(ym),ov=rec.ov||{},M=stkMk(ov,rec.adj),cells=INV_STK.cells,mm=+ym.slice(5);
   wrap.querySelectorAll('[data-ref]').forEach(el=>{
     if(document.activeElement===el||el.dataset.lab)return;
     const ref=el.dataset.ref,base=cells[ref],kind=base?base[0]:'i',rawV=M.raw(ref),hasOv=ov[ref]!==undefined;
@@ -16405,7 +16502,7 @@ function stkVzScroll(ref){
   box.scrollTop=Math.max(0,box.scrollTop+(er.top-br.top)-br.height/3);box.scrollLeft=Math.max(0,box.scrollLeft+(er.left-br.left)-br.width/4);
 }
 function stkVzTable(ym,anchors){
-  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{}),ov=rec.ov||{},MG=stkMerges(),cells=INV_STK.cells,rows=stkRowsList(),LAB=stkMgStore().lab;
+  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{},rec.adj),ov=rec.ov||{},MG=stkMerges(),cells=INV_STK.cells,rows=stkRowsList(),LAB=stkMgStore().lab;
   const LK=stkLkEntries(),LKR=stkLkRefMap(ym),mm=+ym.slice(5),selS=new Set(stkVz.sel);
   const bg=stkVz.blk?(anchors.find(a=>a.ref===stkVz.blk)||{}).g:null;
   let h='<table class="stk stkvz"><colgroup>'+STK_COLW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup><tbody>',prev=0;
@@ -25031,6 +25128,15 @@ function bizplanDivCfg(year){
     const fresh=bizplanDivInitialRules(year).filter(r=>r.target==='g:ldwear'||r.target==='g:ldca180');
     c.rules=keep.concat(fresh);c.partMig=true;c.partMig2=true;
   }
+  if(String(year)==='2026'&&!c.ld26Mig){ // 2026-11-03: 래들 마모장 연와·CT180 다원화 — KR 홀수달 10% · 원진 짝수달 10% (예상 실적에만 반영, V7 사업계획 금액에는 이미 미반영)
+    c.ld26Mig=true;
+    c.rules.forEach(r=>{
+      if(r.target!=='g:ldwear'&&r.target!=='g:ldca180')return;
+      if(r.vendor!=='KR'&&r.vendor!=='원진')return;
+      delete r.unit;r.pct=10;r.mon=r.vendor==='KR'?BIZPLAN_MON_ODD:BIZPLAN_MON_EVEN;r.fc=1;r.on=true;
+      r.note=String(r.note||'').replace(/\s*\(.*?\)\s*$/,'')+(r.vendor==='KR'?' (홀수달 10%':' (짝수달 10%')+' · 예상 실적에만 반영)';
+    });
+  }
   if(!c.partMig2){ // biz4 초기 배포본에서 0%로 비워 둔 바닥 행 → 같은 업체의 다른 부위 비율로 채움
     c.partMig2=true;
     c.rules.forEach(r=>{
@@ -25044,11 +25150,12 @@ function bizplanDivCfg(year){
 }
 function bizplanDivIsSet(v){return v!==undefined&&v!==null&&v!=='';}
 // 해당 품목·월에 걸리는 업체별 비율 → {total, by:{업체:%}}  (합계 100% 초과 시 비례 축소)
-function bizplanDivShares(idx,m,year){
+function bizplanDivShares(idx,m,year,withFc){   // withFc=true 일 때만 '예상 실적 전용(fc)' 규칙 포함(2026 래들 KR·원진 격달 입고 등: V7 사업계획에는 미반영)
   const c=bizplanDivCfg(year), out={total:0,by:{}};
   if(!c.on)return out;
   c.rules.forEach(r=>{
     if(r.on===false)return;
+    if(r.fc&&!withFc)return;
     if(!bizplanParseMonths(r.mon).has(m))return;
     let p=bizplanDivRulePct(r,m,year);if(p<=0)return;
     if(!bizplanDivRuleApplies(r,idx))return;
@@ -25098,7 +25205,7 @@ function bizplanItemDivSummary(idx,year){
   const title=Object.keys(by).map(v=>v+' '+(gross?(by[v]/gross*100).toFixed(1):0)+'%').join(' · ');
   return {pct,title};
 }
-function bizplanItemCalc(idx,m,year,forceOn,noDiv){
+function bizplanItemCalc(idx,m,year,forceOn,noDiv,withFc){
   // 2026-10-02: 원본 엑셀("2026년 제강 사업계획" 시트) 117개 품목의 실제 금액 셀을 전수 역산한 결과,
   // 금액 계산기준이 품목마다 다르다는 것을 확인했다 — 벌크 캐스터블/모르타르류(SPRAY재·AMC·PGT-BT-SD 등)는
   // "금액=중량×단가"(단가가 원/kg), 전극·노즐·콘세트 등 개당 단가가 매겨진 하드웨어류(DONG-DC15K·
@@ -25109,7 +25216,7 @@ function bizplanItemCalc(idx,m,year,forceOn,noDiv){
   year=year||bizplanCurYear;
   const it=BIZPLAN_ITEMS_SEED[idx];const baseQty=bizplanItemQty(idx,m,year);
   // 다원화사 공급분 제외: 계획수량(baseQty) 중 다원화 비율만큼은 동국제강 몫에서 뺀다(noDiv=true면 제외 전 원계획 그대로).
-  const shares=noDiv?{total:0,by:{}}:bizplanDivShares(idx,m,year);
+  const shares=noDiv?{total:0,by:{}}:bizplanDivShares(idx,m,year,withFc);
   const pct=shares.total;
   // 엑셀 수식에 이미 다원화분이 빠져 있는 품목(SPRAY재: ×0.85)은 총수요로 되돌린 뒤(÷0.85) 업체별 비율을 적용한다.
   const pre=+it.pre||0;
@@ -39692,11 +39799,13 @@ function spMoTbl(y,metric,x){
   sec('계획',spPlan,spProdPlan);sec('실적',spAct,spProdAct);
   return t+'</table>';
 }
+function spGrow(el){if(!el||!el.offsetParent)return;el.style.height='auto';const h=el.scrollHeight+2;el.style.height=Math.min(h,window.innerHeight*0.8)+'px';el.style.overflowY=h>window.innerHeight*0.8?'auto':'hidden';}
+function spGrowAll(root){(root||document).querySelectorAll('textarea.spcm-ta').forEach(spGrow);}
 function spRenderSum(){
   const p=spCur(),box=document.getElementById('spBox-sum');if(!box)return;
   const cm=spCmGet(p),np=spNext(p);
-  const ta=(blk,fld,val,ph)=>`<textarea style="width:100%;min-height:62px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;font-family:inherit" placeholder="${ph}" onchange="spSetCm('${blk}','${fld}',this.value)">${esc(val)}</textarea>`;
-  const col=(blk,title)=>`<div style="flex:1;min-width:250px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="font-size:12.5px;font-weight:800;margin-bottom:6px;color:#1d4ed8">${title}</div>`
+  const ta=(blk,fld,val,ph)=>`<textarea class="spcm-ta" rows="${fld==='prod'?3:5}" style="width:100%;min-height:${fld==='prod'?'66px':'120px'};box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12.5px;line-height:1.5;font-family:inherit;resize:vertical;overflow:hidden" placeholder="${ph}" oninput="spGrow(this)" onchange="spSetCm('${blk}','${fld}',this.value)">${esc(val)}</textarea>`;
+  const col=(blk,title)=>`<div style="flex:1;min-width:340px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="font-size:12.5px;font-weight:800;margin-bottom:6px;color:#1d4ed8">${title}</div>`
     +(blk==='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="nfWriteComments(spNext(spCur()))" title="사업계획 대비 평균 수명·가동 래들 패턴으로 증감 분석 문구를 자동 작성합니다">🤖 자동 작성</button></div>`:'')
     +(blk!=='fc'?`<div style="margin-bottom:6px"><button class="btn sm" onclick="spAutoCm('${blk}')" title="사업계획 대비 실제 판매 수량·물량을 품목별로 비교해 증가·감소 품목을 자동 작성합니다">🤖 자동 작성 (사업계획 대비)</button></div>`:'')
     +`<div style="font-size:11.5px;font-weight:700;color:var(--muted)">● 제강 생산량</div>${ta(blk,'prod',cm[blk].prod,'- 생산량 +0톤 증가 …')}`
@@ -39706,7 +39815,7 @@ function spRenderSum(){
   let it=`<table class="bomtbl" style="min-width:auto"><tr><th style="width:90px">구분</th><th style="width:200px">항목</th><th>ISSUE 내용</th><th style="width:40px"></th></tr>`;
   iss.forEach((o,i)=>{it+=`<tr><td><select class="selbox" style="padding:4px" onchange="spIssueSet(${i},'g',this.value)">${['제강','시중','포스코','축로','기타'].map(g=>`<option${o.g===g?' selected':''}>${g}</option>`).join('')}</select></td>`
     +`<td><input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px" value="${esc(o.t||'')}" onchange="spIssueSet(${i},'t',this.value)"></td>`
-    +`<td><textarea style="width:100%;min-height:40px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px;font-family:inherit" onchange="spIssueSet(${i},'x',this.value)">${esc(o.x||'')}</textarea></td>`
+    +`<td><textarea class="spcm-ta" style="width:100%;min-height:52px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12.5px;line-height:1.5;font-family:inherit;resize:vertical;overflow:hidden" oninput="spGrow(this)" onchange="spIssueSet(${i},'x',this.value)">${esc(o.x||'')}</textarea></td>`
     +`<td><button class="btn sm" onclick="spIssueDel(${i})">✕</button></td></tr>`;});
   it+=`</table><div style="margin-top:6px"><button class="btn sm" onclick="spIssueAdd()">＋ ISSUE 행 추가</button> <button class="btn sm primary" onclick="spIssueFromBoard()" title="팀 업무 보드의 진행·접수 업무와 이번 기간 완료 업무를 설비(분류)별로 정리해 ISSUE에 넣습니다">🤖 팀 업무 보드에서 설비별 자동 정리</button></div>`;
   box.innerHTML=`<div class="subhead">● 요약 (단위: 백만원 · 중량 톤) <span class="hint">동국제강 실적 = [내화물 원단위] 입고내역(매출합계 포함+직매출) 자동 · 포스코·시중·축로 = [실적 입력] 탭에서 직접 입력 · 차월 예상 = [차월 예상실적] 화면 값</span></div>`
@@ -39716,6 +39825,8 @@ function spRenderSum(){
     +`<div class="subhead">COMMENT · 증가요인 · 감소요인</div><div style="display:flex;gap:10px;flex-wrap:wrap">${col('cur',spLabel(p,true)+' 실적')}${col('fc',spLabel(np,true)+' 예상 실적')}${col('cum',p.y+'년 누적 실적')}</div>`
     +(()=>{try{return spAutoCmBasis(p);}catch(e){console.error(e);return '';}})()
     +`<div class="subhead">● 주요 ISSUE 사항</div><div class="tablewrap">${it}</div>`;
+  spGrowAll(box);setTimeout(()=>spGrowAll(box),250);
+  try{if(!box.__ro&&window.ResizeObserver){let lw=0;box.__ro=new ResizeObserver(()=>{const w=box.clientWidth;if(w&&w!==lw){lw=w;spGrowAll(box);}});box.__ro.observe(box);}}catch(e){}
 }
 function spRenderMt(){
   const p=spCur(),box=document.getElementById('spBox-mt');if(!box)return;
@@ -40237,9 +40348,10 @@ function nfMonth(y,m){
     const uR=nfaLinkUnit('roj',y),uB=nfaLinkUnit('bal',y),rA=pm.EAF.a-pm.ROJ.a-pm.BAL.a,rW=pm.EAF.w-pm.ROJ.w-pm.BAL.w;
     const kR=P.roj>0?roj/P.roj-1:null,kB=P.bal>0?bal/P.bal-1:null;
     const jRa=kR!=null?pm.ROJ.a*kR:roj*uR.a,jRw=kR!=null?pm.ROJ.w*kR:roj*uR.w,jBa=kB!=null?pm.BAL.a*kB:bal*uB.a,jBw=kB!=null?pm.BAL.w*kB:bal*uB.w;
-    o.dA={LD:sA*pm.LD.a*(fL-1),TD:sA*pm.TD.a*(fT-1),EAFch:sA*rA*(fE-1),ROJ:sA*jRa,BAL:sA*jBa};o.dA.EAF=o.dA.EAFch+o.dA.ROJ+o.dA.BAL;
-    o.dW={LD:sW*pm.LD.w*(fL-1),TD:sW*pm.TD.w*(fT-1),EAFch:sW*rW*(fE-1),ROJ:sW*jRw,BAL:sW*jBw};o.dW.EAF=o.dW.EAFch+o.dW.ROJ+o.dW.BAL;
-    o.a=pl.a+o.dA.LD+o.dA.TD+o.dA.EAF;o.w=pl.w+o.dW.LD+o.dW.TD+o.dW.EAF;o.ok=true;
+    let dvA=0,dvW=0;try{BIZPLAN_ITEMS_SEED.forEach((it,i)=>{if(it.del||it.eq!=='LD')return;const c0=bizplanItemCalc(i,m,String(y)),c1=bizplanItemCalc(i,m,String(y),false,false,true);dvA+=(c0.amt-c1.amt)/1e6;dvW+=(c0.wt-c1.wt)/1000;});}catch(e){}   // 래들 다원화(예상 전용 규칙) 제외분 — 래들 활동량 비 적용
+    o.dA={LD:sA*pm.LD.a*(fL-1),TD:sA*pm.TD.a*(fT-1),EAFch:sA*rA*(fE-1),ROJ:sA*jRa,BAL:sA*jBa,DIV:-sA*fL*dvA};o.dA.EAF=o.dA.EAFch+o.dA.ROJ+o.dA.BAL;
+    o.dW={LD:sW*pm.LD.w*(fL-1),TD:sW*pm.TD.w*(fT-1),EAFch:sW*rW*(fE-1),ROJ:sW*jRw,BAL:sW*jBw,DIV:-sW*fL*dvW};o.dW.EAF=o.dW.EAFch+o.dW.ROJ+o.dW.BAL;
+    o.a=pl.a+o.dA.LD+o.dA.TD+o.dA.EAF+o.dA.DIV;o.w=pl.w+o.dW.LD+o.dW.TD+o.dW.EAF+o.dW.DIV;o.ok=true;
     return o;
   });
 }
@@ -40264,7 +40376,7 @@ function nfAutoPeriodSum(q,ms){
     roj:{p:sum(o=>o.roj.p),f:sum(o=>o.roj.f)},bal:{p:sum(o=>o.bal.p),f:sum(o=>o.bal.f)},
     ok:arr.every(o=>o.ok)};
   if(D.ok){D.pa=sum(o=>o.plan.a);D.pw=sum(o=>o.plan.w);D.a=sum(o=>o.a);D.w=sum(o=>o.w);
-    D.dA={LD:sum(o=>o.dA.LD),TD:sum(o=>o.dA.TD),EAF:sum(o=>o.dA.EAF),EAFch:sum(o=>o.dA.EAFch||0),ROJ:sum(o=>o.dA.ROJ||0),BAL:sum(o=>o.dA.BAL||0)};D.dW={LD:sum(o=>o.dW.LD),TD:sum(o=>o.dW.TD),EAF:sum(o=>o.dW.EAF),EAFch:sum(o=>o.dW.EAFch||0),ROJ:sum(o=>o.dW.ROJ||0),BAL:sum(o=>o.dW.BAL||0)};}
+    D.dA={LD:sum(o=>o.dA.LD),TD:sum(o=>o.dA.TD),EAF:sum(o=>o.dA.EAF),EAFch:sum(o=>o.dA.EAFch||0),ROJ:sum(o=>o.dA.ROJ||0),BAL:sum(o=>o.dA.BAL||0),DIV:sum(o=>o.dA.DIV||0)};D.dW={LD:sum(o=>o.dW.LD),TD:sum(o=>o.dW.TD),EAF:sum(o=>o.dW.EAF),EAFch:sum(o=>o.dW.EAFch||0),ROJ:sum(o=>o.dW.ROJ||0),BAL:sum(o=>o.dW.BAL||0),DIV:sum(o=>o.dW.DIV||0)};}
   return D;
 }
 // 가동 중 래들 패턴표(현재 누적 CH · 잔여 · 해체 예상일)
@@ -40297,6 +40409,11 @@ function nfAnalysis(q){
       const nm=nfaLinkNames(k,q.y,ms),why=man(k)?'직접 입력':(sim?'교체 이력·누적 CH 기준 모의':'사업계획 횟수');
       items.push({k:K,a:RC.C[K],t:`${lab} 교체 ${F1(D[k].f)}회 예상(계획 ${F1(D[k].p)}회, ${nfSg(D[k].f-D[k].p,DD)}회 : ${why}) → ${tg}${nm?'('+nm+' 등 연결 품목)':''} 사용량`});
     });
+  }
+  if(D.ok&&Math.abs(RC.C.DIV)>=thr){   // 래들 마모장 연와·CT180 다원화(KR·원진 격달 입고) 제외분
+    const cf=(bizplanDivCfg(String(q.y)).rules||[]).filter(r=>r.fc&&r.on!==false&&(r.target==='g:ldwear'||r.target==='g:ldca180')),mv={};
+    ms.forEach(m=>cf.forEach(r=>{if(bizplanParseMonths(r.mon).has(m)){const k=m+'월 '+r.vendor+' '+(+r.pct||0)+'%';mv[k]=1;}}));
+    items.push({k:'DIV',a:RC.C.DIV,t:`래들 다원화 공급분 제외(${Object.keys(mv).join('·')||'KR·원진'} 입고 : 마모장 연와·CT180) → 래들 내화물 동국제강 몫`});
   }
   if(Math.abs(RC.res)>=thr){
     const sr=[...RC.srcs];
@@ -40433,13 +40550,13 @@ function nfaLinkNames(kind,y,ms){   // 연결 품목 중 계획 금액이 큰 �
   return Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).slice(0,2).join('·');
 }
 function nfRecon(q){   // 동국제강(제강) 예상 − 사업계획 차이를 설비·교체 이벤트별 구성요소로 분해 (구성요소 합 + 잔여 = 총 차이)
-  const ms=spMonths(q),y=q.y,C={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0},R={P:0,F:0,res:0,srcs:new Set()};
+  const ms=spMonths(q),y=q.y,C={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0,DIV:0},R={P:0,F:0,res:0,srcs:new Set()};
   ms.forEach(m=>{
     const pl=spPlan(y,m,'dg'),fc=spFc(y,m,'dg'),d=fc.a-pl.a;R.P+=pl.a;R.F+=fc.a;
     let part=null;
-    if(/활동량/.test(fc.src)){try{const o=nfaCalcMonth(y,m);if(o){const sA=o.T.pa>0?o.planA/o.T.pa:1;part={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0};
-      o.rows.forEach(r=>{const k=r.eq==='LD'?'LD':r.eq==='TD'?'TD':(r.lk==='roj'?'ROJ':r.lk==='bal'?'BAL':'EAFo');part[k]+=(r.fa-r.pa)*sA;});}}catch(e){}}
-    else if(/^자동/.test(fc.src)){try{const o=nfMonth(y,m);if(o&&o.ok)part={LD:o.dA.LD,TD:o.dA.TD,EAFo:o.dA.EAFch,ROJ:o.dA.ROJ,BAL:o.dA.BAL};}catch(e){}}
+    if(/활동량/.test(fc.src)){try{const o=nfaCalcMonth(y,m);if(o){const sA=o.T.pa>0?o.planA/o.T.pa:1;part={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0,DIV:0};
+      o.rows.forEach(r=>{const k=r.eq==='LD'?'LD':r.eq==='TD'?'TD':(r.lk==='roj'?'ROJ':r.lk==='bal'?'BAL':'EAFo');part[k]+=(r.fa+(r.dv||0)-r.pa)*sA;part.DIV-=(r.dv||0)*sA;});}}catch(e){}}
+    else if(/^자동/.test(fc.src)){try{const o=nfMonth(y,m);if(o&&o.ok)part={LD:o.dA.LD,TD:o.dA.TD,EAFo:o.dA.EAFch,ROJ:o.dA.ROJ,BAL:o.dA.BAL,DIV:o.dA.DIV||0};}catch(e){}}
     if(part){let s=0;Object.keys(part).forEach(k=>{C[k]+=part[k];s+=part[k];});R.res+=d-s;}
     else{R.res+=d;R.srcs.add(fc.src);}
   });
@@ -40524,17 +40641,20 @@ function nfaCalcMonth(y,m,ctl){
       const pc=bizplanItemCalc(i,m,Y);let bq,mth,lkk='';
       if(LK.roj.has(i)||LK.bal.has(i)){lkk=LK.roj.has(i)?'roj':'bal';const F=lkk==='roj'?roj:bal,Pn=lkk==='roj'?rojP:balP,fr=v=>Math.round(v*10)/10;
         bq=Pn>0?pc.baseQty*F/Pn:pc.baseQty+F*((nfaLinkUnit(lkk,y).q[i])||0);mth=(lkk==='roj'?'로저전극':'발코니')+' 교체 '+fr(F)+'회(계획 '+fr(Pn)+'회) 연동';}
+      else if(it.eq==='EAF'&&/SPRAY|ANKER|MAGRAM|올리빈|스탐프|STAMP/i.test(it.name||'')){   // 2026-11-03: 전기로 조업용 열간보수재는 생산량(조업 CH)에 비례 + 보수 이벤트 대수 차이 가산
+        bq=pc.baseQty*rCH+(Mp.has(i)?((Bf[i]||0)-(Bp[i]||0)):0);mth='계획 × 조업 CH 비'+(Mp.has(i)?' + 보수 대수 차이':'');}
       else if(Mp.has(i)){bq=pc.baseQty+((Bf[i]||0)-(Bp[i]||0));mth='물량표×보수 대수';}
       else if(it.eq==='LD'){bq=pc.baseQty*rLD;mth='계획 × 래들 신축 대수 비';}
       else if(it.eq==='TD'){bq=pc.baseQty*rTD;mth='계획 × 턴디쉬 대수 비';}
       else if(/SPRAY|ANKER|MAGRAM|올리빈/i.test(it.name||'')){bq=pc.baseQty*rWk;mth='계획 × 주간보수 횟수 비';}
       else{bq=pc.baseQty*rCH;mth='계획 × 조업 CH 비';}
       bq=Math.max(0,bq);
-      const sh=bizplanDivShares(i,m,Y),pct=sh.total,pre=+it.pre||0;
-      const gross=(pct>0&&pre>0&&pre<1)?bq/(1-pre):bq,qty=gross-gross*pct/100;
+      const sh=bizplanDivShares(i,m,Y,true),pct=sh.total,pre=+it.pre||0,pct0=bizplanDivShares(i,m,Y).total;
+      const gross=(pct>0&&pre>0&&pre<1)?bq/(1-pre):bq,qty=gross-gross*pct/100,qty0=gross-gross*pct0/100;
       const uw=(it.uwm&&it.uwm[m]!=null)?it.uwm[m]:(it.uw||0),wt=qty*uw,pp0=pc.price,price=(ctl&&ctl.n)?pp0:nfaPriceF(i,ym,pp0),amt=it.basis==='qty'?qty*price:wt*price;
       const pe=((price-pp0)*(it.basis==='qty'?qty:wt))/1e6;   // 2026-10-14: 단가 변동 효과(예상 수량 × (예상 단가 − 계획 단가))
-      const o={i:i,eq:it.eq,lk:lkk,name:it.name,spec:it.spec,basis:it.basis==='qty'?'qty':'wt',price:price,pprice:pp0,pe:pe,uw:uw,mth:mth,pq:pc.qty,fq:qty,pw:pc.wt/1000,fw:wt/1000,pa:pc.amt/1e6,fa:amt/1e6};
+      const wt0=qty0*uw,amt0=it.basis==='qty'?qty0*price:wt0*price;
+      const o={i:i,eq:it.eq,lk:lkk,name:it.name,spec:it.spec,basis:it.basis==='qty'?'qty':'wt',price:price,pprice:pp0,pe:pe,uw:uw,mth:mth,pq:pc.qty,fq:qty,pw:pc.wt/1000,fw:wt/1000,pa:pc.amt/1e6,fa:amt/1e6,dv:(amt0-amt)/1e6,dvw:(wt0-wt)/1000};
       rows.push(o);const s=S[it.eq];s.pa+=o.pa;s.fa+=o.fa;s.pw+=o.pw;s.fw+=o.fw;
     });
     const T={pa:0,fa:0,pw:0,fw:0};Object.keys(S).forEach(k=>['pa','fa','pw','fw'].forEach(f=>T[f]+=S[k][f]));
