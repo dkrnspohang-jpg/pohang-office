@@ -16353,16 +16353,18 @@ function stkSumAudit(ym){
       if(Math.abs(d)>=1)out.push({ref:ref,name:((LKR[ref]||[])[0]||{}).n||ref,val:val,vis:vis,d:d,hint:(rec.ov&&rec.ov[ref]!==undefined)?'입력 수식 사용: '+rec.ov[ref]:(HINT[ref]||'')});
     });
   });
-  /* 아래쪽 표(품명·규격·단중·재고량 2단): 계 바로 위로 이어진 중량 칸(식)을 묶음으로 보고 합과 비교 */
-  [['B','E'],['G','J']].forEach(([lc,vc])=>{
-    for(let r=66;r<=130;r++){
+  /* 아래쪽 표: 계 식이 감싸는 첫 줄(S1 / S2 규격 줄)부터 계 바로 위 줄까지의 중량 합과 비교 */
+  [['B','E','B','S1'],['G','J','G','S2']].forEach(([lc,vc,sc,lab])=>{
+    let r0=0;for(let r=66;r<=130;r++){const x=cells[sc+r];if(x&&String(x[1]).trim()===lab){r0=r;break;}}
+    if(!r0)return;
+    for(let r=r0+1;r<=130;r++){
       const x=cells[lc+r];if(!x||x[1]!=='계')continue;
-      const ref=vc+r;if(!cells[ref]||cells[ref][0]!=='f')continue;
-      let vis=0,rr=r-1;
-      while(rr>=66&&cells[vc+rr]&&cells[vc+rr][0]==='f'){vis+=M.V(vc+rr);rr--;}
-      if(adj[ref])continue;
+      const ref=vc+r;if(!cells[ref]||cells[ref][0]!=='f')break;
+      let vis=0;for(let rr=r0;rr<r;rr++)if(cells[vc+rr]&&cells[vc+rr][0]==='f')vis+=M.V(vc+rr);
+      if(adj[ref])break;
       const val=M.V(ref),d=val-vis;
       if(Math.abs(d)>=1)out.push({ref:ref,name:((LKR[ref]||[])[0]||{}).n||ref,val:val,vis:vis,d:d,hint:(rec.ov&&rec.ov[ref]!==undefined)?'입력 수식 사용: '+rec.ov[ref]:''});
+      break;
     }
   });
   return out;
@@ -16388,6 +16390,8 @@ function stkBanner(ym){
       <div style="max-height:220px;overflow:auto;margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>원단위 품목</th><th>단위</th><th>넘어가는 칸(식)</th><th class="n">넘어가는 값</th></tr></thead><tbody>${lst.map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.u)}</td><td>${esc(x.ex)}</td><td class="n"><b>${x.v==null?'-':stkFmt(x.v)}</b> ${esc(x.u==='KG'||x.u==='kg'?'kg':x.u)}</td></tr>`).join('')}</tbody></table></div></details>`;})()}
     ${(()=>{const ad=rec.adj||{},ks=Object.keys(ad);if(!ks.length)return '';const M0=stkMk(rec.ov||{}),LKR=stkLkRefMap(ym);
       return `<details open style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#6d28d9;font-weight:800">⚙ 합계 중량 조정 ${ks.length}건 (보라 칸) — 월말재고에 조정값이 반영됩니다</summary><div style="margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>칸</th><th>연결 원단위 품목</th><th class="n">원래 합계</th><th>조정</th><th class="n">조정 후</th><th>사유</th><th></th></tr></thead><tbody>${ks.map(r=>{const a=ad[r],b=M0.V(r),af=a.mode==='set'?+a.v:b+(+a.v);const nm=(LKR[r]||[]).map(x=>x.n).join(', ');return `<tr><td>${r}</td><td>${esc(nm)||'-'}</td><td class="n">${stkFmt(b)}</td><td>${a.mode==='set'?'직접 지정':'가감 '+((+a.v>0?'+':'')+stkFmt(+a.v))}</td><td class="n"><b>${stkFmt(af)}</b> (${(af-b>0?'+':'')+stkFmt(af-b)})</td><td>${esc(a.memo||'')}</td><td>${locked?'':`<button class="btn sm" onclick="stkAdjOpen('${r}')">수정</button> <button class="btn sm" onclick="stkAdjDel('${r}')">해제</button>`}</td></tr>`;}).join('')}</tbody></table></div></details>`;})()}
+    ${(()=>{const gt=stkGrpTotals(ym);if(!gt.length)return '';const f=v=>Math.round(v).toLocaleString();
+      return `<details style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#1d4ed8;font-weight:800">📊 묶음별 합계 ${gt.length}건 — 시트에 계 줄이 없는 묶음 · 마스터 연동이 없는 행도 포함</summary><div style="margin-top:4px;max-height:300px;overflow:auto"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>묶음</th><th class="n">행</th><th>단위</th><th class="n">연동 행 합</th><th class="n">미연동 행 합</th><th class="n">합계</th><th>미연동 행</th></tr></thead><tbody>${gt.map(o=>`<tr><td>${esc(o.n)}</td><td class="n">${o.rows}</td><td>${o.units.size>1?'혼합':[...o.units][0]}</td><td class="n">${f(o.vl)}</td><td class="n" style="${o.un?'color:#b45309;font-weight:700':''}">${o.un?f(o.vu):'-'}</td><td class="n"><b>${f(o.vl+o.vu)}</b></td><td style="color:#b45309">${esc(o.unl.join(', '))}</td></tr>`).join('')}</tbody></table></div>${(()=>{const u=stkUnlinkedAll(ym);if(!u.list.length)return '';return `<div style="margin-top:5px;color:#b45309"><b>마스터 연동이 없는 시트 행 ${u.list.length}개</b> — EA 합 <b>${f(u.ea)}</b> · kg 합 <b>${f(u.kg)}</b><br><span style="color:var(--muted)">${esc(u.list.map(x=>x.n+' '+f(x.v)+' '+x.u).join(' · '))}</span></div>`;})()}<div style="color:var(--muted);margin-top:3px">중량 칸이 비어 있던 품목은 품목마스터 단위로 채웠습니다 — EA 품목은 수량 그대로, KG 품목은 수량×단중. 합계는 시트에서만 보이며 원단위로는 넘어가지 않습니다.</div></details>`;})()}
     ${(()=>{const au=stkSumAudit(ym);if(!au.length)return '<div style="font-size:12px;color:#166534;margin:0 0 6px">✔ 합계(계) 점검: 모든 계 칸이 표시된 항목의 합과 일치합니다(가감 조정 칸 제외)</div>';
        return `<details open style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#b45309;font-weight:800">⚠ 합계(계) 점검 ${au.length}건 — 표시된 항목 합과 다릅니다</summary><div style="margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>칸</th><th>품목</th><th class="n">계 값</th><th class="n">표시 항목 합</th><th class="n">차이</th><th>사유</th></tr></thead><tbody>${au.map(x=>`<tr><td>${x.ref}</td><td>${esc(x.name)}</td><td class="n">${stkFmt(x.val)}</td><td class="n">${stkFmt(x.vis)}</td><td class="n" style="color:#b91c1c;font-weight:700">${(x.d>0?'+':'')+stkFmt(x.d)}</td><td>${esc(x.hint)}</td></tr>`).join('')}</tbody></table></div></details>`;})()}
      <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">노란 칸이 입력 칸입니다. <b>합계(계) 중량 칸을 누르면 합계를 가감(±)하거나 직접 지정</b>할 수 있습니다(보라 칸). 수량 칸에 <b>=192*2+161</b> 처럼 엑셀 수식도 입력할 수 있고(칸을 누르면 수식이 보입니다), <b>↑ ↓ ← → · Enter</b> 로 칸을 이동합니다. 주황 칸은 소계 수식을 수기로 고친 칸입니다(엑셀의 −10000 같은 조정).</div>`;
@@ -31419,6 +31423,93 @@ function stkSumFixMig(){
   }catch(e){console.warn('stkSumFixMig',e);}
 }
 stkSumFixMig();
+
+/* 2026-11-03: ① 수량은 있는데 중량 칸이 비어 있는 품목은 품목마스터 단위 기준으로 채운다(EA=수량 그대로, KG=수량×단중, 단중 없으면 수량).
+   ② 시트에 계 줄이 없는 묶음(ONQC·EASY200·SPRAY재 등)과 마스터 연동이 없는 행까지 묶음별 합계를 만든다(상단 [묶음별 합계]). */
+const STK_WBLK=[{k:'UL',q:'E',w:'F',u:'C',cols:['A','B','C','D','E','F'],lo:false},{k:'UR',q:'J',w:'K',u:'I',cols:['G','H','I','J','K'],lo:false},
+  {k:'LL',q:'D',w:'E',u:'C',cols:['A','B','C','D','E'],lo:true},{k:'LR',q:'I',w:'J',u:'H',cols:['F','G','H','I','J'],lo:true}];
+function stkUnitRefs(){const o={};const map=stkMapAll();Object.keys(map).forEach(code=>{const it=INV_MASTER.find(m=>m.c===code);if(!it)return;(String(map[code]).match(/[A-Z]{1,2}\d+/g)||[]).forEach(ref=>{o[ref]=it.u;});});return o;}
+function stkUsedRows(b,r1,r2){const c=INV_STK.cells,used=new Set();
+  for(let r=r1;r<=r2;r++){const f=c[b.w+r];if(f&&f[0]==='f'&&typeof f[1]==='string'&&!/SUM\(/.test(f[1]))
+    (f[1].match(/[A-Z]{1,2}\d+/g)||[]).forEach(ref=>{const q=stkRefP(ref),cl=q&&stkColL(q.c);if(q&&q.r!==r&&(cl===b.q||cl===b.u))used.add(q.r);});}
+  return used;}
+function stkMaxRow(){let m=0;Object.keys(INV_STK.cells).forEach(k=>{const q=stkRefP(k);if(q&&q.r>m)m=q.r;});return m;}
+function stkUnlinkedAll(ym){
+  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{},rec.adj),c=INV_STK.cells,LKR=stkLkRefMap(ym),out={ea:0,kg:0,list:[]},maxR=stkMaxRow();
+  STK_WBLK.forEach(b=>{
+    const r1=b.lo?STK_BOT+2:4,r2=b.lo?maxR:STK_BOT-1,used=stkUsedRows(b,r1,r2),cov=new Set();
+    for(let r=r1;r<=r2;r++){const f=c[b.w+r];if(f&&f[0]==='f'&&typeof f[1]==='string'){const m=/SUM\(\s*[A-Z]{1,2}(\d+)\s*:\s*[A-Z]{1,2}(\d+)\s*\)/.exec(f[1]);if(m)for(let x=+m[1];x<=+m[2];x++)cov.add(x);}}
+    for(let r=r1;r<=r2;r++){
+      const qr=b.q+r,wr=b.w+r,hasW=!!(c[wr]||STK_SLOTS.has(wr));
+      if(!(STK_SLOTS.has(qr)||(c[qr]&&c[qr][0]!=='s'))&&!hasW)continue;
+      if(used.has(r)||cov.has(r)||LKR[qr]||LKR[wr]||b.cols.some(cl=>c[cl+r]&&c[cl+r][1]==='계'))continue;
+      if(hasW&&c[wr]&&c[wr][0]==='f'&&/SUM\(/.test(c[wr][1]))continue;
+      const v=M.V(hasW?wr:qr);if(!v||!isFinite(v))continue;
+      const f=c[wr]&&c[wr][0]==='f'?String(c[wr][1]):'',isKg=f?f.indexOf(b.u)>=0&&new RegExp('(^|[^A-Z])'+b.u+'\\d').test(f):(b.k==='LL'&&hasW&&!c[qr]);
+      const nm=(b.k==='UR'||b.k==='LR'?['G','H']:['A','B']).map(cl=>c[cl+r]&&c[cl+r][1]).filter(x=>x!=null&&x!=='').join(' ');
+      if(isKg)out.kg+=v;else out.ea+=v;
+      out.list.push({r:r,n:nm||(b.cols[0]+r),v:v,u:isKg?'kg':'EA'});
+    }
+  });
+  return out;
+}
+function stkWtFill(){
+  const c=INV_STK.cells,unitOf=stkUnitRefs();let n=0,maxR=0;
+  Object.keys(c).forEach(k=>{const q=stkRefP(k);if(q&&q.r>maxR)maxR=q.r;});
+  STK_WBLK.forEach(b=>{
+    const r1=b.lo?STK_BOT+2:4,r2=b.lo?maxR:STK_BOT-1,used=stkUsedRows(b,r1,r2);
+    for(let r=r1;r<=r2;r++){
+      const qr=b.q+r,qc=c[qr];if(!(STK_SLOTS.has(qr)||(qc&&qc[0]!=='s')))continue;
+      if(c[b.w+r]||STK_SLOTS.has(b.w+r)||used.has(r))continue;
+      if(unitOf[b.w+r]!==undefined)continue;   // 중량 칸 자체가 다른 품목의 연동 대상이면 건드리지 않음(연동값이 바뀜)
+      if(b.cols.some(cl=>c[cl+r]&&c[cl+r][1]==='계'))continue;
+      const u=unitOf[qr]||unitOf[b.w+r],uv=c[b.u+r],un=(uv&&(uv[0]==='n'||uv[0]==='i')&&typeof uv[1]==='number')?uv[1]:null;
+      c[b.w+r]=['f',(u==='EA'||un==null)?'='+qr:'='+qr+'*'+b.u+r];n++;
+    }
+  });
+  return n;
+}
+function stkWtFillMig(){
+  try{
+    const hasLay=!!localStorage.getItem(STK_LAY_KEY);
+    if(hasLay&&localStorage.getItem('dgrns_stk_mig1103c'))return;
+    const n=stkWtFill();
+    if(hasLay){if(n)stkLaySave();localStorage.setItem('dgrns_stk_mig1103c','1');}
+  }catch(e){console.warn('stkWtFillMig',e);}
+}
+stkWtFillMig();
+const STK_GRPDEF=[
+  {n:'SLOT PLUG (D370H·D520H)',b:'UL',a:'D370H',z:'D520H'},
+  {n:'MORTAR (MAL·SK38)',b:'UL',a:'MAL',z:'SK38'},
+  {n:'CASTABLE (CT-180·RM-180)',b:'UR',a:'CT-180(KR)',z:'RM-180(원진)'},
+  {n:'ONQC (Top Plate~Well Block)',b:'UR',a:'Top Plate',z:'Well Block'},
+  {n:'EASY200 (노즐·플레이트)',b:'UR',a:'상노즐',z:'하 PLATE'},
+  {n:'롱노즐 (1200(V)·오성)',b:'UR',a:'1200(V)',z:'오성(철근재)'},
+  {n:'EBT BRICK (TUBE·TERMINAL)',b:'UR',a:'TUBE',z:'TERMINAL'},
+  {n:'SPRAY재 (동국·원진·KR·CR)',b:'LL',a:'SPRAY재',z:'CR'},
+  {n:'T/D GUNNING재 (동국·원진)',b:'LL',a:'T/D GUNNING재',z:'원진'},
+  {n:'IMPACT PAD (소형·대형)',b:'LR',a:'소형',z:'대형'},
+  {n:'S-TUBE (350·400·420)',b:'LR',a:'350(40T)',z:'420(40T)'},
+  {n:'C-52 플레이트·블록류 (SES·MTNP·PLATE·CAP·GASKET)',b:'LR',a:'SES Bloom(장)',z:'Gasket'}];
+function stkGrpTotals(ym){
+  const rec=stkRec(ym)||{ov:{}},M=stkMk(rec.ov||{},rec.adj),c=INV_STK.cells,LKR=stkLkRefMap(ym),out=[];
+  const find=(b,lab,from)=>{const r1=Math.max(from||0,b.lo?STK_BOT+2:4),r2=b.lo?200:STK_BOT-1;
+    for(let r=r1;r<=r2;r++)for(const cl of b.cols){const x=c[cl+r];if(x&&x[0]==='s'&&String(x[1]).trim()===lab)return r;}return 0;};
+  STK_GRPDEF.forEach(g=>{
+    const b=STK_WBLK.find(x=>x.k===g.b),ra=find(b,g.a,0);if(!ra)return;const rz=find(b,g.z,ra);if(!rz||rz<ra)return;
+    const o={n:g.n,k:g.b,r1:ra,r2:rz,rows:0,lk:0,un:0,vl:0,vu:0,units:new Set(),unl:[]};
+    for(let r=ra;r<=rz;r++){
+      const wr=b.w+r,qr=b.q+r,hasW=!!(c[wr]||STK_SLOTS.has(wr));if(!hasW&&!(STK_SLOTS.has(qr)||(c[qr]&&c[qr][0]!=='s')))continue;
+      if(b.cols.some(cl=>c[cl+r]&&c[cl+r][1]==='계'))continue;
+      const L=LKR[qr]||LKR[wr],v=M.V(hasW?wr:qr),uv=c[b.u+r],isKg=(L&&L[0].u)?L[0].u==='KG':(uv&&typeof uv[1]==='number'),nm=g.b==='UR'||g.b==='LR'?((c['G'+r]&&c['G'+r][1])||'')+' '+((c['H'+r]&&c['H'+r][1])||''):((c['A'+r]&&c['A'+r][1])||'')+' '+((c['B'+r]&&c['B'+r][1])||'');
+      if(!L&&!v)continue;   // 연동도 재고도 없는 빈 행은 제외
+      o.rows++;o.units.add(isKg?'kg':'EA');
+      if(L){o.lk++;o.vl+=v;}else{o.un++;o.vu+=v;o.unl.push(nm.trim()+' '+(Math.round(v*10)/10).toLocaleString());}
+    }
+    if(o.rows>=1)out.push(o);
+  });
+  return out;
+}
 
 const SX={ym:'',f:'',g:'',q:'',sel:new Set()};
 function sxConfAll(){try{const o=JSON.parse(localStorage.getItem(SX_CONF_KEY)||'{}');return(o&&typeof o==='object')?o:{};}catch(e){return {};}}
