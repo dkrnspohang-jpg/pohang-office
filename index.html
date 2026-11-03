@@ -31423,15 +31423,17 @@ stkLayLoad();stkLayMigrate();
 function stkSumFixFormulas(){
   try{
     const OLD=[['=SUM(F25:F28)-10000','=SUM(F24:F28)','F29'],['=SUM(F30:F35)-5000','=SUM(F30:F35)','F36'],['=SUM(F43:F44)-1800','=SUM(F41:F44)','F45'],['=SUM(J91:J97)-0.65','=SUM(J90:J97)','J98'],['=SUM(J90:J96)-0.65','=SUM(J89:J96)','J97'],['=E50*C50-1299','=E50*C50','F50'],['=E53*C53-250','=E53*C53','F53']];
-    const c=INV_STK.cells,all=stkAll(),r9=all['2026-09']||{on:1,ov:{}};let ch=false;
+    const c=INV_STK.cells,all=stkAll(),r9=JSON.parse(JSON.stringify(all['2026-09']||{on:1,ov:{}}));let ch=false,chOv=false;
     r9.ov=r9.ov||{};
     OLD.forEach(o=>{
       Object.keys(c).forEach(ref=>{if(c[ref][0]==='f'&&c[ref][1]===o[0]){if(r9.ov[ref]===undefined)r9.ov[ref]=o[0];c[ref]=['f',o[1]];ch=true;}});
     });
     /* 9월 이후 달 시트에 옛 계 수식이 값으로 복사돼 들어간 경우도 제거(9월 시트 자체는 당시 기록이라 그대로 둔다) */
     Object.keys(all).forEach(ym=>{if(ym==='2026-09')return;const ov=(all[ym]||{}).ov;if(!ov)return;
-      OLD.forEach(o=>{if(ov[o[2]]===o[0]){delete ov[o[2]];ch=true;}});});
-    if(ch){stkLaySave();all['2026-09']=r9;stkSaveAll(all);}
+      OLD.forEach(o=>{if(ov[o[2]]===o[0]){delete ov[o[2]];ch=true;chOv=true;}});});
+    if(ch){stkLaySave();
+      if(JSON.stringify(all['2026-09']||null)!==JSON.stringify(r9)||chOv){all['2026-09']=r9;stkSaveAll(all);}   // 재고량 값이 실제로 바뀐 때만 저장(다른 PC에 오래된 값이 새 값으로 올라가는 것 방지)
+    }
     return ch;
   }catch(e){console.warn('stkSumFixFormulas',e);return false;}
 }
@@ -34502,6 +34504,15 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
       if(k==='dgrns_dia'&&!force){try{ // 팀에서 온 모식도가 이 PC보다 크게 적으면(비어 있는 PC가 올린 경우 등) 덮어쓰지 않고 이 PC 것을 지킨다
         const lc=Object.keys(JSON.parse(localStorage.getItem('dgrns_dia')||'{}')).length,rc=Object.keys(JSON.parse(kv[k]||'{}')).length;
         if(lc>0&&rc<lc*0.5){console.warn('모식도: 팀 자료가 더 적어 덮어쓰지 않음',lc,rc);try{toast('팀 공유의 모식도가 이 PC보다 크게 적어 덮어쓰지 않았습니다');}catch(e){}return;}
+      }catch(e){}}
+      /* 2026-11-03: 재고량 시트(dgrns_invstock) — 팀에서 온 값에 이 PC에만 있는 달(또는 이 PC가 입력을 더 많이 한 달)이 빠져 있으면 합쳐서 반영한다.
+         다른 PC가 오래된 자료로 팀 저장소를 덮은 뒤 내려와 입력한 10월 시트가 통째로 사라지는 일을 막는다. */
+      if(k==='dgrns_invstock'&&!force){try{
+        const L=JSON.parse(localStorage.getItem(k)||'{}')||{},R=JSON.parse(kv[k]||'{}')||{};
+        const nn=r=>r?Object.keys(r.ov||{}).length+Object.keys(r.adj||{}).length:-1;
+        let mg=0;Object.keys(L).forEach(ym=>{if(!R[ym]||nn(L[ym])>nn(R[ym])){R[ym]=L[ym];mg++;}});
+        if(mg){kv[k]=JSON.stringify(R);console.warn('재고량 시트: 이 PC 입력 '+mg+'개월 분을 보존해 합쳤습니다');
+          setTimeout(()=>{try{kvTouch(k);if(window.fbOnKv)window.fbOnKv();}catch(e){}},300);}
       }catch(e){}}
       if(force||rt>=lt){raw(k,kv[k]);kvTimes[k]=force?Date.now():(rt||Date.now());}
     }catch(e){}});
