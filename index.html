@@ -16384,6 +16384,55 @@ function stkSumAudit(ym){
   });
   return out;
 }
+/* 2026-11-03: LW200 단중×수량을 표 아래 따로(A열 4칸) 계산해 PGT-BT 계에 더하던 것을, PGT-BT 안의 한 줄(규격 LW200)로 옮긴다.
+   줄을 합계 바로 위에 넣어 계 범위가 자동으로 넓어지고, 모든 달의 수량 입력값은 새 줄 수량 칸으로 옮긴다. */
+function stkLwDetect(){
+  try{
+    const c=INV_STK.cells;
+    for(const k of Object.keys(c)){
+      const m=/^A(\d+)$/.exec(k);if(!m)continue;const r=+m[1];
+      if(r>=STK_BOT||!c[k]||c[k][0]!=='s'||String(c[k][1]).trim()!=='LW200')continue;
+      const u=c['A'+(r+1)],w=c['A'+(r+3)];
+      if(!u||u[0]!=='n'||!isFinite(+u[1])||!w||w[0]!=='f'||!/^=A\d+\*A\d+$/.test(String(w[1]).replace(/\s/g,'')))continue;
+      if(!STK_SLOTS.has('A'+(r+2))&&!c['A'+(r+2)])continue;
+      const wref='A'+(r+3),re=new RegExp('\\+'+wref+'(?!\\d)');let sum=null;
+      Object.keys(c).forEach(x=>{const f=c[x];if(f&&f[0]==='f'&&typeof f[1]==='string'&&re.test(f[1]))sum=x;});
+      if(!sum)continue;
+      return {r,ur:r+1,qr:r+2,wr:r+3,sum};
+    }
+  }catch(e){}
+  return null;
+}
+function stkLwConvert(){
+  const d=stkLwDetect();if(!d){toast('전환할 LW200 별도 계산이 없습니다');return;}
+  const ym=stkYm();if(invConfLocked(ym)){toast('확정된 달은 수정할 수 없습니다 — [월별 원단위]에서 확정 해제');return;}
+  let c=INV_STK.cells,sr=+/\d+/.exec(d.sum)[0],scol=/^[A-Z]+/.exec(d.sum)[0],lastR=sr-1;
+  if(!stkRowOk(lastR,true)){toast('합계 바로 위 줄을 찾지 못했습니다');return;}
+  const unit=+c['A'+d.ur][1],qty0=c['A'+d.qr]?c['A'+d.qr][1]:'';
+  if(!confirm(`LW200 단중(${unit}) × 수량을 따로 더하던 것을 PGT-BT 안의 한 줄(규격 LW200)로 옮깁니다.\n\n· ${sr}행(합계) 바로 위에 새 줄이 생기고, 합계 범위에 자동으로 들어갑니다.\n· 모든 달의 LW200 수량 입력값이 새 줄 수량 칸으로 옮겨집니다.\n· 표 아래 A${d.r}~A${d.wr} 칸은 비워집니다.\n\n계속할까요? ([↩ 되돌리기]로 복원할 수 있습니다)`))return;
+  stkUndoPush('LW200 별도 계산 → 줄 전환');
+  const b=stkBlk(lastR,2),S=stkPatternRow(lastR,b);
+  const rows=stkInsertCore(sr,1,S,b,true,false),N=rows[0],ns=scol+(sr+1);
+  c=INV_STK.cells;   // 줄 삽입이 셀 표를 새로 만들 수 있으므로 다시 가져온다
+  c['B'+N]=['s','LW200'];c['C'+N]=['n',unit];
+  if(!c['F'+N])c['F'+N]=['f',`=E${N}*C${N}`];
+  const wre=new RegExp('\\+A'+d.wr+'(?!\\d)');
+  if(c[ns]&&typeof c[ns][1]==='string')c[ns][1]=c[ns][1].replace(wre,'');
+  [d.r,d.ur,d.qr,d.wr].forEach(r=>{delete c['A'+r];});
+  INV_STK.slots=INV_STK.slots.filter(k=>k!=='A'+d.qr);STK_SLOTS.delete('A'+d.qr);
+  const s=stkMgStore();if(s.lab['A'+d.r]!==undefined){delete s.lab['A'+d.r];stkMgSave(s);}
+  const all=stkAll();if(!all['2026-09'])all['2026-09']={on:1,ov:{}};
+  Object.keys(all).forEach(m=>{const rec=all[m];if(!rec)return;rec.ov=rec.ov||{};const ov=rec.ov;
+    const q=ov['A'+d.qr]!==undefined?ov['A'+d.qr]:qty0;
+    if(ov['E'+N]===undefined&&q!==''&&q!=null&&q!==0)ov['E'+N]=q;
+    if(ov['A'+d.ur]!==undefined&&+ov['A'+d.ur]!==unit&&ov['C'+N]===undefined)ov['C'+N]=ov['A'+d.ur];
+    [d.r,d.ur,d.qr,d.wr].forEach(r=>{delete ov['A'+r];});
+    Object.keys(ov).forEach(k=>{if(typeof ov[k]==='string'&&ov[k][0]==='='&&wre.test(ov[k]))ov[k]=ov[k].replace(wre,'');});
+    if(rec.adj)Object.keys(rec.adj).forEach(k=>{});});
+  stkSaveAll(all);stkLaySave();
+  try{stkRender();}catch(e){}try{stkSyncSoon(ym);}catch(e){}
+  toast(`LW200을 ${N}행(PGT-BT 안)으로 옮겼습니다 — 합계는 ${scol}${sr+1}`);
+}
 function stkBanner(ym){
   const ban=document.getElementById('stk_banner'),info=document.getElementById('stk_info');if(!ban)return;
   const rec=stkRec(ym)||{on:1,ov:{}},map=stkMapAll(),M=stkCtx(ym),locked=invConfLocked(ym);
@@ -16403,6 +16452,7 @@ function stkBanner(ym){
       if(!lst.length)return '';
       return `<details style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#166534;font-weight:700">🔗 원단위 월말재고로 넘어가는 칸 ${lst.length}건 보기 (초록 테두리 칸)</summary>
       <div style="max-height:220px;overflow:auto;margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>원단위 품목</th><th>단위</th><th>넘어가는 칸(식)</th><th class="n">넘어가는 값</th></tr></thead><tbody>${lst.map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.u)}</td><td>${esc(x.ex)}</td><td class="n"><b>${x.v==null?'-':stkFmt(x.v)}</b> ${esc(x.u==='KG'||x.u==='kg'?'kg':x.u)}</td></tr>`).join('')}</tbody></table></div></details>`;})()}
+    ${(()=>{const d=stkLwDetect();if(!d||locked)return '';return `<div style="font-size:12px;margin:0 0 6px;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:5px 9px"><b>LW200</b> 단중×수량이 표 아래(A${d.r}~A${d.wr})에서 따로 계산되어 PGT-BT 합계에 더해지고 있습니다. <button class="btn sm primary" onclick="stkLwConvert()">PGT-BT 안의 한 줄로 옮기기</button> <span style="color:var(--muted)">(합계 값은 그대로 · 되돌리기 가능)</span></div>`;})()}
     ${(()=>{const ad=rec.adj||{},ks=Object.keys(ad);if(!ks.length)return '';const M0=stkMk(rec.ov||{}),LKR=stkLkRefMap(ym);
       return `<details open style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#6d28d9;font-weight:800">⚙ 합계 중량 조정 ${ks.length}건 (보라 칸) — 월말재고에 조정값이 반영됩니다</summary><div style="margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>칸</th><th>연결 원단위 품목</th><th class="n">원래 합계</th><th>조정</th><th class="n">조정 후</th><th>사유</th><th></th></tr></thead><tbody>${ks.map(r=>{const a=ad[r],b=M0.V(r),af=a.mode==='set'?+a.v:b+(+a.v);const nm=(LKR[r]||[]).map(x=>x.n).join(', ');return `<tr><td>${r}</td><td>${esc(nm)||'-'}</td><td class="n">${stkFmt(b)}</td><td>${a.mode==='set'?'직접 지정':'가감 '+((+a.v>0?'+':'')+stkFmt(+a.v))}</td><td class="n"><b>${stkFmt(af)}</b> (${(af-b>0?'+':'')+stkFmt(af-b)})</td><td>${esc(a.memo||'')}</td><td>${locked?'':`<button class="btn sm" onclick="stkAdjOpen('${r}')">수정</button> <button class="btn sm" onclick="stkAdjDel('${r}')">해제</button>`}</td></tr>`;}).join('')}</tbody></table></div></details>`;})()}
     ${(()=>{const gt=stkGrpTotals(ym);if(!gt.length)return '';const f=v=>Math.round(v).toLocaleString();
@@ -16623,7 +16673,7 @@ function stkVzRender(force){
     <button class="btn sm" onclick="stkVzClose();stkMapOpenSheet()" title="기존 수식 입력 표">수식 표로 보기</button><button class="btn sm" onclick="stkVzClose()">닫기</button></div>
    ${stkHas(ym)?'':`<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:5px 9px;font-size:12px;margin-bottom:6px">⚠ ${esc(ym)} 재고량 시트가 아직 없습니다. 연동은 저장되지만 월말재고에는 시트를 만든 뒤 반영됩니다. <button class="btn sm primary" onclick="stkStart().then(()=>stkVzRender())">▶ 전월 값으로 ${esc(ym)} 시트 시작</button></div>`}
    <div class="vz-wrap"><div class="vz-l"><div style="padding:6px;border-bottom:1px solid #e2e8f0">
-      <div style="display:flex;gap:4px;margin-bottom:5px">${[['all','전체'],['no','미연동'],['ok','연동됨']].map(x=>`<button class="btn sm${stkVz.f===x[0]?' primary':''}" onclick="stkVz.f='${x[0]}';stkVzRender()">${x[1]} ${cnt[x[0]]}</button>`).join('')}<button class="btn sm" style="margin-left:auto" onclick="stkVzAuto()" title="시트에 같은 이름의 품명이 확실히 있는 미연동 품목만 골라 한 번에 연결합니다">⚡ 자동 연결</button></div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">${[['all','전체'],['no','미연동'],['ok','연동됨']].map(x=>`<button class="btn sm${stkVz.f===x[0]?' primary':''}" onclick="stkVz.f='${x[0]}';stkVzRender()">${x[1]} ${cnt[x[0]]}</button>`).join('')}<button class="btn sm" style="margin-left:auto" onclick="stkVzAuto()" title="시트에 같은 이름의 품명이 확실히 있는 미연동 품목만 골라 한 번에 연결합니다">⚡ 자동 연결</button><button class="btn sm" onclick="stkVzNew()" title="왼쪽에 연결할 품목이 없을 때 — 월별 원단위에 새 품목을 만들고 바로 고른 상태로 둡니다(시트 품명 기준)">＋ 새 품목</button></div>
       <input class="search" id="stkVzQ" placeholder="품명·설비 검색" value="${esc(stkVz.q)}" oninput="stkVz.q=this.value;stkVzRender()" style="width:100%">
       ${blkA?`<div style="margin-top:5px;font-size:11.5px;background:#fef9c3;border-radius:5px;padding:3px 6px">시트 품명 <b>${esc(blkA.label||'(품명 없음)')}</b> 기준으로 정렬 <button class="btn sm" onclick="stkVz.blk='';stkVzRender()">해제</button></div>`:''}</div>
      <div class="vz-list" id="stkVzList">${lh}</div></div>
@@ -16648,6 +16698,30 @@ async function stkVzAuto(){
   if(!confirm('시트에서 같은 이름의 품명을 찾은 '+hits.length+'개 품목을 연결합니다.\n\n'+hits.map(h=>'· ['+h.m.g+'] '+h.m.n+' ← 시트 "'+h.a.label+'" '+h.d.ex+' ('+h.d.type+' '+stkFmt(M.ev(h.d.ex))+')').join('\n')+'\n\n나머지 '+left+'개는 직접 연결하거나 월별 화면에서 직접 입력합니다. 연결할까요?'))return;
   for(const h of hits)await stkMapSet(h.m.c,h.d.ex);
   stkVz.note='✔ '+hits.length+'개 자동 연결 완료';stkVzRender();try{stkRender();}catch(e){}toast('자동 연결 '+hits.length+'건 완료');
+}
+/* 2026-11-03: 연동 작업대에서 왼쪽에 연결할 원단위 품목이 없을 때 — 월별 원단위(품목마스터)에 새 품목을 만들고 바로 고른 상태로 둔다.
+   이름은 지금 고른 시트 품명을 기본값으로 쓴다. 만든 뒤 오른쪽 시트에서 칸을 눌러 [연동하기]를 누르면 된다. */
+function stkVzNew(){
+  const ym=stkYm();
+  if(typeof invConfLocked==='function'&&invConfLocked(ym)){toast('확정된 달입니다 — 월별 원단위에서 확정 해제 후 만들어 주세요');return;}
+  const anchors=stkVzAnchors(ym),ba=stkVz.blk?anchors.find(a=>a.ref===stkVz.blk):null;
+  const nm0=ba&&ba.label?ba.label:'';
+  const nm=prompt('월별 원단위에 새로 만들 품목 이름을 입력하세요.\n(고른 시트 품명이 기본값입니다)',nm0);
+  if(nm==null)return;const name=nm.trim();if(!name){toast('품목 이름을 입력하세요');return;}
+  if(INV_MASTER.some(m=>m.n===name)&&!confirm('같은 이름의 원단위 품목이 이미 있습니다.\n그래도 새로 만드시겠습니까?'))return;
+  let du='KG';if(ba){const g=ba.g,cells=INV_STK.cells;let num=0,tot=0;const uc=g.right?(g.bot?'H':'I'):(g.bot?'C':'C');
+    for(let r=g.r1;r<=g.rEnd;r++){const x=cells[uc+r];if(!x)continue;tot++;if(x[0]==='n'&&!isNaN(+x[1]))num++;}
+    if(tot&&num/tot<0.4)du='EA';}
+  const un=prompt('단위를 입력하세요 (KG 또는 EA)',du);if(un==null)return;
+  const u=/^e/i.test(un.trim())?'EA':'KG';
+  const gr=prompt('설비 구분을 입력하세요 (EAF / LF / CC / 형강가열로 / 공통)','공통');if(gr==null)return;
+  const g=['EAF','LF','CC','형강가열로','공통'].find(x=>x.toUpperCase()===gr.trim().toUpperCase())||'공통';
+  const code='EX'+Date.now().toString(36).toUpperCase();
+  const it={g,c:code,n:name,u,p:0,cl:''};
+  INV_MASTER.push(it);invM.set(code,it);invUserItems.push(it);saveInvUserItems();
+  try{invRenderAll();}catch(e){}
+  stkVz.f='all';stkVz.q='';stkVzRender();stkVzPick(code);
+  toast('새 원단위 품목을 만들었습니다 · '+name+' ('+u+') — 오른쪽 시트에서 값 칸을 눌러 [연동하기]를 누르세요 · 단가는 월별 원단위에서 입력');
 }
 function stkVzPick(code){
   const ym=stkYm(),map=stkMapAll(),m=INV_MASTER.find(x=>x.c===code);if(!m)return;
@@ -32656,10 +32730,10 @@ function vcNorm(s){return String(s||'').replace(/\(주\)|㈜|주식회사|\s+/g,
 function vcItemKey(s){return String(s||'').replace(/\(.*?\)/g,'').replace(/\s+/g,'').replace(/D$/i,'').toUpperCase();}
 function vcSum(ms,y,fn){let a=0,w=0;ms.forEach(m=>{const v=fn(y,m)||{};a+=+v.a||0;w+=+v.w||0;});return {a:a,w:w};}
 function vcGroups(y,months,k){   // 포스코: 품목군(cat)별 / 시중: 거래처별 — 계획(사업계획 시드) ↔ 실적(전산 거래처·품목)
-  const seed=spVendSeed(k),vn=k==='po1'?'포스코(기존)':k==='po2'?'포스코퓨처엠':null,byV=(k==='rt'),G={};
+  const src=spVendSrc(k),byV=(k==='rt'),G={};
   const g=(key,name)=>G[key]||(G[key]={name:name,pa:0,pw:0,aa:0,aw:0});
   months.forEach(m=>{
-    seed.forEach((it,i)=>{if(it.del||(vn&&it.vendor!==vn))return;let mo;try{mo=bizplanExtMo(seed,i,m-1,String(y));}catch(e){return;}
+    src.forEach(x=>{const it=x.it;let mo;try{mo=bizplanExtMo(x.seed,x.i,m-1,String(y));}catch(e){return;}
       if(!mo||!(mo.a||mo.w))return;const nm=byV?it.vendor:it.cat,o=g(byV?vcNorm(nm):vcItemKey(nm),nm);o.pa+=(mo.a||0)/1e6;o.pw+=(mo.w||0)/1000;});
     (ERP.d[spYm(y,m)]||[]).forEach(r=>{if(erpCat(r)!==k)return;
       const nm=byV?String(r[0]||'').replace(/\(주\)|㈜|주식회사/g,'').trim():String(r[3]||'').replace(/D$/,'').trim();
@@ -39640,8 +39714,7 @@ function spPlan(y,m,k){
       if(y===2026){const row=PLAN2026_SALES.find(x=>x[0]===m);if(row){dw=row[1];da=row[2];}}
       else{const e=spEff(y);if(e){da=e.net.amt[m]/1e6;dw=e.net.wt[m]/1000;}}
     }else if(k==='po1'||k==='po2'||k==='rt'){
-      const seed=k==='rt'?BIZPLAN_MARKET_SEED:BIZPLAN_POSCO_SEED,vn=k==='po1'?'포스코(기존)':k==='po2'?'포스코퓨처엠':null;
-      const t=bizplanVendorSeedMonthly(seed,m-1,String(y),vn);da=t.a/1e6;dw=t.w/1000;
+      const t=spVendMonthly(k,m-1,String(y),null);da=t.a/1e6;dw=t.w/1000;
     }else if(k==='rf'){da=SP_RF_PLAN;dw=0;}
   }catch(e){}
   return {a:a!=null?a:da,w:w!=null?w:dw,da:da,dw:dw,ov:(a!=null||w!=null)};
@@ -39712,13 +39785,24 @@ function spProdAct(y,m){
 // ── 차월 예상 ────────────────────────────────────────
 /* 2026-10-30 (rpt176): 포스코·시중 업체별 차월 예상 — r.fc.vend[k][업체]={a,w}. 입력한 업체는 그 값, 입력 안 한 업체는 사업계획 값으로 합산 */
 function spVendSeed(k){return k==='rt'?BIZPLAN_MARKET_SEED:BIZPLAN_POSCO_SEED;}
+/* 2026-11-03: 포스코퓨처엠은 '포스코 신규'가 아니라 시중 거래처 — 전산 실적(erpCat)은 이미 시중으로 잡히므로 사업계획도 시중으로 맞춘다.
+   사업계획 데이터는 번호(인덱스) 보존을 위해 포스코 시드에 그대로 두고, 판매실적분석에서만 시중으로 집계한다. 포스코(신규)는 사업계획 없음(0). */
+const SP_MKT_FROM_POSCO=['포스코퓨처엠'];
+function spVendSrc(k){   // 판매실적분석 구분(k)별 사업계획 원천 품목 [{seed,i,it}]
+  const o=[];
+  if(k==='po1'){BIZPLAN_POSCO_SEED.forEach((it,i)=>{if(!it.del&&it.vendor==='포스코(기존)')o.push({seed:BIZPLAN_POSCO_SEED,i:i,it:it});});}
+  else if(k==='rt'){BIZPLAN_MARKET_SEED.forEach((it,i)=>{if(!it.del)o.push({seed:BIZPLAN_MARKET_SEED,i:i,it:it});});
+    BIZPLAN_POSCO_SEED.forEach((it,i)=>{if(!it.del&&SP_MKT_FROM_POSCO.includes(it.vendor))o.push({seed:BIZPLAN_POSCO_SEED,i:i,it:it});});}
+  return o;
+}
+function spVendMonthly(k,mi,year,vname){let q=0,w=0,a=0;spVendSrc(k).forEach(x=>{if(vname&&x.it.vendor!==vname)return;const mo=bizplanExtMo(x.seed,x.i,mi,year);q+=(mo.q||0);w+=(mo.w||0);a+=(mo.a||0);});return {q,w,a};}
 function spVendList(k){
-  const vn=k==='po1'?'포스코(기존)':k==='po2'?'포스코퓨처엠':null,L=[];
-  try{spVendSeed(k).forEach(it=>{if(it.del||(vn&&it.vendor!==vn))return;if(!L.includes(it.vendor))L.push(it.vendor);});}catch(e){}
+  const L=[];
+  try{spVendSrc(k).forEach(x=>{if(!L.includes(x.it.vendor))L.push(x.it.vendor);});}catch(e){}
   try{((NFA._vend||{})[k]||[]).forEach(v=>{if(!L.includes(v))L.push(v);});}catch(e){}
   return L;
 }
-function spVendPlan(y,m,k,v){try{const t=bizplanVendorSeedMonthly(spVendSeed(k),m-1,String(y),v);return {a:t.a/1e6,w:t.w/1000};}catch(e){return {a:0,w:0};}}
+function spVendPlan(y,m,k,v){try{const t=spVendMonthly(k,m-1,String(y),v);return {a:t.a/1e6,w:t.w/1000};}catch(e){return {a:0,w:0};}}
 function spVendFc(y,m,k){
   const r=spRecGet(spYm(y,m)),vd=r&&r.fc&&r.fc.vend&&r.fc.vend[k];if(!vd)return null;
   const has=v=>v!=null&&v!=='';let any=false,a=0,w=0;
