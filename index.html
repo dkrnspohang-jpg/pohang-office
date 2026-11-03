@@ -1625,6 +1625,18 @@ table thead th:not([style*="text-align:left"]):not([style*="text-align: left"]),
   table.wpxt td.ref{white-space:nowrap;vertical-align:middle;background:#fafafa}
   table.wpxt td.ref .iinp{width:104px}
   .wpx.noref .refc{display:none}
+  /* 2026-11-03: 월 칸은 높이를 고정(4줄까지)하고 넘치는 내용은 칸 위에 마우스를 올리면 전체가 보입니다 */
+  table.wpxt td.m .tx{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;word-break:break-word}
+  table.wpxt td.m{height:66px;vertical-align:top}
+  table.wpxt td.m.hasend{padding-bottom:17px}
+  table.wpxt td.m .endb{position:absolute;right:3px;bottom:2px}
+  table.wpxt td.m.clip::after{content:'⋯';position:absolute;left:4px;bottom:0;color:#64748b;font-weight:800;line-height:12px}
+  table.wpxt td.ttl [contenteditable]:not(:focus){display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+  /* 기준월(이번 달 실적) · 차월 = 빨간색 표시 */
+  table.wpxt th.hot{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
+  table.wpxt td.m.hot{box-shadow:inset 0 0 0 1px #fca5a5}
+  table.wpxt td.m.hot .tx{color:#dc2626;font-weight:600}
+  .wpx-hot{display:inline-flex;gap:4px;align-items:center;color:#b91c1c;font-weight:700}
   table.wpxt th.mgt{width:46px;min-width:46px;padding:2px}
   table.wpxt td.act{width:46px;min-width:46px;vertical-align:middle;text-align:center;padding:1px}
   table.wpxt td.act .btn{padding:0 3px;font-size:10px;min-width:20px;height:18px;line-height:16px;margin:1px}
@@ -16310,6 +16322,7 @@ async function stkPullPrev(){
 }
 function stkRender(){
   const wrap=document.getElementById('stk_wrap');if(!wrap)return;
+  try{stkSumFixFormulas();}catch(e){}   // 어떤 경로로 옛 계 수식이 되살아나도 화면을 그릴 때마다 교정
   const ye=document.getElementById('stk_ym');
   if(ye&&!ye.value)ye.value=(document.getElementById('inv_ym')||{}).value||curYm();
   const ym=stkYm();const ib=document.getElementById('inv_ym');if(ib&&ib.value!==ym)ib.value=ym;
@@ -28834,17 +28847,29 @@ function wpxMove(id,d){
   wpS.rows[a.id]=Object.assign(wpS.rows[a.id]||{id:a.id},{no:b.no});wpS.rows[b.id]=Object.assign(wpS.rows[b.id]||{id:b.id},{no:a.no});
   wpSave();wpRender();
 }
+/* 기준월(이번 달 실적을 정리하는 달): 자동 = 매월 15일까지는 전월, 이후는 당월. 이 달과 차월을 빨간색으로 표시 */
+function wpBaseSel(){try{return localStorage.getItem('dgrns_wpbase')||'auto';}catch(e){return 'auto';}}
+function wpBaseYM(){
+  const sel=wpBaseSel(),t=todayStr();let y=+t.slice(0,4),m=+t.slice(5,7);const d=+t.slice(8,10);
+  if(sel!=='auto')return {y:y,m:+sel};
+  if(d<=15){m--;if(m<1){m=12;y--;}}
+  return {y:y,m:m};
+}
+function wpBaseMonth(yr){const b=wpBaseYM();return b.y===+yr?b.m:0;}
+function wpSetBase(v){try{localStorage.setItem('dgrns_wpbase',v);}catch(e){}wpRenderXl();}
 function wpRenderXl(){
   const box=document.getElementById('wpXlBox');if(!box)return;
   const L=wpFiltered();
   if(!L.length){box.innerHTML='<div class="empty">조건에 맞는 업무가 없습니다.</div>';return;}
   const years=[...new Set(L.map(x=>+x.year))].sort((a,b)=>b-a);
   let h='<div class="wpx-lg"><b>보는 법</b><span>이슈 제목·거래처·구분은 글자를 눌러 바로 수정 · 월 칸을 누르면 진행내용 입력(Ctrl+Enter 저장) · 내용이 있는 첫 달~마지막 달은 상태 색으로 자동 채움 · 마지막 달에 완료/보류/중단 표시</span><span style="display:inline-flex;gap:4px;align-items:center">막대 색 = 상태</span>'
+    +`<span class="wpx-hot">기준월 <select class="selbox" onchange="wpSetBase(this.value)" title="이 달(실적)과 다음 달(차월)을 빨간색으로 표시합니다"><option value="auto"${wpBaseSel()==='auto'?' selected':''}>자동(${wpBaseYM().m}월)</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${wpBaseSel()===String(i+1)?' selected':''}>${i+1}월</option>`).join('')}</select> = 실적(빨강) · 차월(빨강)</span>`
     +Object.keys(WP_ST).map(s=>`<span style="display:inline-flex;gap:3px;align-items:center"><i style="background:${WP_ST[s].c}"></i>${s}</span>`).join('')+`<span style="flex:1"></span><button class="btn sm" onclick="wpXlRefToggle()" title="시작·기한·상태 열을 접어 진행사항 칸을 넓힙니다">${wpXlRef?'◀ 참고열 접기':'▶ 참고열(시작·기한·상태) 보기'}</button></div>`;
   years.forEach(y=>{
     const rows=L.filter(x=>+x.year===y).sort((a,b)=>a.no-b.no),yy=String(y).slice(2);
     const office=(rows[0]&&rows[0].office)||'포항사업소';
-    let t=`<table class="wpxt"><thead><tr><th rowspan="2">영업소</th><th rowspan="2">거래처</th><th rowspan="2" colspan="2">주요 이슈사항</th><th colspan="12">진행사항(${yy}년)</th><th colspan="3" class="ref refc">참고 (시작·기한·상태)</th><th rowspan="2" class="ref mgt">관리</th></tr><tr>${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th class="ref refc">시작</th><th class="ref refc">기한</th><th class="ref refc">상태</th></tr></thead><tbody>`;
+    const BM=wpBaseMonth(y);
+    let t=`<table class="wpxt"><thead><tr><th rowspan="2">영업소</th><th rowspan="2">거래처</th><th rowspan="2" colspan="2">주요 이슈사항</th><th colspan="12">진행사항(${yy}년)</th><th colspan="3" class="ref refc">참고 (시작·기한·상태)</th><th rowspan="2" class="ref mgt">관리</th></tr><tr>${Array.from({length:12},(_,i)=>`<th${(i+1===BM)?' class="hot" title="기준월 — 이번 달 실적"':(i+1===BM+1&&BM>0)?' class="hot" title="차월 — 다음 달 계획"':''}>${i+1}월${(i+1===BM)?'<div style="font-size:9.5px;font-weight:700">실적</div>':(i+1===BM+1&&BM>0)?'<div style="font-size:9.5px;font-weight:700">차월</div>':''}</th>`).join('')}<th class="ref refc">시작</th><th class="ref refc">기한</th><th class="ref refc">상태</th></tr></thead><tbody>`;
     // 병합 그룹 계산
     const n=rows.length,custSpan=Array(n).fill(0),catSpan=Array(n).fill(0);
     for(let i=0;i<n;){let j=i;while(j+1<n&&rows[j+1].customer===rows[i].customer)j++;custSpan[i]=j-i+1;
@@ -28866,9 +28891,11 @@ function wpRenderXl(){
       const SP=wpEffSpan(it,mp);
       for(let m=1;m<=12;m++){
         const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3'||SP.e[m],note=k==='2'||k==='3',lines=mp[m]||[];
-        let body=lines.length?lines.map(s=>'- '+esc(s)).join('<br>'):(note?`<span style="color:${st.c}">●</span>`:'');
-        if(m===SP.last&&WP_END[it.status])body+=`<div style="text-align:right;margin-top:2px"><span style="font-size:9.5px;font-weight:800;color:${st.c};background:#fff;border:1px solid ${st.c};border-radius:3px;padding:0 4px">${WP_END[it.status]}</span></div>`;
-        tr+=`<td class="m" data-id="${it.id}" data-m="${m}" onclick="wpxCell(this)" style="${bar?'background:'+(WP_TINT[it.status]||'#e2e8f0'):''}"><div class="bar" onclick="event.stopPropagation();wpxBar('${it.id}',${m-1})" title="${m}월 진행 기간 표시 켜기/끄기" style="${bar?'background:'+st.c:''}"></div><div class="t">${body}</div></td>`;
+        let body=lines.length?`<div class="tx">${lines.map(s=>'- '+esc(s)).join('<br>')}</div>`:(note?`<span style="color:${st.c}">●</span>`:'');
+        const endB=(m===SP.last&&WP_END[it.status]);
+        if(endB)body+=`<span class="endb" style="font-size:9.5px;font-weight:800;color:${st.c};background:#fff;border:1px solid ${st.c};border-radius:3px;padding:0 4px">${WP_END[it.status]}</span>`;
+        const hot=(m===BM||(BM>0&&m===BM+1));
+        tr+=`<td class="m${hot?' hot':''}${endB?' hasend':''}" data-id="${it.id}" data-m="${m}" onclick="wpxCell(this)" ${lines.length?`title="${esc(lines.map(s=>'- '+s).join('\n'))}"`:''} style="${bar?'background:'+(WP_TINT[it.status]||'#e2e8f0'):''}"><div class="bar" onclick="event.stopPropagation();wpxBar('${it.id}',${m-1})" title="${m}월 진행 기간 표시 켜기/끄기" style="${bar?'background:'+st.c:''}"></div><div class="t">${body}</div></td>`;
       }
       tr+=`<td class="ref refc"><input type="month" class="iinp" value="${esc(it.start||'')}" onchange="wpEdit('${it.id}','start',this.value)"></td>`
         +`<td class="ref refc"><input type="month" class="iinp" style="${over?'border-color:#dc2626':''}" value="${esc(it.due||'')}" onchange="wpEdit('${it.id}','due',this.value)"></td>`
@@ -28881,6 +28908,7 @@ function wpRenderXl(){
   });
   h+='<div style="font-size:11px;color:var(--muted);margin:0 2px 8px">* 개선업무 or 신규업무의 연속성을 보기 위함(월 실적 자료 작성시 최신업데이트必) · 시작·기한·상태는 원본 엑셀에 없는 참고 항목입니다. 변경은 입력 즉시 저장됩니다.</div>';
   box.innerHTML=h;
+  box.querySelectorAll('td.m .tx').forEach(e=>{if(e.scrollHeight>e.clientHeight+1)e.parentElement.parentElement.classList.add('clip');});
   if(wpXlFocus){const e=document.getElementById('wpxT_'+wpXlFocus);wpXlFocus=null;if(e){e.focus();try{const r=document.createRange();r.selectNodeContents(e);const s=getSelection();s.removeAllRanges();s.addRange(r);}catch(x){}}}
 }
 /* ---- 엑셀(.xlsx): 원본 양식 (영업소·거래처·구분·주요 이슈사항·1~12월 진행) + 참고 열(시작·기한·상태·진척) ---- */
@@ -28891,7 +28919,8 @@ function wpXlsSheet(bk,y,rows){
   const P=(r,c,v,o,r2,c2)=>{S.put(r,c,v,o);if((r2&&r2>r)||(c2&&c2>c))S.merge(r,c,r2||r,c2||c,o);};
   P(1,1,`■ 영업소별 주요업무 진행현황 (${y}년) — 기준 ${todayStr()}`,{b:1,sz:13,h:'left'},1,12);S.height(1,22);
   P(3,1,'영업소',hs,4,1);P(3,2,'거래처',hs,4,2);P(3,3,'주요 이슈사항',hs,4,4);P(3,5,`진행사항(${yy}년)`,hs,3,16);P(3,17,'참고 (시작·기한·상태)',hr,3,20);
-  for(let m=1;m<=12;m++)S.put(4,4+m,m+'월',hs);
+  const BM=wpBaseMonth(y),hotH={b:1,sz:10,fill:'#fee2e2',color:'#b91c1c',bd:'a',h:'center',v:'center',wrap:true};
+  for(let m=1;m<=12;m++){const hot=(m===BM||(BM>0&&m===BM+1));S.put(4,4+m,m+'월'+(m===BM?' (실적)':(BM>0&&m===BM+1)?' (차월)':''),hot?hotH:hs);}
   [['시작',17],['기한',18],['상태',19],['진척(%)',20]].forEach(a=>S.put(4,a[1],a[0],hr));
   const n=rows.length;let r=5;const R0=5;
   const ctr={sz:10,b:1,bd:'a',h:'center',v:'center',wrap:true,fill:'#f4f7fb'};
@@ -28917,7 +28946,7 @@ function wpXlsSheet(bk,y,rows){
       const k=wpMm(it.mm,m-1),bar=k==='1'||k==='3'||SPX.e[m],note=k==='2'||k==='3',ls=mp[m]||[];
       let txt=ls.length?ls.map(s=>'- '+s).join('\n'):(note?'●':'');
       if(m===SPX.last&&WP_END[it.status])txt+=(txt?'\n':'')+'['+WP_END[it.status]+']';
-      S.put(r,4+m,txt,{sz:9,bd:'a',h:ls.length?'left':'center',v:ls.length?'top':'center',wrap:true,fill:bar?(WP_TINT[it.status]||'#e2e8f0'):undefined,color:note&&!ls.length?st.c:'#1e293b'});
+      S.put(r,4+m,txt,{sz:9,bd:'a',h:ls.length?'left':'center',v:ls.length?'top':'center',wrap:true,fill:bar?(WP_TINT[it.status]||'#e2e8f0'):undefined,color:note&&!ls.length?st.c:((m===BM||(BM>0&&m===BM+1))?'#c00000':'#1e293b')});
     }
     const rf={sz:10,bd:'a',h:'center',v:'center'};
     S.put(r,17,it.start||'',rf);S.put(r,18,it.due||'',rf);
@@ -28926,6 +28955,7 @@ function wpXlsSheet(bk,y,rows){
     r++;
   });
   r++;S.put(r,1,'* 개선업무 or 신규업무의 연속성을 보기 위함(월 실적 자료 작성시 최신업데이트必)',{sz:9,h:'left'});
+  if(BM>0){r++;S.put(r,1,'* 빨간색 표시 = '+BM+'월(이번 달 실적) · '+(BM<12?(BM+1)+'월(차월)':'')+' — 이번 달 진행 업무를 확인·업데이트하는 칸',{sz:9,h:'left',color:'#b91c1c'});}
   r++;S.put(r,1,'* 월 칸의 색 = 진행 기간(내용이 있는 첫 달~마지막 달 자동 채움), 색상은 상태(진행중 파랑·완료 초록·보류 주황·중단 빨강·예정 회색), 마지막 달에 완료·보류·중단 표시. 시작·기한·상태·진척은 참고 열입니다.',{sz:9,h:'left'});
 }
 async function wpExportXlsx(){
@@ -31388,6 +31418,23 @@ function stkLayMigrate(){
 stkLayLoad();stkLayMigrate();
 /* 2026-11-03: 엑셀 기본식에 들어 있던 고정 가감(-10000·-5000·-1800 등)과 잘못된 SUM 범위(MAC-W 21K 제외, AMC-BS 9·9-5 제외)를 바로잡고,
    품명을 합계(계) 기준으로 병합. 9월 값은 그대로 보이도록 9월에만 옛 식을 입력값으로 남긴다. 저장된 양식(layout)에도 적용(한 번만 실행). */
+/* 2026-11-03: 옛 계 수식(-10000 등)을 바로잡는 부분을 따로 뺌 — 팀 공유(클라우드)에서 옛 양식이 내려와 되살아나는 경우에도 다시 교정하려고,
+   양식을 새로 읽은 직후(fbApplyKv)에도 호출한다. 고친 게 있으면 true */
+function stkSumFixFormulas(){
+  try{
+    const OLD=[['=SUM(F25:F28)-10000','=SUM(F24:F28)','F29'],['=SUM(F30:F35)-5000','=SUM(F30:F35)','F36'],['=SUM(F43:F44)-1800','=SUM(F41:F44)','F45'],['=SUM(J91:J97)-0.65','=SUM(J90:J97)','J98'],['=SUM(J90:J96)-0.65','=SUM(J89:J96)','J97'],['=E50*C50-1299','=E50*C50','F50'],['=E53*C53-250','=E53*C53','F53']];
+    const c=INV_STK.cells,all=stkAll(),r9=all['2026-09']||{on:1,ov:{}};let ch=false;
+    r9.ov=r9.ov||{};
+    OLD.forEach(o=>{
+      Object.keys(c).forEach(ref=>{if(c[ref][0]==='f'&&c[ref][1]===o[0]){if(r9.ov[ref]===undefined)r9.ov[ref]=o[0];c[ref]=['f',o[1]];ch=true;}});
+    });
+    /* 9월 이후 달 시트에 옛 계 수식이 값으로 복사돼 들어간 경우도 제거(9월 시트 자체는 당시 기록이라 그대로 둔다) */
+    Object.keys(all).forEach(ym=>{if(ym==='2026-09')return;const ov=(all[ym]||{}).ov;if(!ov)return;
+      OLD.forEach(o=>{if(ov[o[2]]===o[0]){delete ov[o[2]];ch=true;}});});
+    if(ch){stkLaySave();all['2026-09']=r9;stkSaveAll(all);}
+    return ch;
+  }catch(e){console.warn('stkSumFixFormulas',e);return false;}
+}
 function stkSumFixMig(){
   try{
     const done=!!localStorage.getItem('dgrns_stk_mig1103');   // 식 교정은 매번 확인(옛 파일로 저장된 양식이 되살아나도 교정), 병합은 한 번만
@@ -34474,6 +34521,7 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     try{sgPrice=loadSgPrice();}catch(e){}
     try{sgSize=loadSgSize();}catch(e){}
     try{stkLayLoad();}catch(e){}
+    setTimeout(()=>{try{if(stkSumFixFormulas()&&curView==='inv'&&typeof stkRender==='function')stkRender();}catch(e){}},120);   // 팀에서 옛 계 수식 양식이 내려와도 다시 교정
     /* rpt149: 아래 값들은 메모리에 따로 들고 있어서, 새로 받은 값으로 다시 읽지 않으면 이 PC가 다음에 저장할 때 오래된 내용으로 팀 값을 덮어쓸 수 있었음 */
     try{invMOv=invMasterOv();}catch(e){}
     try{invPriceHist=loadInvPriceHist();}catch(e){}
@@ -39671,20 +39719,21 @@ function spSumFn(p,fn){let a=0,w=0;spMonths(p).forEach(m=>{const v=fn(p.y,m);a+=
 function spCumMonths(p){const ms=spMonths(p);return Array.from({length:ms[ms.length-1]},(_,i)=>i+1);}
 function spSumData(p){
   const np=spNext(p),cm=spCumMonths(p),D={cur:{},fc:{},cum:{}};
-  const tot=(o,ks)=>{const t={pa:0,aa:0,pw:0,aw:0};ks.forEach(k=>{['pa','aa','pw','aw'].forEach(f=>t[f]+=o[k][f]);});return t;};
+  const tot=(o,ks)=>{const t={pa:0,aa:0,pw:0,aw:0,ya:0,yw:0};ks.forEach(k=>{['pa','aa','pw','aw','ya','yw'].forEach(f=>t[f]+=(o[k][f]||0));});return t;};
   SP_CATS.forEach(c=>{
     const pl=spSumFn(p,(y,m)=>spPlan(y,m,c.k)),ac=spSumFn(p,(y,m)=>spAct(y,m,c.k));
     D.cur[c.k]={pa:pl.a,aa:ac.a,pw:pl.w,aw:ac.w};
     const fp=spSumFn(np,(y,m)=>spPlan(y,m,c.k)),fa=spSumFn(np,(y,m)=>spFc(y,m,c.k));
     D.fc[c.k]={pa:fp.a,aa:fa.a,pw:fp.w,aw:fa.w};
-    let cpa=0,caa=0,cpw=0,caw=0;cm.forEach(m=>{const a=spPlan(p.y,m,c.k),b=spAct(p.y,m,c.k);cpa+=a.a;caa+=b.a;cpw+=a.w;caw+=b.w;});
-    D.cum[c.k]={pa:cpa,aa:caa,pw:cpw,aw:caw};
+    let cpa=0,caa=0,cpw=0,caw=0,ypa=0,ypw=0;cm.forEach(m=>{const a=spPlan(p.y,m,c.k),b=spAct(p.y,m,c.k);cpa+=a.a;caa+=b.a;cpw+=a.w;caw+=b.w;});
+    for(let m=1;m<=12;m++){const a=spPlan(p.y,m,c.k);ypa+=a.a;ypw+=a.w;}   // 2026-11-03: 누적 실적의 계획은 연간 계획(1~12월)
+    D.cum[c.k]={pa:cpa,aa:caa,pw:cpw,aw:caw,ya:ypa,yw:ypw};
   });
   const K4=['dg','po1','po2','rt'];
   ['cur','fc','cum'].forEach(b=>{D[b].tot=tot(D[b],K4);});
   D.cur.prod={pa:spSumFn(p,(y,m)=>({a:spProdPlan(y,m)})).a,aa:spSumFn(p,(y,m)=>({a:spProdAct(y,m)})).a};
   D.fc.prod={pa:spSumFn(np,(y,m)=>({a:spProdPlan(y,m)})).a,aa:spSumFn(np,(y,m)=>({a:spProdFc(y,m).v})).a};
-  let a=0,b=0;cm.forEach(m=>{a+=spProdPlan(p.y,m);b+=spProdAct(p.y,m);});D.cum.prod={pa:a,aa:b};
+  let a=0,b=0,ya=0;cm.forEach(m=>{a+=spProdPlan(p.y,m);b+=spProdAct(p.y,m);});for(let m=1;m<=12;m++)ya+=spProdPlan(p.y,m);D.cum.prod={pa:a,aa:b,ya:ya};
   D.np=np;return D;
 }
 // ── 보수 계획 vs 실적 ───────────────────────────────
@@ -39814,6 +39863,12 @@ function spRender(){
   }catch(e){console.error(e);const b=document.getElementById('spBox-'+SP_ST.tab);if(b)b.innerHTML='<div class="empty">화면을 그리는 중 오류가 발생했습니다: '+esc(String(e.message||e))+'</div>';}
 }
 // 요약표(양식) — screen / excel 공용
+function spCumRate(o,x){   // 2026-11-03: 누적 달성율 = 누적 실적 ÷ 연간 계획 · 색은 현재까지(1~n월) 계획 대비 달성 여부
+  const ya=o.ya||0,pace=o.pa>0?o.aa/o.pa:null;
+  if(x)return `<td style="mso-number-format:'0%';text-align:center">${ya>0?(o.aa/ya):''}</td>`;
+  const st=pace==null?'background:#f2f2f2;color:#7f7f7f;font-weight:600':pace>=1?'background:#c6efce;color:#006100;font-weight:800':pace>=0.9?'background:#ffeb9c;color:#7f4f00;font-weight:800':'background:#ffc7ce;color:#9c0006;font-weight:800';
+  return `<td class="n" data-keepbg="1" style="${st}" title="${pace==null?'':'1~n월 계획 대비 '+Math.round(pace*100)+'%'}">${spR(o.aa,ya)}</td>`;
+}
 function spSumTbl(p,x){
   const D=spSumData(p),np=D.np,H=(s,a)=>`<th${a||''}>${s}</th>`;
   const bg='background:#dbe4f0;',bgT='background:#eef2f6;font-weight:800;';
@@ -39821,18 +39876,19 @@ function spSumTbl(p,x){
   const num=(v,fmt)=>x?`<td style="mso-number-format:'${fmt||'#,##0'}';text-align:center">${(v==null||isNaN(v))?'':Math.round(v*10)/10}</td>`:`<td class="n">${spN(v)}</td>`;
   const rate=(a,pl)=>x?`<td style="mso-number-format:'0%';text-align:center">${pl>0?(a/pl):''}</td>`:`<td class="n" style="${pl>0?spCls(a-pl):''}">${spR(a,pl)}</td>`;
   const blk=(o,w,tot,withW)=>num(o.pa)+num(o.aa)+rate(o.aa,o.pa)+(withW?num(o.pw)+num(o.aw)+rate(o.aw,o.pw):'');
+  const cblk=o=>num(o.ya)+num(o.aa)+spCumRate(o,x);
   const ttl=`■ 포항사업소 ${spLabel(p).replace(p.y+'년 ','')} 실적 및 ${spLabel(np).replace(np.y+'년 ','')} 예상 실적`;
   let t=x?`<table border="1"><tr><td colspan="17" style="font-size:14pt;font-weight:bold;border:none">${esc(ttl)}</td></tr><tr><td colspan="17" style="border:none"></td></tr><tr><td colspan="17" style="font-weight:bold;border:none">● 요약 (단위:백만원)</td></tr>`:`<table class="bomtbl" style="min-width:auto">`;
-  t+=`<tr>${th('구분',' rowspan="3" colspan="2"')}${th(esc(spLabel(p,true))+' 실적',' colspan="6"')}${th(esc(spLabel(np,true))+' 예상 실적',' colspan="6"')}${th(p.y+'년 누적 실적',' colspan="3"')}</tr>`;
+  t+=`<tr>${th('구분',' rowspan="3" colspan="2"')}${th(esc(spLabel(p,true))+' 실적',' colspan="6"')}${th(esc(spLabel(np,true))+' 예상 실적',' colspan="6"')}${th(p.y+'년 누적 실적(연간 계획 대비)',' colspan="3"')}</tr>`;
   t+=`<tr>${th('금액',' colspan="3"')}${th('중량',' colspan="3"')}${th('금액',' colspan="3"')}${th('중량',' colspan="3"')}${th('금액',' colspan="3"')}</tr>`;
-  t+=`<tr>${['계획','실적','달성율','계획','실적','달성율','계획','예상','달성율','계획','예상','달성율','계획','실적','달성율'].map(s=>th(s)).join('')}</tr>`;
+  t+=`<tr>${['계획','실적','달성율','계획','실적','달성율','계획','예상','달성율','계획','예상','달성율','계획(연간)','실적(누적)','달성율(연간)'].map(s=>th(s)).join('')}</tr>`;
   const lab=(s,a)=>x?`<td${a||''} style="${bg}text-align:center;font-weight:bold">${s}</td>`:`<td${a||''} style="font-weight:700;background:#f6f8fa">${s}</td>`;
   // 제강생산량
   const pr=(o)=>num(o.pa)+num(o.aa)+rate(o.aa,o.pa);
-  t+=`<tr>${lab('제강생산량(톤)',' colspan="2"')}${pr(D.cur.prod)}<td colspan="3"></td>${pr(D.fc.prod)}<td colspan="3"></td>${pr(D.cum.prod)}</tr>`;
+  t+=`<tr>${lab('제강생산량(톤)',' colspan="2"')}${pr(D.cur.prod)}<td colspan="3"></td>${pr(D.fc.prod)}<td colspan="3"></td>${cblk(D.cum.prod)}</tr>`;
   const row=(c,first,second)=>{
     const wRf=c.k==='rf';
-    return `<tr>${first}${second}${blk(D.cur[c.k],0,0,!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.fc[c.k],0,0,!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.cum[c.k],0,0,false)}</tr>`;
+    return `<tr>${first}${second}${blk(D.cur[c.k],0,0,!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.fc[c.k],0,0,!wRf)}${wRf?'<td colspan="3"></td>':''}${cblk(D.cum[c.k])}</tr>`;
   };
   const c0=SP_CATS[0],c1=SP_CATS[1],c2=SP_CATS[2],c3=SP_CATS[3],c4=SP_CATS[4];
   t+=row(c0,lab('동국제강'),lab('제강'));
@@ -39841,7 +39897,7 @@ function spSumTbl(p,x){
   t+=row(c3,lab('시중',' colspan="2"'),'');
   t+=row(c4,lab('축로',' colspan="2"'),'');
   const T=(b)=>{const o=D[b].tot;return blk(o,0,0,true);};
-  t+=`<tr style="${x?'':bgT}">${lab('합계(축로제외)',' colspan="2"')}${T('cur')}${T('fc')}${(()=>{const o=D.cum.tot;return blk(o,0,0,false);})()}</tr>`;
+  t+=`<tr style="${x?'':bgT}">${lab('합계(축로제외)',' colspan="2"')}${T('cur')}${T('fc')}${cblk(D.cum.tot)}</tr>`;
   t+='</table>';
   return t;
 }
@@ -39993,7 +40049,7 @@ function spRenderSum(){
   box.innerHTML=`<div class="subhead">● 요약 (단위: 백만원 · 중량 톤) <span class="hint">동국제강 실적 = [내화물 원단위] 입고내역(매출합계 포함+직매출) 자동 · 포스코·시중·축로 = [실적 입력] 탭에서 직접 입력 · 차월 예상 = [차월 예상실적] 화면 값</span></div>`
     +`<div class="tablewrap">${spSumTbl(p,false)}</div>`
     +`<div class="xl-legend"><b>색상 안내</b><i style="background:#bdd7ee;color:#1f3864">계획</i><i style="background:#c6e0b4;color:#274e13">실적</i><i style="background:#f8cbad;color:#833c0b">예상</i><span>달성율 →</span><i style="background:#c6efce;color:#006100">100% 이상</i><i style="background:#ffeb9c;color:#7f4f00">90~99%</i><i style="background:#ffc7ce;color:#9c0006">90% 미만</i><i style="background:#f2f2f2;color:#7f7f7f">0% (미입력)</i></div>`
-    +`<div style="font-size:11px;color:var(--muted);margin:4px 2px 12px">※ 누적은 ${p.y}년 1월부터 ${spLabel(p)} 말까지 · 달성율 = 실적 ÷ 계획 · 계획은 [사업계획]${p.y===2026?'(2026 V7 월별 판매계획)':' 엔진(다원화 반영)'}에서 가져오며 [실적 입력] 탭에서 월별로 직접 수정할 수 있습니다.</div>`
+    +`<div style="font-size:11px;color:var(--muted);margin:4px 2px 12px">※ 누적 실적은 ${p.y}년 1월부터 ${spLabel(p)} 말까지 · <b>누적 달성율 = 누적 실적 ÷ 연간 계획(1~12월)</b>(색상은 1월~${spLabel(p)} 계획 대비 달성 여부: 100% 이상 초록 · 90% 이상 노랑 · 미만 빨강) · 그 외 달성율 = 실적 ÷ 계획 · 계획은 [사업계획]${p.y===2026?'(2026 V7 월별 판매계획)':' 엔진(다원화 반영)'}에서 가져오며 [실적 입력] 탭에서 월별로 직접 수정할 수 있습니다.</div>`
     +`<div class="subhead">COMMENT · 증가요인 · 감소요인</div><div style="display:flex;gap:10px;flex-wrap:wrap">${col('cur',spLabel(p,true)+' 실적')}${col('fc',spLabel(np,true)+' 예상 실적')}${col('cum',p.y+'년 누적 실적')}</div>`
     +(()=>{try{return spAutoCmBasis(p);}catch(e){console.error(e);return '';}})()
     +`<div class="subhead">● 주요 ISSUE 사항</div><div class="tablewrap">${it}</div>`;
@@ -40262,17 +40318,18 @@ function spSumTblC(p){   // 구분 열을 1칸으로 통합한 요약표(내보�
   const num=v=>`<td class="n">${spN(v)}</td>`;
   const rate=(a,pl)=>`<td class="n" style="${pl>0?spCls(a-pl):''}">${spR(a,pl)}</td>`;
   const blk=(o,withW)=>num(o.pa)+num(o.aa)+rate(o.aa,o.pa)+(withW?num(o.pw)+num(o.aw)+rate(o.aw,o.pw):'');
+  const cblk=o=>num(o.ya)+num(o.aa)+spCumRate(o,false);
   const lab=s=>`<td style="font-weight:700;background:#f6f8fa">${s}</td>`;
   let t=`<table class="bomtbl" style="min-width:auto">`;
-  t+=`<tr>${th('구분',' rowspan="3"')}${th(esc(spLabel(p,true))+' 실적',' colspan="6"')}${th(esc(spLabel(np,true))+' 예상 실적',' colspan="6"')}${th(p.y+'년 누적 실적',' colspan="3"')}</tr>`;
+  t+=`<tr>${th('구분',' rowspan="3"')}${th(esc(spLabel(p,true))+' 실적',' colspan="6"')}${th(esc(spLabel(np,true))+' 예상 실적',' colspan="6"')}${th(p.y+'년 누적 실적(연간 계획 대비)',' colspan="3"')}</tr>`;
   t+=`<tr>${th('금액',' colspan="3"')}${th('중량',' colspan="3"')}${th('금액',' colspan="3"')}${th('중량',' colspan="3"')}${th('금액',' colspan="3"')}</tr>`;
-  t+=`<tr>${['계획','실적','달성율','계획','실적','달성율','계획','예상','달성율','계획','예상','달성율','계획','실적','달성율'].map(s=>th(s)).join('')}</tr>`;
+  t+=`<tr>${['계획','실적','달성율','계획','실적','달성율','계획','예상','달성율','계획','예상','달성율','계획(연간)','실적(누적)','달성율(연간)'].map(s=>th(s)).join('')}</tr>`;
   const pr=o=>num(o.pa)+num(o.aa)+rate(o.aa,o.pa);
-  t+=`<tr>${lab('제강생산량(톤)')}${pr(D.cur.prod)}<td colspan="3"></td>${pr(D.fc.prod)}<td colspan="3"></td>${pr(D.cum.prod)}</tr>`;
-  const row=(c,l)=>{const wRf=c.k==='rf';return `<tr>${lab(l)}${blk(D.cur[c.k],!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.fc[c.k],!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.cum[c.k],false)}</tr>`;};
+  t+=`<tr>${lab('제강생산량(톤)')}${pr(D.cur.prod)}<td colspan="3"></td>${pr(D.fc.prod)}<td colspan="3"></td>${cblk(D.cum.prod)}</tr>`;
+  const row=(c,l)=>{const wRf=c.k==='rf';return `<tr>${lab(l)}${blk(D.cur[c.k],!wRf)}${wRf?'<td colspan="3"></td>':''}${blk(D.fc[c.k],!wRf)}${wRf?'<td colspan="3"></td>':''}${cblk(D.cum[c.k])}</tr>`;};
   const C=SP_CATS;
   t+=row(C[0],'동국제강(제강)')+row(C[1],'포스코(기존)')+row(C[2],'포스코(신규)')+row(C[3],'시중')+row(C[4],'축로');
-  t+=`<tr>${lab('합계(축로제외)')}${blk(D.cur.tot,true)}${blk(D.fc.tot,true)}${blk(D.cum.tot,false)}</tr>`;
+  t+=`<tr>${lab('합계(축로제외)')}${blk(D.cur.tot,true)}${blk(D.fc.tot,true)}${cblk(D.cum.tot)}</tr>`;
   return t+'</table>';
 }
 function qxFromDom(S,tb,r0,spans){   // 화면 표(색상 적용 후) → xlsx 시트 (병합·색·굵기·정렬·숫자서식)
