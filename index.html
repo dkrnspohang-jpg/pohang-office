@@ -3358,6 +3358,7 @@ service cloud.firestore {
         <button class="btn" id="stk_rowbtn" onclick="stkRowToggle()" title="품명·규격·단중 줄을 새로 추가하거나 지우고 열 정렬(가운데 맞춤)을 바꿉니다 — 아래 줄의 수식·병합·연동 칸이 자동으로 이동">📐 품목 추가·삭제 · 정렬</button>
         <button class="btn primary" onclick="sxOpen(stkYm())" title="엑셀 원단위 파일과 대조한 연동 현황 · 연결/수정/확인 (전체화면)">🧭 연동 센터</button>
         <button class="btn" onclick="stkMapOpen()">🔗 연동 설정</button>
+        <button class="btn" onclick="stkAuditOpen()" title="수식을 직접 바꾼 칸·가감·참조 오류·연동 오류·음수 중량을 한 번에 찾아서 고칩니다">🩺 시트 점검</button>
         <button class="btn" onclick="stkPullPrev()" title="전월 재고량 시트의 수량(노란 입력 칸)을 이번 달 시트로 가져옵니다">⏪ 전월 재고 가져오기</button>
         <button class="btn" onclick="stkSyncNow()">월말재고로 반영</button>
         <button class="btn" onclick="stkExcel()">📥 엑셀</button>
@@ -16292,6 +16293,120 @@ async function stkAdjDel(ref,fromDlg){
   rec.ts=Date.now();stkSaveAll(a);flashSave();stkAdjClose();stkRender();
   if(rec.on!==0){const n=await stkSync(ym,true);toast(`조정을 해제했습니다 — 월말재고 ${n}품목 반영`);stkBanner(ym);}
 }
+
+/* ===== 2026-11-04: 🩺 시트 점검 — 수동으로 바뀐 수식·가감·참조 오류·연동 오류·이상 값을 한 번에 찾아 고칩니다 ===== */
+function stkLabelOf(ref){
+  const q=stkRefP(ref);if(!q)return ref;const b=stkBlk(q.r,q.c),c=INV_STK.cells,LAB=stkMgStore().lab;
+  const txt=k=>{const x=c[k];return LAB[k]||(x&&x[0]==='s'&&x[1]!==''?String(x[1]):'');};
+  const spec=txt(stkColL(b.right?(b.bot?7:8):2)+q.r);
+  let nm='';for(let r=q.r;r>=4&&!nm;r--){if(r<(q.r>=STK_BOT?STK_BOT+2:4))break;nm=txt(b.nc+r);}
+  return (nm?nm+' ':'')+(spec&&spec!==nm?spec:'')+' ('+ref+')';
+}
+function stkAuditRun(ym){
+  const rec=stkRec(ym)||{ov:{}},ov=rec.ov||{},adj=rec.adj||{},c=INV_STK.cells,map=stkMapAll();
+  const M=stkMk(ov,rec.adj),M0=stkMk({}),R={ovr:[],adj:[],ref:[],sum:[],map:[],dup:[],neg:[],rep:[]};
+  const kind=k=>c[k]?c[k][0]:(STK_SLOTS.has(k)?'i':null);
+  // 1) 이번 달에 수식을 직접 바꾼 칸 (기본 수식과 다름)
+  Object.keys(ov).forEach(k=>{const x=c[k];if(!x||x[0]!=='f')return;
+    R.ovr.push({ref:k,label:stkLabelOf(k),base:String(x[1]),now:String(ov[k]),val:M.V(k),baseVal:M0.V(k)});});
+  // 2) 합계 가감
+  Object.keys(adj).forEach(k=>{const a=adj[k],x=c[k];R.adj.push({ref:k,label:stkLabelOf(k),mode:a.mode,v:a.v,memo:a.memo||'',ok:!!(x&&x[0]==='f'),val:M.V(k),baseVal:M0.V(k)});});
+  // 3) 수식이 참조하는 칸이 비었거나 문자
+  Object.keys(c).forEach(k=>{const x=c[k];if(x[0]!=='f')return;const f=String(ov[k]!==undefined?ov[k]:x[1]);
+    const body=f.replace(/SUM\(\s*[A-Z]+\d+\s*:\s*[A-Z]+\d+\s*\)/g,'');
+    (body.match(/[A-Z]{1,2}\d+/g)||[]).forEach(r=>{const kd=kind(r);
+      if(!kd)R.ref.push({ref:k,label:stkLabelOf(k),msg:`수식 ${f} 이(가) 비어 있는 칸 ${r} 를 참조합니다`});
+      else if(kd==='s'&&c[r][1]!==''&&ov[r]===undefined)R.ref.push({ref:k,label:stkLabelOf(k),msg:`수식 ${f} 이(가) 문자 칸 ${r}(${c[r][1]}) 를 참조합니다`});});
+    const rows=(body.match(/[A-Z]{1,2}(\d+)/g)||[]).map(z=>+z.replace(/\D/g,'')),me=stkRefP(k);
+    if(!/SUM\(/.test(f)&&rows.length&&rows.length<=2&&me&&rows.some(r=>r!==me.r)&&k!=='A18'&&me.c<=11)R.ref.push({ref:k,label:stkLabelOf(k),msg:`수식 ${f} 이(가) 다른 줄 칸을 참조합니다 (품목 줄 수식은 같은 줄을 참조해야 함)`});});
+  // 4) 합계(계) SUM 범위: 끝이 바로 윗줄인지
+  Object.keys(c).forEach(k=>{const x=c[k];if(x[0]!=='f')return;const f=String(ov[k]!==undefined?ov[k]:x[1]),m=/^=SUM\(([A-Z]+)(\d+):([A-Z]+)(\d+)\)/.exec(f),me=stkRefP(k);
+    if(m&&me&&me.c<=11&&+m[4]!==me.r-1)R.sum.push({ref:k,label:stkLabelOf(k),msg:`합계 식 ${f} 의 범위 끝(${m[4]}행)이 바로 윗줄(${me.r-1}행)이 아닙니다`});});
+  // 5) 월별 원단위 연동 칸 — 연동 식의 칸이 없거나 문자 칸 / 한 칸에 여러 품목
+  const used={},mo=stkMapOv(),ok=ex=>(String(ex).match(/[A-Z]{1,2}\d+/g)||[]).every(r=>{const kd=kind(r);return kd&&!(kd==='s'&&c[r][1]!=='');});
+  /* 엑셀 기준 연동 칸과 다른데 칸이 없거나·겹치거나·다른 품목의 기준 칸을 차지한 품목 — 줄이 한 칸씩 밀린 연쇄까지 반복 계산 */
+  const xlOf=c=>INV_STK.map[c]||STK_XL_REF[c]||'',sim=Object.assign({},map),chain=new Set();
+  for(let it=0;it<12;it++){let ch=false;const cnt={},xt={};
+    Object.keys(sim).forEach(c=>(String(sim[c]).match(/[A-Z]{1,2}\d+/g)||[]).forEach(r=>{(cnt[r]=cnt[r]||new Set()).add(c);}));
+    Object.keys(sim).forEach(c=>{const d=xlOf(c);if(d)(xt[d]=xt[d]||new Set()).add(c);});
+    Object.keys(sim).forEach(c=>{const d=xlOf(c),cu=String(sim[c]);if(!d||cu===d||!ok(d))return;
+      const refs=cu.match(/[A-Z]{1,2}\d+/g)||[];
+      if(!ok(cu)||refs.some(r=>cnt[r]&&cnt[r].size>1)||(xt[cu]&&[...xt[cu]].some(o=>o!==c))){sim[c]=d;chain.add(c);ch=true;}});
+    if(!ch)break;}
+  const mkm=(code,why)=>{const it=INV_MASTER.find(m=>m.c===code),cur=map[code],def=INV_STK.map[code]||STK_XL_REF[code]||'';   /* 기준 = 엑셀 원단위 파일의 연동 칸(STK_XL_REF) */
+    const hasOv=String(cur)!==def;
+    return{code,label:it?it.n:code,cur,def,hasOv,fix:chain.has(code)&&!!def&&ok(def),why,
+      curVal:(()=>{try{return M.ev(cur);}catch(e){return NaN;}})(),defVal:(()=>{try{return def?M.ev(def):NaN;}catch(e){return NaN;}})()};};
+  Object.keys(map).forEach(code=>{const ex=String(map[code]);
+    if(!ok(ex))R.map.push(mkm(code,'연동 식 '+ex+' 의 칸이 시트에 없거나 문자 칸입니다 (줄이 지워졌거나 한 줄씩 밀렸을 수 있음)'));
+    (ex.match(/[A-Z]{1,2}\d+/g)||[]).forEach(r=>{(used[r]=used[r]||[]).push(code);});});
+  chain.forEach(code=>{if(!R.map.some(x=>x.code===code)&&!Object.keys(used).some(r=>new Set(used[r]).size>1&&used[r].indexOf(code)>=0))R.map.push(mkm(code,'엑셀 원단위 기준 연동 칸과 달라, 줄이 한 칸씩 밀린 것으로 보입니다'));});
+  Object.keys(used).forEach(r=>{const cs=[...new Set(used[r])];if(cs.length>1)cs.forEach(code=>R.dup.push(Object.assign(mkm(code,'한 칸('+r+')에 연동 품목이 '+cs.length+'개 겹칩니다: '+cs.map(x=>(INV_MASTER.find(m=>m.c===x)||{}).n||x).join(' / ')),{cell:r})));});
+  // 6) 이상 값
+  Object.keys(c).concat([...STK_SLOTS]).forEach(k=>{const me=stkRefP(k);if(!me)return;const x=c[k];
+    if(x&&x[0]==='f'&&me.c<=11){const v=M.V(k);if(v<0)R.neg.push({ref:k,label:stkLabelOf(k),msg:`중량이 음수입니다 (${stkFmt(v)})`+(adj[k]?' — 가감/직접 지정 적용 칸':ov[k]!==undefined?' — 수식을 직접 바꾼 칸':'')});}});
+  // 같은 수량이 서로 다른 줄에서 반복(3자리 이상) — 참고용
+  const qv={};[...STK_SLOTS].forEach(k=>{const v=M.V(k);if(v>=100&&ov[k]!==undefined)(qv[v]=qv[v]||[]).push(k);});
+  Object.keys(qv).forEach(v=>{if(qv[v].length>1)R.rep.push({ref:qv[v][0],label:qv[v].map(stkLabelOf).join(' · '),msg:`같은 값 ${v} 이(가) ${qv[v].length}칸에 입력되어 있습니다 (복사 입력이면 확인)`});});
+  return R;
+}
+function stkAuditClose(){const o=document.getElementById('stkAuditOv');if(o)o.remove();}
+function stkAuditOpen(){
+  const ym=stkYm();if(!stkHas(ym)){toast('이번 달 시트가 없습니다');return;}
+  const R=stkAuditRun(ym),locked=invConfLocked(ym);stkAuditClose();
+  const sec=(t,n,body,color)=>`<div style="margin:10px 0 4px;font-weight:800;color:${color||'#0f172a'}">${t} <span style="font-weight:600;color:#64748b">${n}건</span></div>${n?body:'<div style="color:#16a34a;font-size:12px">✔ 이상 없음</div>'}`;
+  const li=(a,btn)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:4px;font-size:12px;line-height:1.5"><div style="flex:1">${a}</div>${btn||''}</div>`;
+  const ovrB=R.ovr.map(x=>li(`<b>${esc(x.label)}</b><br>기본 수식 <code>${esc(x.base)}</code> = <b>${stkFmt(x.baseVal)}</b><br>이번 달 수식 <code style="color:#c2410c">${x.now==='null'?'(비워 둠)':esc(x.now)}</code> = <b style="color:#c2410c">${stkFmt(x.val)}</b>`,locked?'':`<button class="btn sm primary" onclick="stkAuditRestore('${x.ref}')">기본 수식으로 복원</button>`)).join('');
+  const adjB=R.adj.map(x=>li(`<b>${esc(x.label)}</b> — ${x.mode==='set'?'직접 지정 '+stkFmt(+x.v):'가감 '+(+x.v>0?'+':'')+stkFmt(+x.v)}${x.memo?' · '+esc(x.memo):''}<br>원래 ${stkFmt(x.baseVal)} → 조정 후 <b style="color:#6d28d9">${stkFmt(x.val)}</b>${x.ok?'':' <span style="color:#b91c1c">· 계산 칸이 아닌 곳에 걸린 가감(줄 이동으로 어긋났을 수 있음)</span>'}`,locked?'':`<button class="btn sm" onclick="stkAuditAdjDel('${x.ref}')">가감 해제</button>`)).join('');
+  const simple=a=>a.map(x=>li(`<b>${esc(x.label)}</b><br>${esc(x.msg)}`)).join('');
+  const mapL=a=>a.map(x=>li(`<b>${esc(x.label)}</b><br>${esc(x.why)}<br>지금 연동 <code>${esc(x.cur)}</code>${isFinite(x.curVal)?' = <b>'+stkFmt(x.curVal)+'</b>':''}${x.def&&x.def!==x.cur?' · 엑셀 기준 연동 <code style="color:#15803d">'+esc(x.def)+'</code>'+(isFinite(x.defVal)?' = <b>'+stkFmt(x.defVal)+'</b>':''):''}`,(!locked&&x.fix)?`<button class="btn sm primary" onclick="stkAuditMapFix('${x.code}')">엑셀 기준 연동으로 바꾸기</button>`:'')).join('');
+  const mapFixN=[...R.map,...R.dup].filter(x=>x.fix).map(x=>x.code).filter((c,i,A)=>A.indexOf(c)===i).length;
+  const total=R.ovr.length+R.ref.length+R.sum.length+R.map.length+R.dup.length+R.neg.length;
+  const ov=document.createElement('div');ov.id='stkAuditOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:16px 18px;max-width:760px;width:96%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:13px">
+    <div style="display:flex;align-items:center;gap:8px"><div style="font-size:15px;font-weight:800;flex:1">🩺 재고량 시트 점검 <span style="font-weight:600;color:#64748b">(${esc(ym)})</span></div><button class="btn sm" onclick="stkAuditClose()">닫기</button></div>
+    <div style="margin:6px 0;padding:8px 10px;border-radius:8px;background:${total?'#fff7ed':'#f0fdf4'};border:1px solid ${total?'#fdba74':'#86efac'};line-height:1.6">${total?`확인이 필요한 항목 <b>${total}건</b>${R.rep.length?` · 참고 ${R.rep.length}건`:''} — 아래 목록에서 바로 고칠 수 있습니다. ${locked?'(확정된 달이라 복원·해제 버튼은 숨겼습니다)':''}`:`수식·참조·연동 오류가 없습니다.${R.rep.length?' (참고 항목만 있음)':''}`}</div>
+    ${sec('① 이번 달에 수식을 직접 바꾼 칸 (주황색 칸) — 이 때문에 값이 어긋나는 경우가 가장 많습니다',R.ovr.length,ovrB,'#c2410c')}
+    ${sec('② 합계 중량 가감·직접 지정',R.adj.length,adjB,'#6d28d9')}
+    ${sec('③ 수식이 비었거나 문자인 칸을 참조',R.ref.length,simple(R.ref))}
+    ${sec('④ 합계(계) 범위 이상',R.sum.length,simple(R.sum))}
+    ${sec('⑤ 월별 원단위 연동 이상 (연동 칸이 없거나 문자 칸)',R.map.length,mapL(R.map),'#b91c1c')}
+    ${sec('⑥ 한 칸에 연동 품목이 여러 개',R.dup.length,mapL(R.dup))}
+    ${sec('⑦ 음수 중량',R.neg.length,simple(R.neg))}
+    ${sec('참고: 같은 수량이 여러 칸에 반복 입력',R.rep.length,simple(R.rep),'#475569')}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">${mapFixN&&!locked?`<button class="btn sm primary" onclick="stkAuditMapFixAll()">연동 이상 ${mapFixN}건 엑셀 기준 연동으로 바꾸기</button>`:''}${R.ovr.length&&!locked?`<button class="btn sm primary" onclick="stkAuditRestoreAll()">수식 직접 변경 ${R.ovr.length}건 모두 기본 수식으로 복원</button>`:''}</div></div>`;
+  document.body.appendChild(ov);
+}
+async function stkAuditRestore(ref){
+  const ym=stkYm(),a=stkAll(),rec=a[ym];if(!rec||!rec.ov||rec.ov[ref]===undefined)return;
+  try{await undoSnap('시트 점검 · 수식 복원 '+ym+' '+ref,'bulk');}catch(e){}
+  delete rec.ov[ref];rec.ts=Date.now();stkSaveAll(a);flashSave();stkRender();
+  if(rec.on!==0)await stkSync(ym,true);
+  toast(`${ref} 수식을 기본 수식으로 복원했습니다`);stkAuditOpen();
+}
+async function stkAuditRestoreAll(){
+  const ym=stkYm(),R=stkAuditRun(ym);if(!R.ovr.length)return;
+  if(!confirm(`이번 달에 직접 바꾼 수식 ${R.ovr.length}칸을 모두 기본 수식으로 되돌립니다.\n\n`+R.ovr.slice(0,8).map(x=>x.label+': '+x.now+' → '+x.base).join('\n')+(R.ovr.length>8?`\n… 외 ${R.ovr.length-8}칸`:'')+'\n\n계속할까요? (되돌리기 가능)'))return;
+  const a=stkAll(),rec=a[ym];
+  try{await undoSnap('시트 점검 · 수식 일괄 복원 '+ym,'bulk');}catch(e){}
+  R.ovr.forEach(x=>{delete rec.ov[x.ref];});rec.ts=Date.now();stkSaveAll(a);flashSave();stkRender();
+  if(rec.on!==0)await stkSync(ym,true);
+  toast(`수식 ${R.ovr.length}칸을 기본 수식으로 복원했습니다`);stkAuditOpen();
+}
+async function stkAuditMapFix(code){
+  const def=INV_STK.map[code]||STK_XL_REF[code];if(!def)return;
+  try{await undoSnap('시트 점검 · 연동 변경 '+code,'bulk');}catch(e){}
+  const o=stkMapOv();if(def===(INV_STK.map[code]||''))delete o[code];else o[code]=def;try{localStorage.setItem(STK_MAP_KEY,JSON.stringify(o));}catch(e){}
+  flashSave();await stkSync(stkYm(),true);try{stkBanner(stkYm());}catch(e){}stkAuditOpen();toast('엑셀 기준 연동으로 바꿨습니다 ('+def+')');
+}
+async function stkAuditMapFixAll(){
+  const R=stkAuditRun(stkYm()),codes=[...new Set([...R.map,...R.dup].filter(x=>x.fix).map(x=>x.code))];if(!codes.length)return;
+  if(!confirm(`연동 이상 ${codes.length}건을 엑셀 원단위 기준 연동 칸으로 바꿉니다.\n\n`+[...R.map,...R.dup].filter(x=>x.fix).filter((x,i,A)=>A.findIndex(y=>y.code===x.code)===i).slice(0,10).map(x=>x.label+': '+x.cur+' → '+x.def).join('\n')+'\n\n계속할까요?'))return;
+  try{await undoSnap('시트 점검 · 연동 일괄 변경','bulk');}catch(e){}
+  const o=stkMapOv();codes.forEach(c=>{const def=INV_STK.map[c]||STK_XL_REF[c];if(def===(INV_STK.map[c]||''))delete o[c];else o[c]=def;});try{localStorage.setItem(STK_MAP_KEY,JSON.stringify(o));}catch(e){}
+  flashSave();await stkSync(stkYm(),true);try{stkBanner(stkYm());}catch(e){}stkAuditOpen();toast(`엑셀 기준 연동으로 ${codes.length}건 바꿨습니다`);
+}
+async function stkAuditAdjDel(ref){await stkAdjDel(ref,true);stkAuditOpen();}
 async function stkPullPrev(){
   const ym=stkYm();
   if(!stkHas(ym)){toast('이번 달 시트가 없습니다 — 먼저 [전월 값으로 시작]을 누르세요');return;}
@@ -31256,8 +31371,10 @@ function stkTxAll(m){
   Object.keys(STK_XL_REF).forEach(c=>{const e=mex(STK_XL_REF[c]);if(e)STK_XL_REF[c]=e;else delete STK_XL_REF[c];});
   STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
   // 저장된 월별 입력값
-  const all=stkAll();Object.keys(all).forEach(ym=>{const rec=all[ym];if(!rec||!rec.ov)return;const ov={};
-    Object.keys(rec.ov).forEach(k=>{const nk=kref(k);if(nk==null)return;ov[nk]=tv(rec.ov[k]);});rec.ov=ov;});
+  const all=stkAll();Object.keys(all).forEach(ym=>{const rec=all[ym];if(!rec)return;
+    if(rec.ov){const ov={};Object.keys(rec.ov).forEach(k=>{const nk=kref(k);if(nk==null)return;ov[nk]=tv(rec.ov[k]);});rec.ov=ov;}
+    /* 2026-11-04: 합계 중량 가감(adj)도 같이 이동 — 이전에는 줄을 넣거나 지워도 가감 위치가 그대로여서 엉뚱한 칸에 가감이 걸렸음 */
+    if(rec.adj){const adj={};Object.keys(rec.adj).forEach(k=>{const nk=kref(k);if(nk!=null)adj[nk]=rec.adj[k];});if(Object.keys(adj).length)rec.adj=adj;else delete rec.adj;}});
   stkSaveAll(all);
   // 연동 수식 덮어쓴 값
   const mo=stkMapOv(),mo2={};Object.keys(mo).forEach(c=>{const v=mo[c];if(v===''){mo2[c]='';return;}const e=mex(v);mo2[c]=e;});
