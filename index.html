@@ -32793,7 +32793,9 @@ function vcFcLines(q){   // 예상 COMMENT용 — {inc:[],dec:[],flat:[]}
     const pl=vcSum(ms,y,(yy,m)=>spPlan(yy,m,k)),fc=vcSum(ms,y,(yy,m)=>spFc(yy,m,k));
     out.tot.p+=pl.a;out.tot.f+=fc.a;
     if(!(pl.a>0.05||fc.a>0.05))return;
-    const srcs=[...new Set(ms.map(m=>spFc(y,m,k).src))],isPlan=srcs.length===1&&srcs[0]==='사업계획';
+    const srcs=[...new Set(ms.map(m=>String(spFc(y,m,k).src).replace(/\+단가$/,'')))],isPlan=srcs.length===1&&srcs[0]==='사업계획';
+    const px=ms.reduce((a,m)=>a+(spFc(y,m,k).px||0),0);   // 2026-11-04: 예상에 포함된 단가 인상 효과(백만원)
+    const pxn=Math.abs(px)>=0.05?` · 단가 ${px>0?'인상':'인하'} 효과 ${mcS(px,Math.abs(px)<10?1:0)}백만원 포함`:'';
     const da=fc.a-pl.a,dw=fc.w-pl.w,rc=vcRecentAvg(y,Math.min.apply(null,ms),k),pm=pl.a/ms.length;
     const trend='';   // 2026-11-04: 간결한 COMMENT 형식 — 최근 3개월 월평균 문구 제외
     if(Math.abs(da)<0.5&&Math.abs(dw)<0.5){
@@ -32806,7 +32808,7 @@ function vcFcLines(q){   // 예상 COMMENT용 — {inc:[],dec:[],flat:[]}
       drv=vcDrv(rows.filter(o=>Math.abs(o.d)>=0.5),up);}catch(e){}
     const how=isPlan?'':srcs.join('/');
     const t=pl.a<=0.05?`- ${VC_NAME[k]} 예상 ${mcN1(fc.a)}백만원·${mcN1(fc.w)}톤`
-      :`- ${VC_NAME[k]} 예상 ${mcN1(fc.a)}백만원·${mcN1(fc.w)}톤 (사업계획 대비 \u0001백만원) ${up?'증가':'감소'}${drv}${trend}`;
+      :`- ${VC_NAME[k]} 예상 ${mcN1(fc.a)}백만원·${mcN1(fc.w)}톤 (사업계획 대비 \u0001백만원) ${up?'증가':'감소'}${drv}${pxn}${trend}`;
     out.items.push({k:k,da:da,up:up,txt:t});(up?out.inc:out.dec).push(t.replace('\u0001',mcS1(da)));
   });
   return out;
@@ -39854,7 +39856,7 @@ function nfVendClear(y,t,n){
   if(!confirm(spLabel({y:y,t:t,n:n})+' 포스코·시중 업체별 예상 입력값을 모두 지웁니다(사업계획 값으로 복귀).'))return;
   (async()=>{for(const m of spMonths({y:y,t:t,n:n})){await spMut(spYm(y,m),r=>{if(r.fc)delete r.fc.vend;});}spRenderAll();toast('업체별 예상 입력을 지웠습니다');})();
 }
-function spFc(y,m,k){
+function spFc0(y,m,k){
   const r=spRecGet(spYm(y,m)),f=r&&r.fc&&r.fc[k],pl=spPlan(y,m,k);
   const has=v=>v!=null&&v!=='';
   if(k==='po1'||k==='po2'||k==='rt'){const vv=spVendFc(y,m,k);if(vv)return {a:vv.a,w:vv.w,src:'수정(업체별)',pa:pl.a,pw:pl.w};}
@@ -39864,6 +39866,47 @@ function spFc(y,m,k){
   if(k==='dg'){const na=nfaApplied(y,m);if(na)return {a:na.a,w:na.w,src:'활동량 계획',pa:pl.a,pw:pl.w};}
   if(k==='dg'){const au=nfAutoMonth(y,m);if(au)return {a:au.a,w:au.w,src:'자동(수명패턴)',pa:pl.a,pw:pl.w};}
   return {a:pl.a,w:pl.w,src:'사업계획',pa:pl.a,pw:pl.w};
+}
+/* 2026-11-04: 예상 판매실적에 단가 인상 효과 반영 — 사업계획 단가 기준으로 계산되는 예상(사업계획·자동·활동량 계획)에만 더한다.
+   단가 효과율 = 최근 실적 월(최대 3개월)의 [실적 평균단가 ÷ 계획 평균단가 − 1] (설비별: 래들·턴디쉬·전기로 / 포스코(기존)·시중은 품목군·거래처별 합산).
+   직접 입력한 예상('수정…')에는 더하지 않는다. 끄기: 차월 예상 화면의 '단가 인상 효과 반영' 체크 해제. */
+let NF_PRICE_ON=(function(){try{return localStorage.getItem('dgrns_nf_price')!=='0';}catch(e){return true;}})();
+function nfPriceToggle(on){NF_PRICE_ON=!!on;try{localStorage.setItem('dgrns_nf_price',on?'1':'0');}catch(e){}try{nfClear();}catch(e){}spRenderAll();}
+function nfPriceRates(y,m){
+  return nfCached('pr|'+y+'|'+m,function(){
+    const R={LD:{pe:0,pb:0},TD:{pe:0,pb:0},EAF:{pe:0,pb:0},po1:{pe:0,pb:0},rt:{pe:0,pb:0},ms:[]};
+    const grp=k=>k==='LD_MAIN'||k==='LD_PERM'?'LD':/^TD_/.test(k)?'TD':/^EAF_/.test(k)?'EAF':null;
+    let n=0;
+    for(let mm=m-1;mm>=1&&n<3;mm--){
+      let rows=[];try{rows=spItemCmpRows(y,[mm])||[];}catch(e){}
+      let any=false;
+      rows.forEach(r=>{const g=grp(mcCatOf(r.name,r.eq));if(!g)return;const sp=mcPriceSplit(r);if(sp.base>0){R[g].pe+=sp.p;R[g].pb+=sp.base;any=true;}});
+      ['po1','rt'].forEach(k=>{if(!ERP.d[spYm(y,mm)])return;let G=[];try{G=vcGroups(y,[mm],k);}catch(e){}
+        G.forEach(o=>{if(o.pw>0&&o.aw>0&&o.pa>0&&o.aa>0){const ppu=o.pa/o.pw,apu=o.aa/o.aw,q=apu/ppu;if(q>0.5&&q<1.5){R[k].pe+=(apu-ppu)*o.aw;R[k].pb+=ppu*o.aw;any=true;}}});});
+      if(any){n++;R.ms.push(mm);}
+    }
+    ['LD','TD','EAF','po1','rt'].forEach(k=>{R[k].r=R[k].pb>0?R[k].pe/R[k].pb:0;});
+    return R;
+  });
+}
+function nfPriceFx(y,m,k,base){   // 예상 금액(백만원, 사업계획 단가 기준)에 더할 단가 인상 효과
+  const R=nfPriceRates(y,m);if(!R.ms.length)return null;
+  if(k==='dg'){
+    const pm=nfPlanMoney(y,m),tA=pm.LD.a+pm.TD.a+pm.EAF.a;if(!(tA>0))return null;
+    const parts={LD:base*pm.LD.a/tA*R.LD.r,TD:base*pm.TD.a/tA*R.TD.r,EAF:base*pm.EAF.a/tA*R.EAF.r};
+    return {a:parts.LD+parts.TD+parts.EAF,parts:parts,rates:{LD:R.LD.r,TD:R.TD.r,EAF:R.EAF.r},ms:R.ms};
+  }
+  const r=R[k]&&R[k].r;if(!r)return null;
+  return {a:base*r,rates:{x:r},ms:R.ms};
+}
+function spFc(y,m,k){
+  const f=spFc0(y,m,k);
+  try{
+    if(!NF_PRICE_ON||!f||!(f.a>0)||!(k==='dg'||k==='po1'||k==='rt'))return f;
+    if(/^수정/.test(f.src))return f;
+    const px=nfPriceFx(y,m,k,f.a);if(!px||Math.abs(px.a)<0.005)return f;
+    return Object.assign({},f,{a:f.a+px.a,src:f.src+'+단가',px:px.a,pxd:px});
+  }catch(e){return f;}
 }
 function spProdFc(y,m){const r=spRecGet(spYm(y,m)),v=r&&r.fc&&r.fc.prod;if(v!=null&&v!=='')return {v:+v,src:'수정'};return {v:spProdPlan(y,m),src:'사업계획'};}
 async function spSetFc(y,m,k,f,val){
@@ -40861,6 +40904,12 @@ function nfAnalysis(q){
     ms.forEach(m=>cf.forEach(r=>{if(bizplanParseMonths(r.mon).has(m)){const k=m+'월 '+r.vendor+' '+(+r.pct||0)+'%';mv[k]=1;}}));
     items.push({k:'DIV',a:RC.C.DIV,t:`래들 다원화 공급분 제외(${Object.keys(mv).join('·')||'KR·원진'} 입고)`});
   }
+  if(D.ok||Math.abs(RC.C.PLD)+Math.abs(RC.C.PTD)+Math.abs(RC.C.PEAF)>0){   // 2026-11-04: 단가 인상(인하) 효과 — 최근 실적 평균단가 변동률 반영분
+    let PR=null;try{PR=nfPriceRates(q.y,ms[0]);}catch(e){}
+    [['PLD','래들 신축·보수 내화물','LD'],['PTD','턴디쉬 내화물','TD'],['PEAF','전기로 내화물','EAF']].forEach(([K,lab,g])=>{
+      const v=RC.C[K];if(!v)return;const r=PR&&PR[g]?PR[g].r:0;
+      items.push({k:K,a:v,px:1,sfx:Math.abs(r)>=0.0005?` (평균단가 ${nfSg(r*100,1)}%)`:'',t:`단가 ${v>0?'인상':'인하'}으로 ${lab}`});});
+  }
   if(Math.abs(RC.res)>=thr){
     const sr=[...RC.srcs];
     items.push({k:'RES',a:RC.res,t:sr.length?`직접 입력한 제강 예상값(${sr.join('/')})과 사업계획의 차이`:`개별 항목에 반영되지 않은 잔여 조정(반올림·기타)`});
@@ -40873,9 +40922,9 @@ function nfAnalysis(q){
   const sI=rr.filter(x=>x>0).reduce((s,x)=>s+x,0),sD=rr.filter(x=>x<0).reduce((s,x)=>s+x,0);
   const dgR=items.reduce((s,i)=>s+i.r,0),vR=k=>VF.items.filter(v=>v.k===k).reduce((s,v)=>s+v.r,0);
   const vt=v=>'- '+v.txt.replace(/^- /,'').replace('\u0001',nfSg(v.r,DD));
-  const inc=items.filter(i=>i.a>thr).sort((x,y)=>y.a-x.a).map(i=>`- ${i.t} ${nfSg(i.r,DD)}백만원 증가`).concat(VF.items.filter(v=>v.up).map(vt));
-  const dec=items.filter(i=>i.a<-thr).sort((x,y)=>x.a-y.a).map(i=>`- ${i.t} ${nfSg(i.r,DD)}백만원 감소`).concat(VF.items.filter(v=>!v.up).map(vt));
-  const flat=items.filter(i=>Math.abs(i.a)<=thr&&i.k!=='RES').map(i=>`- ${i.t} 변동 없음`).concat(VF.flat.map(l=>l.replace(/^- /,'- [변동 없음] ')));
+  const inc=items.filter(i=>i.a>thr||(i.px&&i.r>0)).sort((x,y)=>y.a-x.a).map(i=>`- ${i.t} ${nfSg(i.r,DD)}백만원 증가${i.sfx||''}`).concat(VF.items.filter(v=>v.up).map(vt));
+  const dec=items.filter(i=>i.a<-thr||(i.px&&i.r<0)).sort((x,y)=>x.a-y.a).map(i=>`- ${i.t} ${nfSg(i.r,DD)}백만원 감소${i.sfx||''}`).concat(VF.items.filter(v=>!v.up).map(vt));
+  const flat=items.filter(i=>Math.abs(i.a)<=thr&&i.k!=='RES'&&!i.px).map(i=>`- ${i.t} 변동 없음`).concat(VF.flat.map(l=>l.replace(/^- /,'- [변동 없음] ')));
   return {D:D,RC:RC,prod:prod.join('\n'),inc:(inc.length?inc:['- 해당 사항 없음']).join('\n'),dec:(dec.concat(flat).length?dec.concat(flat):['- 해당 사항 없음']).join('\n')};
 }
 function nfAutoToggle(on){NF_AUTO_ON=!!on;try{localStorage.setItem('dgrns_nf_auto',on?'1':'0');}catch(e){}nfClear();spRenderAll();}
@@ -40889,6 +40938,7 @@ async function nfWriteComments(q){
 function nfAutoHtml(q){
   const A=nfAnalysis(q),sty='border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#f8fbff';
   const tog=`<label style="font-size:12px;font-weight:700"><input type="checkbox" ${NF_AUTO_ON?'checked':''} onchange="nfAutoToggle(this.checked)"> 수명·가동패턴 자동 예상 사용 <span style="font-weight:400;color:var(--muted)">(끄면 사업계획 기본값)</span></label>`;
+  const ptog=`<label style="font-size:12px;font-weight:700"><input type="checkbox" ${NF_PRICE_ON?'checked':''} onchange="nfPriceToggle(this.checked)"> 단가 인상 효과 반영 <span style="font-weight:400;color:var(--muted)">(최근 실적 평균단가 변동률)</span></label>`;
   if(!A||!A.D){return `<div style="${sty}"><div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-bottom:6px">🤖 자동 예상 (사업계획 대비 평균 수명·가동 패턴)</div>${tog}<div style="margin-top:8px;font-size:12px;color:var(--muted)">이 기간은 사업계획 월별 데이터가 없어 자동 예상을 만들 수 없습니다.</div></div>`;}
   const D=A.D,DD=nfaRound()?0:1,N1=nfFx(),cell=(v,s)=>`<td class="n"${s?` style="${s}"`:''}>${v}</td>`;
   const dc=(v,d)=>`<td class="n" style="${spCls(v)}">${v===null||Math.abs(v)<(d===0?0.5:0.05)?'-':nfSg(v,d)}</td>`;
@@ -40909,6 +40959,10 @@ function nfAutoHtml(q){
   t+=row('전기로 발코니(회)',D.bal.p,D.bal.f,1,null,'동일 방식');
   if(D.ok){
     t+=`<tr style="background:#eef2f6;font-weight:800"><td>동국제강 제강 예상 매출(백만원)</td>${cell(N1(D.pa))}${cell(N1(D.a))}${dc(D.a-D.pa,DD)}${dc(D.a-D.pa,DD)}<td style="font-size:11px;font-weight:400;color:var(--muted)">래들+턴디쉬+전기로 증감 합계</td></tr>`;
+    try{const pxs=A.RC.C.PLD+A.RC.C.PTD+A.RC.C.PEAF;
+      if(NF_PRICE_ON&&Math.abs(pxs)>=0.005){const PR=nfPriceRates(q.y,spMonths(q)[0]),f=g=>PR[g]?nfSg(PR[g].r*100,1)+'%':'-';
+        t+=`<tr><td style="padding-left:22px;color:#475569">└ 단가 ${pxs>0?'인상':'인하'} 효과 포함</td><td></td><td></td><td></td>${dc(pxs,DD)}<td style="font-size:11px;color:var(--muted)">최근 ${PR.ms.length}개월(${PR.ms.slice().reverse().join('·')}월) 실적 평균단가 변동률 — 래들 ${f('LD')} · 턴디쉬 ${f('TD')} · 전기로 ${f('EAF')} (금액에 가산)</td></tr>`;
+        t+=`<tr style="background:#eef2f6;font-weight:800"><td>단가 효과 반영 제강 예상 매출(백만원)</td>${cell(N1(D.pa))}${cell(N1(D.a+pxs))}${dc(D.a+pxs-D.pa,DD)}${dc(D.a+pxs-D.pa,DD)}<td style="font-size:11px;font-weight:400;color:var(--muted)">판매실적분석 예상 판매실적에 반영되는 금액</td></tr>`;}}catch(e){}
     t+=`<tr style="background:#eef2f6;font-weight:800"><td>동국제강 제강 예상 중량(톤)</td>${cell(N1(D.pw))}${cell(N1(D.w))}${dc(D.w-D.pw,DD)}<td></td><td></td></tr>`;
   }
   t+='</table>';
@@ -40916,9 +40970,9 @@ function nfAutoHtml(q){
   let rt=`<table class="bomtbl" style="min-width:auto"><tr><th>래들</th><th>업체</th><th class="n">현재 누적 CH</th><th class="n">평균수명 대비</th><th class="n">잔여 CH</th><th>해체 도래 예상</th><th>예상 기간 내</th></tr>`;
   R.rows.forEach(r=>{rt+=`<tr><td style="font-weight:700">${esc(r.no)}</td><td>${esc(r.vendor||'')}</td>${cell(Math.round(r.camp))}${cell(Math.round(r.camp/R.L.l*100)+'%',r.over?'color:#c81e1e;font-weight:700':'')}${cell(Math.round(r.rem))}<td>${r.end?esc(r.end.slice(5).replace('-','/'))+' 경':'-'}</td><td style="text-align:center;${r.inP?'background:#fef08a;font-weight:700':''}">${r.inP?'● 해당':''}</td></tr>`;});
   rt+='</table>';
-  const concl=D.ok?`<b>${esc(spLabel(q))}</b> 동국제강 제강 예상 매출은 <b>${N1(D.a)}백만원</b>으로 사업계획(${N1(D.pa)}백만원) 대비 <b style="${spCls(D.a-D.pa)}">${nfSg(D.a-D.pa,DD)}백만원</b>입니다. 래들 해체 <b>${N1(D.ld.f)}대</b>(계획 ${N1(D.ld.p)}대 ${nfSg(D.ld.f-D.ld.p,DD)}대) — 생산량 ${nfSg(D.ld.eProd,DD)}대 · 평균수명 ${nfSg(D.ld.eLife,DD)}대 · 가동패턴 ${nfSg(D.ld.ePat,DD)}대.`
+  const concl=D.ok?`<b>${esc(spLabel(q))}</b> 동국제강 제강 예상 매출은 <b>${N1(D.a)}백만원</b>으로 사업계획(${N1(D.pa)}백만원) 대비 <b style="${spCls(D.a-D.pa)}">${nfSg(D.a-D.pa,DD)}백만원</b>입니다. 래들 해체 <b>${N1(D.ld.f)}대</b>(계획 ${N1(D.ld.p)}대 ${nfSg(D.ld.f-D.ld.p,DD)}대) — 생산량 ${nfSg(D.ld.eProd,DD)}대 · 평균수명 ${nfSg(D.ld.eLife,DD)}대 · 가동패턴 ${nfSg(D.ld.ePat,DD)}대.`+(()=>{const x=NF_PRICE_ON?A.RC.C.PLD+A.RC.C.PTD+A.RC.C.PEAF:0;return Math.abs(x)>=0.05?` 최근 실적 단가 변동을 반영하면 <b>${N1(D.a+x)}백만원</b>(${nfSg(x,DD===0?1:DD)}백만원 ${x>0?'가산':'차감'})입니다.`:'';})()
     :`<b>${esc(spLabel(q))}</b> 래들 해체 <b>${N1(D.ld.f)}대</b> 예상(계획 ${N1(D.ld.p)}대).`;
-  return `<div style="${sty}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#1d4ed8">🤖 자동 예상 — 사업계획 대비 평균 수명 · 현재 가동 래들 패턴</div><span style="flex:1"></span>${tog}</div>`
+  return `<div style="${sty}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#1d4ed8">🤖 자동 예상 — 사업계획 대비 평균 수명 · 현재 가동 래들 패턴</div><span style="flex:1"></span>${ptog}${tog}</div>`
     +`<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">${concl}</div>`
     +`<div class="tablewrap">${t}</div>`
     +`<div style="font-size:11px;color:var(--muted);margin:4px 2px 8px">※ 기준일 ${esc(R.asOf)}(래들 최종 기록일) · 래들 평균 해체수명 = 최근 12개월 ${D.L.n}건 평균 · 래들 1기당 일 소모 약 ${R.rate.toFixed(2)}CH(예상 조업 CH ÷ 가동 ${R.rows.length}기). 금액은 사업계획 설비별 금액 비중 × 설비별 활동량 비(래들=해체 대수 비, 턴디쉬=대수 비, 전기로=조업 CH 비)로 환산합니다.</div>`
@@ -40994,15 +41048,16 @@ function nfaLinkNames(kind,y,ms){   // 연결 품목 중 계획 금액이 큰 �
   return Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).slice(0,2).join('·');
 }
 function nfRecon(q){   // 동국제강(제강) 예상 − 사업계획 차이를 설비·교체 이벤트별 구성요소로 분해 (구성요소 합 + 잔여 = 총 차이)
-  const ms=spMonths(q),y=q.y,C={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0,DIV:0},R={P:0,F:0,res:0,srcs:new Set()};
+  const ms=spMonths(q),y=q.y,C={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0,DIV:0,PLD:0,PTD:0,PEAF:0},R={P:0,F:0,res:0,srcs:new Set()};
   ms.forEach(m=>{
-    const pl=spPlan(y,m,'dg'),fc=spFc(y,m,'dg'),d=fc.a-pl.a;R.P+=pl.a;R.F+=fc.a;
+    const pl=spPlan(y,m,'dg'),fc=spFc(y,m,'dg'),pxv=fc.px||0,d=fc.a-pl.a-pxv;R.P+=pl.a;R.F+=fc.a;
+    if(pxv&&fc.pxd&&fc.pxd.parts){C.PLD+=fc.pxd.parts.LD;C.PTD+=fc.pxd.parts.TD;C.PEAF+=fc.pxd.parts.EAF;}
     let part=null;
     if(/활동량/.test(fc.src)){try{const o=nfaCalcMonth(y,m);if(o){const sA=o.T.pa>0?o.planA/o.T.pa:1;part={LD:0,TD:0,EAFo:0,ROJ:0,BAL:0,DIV:0};
       o.rows.forEach(r=>{const k=r.eq==='LD'?'LD':r.eq==='TD'?'TD':(r.lk==='roj'?'ROJ':r.lk==='bal'?'BAL':'EAFo');part[k]+=(r.fa+(r.dv||0)-r.pa)*sA;part.DIV-=(r.dv||0)*sA;});}}catch(e){}}
     else if(/^자동/.test(fc.src)){try{const o=nfMonth(y,m);if(o&&o.ok)part={LD:o.dA.LD,TD:o.dA.TD,EAFo:o.dA.EAFch,ROJ:o.dA.ROJ,BAL:o.dA.BAL,DIV:o.dA.DIV||0};}catch(e){}}
     if(part){let s=0;Object.keys(part).forEach(k=>{C[k]+=part[k];s+=part[k];});R.res+=d-s;}
-    else{R.res+=d;R.srcs.add(fc.src);}
+    else{R.res+=d;R.srcs.add(String(fc.src).replace(/\+단가$/,''));}
   });
   R.C=C;R.d=R.F-R.P;return R;
 }
