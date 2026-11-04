@@ -2407,7 +2407,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
           <div class="field w-no"><label>대근자 <span style="font-size:10px;color:var(--muted)">(교대)</span></label><select id="lv_sub"></select></div>
           <div class="field grow"><label>사유</label><input type="text" id="lv_reason" placeholder="예: 개인 사유"></div>
           <div class="field"><label>&nbsp;</label><div style="display:flex;gap:6px">
-            <button class="btn primary" id="lv_submit" onclick="submitLeave()">상신</button>
+            <button class="btn primary" id="lv_submit" onclick="submitLeave()">상신</button><button class="btn" type="button" onclick="attDupOpen()" title="같은 날 중복 상신된 문서 찾기">🔎 중복 점검</button>
             <button class="btn hidden" id="lv_cancel" onclick="resetLeaveForm()">취소</button>
           </div></div>
         </div>
@@ -2463,7 +2463,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
           </select></div>
           <div class="field grow"><label>작업 내용 · 사유</label><input type="text" id="ot_reason" placeholder="예: 래들 3호 신축 축조 지원"></div>
           <div class="field"><label>&nbsp;</label><div style="display:flex;gap:6px">
-            <button class="btn primary" id="ot_submit" onclick="submitOt()">상신</button>
+            <button class="btn primary" id="ot_submit" onclick="submitOt()">상신</button><button class="btn" type="button" onclick="attDupOpen()" title="같은 날 중복 상신된 문서 찾기">🔎 중복 점검</button>
             <button class="btn hidden" id="ot_cancel" onclick="resetOtForm()">취소</button>
           </div></div>
         </div>
@@ -2548,6 +2548,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap"><input type="checkbox" id="ap_group" checked onchange="renderApprove()"> 같은 날짜끼리 묶어보기</label>
       <label id="ap_unconfWrap" style="display:none;align-items:center;gap:4px;font-size:12px;color:#c2410c;white-space:nowrap" title="관리직 확인(회사 시스템 입력)이 아직 안 된 건만 봅니다"><input type="checkbox" id="ap_unconf" onchange="renderApprove()"> 🔖 미확인만 보기</label>
       <span class="spacer"></span><span style="font-size:12px;color:var(--muted)" id="ap_count"></span>
+      <button class="btn" onclick="attDupOpen()" title="같은 사람이 같은 날 올린 중복 휴가원·잔업신청을 찾아 정리합니다">🔎 중복 결재 점검</button>
       <button class="btn primary" id="ap_bulkBtn" disabled onclick="bulkApproveSelected()" title="체크한 건을 한 번에 승인합니다(문서별 결재 기록·사인은 개별적으로 그대로 남습니다)">✍️ 선택 일괄승인 (0)</button>
     </div>
     <div class="toolrow" id="ap_dateChips" style="flex-wrap:wrap;gap:6px"></div>
@@ -36590,6 +36591,95 @@ function lvCalcDays(){
   const d=Math.floor((new Date(e)-new Date(s))/86400000)+1;
   if(d>0)el.value=d;
 }
+/* ===== 2026-11-04: 근태 결재 중복 상신 방지 + 중복 점검 =====
+   · 같은 사람이 같은 날(기간이 겹치면) 휴가원을 또 올리거나(연차 → 연중휴가 등 종류만 바꿔 올리는 경우 포함), 같은 날 같은 시간대 잔업을 또 올리면 상신 자체를 막는다.
+   · 반려된 문서는 제외, 오전반차+오후반차 / 오전반차+조퇴 처럼 시간대가 겹치지 않는 조합은 허용, 시간이 안 겹치는 잔업 2건은 확인 후 허용.
+   · 이미 쌓여 있는 중복은 🔎 중복 결재 점검에서 찾아 정리한다. */
+function attSlot(t){return t==='오전반차'?'am':((t==='오후반차'||t==='조퇴')?'pm':'all');}
+function attLvOverlap(a,b){
+  const a1=a.start,a2=a.end||a.start,b1=b.start,b2=b.end||b.start;if(!a1||!b1||a2<b1||b2<a1)return false;
+  const sa=attSlot(a.type),sb=attSlot(b.type);return sa==='all'||sb==='all'||sa===sb;
+}
+function attMin(t){const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1])*60+(+m[2]):null;}
+function attOtRange(o){const s0=attMin(o.st),e0=attMin(o.et);if(s0==null||e0==null)return null;return [s0,e0<=s0?e0+1440:e0];}
+function attOtSameDay(a,b){return !!a.date&&a.date===b.date;}
+function attOtOverlap(a,b){if(!attOtSameDay(a,b))return false;const ra=attOtRange(a),rb=attOtRange(b);if(!ra||!rb)return true;return ra[0]<rb[1]&&rb[0]<ra[1];}
+function attActive(d){return d&&d.status!=='rej';}
+function attDocLine(kind,d){
+  const st=(typeof ST_LABEL!=='undefined'&&ST_LABEL[d.status])||d.status||'';
+  if(kind==='leave')return `${d.type} ${d.start}${d.end&&d.end!==d.start?' ~ '+d.end:''}${d.days?' ('+d.days+'일)':''} · ${st} · 상신 ${d.at||''}`;
+  return `잔업 ${d.date} ${d.st||''}~${d.et||''}${d.type==='holiday'?' (휴일근로)':''} · ${st} · 상신 ${d.at||''}`;
+}
+function attNameOf(id){const e=empData.find(x=>x.id===id);return e?e.name:id;}
+/* 상신 직전 검사 — 통과하면 true */
+function attGuard(kind,rec,empIds){
+  const hits=[],warns=[];
+  if(kind==='leave'){
+    leaveData.forEach(x=>{if(x.id!==rec.id&&attActive(x)&&x.empId===rec.empId&&attLvOverlap(rec,x))hits.push(rec.name+' — '+attDocLine('leave',x));});
+    if(attSlot(rec.type)==='all')otData.forEach(o=>{if(attActive(o)&&otHas(o,rec.empId)&&o.date>=rec.start&&o.date<=(rec.end||rec.start)&&!(rec.type==='주휴'&&o.type==='holiday'))warns.push(rec.name+' — '+attDocLine('ot',o));});
+  }else{
+    empIds.forEach(id=>{otData.forEach(o=>{if(o.id!==rec.id&&attActive(o)&&otHas(o,id)&&attOtOverlap(rec,o))hits.push(attNameOf(id)+' — '+attDocLine('ot',o));});
+      leaveData.forEach(l=>{if(attActive(l)&&l.empId===id&&attSlot(l.type)==='all'&&rec.date>=l.start&&rec.date<=(l.end||l.start)&&!(l.type==='주휴'&&rec.type==='holiday'))warns.push(attNameOf(id)+' — '+attDocLine('leave',l));});});
+  }
+  if(hits.length){
+    const msg='⛔ 중복 상신입니다 — 같은 사람이 같은 날 이미 올린 문서가 있습니다.\n\n'+hits.slice(0,6).join('\n')+(hits.length>6?`\n… 외 ${hits.length-6}건`:'')+'\n\n기존 문서를 삭제(또는 반려)한 뒤 다시 올리거나, 날짜·종류를 확인해 주세요.'+(kind==='ot'?'\n(같은 날이라도 시간대가 겹치지 않으면 올릴 수 있습니다)':'\n(오전반차+오후반차처럼 시간대가 겹치지 않는 조합은 올릴 수 있습니다)');
+    if(['admin'].includes(appRole())){
+      if(!confirm(msg+'\n\n[관리자] 그래도 중복을 알고 상신할까요?'))return false;
+      return true;
+    }
+    alert(msg);return false;
+  }
+  if(warns.length){
+    const w=kind==='leave'?'이 휴가 기간에 이미 잔업/휴일근로가 상신되어 있습니다.':'같은 날 이미 하루 종일 휴가(연차 등)가 상신되어 있습니다.';
+    if(!confirm('⚠ '+w+'\n\n'+warns.slice(0,5).join('\n')+'\n\n그래도 상신할까요?'))return false;
+  }
+  return true;
+}
+/* 이미 쌓인 중복 찾기 */
+function attRank(d){const stR={done:6,bos:5,off:5,gis:4,fm:4,gye:3,jun:2,req:2,rej:0};
+  const real=d.steps?Object.keys(d.steps).filter(k=>!(d.steps[k]&&d.steps[k].auto)).length:0;return (stR[d.status]||1)*100+real*10+(d.imported?0:1);}
+function attDupScan(){
+  const groups=[],warns=[];
+  const cluster=(docs,ov)=>{const par=docs.map((_,i)=>i),f=i=>par[i]===i?i:(par[i]=f(par[i]));
+    for(let i=0;i<docs.length;i++)for(let j=i+1;j<docs.length;j++)if(ov(docs[i],docs[j]))par[f(i)]=f(j);
+    const m={};docs.forEach((d,i)=>{(m[f(i)]=m[f(i)]||[]).push(d);});return Object.values(m).filter(a=>a.length>1);};
+  const byEmp={};leaveData.filter(attActive).forEach(d=>{(byEmp[d.empId]=byEmp[d.empId]||[]).push(d);});
+  Object.keys(byEmp).forEach(id=>cluster(byEmp[id],attLvOverlap).forEach(c=>groups.push({kind:'leave',empId:id,name:attNameOf(id)||c[0].name,docs:c})));
+  const ots={};otData.filter(attActive).forEach(o=>otMembers(o).forEach(m=>{if(m.empId)(ots[m.empId]=ots[m.empId]||[]).push(o);}));
+  Object.keys(ots).forEach(id=>cluster(ots[id],attOtOverlap).forEach(c=>groups.push({kind:'ot',empId:id,name:attNameOf(id),docs:c})));
+  groups.forEach(g=>{g.docs.sort((a,b)=>attRank(b)-attRank(a)||(a.seq||0)-(b.seq||0));g.keep=g.docs[0].id;});
+  groups.sort((a,b)=>String((b.docs[0].start||b.docs[0].date)||'').localeCompare(String((a.docs[0].start||a.docs[0].date)||'')));
+  Object.keys(byEmp).forEach(id=>byEmp[id].forEach(l=>{if(attSlot(l.type)!=='all')return;otData.filter(o=>attActive(o)&&otHas(o,id)&&o.date>=l.start&&o.date<=(l.end||l.start)&&!(l.type==='주휴'&&o.type==='holiday')).forEach(o=>warns.push({name:attNameOf(id),l,o}));}));
+  return {groups,warns};
+}
+function attDupCanDel(d){return !realSteps(d)||['admin','office'].includes(appRole());}
+function attDupClose(){const o=document.getElementById('attDupOv');if(o)o.remove();}
+function attDupOpen(){
+  const R=attDupScan();attDupClose();
+  const row=(g,d)=>{const keep=d.id===g.keep,multi=g.kind==='ot'&&otMembers(d).length>1;
+    return `<div style="display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid ${keep?'#86efac':'#fdba74'};background:${keep?'#f0fdf4':'#fff7ed'};border-radius:6px;margin-bottom:3px;font-size:12px"><span class="tag" style="background:${keep?'#16a34a':'#ea580c'};color:#fff;font-size:10.5px;white-space:nowrap">${keep?'남김 추천':'삭제 추천'}</span><div style="flex:1">${esc(attDocLine(g.kind,d))}${multi?' <span style="color:#64748b">· '+otMembers(d).length+'명 합동 상신</span>':''}</div><button class="btn sm" onclick="attDupClose();openAttDoc('${g.kind}','${d.id}')">문서</button>${attDupCanDel(d)?`<button class="btn sm danger" onclick="attDupDel('${g.kind}','${d.id}')">삭제</button>`:'<span style="font-size:11px;color:#64748b">결재 진행됨</span>'}</div>`;};
+  const body=R.groups.map(g=>`<div style="margin:8px 0 2px;font-weight:800">${g.kind==='leave'?'🏖 휴가원':'⏱ 잔업'} 중복 — ${esc(g.name||'')} <span style="font-weight:600;color:#64748b">${g.docs.length}건</span></div>${g.docs.map(d=>row(g,d)).join('')}`).join('');
+  const wb=R.warns.slice(0,30).map(w=>`<div style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:3px;font-size:12px"><b>${esc(w.name)}</b> — ${esc(attDocLine('leave',w.l))}<br>　　같은 기간 ${esc(attDocLine('ot',w.o))}</div>`).join('');
+  const delN=R.groups.reduce((n,g)=>n+g.docs.filter(d=>d.id!==g.keep&&!realSteps(d)&&!(g.kind==='ot'&&otMembers(d).length>1)).length,0);
+  const ov=document.createElement('div');ov.id='attDupOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:16px 18px;max-width:780px;width:96%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:13px">
+    <div style="display:flex;align-items:center;gap:8px"><div style="font-size:15px;font-weight:800;flex:1">🔎 중복 결재 점검</div><button class="btn sm" onclick="attDupClose()">닫기</button></div>
+    <div style="margin:6px 0;padding:8px 10px;border-radius:8px;background:${R.groups.length?'#fff7ed':'#f0fdf4'};border:1px solid ${R.groups.length?'#fdba74':'#86efac'};line-height:1.6">${R.groups.length?`같은 사람이 같은 날 올린 중복 <b>${R.groups.length}묶음</b>을 찾았습니다. 결재가 가장 많이 진행된(완료) 문서를 '남김 추천', 나머지를 '삭제 추천'으로 표시했습니다. 반려된 문서는 점검에서 제외했습니다.`:'휴가원·잔업신청에 중복 상신이 없습니다.'}</div>
+    ${body}
+    ${R.warns.length?`<div style="margin:12px 0 4px;font-weight:800;color:#475569">참고 — 하루 종일 휴가 기간에 잔업이 있는 건 <span style="font-weight:600;color:#64748b">${R.warns.length}건</span></div>${wb}${R.warns.length>30?'<div style="font-size:11.5px;color:#64748b">… 이하 생략</div>':''}`:''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">${delN?`<button class="btn sm danger" onclick="attDupDelAll()">삭제 추천 중 결재 안 된 ${delN}건 한꺼번에 삭제</button>`:''}</div></div>`;
+  document.body.appendChild(ov);
+}
+async function attDupDel(kind,id){await cancelDoc(kind,id);attDupOpen();}
+async function attDupDelAll(){
+  const R=attDupScan(),list=[];
+  R.groups.forEach(g=>g.docs.forEach(d=>{if(d.id!==g.keep&&!realSteps(d)&&!(g.kind==='ot'&&otMembers(d).length>1)&&!list.some(x=>x.d.id===d.id))list.push({kind:g.kind,d,name:g.name});}));
+  if(!list.length)return;
+  if(!confirm(`결재가 아직 진행되지 않은 중복 문서 ${list.length}건을 삭제합니다.\n\n`+list.slice(0,10).map(x=>x.name+' — '+attDocLine(x.kind,x.d)).join('\n')+(list.length>10?`\n… 외 ${list.length-10}건`:'')+'\n\n계속할까요?'))return;
+  for(const x of list){try{await delRec(x.kind==='leave'?'leave':'ot',x.d.id);}catch(e){}
+    if(x.kind==='leave')leaveData=leaveData.filter(y=>y.id!==x.d.id);else otData=otData.filter(y=>y.id!==x.d.id);}
+  flashSave();toast(`중복 ${list.length}건을 삭제했습니다`);refreshAttend();attDupOpen();
+}
 async function submitLeave(){
   const empId=document.getElementById('lv_emp').value;
   const emp=empData.find(x=>x.id===empId);
@@ -36604,6 +36694,7 @@ async function submitLeave(){
     status:startStatus(emp),st0:startStatus(emp),line:docLineFor(emp),lineConf:docConfFor(emp),
     by:myEmpId(),who:((apprLineOf(emp.id)||{}).who)||{},steps:{},conf:null,at:todayStr(),seq:Date.now()};
   if(editLvId){const old=leaveData.find(x=>x.id===editLvId);if(old){rec.at=old.at;rec.steps=old.steps||{};rec.conf=old.conf||null;rec.status=old.status==='rej'?rec.st0:old.status;}}
+  if(!attGuard('leave',rec,[rec.empId]))return;
   await putRec('leave',rec);flashSave();
   const i=leaveData.findIndex(x=>x.id===rec.id);if(i>=0)leaveData[i]=rec;else leaveData.push(rec);
   toast(editLvId?'수정되었습니다':'휴가원을 상신했습니다 · '+(ST_LABEL[rec.status]||''));
@@ -36772,6 +36863,7 @@ async function submitOt(){
   if(emps.length>1)rec.members=emps.map(e=>({empId:e.id,name:e.name,dept:e.dept||'',team:e.team||'',rank:e.rank||''}));
   if(old){rec.at=old.at;rec.seq=old.seq||rec.seq;
     if(realSteps(old)&&old.status!=='rej'){rec.steps=old.steps||{};rec.conf=old.conf||null;rec.status=old.status;rec.st0=old.st0||rec.st0;}}
+  if(!attGuard('ot',rec,ids))return;
   await putRec('ot',rec);
   const i=otData.findIndex(x=>x.id===rec.id);if(i>=0)otData[i]=rec;else otData.push(rec);
   flashSave();
@@ -36937,8 +37029,12 @@ async function lvBulkSubmit(){
     for(const l of del){try{await delRec('leave',l.id);}catch(e){}}
     leaveData=leaveData.filter(l=>!yrs.includes(String(l.start||'').slice(0,4)));
   }
-  let n=0;
+  let n=0,skipped=[];
+  const acc=[];
   for(const r of rows){
+    const chk={id:'',empId:r.emp.id,type:r.type,start:r.st,end:r.en};
+    if(leaveData.some(x=>attActive(x)&&x.empId===chk.empId&&attLvOverlap(chk,x))||acc.some(x=>x.empId===chk.empId&&attLvOverlap(chk,x))){skipped.push(r.emp.name+' '+r.type+' '+r.st+(r.en!==r.st?'~'+r.en:''));continue;}
+    acc.push(chk);
     const rec={id:uid(),empId:r.emp.id,name:r.emp.name,dept:r.emp.dept||'',type:r.type,
       sub:'',subName:'',start:r.st,end:r.en,days:r.days,reason:r.memo||'회사 시스템 이관',
       status:'done',st0:'jun',line:[],lineConf:false,who:{},steps:{},conf:null,
@@ -36947,7 +37043,8 @@ async function lvBulkSubmit(){
   }
   flashSave();
   document.getElementById('lvBulkOverlay').classList.remove('show');
-  refreshAttend();toast(n+'건의 휴가 기록을 등록했습니다');
+  refreshAttend();toast(n+'건의 휴가 기록을 등록했습니다'+(skipped.length?' · 이미 같은 날 기록이 있어 건너뜀 '+skipped.length+'건':''));
+  if(skipped.length)alert('이미 같은 날 휴가가 있어 건너뛴 '+skipped.length+'건:\n\n'+skipped.slice(0,15).join('\n')+(skipped.length>15?'\n… 외 '+(skipped.length-15)+'건':''));
 }
 function vacDetail(empId){
   document.getElementById('lv_fEmp').value=empId;
@@ -38709,6 +38806,7 @@ async function mvSubmitLeave(){
     status:startStatus(me),st0:startStatus(me),line:docLineFor(me),lineConf:docConfFor(me),
     by:myEmpId(),who:((apprLineOf(me.id)||{}).who)||{},steps:{},conf:null,
     at:editing?editing.at:todayStr(),seq:editing?editing.seq:Date.now()};
+  if(!attGuard('leave',rec,[rec.empId]))return;
   mvBusy=true;
   try{await mvPut('leave',rec);}catch(e){mvBusy=false;return mvSaveFail(e);}
   mvBusy=false;flashSave();
@@ -38770,6 +38868,7 @@ async function mvSubmitOt(){
     by:myEmpId(),who:((apprLineOf(me.id)||{}).who)||{},steps:sf.steps,conf:null,
     at:editing?editing.at:todayStr(),seq:editing?editing.seq:Date.now()};
   if(editing&&Array.isArray(editing.members)&&editing.members.length>1)rec.members=editing.members;
+  if(!attGuard('ot',rec,editing&&Array.isArray(editing.members)&&editing.members.length>1?editing.members.map(m=>m.empId):[rec.empId]))return;
   mvBusy=true;
   try{await mvPut('ot',rec);}catch(e){mvBusy=false;return mvSaveFail(e);}
   mvBusy=false;
