@@ -3355,7 +3355,7 @@ service cloud.firestore {
         <input type="month" class="selbox" id="stk_ym" onchange="stkRender()">
         <label style="font-size:12px"><input type="checkbox" id="stk_edit" onchange="stkRender()"> ✏️ 양식 수정(품명·단중·소계 수식)</label>
         <button class="btn" id="stk_mgbtn" onclick="stkMgToggle()" title="품명 칸을 엑셀처럼 병합">🧩 병합 편집</button>
-        <button class="btn" id="stk_rowbtn" onclick="stkRowToggle()" title="품목(줄)을 추가·삭제하고 열 정렬(가운데 맞춤)을 바꿉니다 — 아래 줄의 수식·병합·연동 칸이 자동으로 이동">📐 줄·정렬 편집</button>
+        <button class="btn" id="stk_rowbtn" onclick="stkRowToggle()" title="품명·규격·단중 줄을 새로 추가하거나 지우고 열 정렬(가운데 맞춤)을 바꿉니다 — 아래 줄의 수식·병합·연동 칸이 자동으로 이동">📐 품목 추가·삭제 · 정렬</button>
         <button class="btn primary" onclick="sxOpen(stkYm())" title="엑셀 원단위 파일과 대조한 연동 현황 · 연결/수정/확인 (전체화면)">🧭 연동 센터</button>
         <button class="btn" onclick="stkMapOpen()">🔗 연동 설정</button>
         <button class="btn" onclick="stkPullPrev()" title="전월 재고량 시트의 수량(노란 입력 칸)을 이번 달 시트로 가져옵니다">⏪ 전월 재고 가져오기</button>
@@ -16117,7 +16117,9 @@ function stkLkRefMap(ym){   // {칸: [{code,n,u,ex}]}
     (String(map[code]).match(/[A-Z]{1,2}\d+/g)||[]).forEach(ref=>{(out[ref]=out[ref]||[]).push({code,n:it.n,u:it.u,ex:map[code]});});});
   return out;
 }
-function stkIsSumRef(ref){const m=/^([A-Z]+)(\d+)$/.exec(ref);if(!m)return false;const c=INV_STK.cells,x=c[ref];if(!x||x[0]!=='f')return false;return ['B','H'].some(k=>{const y=c[k+m[2]];return y&&y[1]==='계';});}
+/* 2026-11-04: 합계(계) 줄 판정을 블록별로 — 왼쪽·오른쪽 표가 같은 줄을 쓰지만 서로 다른 표이므로, 그 칸이 속한 표의 규격 칸(위 구역 왼쪽 B·오른쪽 H / 아래 구역 왼쪽 B·오른쪽 G)이 '계'일 때만 합계 줄로 본다 */
+function stkSumAt(r,c){const bot=r>=STK_BOT,k=c<=(bot?5:6)?'B':(bot?'G':'H'),y=INV_STK.cells[k+r];return !!(y&&y[1]==='계');}
+function stkIsSumRef(ref){const m=/^([A-Z]+)(\d+)$/.exec(ref);if(!m)return false;const x=INV_STK.cells[ref];if(!x||x[0]!=='f')return false;return stkSumAt(+m[2],stkColN(m[1]));}
 function stkMk(ov,adj){
   const cells=INV_STK.cells,cache={},stack=new Set();
   function raw(ref){if(ov&&ov[ref]!==undefined)return ov[ref];const c=cells[ref];return c?c[1]:undefined;}
@@ -16200,9 +16202,9 @@ function stkTableHtml(ym,mode){
       if(hdRow||ref==='A1')cls.push('hd');
       else if(txt)cls.push('lb');
       else if(kind==='n')cls.push('sn');
-      else if(kind==='f')cls.push(sumRow?'sum':'fc');
+      else if(kind==='f')cls.push(stkSumAt(r,c)?'sum':'fc');
       if(hasOv&&kind==='f')cls.push('ovr');
-      const ad=ADJ[ref],adjOk=view&&!mgm&&!rowm&&!ro&&kind==='f'&&sumRow&&!txt;
+      const ad=ADJ[ref],adjOk=view&&!mgm&&!rowm&&!ro&&kind==='f'&&!txt&&!hdRow;   /* 2026-11-04: 합계(계) 칸뿐 아니라 계산된 모든 중량 칸(품목별·묶음 합계 포함)에서 가감/직접 지정 가능 */
       if(ad&&kind==='f'){cls.push('adj');}
       const adjT=(ad&&M0)?`\n⚙ 합계 중량 ${ad.mode==='set'?'직접 지정':'가감'} ${ad.mode==='set'?stkFmt(+ad.v):((+ad.v>0?'+':'')+stkFmt(+ad.v))}${ad.memo?' · '+ad.memo:''}  (원래 합계 ${stkFmt(M0.V(ref))})`:'';
       const adA=(ad&&M0)?` data-ad="${esc('⚙ '+(ad.mode==='set'?'지정':((+ad.v>0?'+':'')+stkFmt(+ad.v))))}"`:'';
@@ -16233,7 +16235,7 @@ function stkTableHtml(ym,mode){
         continue;
       }
       if(inner){h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${lkT?` title="${esc(lkT.trim())}"`:''}>${inner}</td>`;}
-      else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${adA}${adC} ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT+adjT+(adjOk&&!ad?'\n(클릭: 합계 중량 조정)':''))}"`:''}>${esc(disp)}</td>`;}
+      else{h+=`<td${sp} class="${cls.join(' ')} ${txt?'':'n'}"${lkA}${adA}${adC} ${hasLab?'':`data-ref="${ref}"`} ${(isF&&kind!=='f')||kind==='f'||lkT?`title="${esc((isF||kind==='f'?String(rawV):'')+lkT+adjT+(adjOk&&!ad?'\n(클릭: 중량 가감·직접 지정)':''))}"`:''}>${esc(disp)}</td>`;}
     }
     flush();h+='</tr>';
   });
@@ -16459,7 +16461,7 @@ function stkBanner(ym){
       return `<details style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#1d4ed8;font-weight:800">📊 묶음별 합계 ${gt.length}건 — 시트에 계 줄이 없는 묶음 · 마스터 연동이 없는 행도 포함</summary><div style="margin-top:4px;max-height:300px;overflow:auto"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>묶음</th><th class="n">행</th><th>단위</th><th class="n">연동 행 합</th><th class="n">미연동 행 합</th><th class="n">합계</th><th>미연동 행</th></tr></thead><tbody>${gt.map(o=>`<tr><td>${esc(o.n)}</td><td class="n">${o.rows}</td><td>${o.units.size>1?'혼합':[...o.units][0]}</td><td class="n">${f(o.vl)}</td><td class="n" style="${o.un?'color:#b45309;font-weight:700':''}">${o.un?f(o.vu):'-'}</td><td class="n"><b>${f(o.vl+o.vu)}</b></td><td style="color:#b45309">${esc(o.unl.join(', '))}</td></tr>`).join('')}</tbody></table></div>${(()=>{const u=stkUnlinkedAll(ym);if(!u.list.length)return '';return `<div style="margin-top:5px;color:#b45309"><b>마스터 연동이 없는 시트 행 ${u.list.length}개</b> — EA 합 <b>${f(u.ea)}</b> · kg 합 <b>${f(u.kg)}</b><br><span style="color:var(--muted)">${esc(u.list.map(x=>x.n+' '+f(x.v)+' '+x.u).join(' · '))}</span></div>`;})()}<div style="color:var(--muted);margin-top:3px">중량 칸이 비어 있던 품목은 품목마스터 단위로 채웠습니다 — EA 품목은 수량 그대로, KG 품목은 수량×단중. 합계는 시트에서만 보이며 원단위로는 넘어가지 않습니다.</div></details>`;})()}
     ${(()=>{const au=stkSumAudit(ym);if(!au.length)return '<div style="font-size:12px;color:#166534;margin:0 0 6px">✔ 합계(계) 점검: 모든 계 칸이 표시된 항목의 합과 일치합니다(가감 조정 칸 제외)</div>';
        return `<details open style="font-size:12px;margin:0 0 6px"><summary style="cursor:pointer;color:#b45309;font-weight:800">⚠ 합계(계) 점검 ${au.length}건 — 표시된 항목 합과 다릅니다</summary><div style="margin-top:4px"><table class="bomtbl" style="font-size:11.5px"><thead><tr><th>칸</th><th>품목</th><th class="n">계 값</th><th class="n">표시 항목 합</th><th class="n">차이</th><th>사유</th></tr></thead><tbody>${au.map(x=>`<tr><td>${x.ref}</td><td>${esc(x.name)}</td><td class="n">${stkFmt(x.val)}</td><td class="n">${stkFmt(x.vis)}</td><td class="n" style="color:#b91c1c;font-weight:700">${(x.d>0?'+':'')+stkFmt(x.d)}</td><td>${esc(x.hint)}</td></tr>`).join('')}</tbody></table></div></details>`;})()}
-     <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">노란 칸이 입력 칸입니다. <b>합계(계) 중량 칸을 누르면 합계를 가감(±)하거나 직접 지정</b>할 수 있습니다(보라 칸). 수량 칸에 <b>=192*2+161</b> 처럼 엑셀 수식도 입력할 수 있고(칸을 누르면 수식이 보입니다), <b>↑ ↓ ← → · Enter</b> 로 칸을 이동합니다. 주황 칸은 소계 수식을 수기로 고친 칸입니다(엑셀의 −10000 같은 조정).</div>`;
+     <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">노란 칸이 입력 칸입니다. <b>계산된 중량 칸(합계·품목별 모두)을 누르면 합계를 가감(±)하거나 직접 지정</b>할 수 있습니다(보라 칸). 수량 칸에 <b>=192*2+161</b> 처럼 엑셀 수식도 입력할 수 있고(칸을 누르면 수식이 보입니다), <b>↑ ↓ ← → · Enter</b> 로 칸을 이동합니다. 주황 칸은 소계 수식을 수기로 고친 칸입니다(엑셀의 −10000 같은 조정).</div>`;
   if(info)info.textContent=nOv?`기본 양식과 다른 칸 ${nOv}개`:'';
 }
 async function stkToggleOn(on){
@@ -16628,7 +16630,7 @@ function stkVzTable(ym,anchors){
       const txt=hasLab||(kind==='s'&&!hasOv)||(typeof rawV==='string'&&rawV[0]!=='='&&isNaN(parseFloat(rawV.replace(/,/g,''))));
       if(ref==='A1')rawV=`${mm}월 내화물 재고량 산출`;
       const cls=[];
-      if(hdRow||ref==='A1')cls.push('hd');else if(txt)cls.push('lb');else if(kind==='n')cls.push('sn');else if(kind==='f')cls.push(sumRow?'sum':'fc');
+      if(hdRow||ref==='A1')cls.push('hd');else if(txt)cls.push('lb');else if(kind==='n')cls.push('sn');else if(kind==='f')cls.push(stkSumAt(r,c)?'sum':'fc');
       let disp;if(txt)disp=String(rawV==null?'':rawV);else{const v=M.V(ref);disp=(rawV==null||rawV==='')&&kind==='i'?'':stkFmt(v);}
       const p=stkRefP(ref);if(bg&&stkVzInG(bg,p))cls.push('vz-blk');
       if(nm){const items=LK.items(ref);
@@ -31181,7 +31183,7 @@ const SX_CONF_KEY='dgrns_stkx_conf';
 const STK_LAY_KEY='dgrns_invstock_layout';
 const STK_MIG=[];
 const STK_PRISTINE=JSON.stringify({cells:INV_STK.cells,merges:INV_STK.merges,slots:INV_STK.slots,map:INV_STK.map,xl:STK_XL_REF});
-let stkRowMode=false,stkRowSel={r:0,c:1},stkRowGrp=true,stkRowAutoEdit=false,stkUndoStk=[];
+let stkRowMode=false,stkRowScope='blk',stkRowSel={r:0,c:1},stkRowGrp=true,stkRowAutoEdit=false,stkUndoStk=[];
 function stkLayApply(L){
   INV_STK.cells=L.cells;INV_STK.merges=L.merges||[];INV_STK.slots=L.slots||[];INV_STK.map=L.map||{};
   STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
@@ -31340,14 +31342,74 @@ function stkPatternRow(R,b){   // 새 줄의 모양을 따라갈 기준 줄 (소
   return R;
 }
 function stkRowCount(){const e=document.getElementById('stk_rown');const n=Math.floor(+(e&&e.value)||1);return Math.max(1,Math.min(10,n));}
+/* ---- 2026-11-04: 이 블록만 삽입/삭제 — 왼쪽·오른쪽 표는 같은 줄 번호를 쓰므로, 선택한 블록의 칸만 위/아래로 밀고 반대편 표는 그대로 둔다 ---- */
+function stkMapBlkDel(N,n,b,ze){const E=N+n-1,inB=c=>c>=b.c1&&c<=b.c2;
+  const f=r=>r<N?r:(r<=E?null:(r<=ze?r-n:r));
+  return{pt:(r,c)=>(c&&inB(c)&&r>=N&&r<=ze)?f(r):r,
+    rg:(c1,r1,c2,r2)=>{if(!(inB(c1)&&inB(c2)))return[r1,r2];
+      const a=r1<N?r1:(r1<=E?N:(r1<=ze?r1-n:r1)),z=r2<N?r2:(r2<=E?N-1:(r2<=ze?r2-n:r2));return a>z?null:[a,z];},
+    bot:r=>r,maxr:v=>v,rows:false};}
+function stkMapBlkIns(N,n,b,ze,ext){const inB=c=>c>=b.c1&&c<=b.c2;
+  return{pt:(r,c)=>(c&&inB(c)&&r>=N&&r<=ze)?r+n:r,
+    rg:(c1,r1,c2,r2)=>{if(!(inB(c1)&&inB(c2)))return[r1,r2];
+      const e=!!ext&&c1>=ext.c1&&c2<=ext.c2&&r2===N-1;
+      return[(r1>=N&&r1<=ze)?r1+n:r1,((r2>=N&&r2<=ze)||e)?r2+n:r2];},
+    bot:r=>r,maxr:v=>v,rows:false};}
+function stkBlkLast(b,bot){const r1=bot?STK_BOT+2:4,r2=bot?STK_MAXR:STK_BOT-1;let last=0;for(let r=r1;r<=r2;r++)if(stkBlkHas(r,b))last=r;return last;}
+function stkInsertBlkCore(R,N,n,S,b,grp,item){
+  const bot=R>=STK_BOT,specAbove=stkSpecRow(N-1,b);
+  const ext=(grp&&specAbove)?{c1:b.c1,c2:b.c2}:null;
+  let ze=bot?STK_MAXR:STK_BOT-1;
+  const last=stkBlkLast(b,bot),need=Math.max(last>=N?last+n:last,N+n-1);
+  if(need>ze){const e=need-ze;               // 구역 맨 아래가 모자라면 구역을 늘린다(위 구역: 아래 구역 머리글 앞에 빈 줄 삽입)
+    if(bot)STK_MAXR+=e;else stkTxAll(stkMapIns(STK_BOT,e,null));
+    ze=bot?STK_MAXR:STK_BOT-1;}
+  stkTxAll(stkMapBlkIns(N,n,b,ze,ext));
+  const rows=[];for(let i=0;i<n;i++)rows.push(N+i);
+  stkBuildRows(rows,S>=N?S+n:S,b,{grp:!!ext,item:!!item});
+  return rows;
+}
+/* 지워지는 줄에 병합된 품명 칸의 시작 칸이 있으면, 남는 줄로 품명을 옮겨 둔다 */
+function stkRelocAnchors(R,E,b){
+  const s=stkMgStore();let ch=false;const all=stkAll();let chAll=false;
+  stkMergeList().forEach(key=>{const p=key.split(':'),a=stkRefP(p[0]),z=stkRefP(p[1]);if(!a||!z)return;
+    if(a.c<b.c1||z.c>b.c2||a.r<R||a.r>E||z.r<=E)return;
+    const from=p[0],to=stkColL(a.c)+(E+1);
+    if(INV_STK.cells[from]&&!INV_STK.cells[to])INV_STK.cells[to]=INV_STK.cells[from];
+    if(s.lab[from]!==undefined&&s.lab[to]===undefined){s.lab[to]=s.lab[from];ch=true;}
+    Object.keys(all).forEach(ym=>{const ov=(all[ym]||{}).ov;if(ov&&ov[from]!==undefined&&ov[to]===undefined){ov[to]=ov[from];chAll=true;}});
+  });
+  if(ch)stkMgSave(s);if(chAll)stkSaveAll(all);
+}
+function stkRowDelBlk(){
+  const R=stkRowSel.r,n=stkRowCount(),E=R+n-1,b=stkBlk(R,stkRowSel.c),bot=R>=STK_BOT,ze=bot?STK_MAXR:STK_BOT-1;
+  for(let r=R;r<=E;r++)if(stkHdRow(r)||r>ze){toast('머리글 줄이나 다른 구역에 걸치는 범위는 삭제할 수 없습니다');return;}
+  const m=stkMapBlkDel(R,n,b,ze),imp=stkImpact(m),LAB=stkMgStore().lab,gone=[];
+  for(let r=R;r<=E;r++)for(let c=b.c1;c<=b.c2;c++){const k=stkColL(c)+r,x=INV_STK.cells[k];
+    if(x&&x[1]!==''&&x[1]!=null&&x[0]!=='f')gone.push(k+' '+x[1]);else if(LAB[k])gone.push(k+' '+LAB[k]);}
+  let nov=0;const all=stkAll();Object.keys(all).forEach(ym=>{const ov=(all[ym]||{}).ov||{};Object.keys(ov).forEach(k=>{const q=stkRefP(k);if(q&&q.r>=R&&q.r<=E&&q.c>=b.c1&&q.c<=b.c2&&ov[k]!=null)nov++;});});
+  const side=b.right?'오른쪽':'왼쪽';
+  let msg=`${R}${n>1?'~'+E:''}행의 ${side} 블록(${stkColL(b.c1)}~${stkColL(b.c2)}열) 품목 ${n}줄을 삭제하고, 이 블록의 아래 줄을 위로 당깁니다.\n(${b.right?'왼쪽':'오른쪽'} 표는 그대로 — 같은 줄 번호의 칸도 움직이지 않습니다)`;
+  if(gone.length)msg+=`\n\n삭제되는 내용: `+gone.slice(0,10).join(' · ')+(gone.length>10?` … 외 ${gone.length-10}칸`:'');
+  if(imp.length)msg+=`\n\n월별 원단위 연동 ${imp.length}건이 바뀝니다:\n  `+imp.slice(0,8).map(x=>`${x.n}: ${x.old} → ${x.nw||'연동 해제'}`).join('\n  ')+(imp.length>8?`\n  … 외 ${imp.length-8}건`:'');
+  if(nov)msg+=`\n\n저장된 입력값 ${nov}칸(모든 달)이 함께 삭제됩니다.`;
+  msg+='\n\n계속할까요? ([↩ 되돌리기]로 복원할 수 있습니다)';
+  if(!confirm(msg))return;
+  stkUndoPush(`품목 줄 삭제 (${side} ${R}${n>1?'~'+E:''}행)`);
+  stkRelocAnchors(R,E,b);
+  stkTxAll(m);stkLaySave();
+  const list=stkRowsList();stkRowSel={r:list.find(r=>r>=R&&!stkHdRow(r))||list[list.length-1]||0,c:stkRowSel.c};
+  stkRowDone(`${side} 블록 ${R}${n>1?'~'+E:''}행을 삭제했습니다 (반대편 표는 그대로)`+(imp.length?` · 연동 ${imp.length}건 변경`:''));
+}
 function stkRowInsert(where){
   const R=stkRowSel.r;if(!stkRowOk(R))return;
   const n=stkRowCount(),b=stkBlk(R,stkRowSel.c),N=where==='above'?R:R+1;
   if(STK_MAXR+n>400){toast('줄이 너무 많아졌습니다');return;}
   stkUndoPush(`줄 삽입 (${R}행 ${where==='above'?'위':'아래'} ${n}줄)`);
   const S=stkPatternRow(R,b);
-  const rows=stkInsertCore(N,n,S,b,stkRowGrp,false);
-  stkLaySave();stkRowSel={r:rows[0],c:stkRowSel.c};stkRowDone(`${rows[0]}${n>1?'~'+rows[n-1]:''}행에 새 줄을 넣었습니다 — 규격·단중·수량을 입력하세요 (아래 줄의 수식·연동 칸은 자동으로 한 줄씩 밀렸습니다)`);
+  const blk=stkRowScope==='blk';
+  const rows=blk?stkInsertBlkCore(R,N,n,S,b,stkRowGrp,false):stkInsertCore(N,n,S,b,stkRowGrp,false);
+  stkLaySave();stkRowSel={r:rows[0],c:stkRowSel.c};stkRowDone(`${rows[0]}${n>1?'~'+rows[n-1]:''}행에 새 줄을 넣었습니다 — 규격·단중·수량을 입력하세요 (${blk?(b.right?'오른쪽':'왼쪽')+' 블록의 아래 줄만 한 줄씩 밀렸고 반대편 표는 그대로입니다':'아래 줄의 수식·연동 칸은 자동으로 한 줄씩 밀렸습니다'})`);
 }
 function stkRowNewItem(){
   const R=stkRowSel.r;if(!stkRowOk(R))return;
@@ -31355,7 +31417,7 @@ function stkRowNewItem(){
   if(STK_MAXR+k>400){toast('줄이 너무 많아졌습니다');return;}
   stkUndoPush(`새 품목 추가 (${R}행 아래 ${k}줄)`);
   const S=stkPatternRow(R,b),N=R+1;
-  const rows=stkInsertCore(N,k,S,b,false,true);
+  const rows=stkRowScope==='blk'?stkInsertBlkCore(R,N,k,S,b,false,true):stkInsertCore(N,k,S,b,false,true);
   const nc=b.nc,top=rows[0];
   INV_STK.cells[nc+top]=['s',''];
   if(k>=2){const s=stkMgStore(),key=`${nc}${top}:${nc}${rows[k-1]}`;stkMgAdd(s,key);stkMgSave(s);}
@@ -31365,6 +31427,7 @@ function stkRowNewItem(){
 }
 function stkRowDelete(){
   const R=stkRowSel.r;if(!stkRowOk(R))return;
+  if(stkRowScope==='blk')return stkRowDelBlk();
   const n=stkRowCount(),E=R+n-1;
   for(let r=R;r<=E;r++)if(stkHdRow(r)||(R<STK_BOT)!==(r<STK_BOT)){toast('머리글 줄이나 다른 구역에 걸치는 범위는 삭제할 수 없습니다');return;}
   const b=stkBlk(R,stkRowSel.c),m=stkMapDel(R,n),imp=stkImpact(m);
@@ -31440,7 +31503,7 @@ function stkRowPaint(){
 }
 function stkRowBar(){
   const bar=document.getElementById('stk_rowbar'),bt=document.getElementById('stk_rowbtn');
-  if(bt){bt.classList.toggle('primary',stkRowMode);bt.textContent=stkRowMode?'📐 줄·정렬 편집 중 (끝내기)':'📐 줄·정렬 편집';}
+  if(bt){bt.classList.toggle('primary',stkRowMode);bt.textContent=stkRowMode?'📐 품목 추가·삭제 중 (끝내기)':'📐 품목 추가·삭제 · 정렬';}
   if(!bar)return;
   if(!stkRowMode){bar.innerHTML='';return;}
   const R=stkRowSel.r,ok=R&&stkRowOk(R,true),b=ok?stkBlk(R,stkRowSel.c):null;
@@ -31449,15 +31512,16 @@ function stkRowBar(){
   const ak=ok?stkAlKey(R,stkRowSel.c):'',av=ok?stkAlAll()[ak]||'x':'x';
   const ab=(v,t)=>`<button class="btn sm${av===v?' primary':''}" ${dis} onclick="stkAlSet('${v}')">${t}</button>`;
   bar.innerHTML=`<div style="background:#fefce8;border:1px solid #facc15;border-radius:8px;padding:8px 12px;margin:2px 0 8px;font-size:12.5px;line-height:1.8;max-width:1180px">
-    <b>📐 줄·정렬 편집</b> — 편집할 곳의 <b>칸을 누르거나 왼쪽 줄 번호</b>를 누르세요. 엑셀의 행 삽입/삭제와 같아서 <b>아래 줄의 수식·병합·월별 원단위 연동 칸·모든 달의 입력값이 자동으로 한 줄씩 이동</b>합니다. (양식 변경은 모든 달에 공통 적용)
+    <b>📐 품목 추가·삭제</b> — 지우거나 넣을 곳의 <b>칸(품명·규격·단중)을 누르거나 왼쪽 줄 번호</b>를 누르세요. <b>아래 줄의 수식·병합·월별 원단위 연동 칸·모든 달의 입력값이 자동으로 한 줄씩 이동</b>합니다. 적용 범위를 <b>이 블록만</b>으로 두면 눌러 둔 쪽(왼쪽/오른쪽) 표만 움직이고 반대편 표는 그대로입니다. (양식 변경은 모든 달에 공통 적용)
     <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <span style="min-width:200px">선택: <b>${ok?R+'행 · '+(b.right?'오른쪽':'왼쪽')+' 블록('+stkColL(b.c1)+'~'+stkColL(b.c2)+'열) · '+stkColL(stkRowSel.c)+'열':'없음'}</b></span>
+      <label title="이 블록만: 선택한 쪽(왼쪽/오른쪽) 표의 칸만 위·아래로 이동 · 양쪽 전체 줄: 엑셀의 행 삽입/삭제처럼 반대편 표도 같은 줄이 함께 움직임">적용 범위 <select class="selbox" onchange="stkRowScope=this.value;stkRowBar()"><option value="blk" ${stkRowScope==='blk'?'selected':''}>이 블록만 (반대편 표는 그대로)</option><option value="all" ${stkRowScope==='all'?'selected':''}>양쪽 전체 줄 (엑셀 행 삽입/삭제)</option></select></label>
       <label>줄 수 <input type="number" id="stk_rown" class="selbox" style="width:54px" min="1" max="10" value="${esc(nv)}"></label>
       <button class="btn sm primary" ${dis} onclick="stkRowInsert('below')" title="선택한 줄 아래에 새 줄을 넣고, 같은 규격 묶음이면 합계 수식에 새 줄을 자동으로 포함합니다">⬇ 아래에 줄 삽입</button>
       <button class="btn sm" ${dis} onclick="stkRowInsert('above')">⬆ 위에 줄 삽입</button>
       <button class="btn sm" ${dis} onclick="stkRowNewItem()" title="선택한 줄 아래에 새 품목(품명 칸 병합 + 줄별 중량 수식)을 만듭니다">＋ 새 품목 추가</button>
-      <button class="btn sm danger" ${dis} onclick="stkRowDelete()" title="선택한 줄 삭제 (엑셀 행 삭제와 동일 — 줄 수만큼 아래로 함께 삭제)">🗑 줄 삭제</button>
-      <button class="btn sm" ${dis} onclick="stkRowClear()" title="이 블록(왼쪽/오른쪽)의 칸만 비움 — 다른 쪽 칸·줄 구조는 그대로">🧽 줄 내용 지우기</button>
+      <button class="btn sm danger" ${dis} onclick="stkRowDelete()" title="선택한 품목 줄을 삭제합니다 (적용 범위가 이 블록만이면 그 쪽 표만 아래 줄이 올라옴)">🗑 품목 줄 삭제</button>
+      <button class="btn sm" ${dis} onclick="stkRowClear()" title="이 블록(왼쪽/오른쪽)의 품명·규격·단중·수량 칸만 비움 — 줄 자리는 그대로 남음">🧽 줄 내용 지우기</button>
       <button class="btn sm" ${stkUndoStk.length?'':'disabled'} onclick="stkUndo()" title="${stkUndoStk.length?esc(stkUndoStk[stkUndoStk.length-1].label):''}">↩ 되돌리기${stkUndoStk.length?' ('+stkUndoStk.length+')':''}</button>
       <label title="체크하면 새 줄이 위·아래 줄과 같은 묶음일 때 병합 칸·소계 SUM 범위·중량 합계식에 자동으로 포함됩니다"><input type="checkbox" ${stkRowGrp?'checked':''} onchange="stkRowGrp=this.checked"> 같은 묶음에 포함(소계·병합 자동 확장)</label>
     </div>
