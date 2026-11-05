@@ -3361,6 +3361,7 @@ service cloud.firestore {
         <button class="btn" onclick="stkMapOpen()">🔗 연동 설정</button>
         <button class="btn" onclick="stkAuditOpen()" title="수식을 직접 바꾼 칸·가감·참조 오류·연동 오류·음수 중량을 한 번에 찾아서 고칩니다">🩺 시트 점검</button>
         <button class="btn" onclick="stkSafeOpen()" title="재고량 시트 입력값·양식과 실적 생산량을 이 PC가 자동으로 보관해 둔 본에서 되돌립니다">🛟 보관본 복구</button>
+        <button class="btn" onclick="stkCloudOpen()" title="팀 저장소(서버)에 올라간 재고량 시트 값과 이 PC 값을 월별로 비교하고, 이 PC 값을 올리거나 서버 값을 받습니다 — 다른 PC에서 옛 값이 보일 때 사용">☁ 팀 동기화 점검</button>
         <button class="btn" onclick="stkPullPrev()" title="전월 재고량 시트의 수량(노란 입력 칸)을 이번 달 시트로 가져옵니다">⏪ 전월 재고 가져오기</button>
         <button class="btn" onclick="stkSyncNow()">월말재고로 반영</button>
         <button class="btn" onclick="stkExcel()">📥 엑셀</button>
@@ -31741,6 +31742,85 @@ function stkSafeRestore(i,mode){
   stkSafeClose();try{stkRender();}catch(x){}try{if(document.getElementById('isp-month').classList.contains('active'))renderInvMonth();}catch(x){}
   try{stkSyncSoon(stkYm());}catch(x){}
   toast('보관본으로 복구했습니다');
+}
+/* ===== 2026-11-05: ☁ 재고량 시트 팀 동기화 점검 — "내 PC에서는 맞는데 다른 PC에서는 옛 값"일 때 =====
+   · 서버(팀 저장소)에 실제로 올라가 있는 값을 직접 읽어 이 PC 값과 월별로 비교하고, 마지막으로 서버에 쓴 PC가 이 PC인지 다른 PC인지 보여 줍니다.
+   · [이 PC → 팀에 올리기]: 재고량 시트 5종(입력값·양식·연동·병합·실적 생산량)만 올립니다(다른 설정은 건드리지 않음). 올린 뒤 서버에서 다시 읽어 일치 여부를 확인합니다.
+   · [팀 → 이 PC로 받기]: 받기 직전 이 PC 상태를 🛟 보관본에 남긴 뒤 서버 값으로 바꿉니다. */
+function stkCloudClose(){const o=document.getElementById('stkCloudOv');if(o)o.remove();}
+async function stkCloudRead(){
+  const out={kv:{},times:{},by:'',at:0,docs:0};
+  const d=await fbDoc('__kv').get({source:'server'});
+  if(d.exists){const x=d.data()||{};out.by=x.by||'';out.at=+x.at||0;out.docs++;Object.assign(out.kv,await fbKvOf(x));Object.assign(out.times,x.times||{});}
+  try{const q=await fbKvqGet(true);Object.assign(out.kv,q.kv);Object.assign(out.times,q.times);out.docs+=q.n;}catch(e){}
+  return out;
+}
+function stkCloudRows(cloudKv){
+  const J=t=>{try{return JSON.parse(t||'{}')||{};}catch(e){return {};}};
+  const L=stkAll(),R=J(cloudKv&&cloudKv.dgrns_invstock);
+  const yms=Array.from(new Set(Object.keys(L).concat(Object.keys(R)))).sort().slice(-6);
+  const hm=t=>{if(!t)return '시각 없음';const d=new Date(t),p=x=>String(x).padStart(2,'0');return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes());};
+  return yms.map(ym=>{const l=L[ym]||null,r=R[ym]||null;
+    const ln=l?Object.keys(l.ov||{}).length:0,rn=r?Object.keys(r.ov||{}).length:0,lt=l?+l.ts||0:0,rt=r?+r.ts||0:0;
+    const same=JSON.stringify(l)===JSON.stringify(r);
+    let st='같음',col='#16a34a';
+    if(!same){if(!r){st='서버에 없음 (이 PC만 있음)';col='#c2410c';}else if(!l){st='이 PC에 없음 (서버만 있음)';col='#c2410c';}
+      else if(lt>rt){st='이 PC가 더 최신';col='#c2410c';}else if(rt>lt){st='서버가 더 최신';col='#c2410c';}else{st='내용이 다름 (시각 같음/없음)';col='#c2410c';}}
+    return {ym,ln,rn,lt:hm(lt),rt:hm(rt),st,col,same};});
+}
+async function stkCloudOpen(){
+  stkCloudClose();
+  const ov=document.createElement('div');ov.id='stkCloudOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.addEventListener('mousedown',e=>{if(e.target===ov)stkCloudClose();});document.body.appendChild(ov);
+  const shell=(inner)=>{ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:16px 18px;max-width:760px;width:96%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:13px">
+    <div style="display:flex;align-items:center;gap:8px"><div style="font-size:15px;font-weight:800;flex:1">☁ 재고량 시트 팀 동기화 점검</div><button class="btn sm" onclick="stkCloudClose()">닫기</button></div>${inner}</div>`;};
+  if(!fbOn){shell(`<div style="margin:10px 0;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;line-height:1.7"><b>이 PC는 팀 저장소에 연결되어 있지 않습니다.</b><br>연결되지 않은 PC에서 입력한 값은 이 PC에만 저장되고 다른 PC로 넘어가지 않습니다. 아래 [연결 재시도]를 누른 뒤 다시 점검해 주세요.<br><span style="color:#64748b;font-size:12px">(연결이 계속 안 되면 팀 공유 화면의 상태 문구와 로그를 확인해 주세요.)</span></div>
+    <button class="btn primary" onclick="stkCloudClose();fbAutoConnect().then(()=>setTimeout(stkCloudOpen,1500))">연결 재시도</button>`);return;}
+  shell('<div style="margin:12px 0;color:#475569">서버에서 직접 읽는 중…</div>');
+  let C;try{C=await stkCloudRead();}catch(e){shell(`<div style="margin:10px 0;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">서버 값을 읽지 못했습니다: ${esc(e.message||String(e))}<br><span style="color:#64748b;font-size:12px">인터넷 연결·방화벽(회사 네트워크)·Firebase 사용 한도를 확인해 주세요.</span></div>`);return;}
+  const rows=stkCloudRows(C.kv),bad=rows.filter(r=>!r.same).length;
+  const hm=t=>{if(!t)return '기록 없음';const d=new Date(t),p=x=>String(x).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());};
+  const last=window.fbKvLast||{};
+  const mine=(C.by===fbClientId);
+  const lastTxt=last.at?(last.ok?`<span style="color:#16a34a">성공</span> (${hm(last.at)})`:`<span style="color:#dc2626">실패</span> (${hm(last.at)}) — ${esc(last.err||'')}`):'이 접속에서는 아직 올린 적 없음';
+  const tr=rows.map(r=>`<tr><td style="padding:4px 8px;font-weight:700">${esc(r.ym)}</td><td style="padding:4px 8px;text-align:right">${r.ln}칸</td><td style="padding:4px 8px;color:#64748b">${esc(r.lt)}</td><td style="padding:4px 8px;text-align:right">${r.rn}칸</td><td style="padding:4px 8px;color:#64748b">${esc(r.rt)}</td><td style="padding:4px 8px;font-weight:700;color:${r.col}">${esc(r.st)}</td></tr>`).join('')||'<tr><td colspan="6" style="padding:8px;color:#64748b">재고량 시트 입력값이 없습니다</td></tr>';
+  shell(`<div style="margin:10px 0;padding:8px 12px;background:${bad?'#fffbeb':'#f0fdf4'};border:1px solid ${bad?'#fde68a':'#bbf7d0'};border-radius:8px;line-height:1.7">${bad?`<b>최근 6개월 중 ${bad}개월이 서버와 다릅니다.</b>`:'<b>최근 6개월 모두 서버와 이 PC가 같습니다.</b> 다른 PC에서 옛 값이 보이면 그 PC가 예전 버전이거나 연결이 안 된 상태입니다.'}</div>
+    <div style="line-height:1.8;font-size:12.5px;color:#334155">이 PC의 마지막 서버 업로드: ${lastTxt}<br>서버에 마지막으로 저장한 시각: <b>${esc(hm(C.at))}</b> — 저장한 PC: <b>${C.at?(mine?'이 PC':'다른 PC ('+esc(String(C.by).slice(0,6))+')'):'-'}</b> <span style="color:#64748b">(설정/마스터 문서 ${C.docs}개 기준)</span></div>
+    <table style="border-collapse:collapse;width:100%;margin:10px 0;font-size:12.5px"><thead><tr style="background:#f1f5f9;text-align:left"><th style="padding:5px 8px">월</th><th style="padding:5px 8px;text-align:right">이 PC 입력칸</th><th style="padding:5px 8px">최종 수정</th><th style="padding:5px 8px;text-align:right">서버 입력칸</th><th style="padding:5px 8px">최종 수정</th><th style="padding:5px 8px">판정</th></tr></thead><tbody>${tr}</tbody></table>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn primary" onclick="stkCloudUp()" title="재고량 시트 5종만 서버로 올립니다">⬆ 이 PC 값을 팀에 올리기</button><button class="btn" onclick="stkCloudDown()" title="서버 값으로 이 PC의 재고량 시트를 바꿉니다(받기 직전 상태는 🛟 보관본에 남음)">⬇ 팀 값을 이 PC로 받기</button></div>
+    <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.7">· 올리기: 이 PC의 월별 수정 시각을 지금으로 갱신해 서버·다른 PC에서 가장 최신으로 인정되게 한 뒤, 서버에서 다시 읽어 일치하는지 확인합니다.<br>· 다른 PC도 <b>이 버전 이후의 프로그램</b>을 열어야 합니다(옛 버전은 시작할 때 옛 값을 새 값처럼 서버에 올릴 수 있습니다).</div>`);
+}
+async function stkCloudUp(){
+  if(!fbOn){alert('팀 저장소에 연결되어 있지 않습니다.');return;}
+  if(!confirm('이 PC의 재고량 시트(입력값·양식·연동·병합·실적 생산량)를 팀 저장소에 올립니다.\n\n다른 PC가 같은 달을 따로 입력했다면 이 PC 값이 우선합니다. 계속할까요?'))return;
+  try{
+    stkSafeSnap('팀에 올리기 직전');
+    const a=stkAll(),now=Date.now();Object.keys(a).forEach(ym=>{if(a[ym]&&typeof a[ym]==='object')a[ym].ts=now;});
+    try{localStorage.setItem(STK_KEY,JSON.stringify(a));}catch(e){}
+    try{const L=JSON.parse(localStorage.getItem(STK_LAY_KEY)||'null');if(L&&typeof L==='object'){L.ts=now;STK_LAY_TS=now;localStorage.setItem(STK_LAY_KEY,JSON.stringify(L));}}catch(e){}
+    STK_SAFE_KEYS.forEach(k=>{try{if(localStorage.getItem(k)!=null)kvTouch(k);}catch(e){}});
+    if(!(await fbPushKv())){alert('업로드 실패: '+((window.fbKvLast||{}).err||'알 수 없음')+'\n\n인터넷 연결을 확인한 뒤 다시 눌러 주세요.');stkCloudOpen();return;}
+    const C=await stkCloudRead();
+    const bad=STK_SAFE_KEYS.filter(k=>{const l=localStorage.getItem(k);return l!=null&&C.kv[k]!==l;});
+    if(bad.length)alert('올렸지만 서버에서 다시 읽은 값이 이 PC와 다릅니다: '+bad.join(', ')+'\n\n잠시 후 [☁ 팀 동기화 점검]을 다시 열어 확인해 주세요. 계속 다르면 알려 주세요.');
+    else toast('☁ 팀에 올렸고 서버에서 다시 읽어 일치함을 확인했습니다');
+  }catch(e){alert('올리기 오류: '+(e.message||e));}
+  stkCloudOpen();
+}
+async function stkCloudDown(){
+  if(!fbOn){alert('팀 저장소에 연결되어 있지 않습니다.');return;}
+  try{
+    const C=await stkCloudRead(),sub={};
+    STK_SAFE_KEYS.forEach(k=>{if(C.kv[k]!==undefined)sub[k]=C.kv[k];});
+    if(!Object.keys(sub).length){alert('서버에 재고량 시트 값이 없습니다.');return;}
+    if(!confirm('서버의 재고량 시트 값으로 이 PC의 값을 바꿉니다.\n(받기 직전 이 PC 상태는 [🛟 보관본 복구]에 남습니다.)\n\n계속할까요?'))return;
+    stkSafeSnap('팀 값 받기 직전');
+    fbApplyKv(sub,C.times,true);
+    try{stkLayLoad();}catch(e){}try{invProd=invProdMap();}catch(e){}
+    try{stkRender();}catch(e){}try{if(document.getElementById('isp-month').classList.contains('active'))renderInvMonth();}catch(e){}
+    toast('서버 값을 받았습니다');
+  }catch(e){alert('받기 오류: '+(e.message||e));}
+  stkCloudOpen();
 }
 try{stkSafeSnap('시작 시 (업데이트·팀 동기화 전)');}catch(e){}
 stkLayLoad();stkLayMigrate();
