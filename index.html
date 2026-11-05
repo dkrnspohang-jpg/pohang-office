@@ -3410,10 +3410,7 @@ service cloud.firestore {
       <div class="costgrid" id="invtCards"></div>
       <div id="invtNote"></div>
       <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 10px">※ 엑셀 '전체원단위' 시트와 동일한 재배분 규칙(분할 사용·수기 고정량·복합단가)으로 월별 품목 입력(전월재고+입고−월말재고)에서 자동 계산합니다. <span style="background:#ffeb3b;padding:0 5px;border-radius:3px;font-weight:700">노란색</span> 칸은 엑셀에서 매달 직접 입력하던 칸(설비 분할 비율·영구장 수량)입니다.</div>
-      <div class="tablewrap"><table class="bomtbl" id="invtTbl" style="min-width:1100px">
-        <thead><tr><th>설비·PART</th><th>품명</th><th>규격</th><th class="n">단가</th><th>단위</th><th class="n">당월 사용량</th><th class="n">수량 원단위</th><th class="n">금액 원단위</th><th class="n">전월 사용량</th><th class="n">전월 금액원단위</th><th class="n">증감</th></tr></thead>
-        <tbody id="invtBody"></tbody>
-      </table></div>
+      <div class="tablewrap" id="invtWrap"></div>
     </div>
     <!-- 월·연도 비교 -->
     <div class="subpanel" id="isp-compare">
@@ -18829,7 +18826,7 @@ function renderInvTot(){
     const exp=fixMode?gap:0;
     const row=(n,pr,ex,fx)=>{const d=pr-ex;const ok=Math.abs(d-fx)<0.02;return `<tr><td>${n}</td><td class="n">${pr.toFixed(2)}</td><td class="n">${ex.toFixed(2)}</td><td class="n" style="color:${ok?'#15803d':'#c81e1e'}">${(d>=0?'+':'')+(Math.abs(d)<0.005?'0.00':d.toFixed(2))}</td></tr>`;};
     const allOk=Math.abs(c.tot.a-xl.tot-exp)<0.05&&Math.abs(c.eq.LF.a-xl.LF)<0.05&&Math.abs(c.eq.CC.a-xl.CC)<0.05;
-    note=`<details open style="margin:6px 0"><summary style="cursor:pointer;font-weight:800;font-size:13px">📑 엑셀(2609월 원단위) 대조 — ${allOk?(fixMode?'<span style="color:#15803d">L13 보정분만 차이, 나머지 전 항목 일치</span>':'<span style="color:#15803d">엑셀과 전 항목 일치</span>'):'<span style="color:#c81e1e">차이 있음(입력값 확인)</span>'}</summary>
+    note=`<details style="margin:6px 0"><summary style="cursor:pointer;font-weight:800;font-size:13px">📑 엑셀(2609월 원단위) 대조 — ${allOk?(fixMode?'<span style="color:#15803d">L13 보정분만 차이, 나머지 전 항목 일치</span>':'<span style="color:#15803d">엑셀과 전 항목 일치</span>'):'<span style="color:#c81e1e">차이 있음(입력값 확인)</span>'}</summary>
       <div class="tablewrap"><table class="bomtbl" style="min-width:0"><thead><tr><th>구분(원/톤)</th><th class="n">프로그램</th><th class="n">엑셀 확정값(L열)</th><th class="n">차이</th></tr></thead><tbody>
       ${row('전기로',c.eq.EAF.a,xl.EAF,exp)}${row('래들',c.eq.LF.a,xl.LF,0)}${row('턴디쉬',c.eq.CC.a,xl.CC,0)}${row('총 합계',c.tot.a,xl.tot,exp)}</tbody></table></div>
       <div style="font-size:11.5px;margin:4px 2px;line-height:1.55">
@@ -18863,45 +18860,91 @@ function renderInvTot(){
       <td class="n">${d.rest?esc(d.rest)+' <b style="color:'+(neg?'#c81e1e':'inherit')+'">'+iN(rr?rr.u:0)+'</b>'+(neg?' ⚠':''):''}</td>
       <td class="n" style="font-size:11px">${d.rest?'총 사용량 − 입력':''}</td><td style="font-size:11px">${srcTag(s)}</td></tr>`;}).join('');
   let box=document.getElementById('invtRt');
-  if(!box){box=document.createElement('div');box.id='invtRt';const n=document.getElementById('invtNote');if(n&&n.parentNode)n.parentNode.insertBefore(box,n.nextSibling);}
+  if(!box){box=document.createElement('div');box.id='invtRt';const n=document.getElementById('invtWrap');if(n&&n.parentNode)n.parentNode.insertBefore(box,n.nextSibling);}
   box.innerHTML=`<div style="border:1px solid #eab308;background:#fffde7;border-radius:8px;padding:8px 10px;margin:8px 0">
     <div style="font-weight:800;font-size:13px;margin-bottom:4px">🟨 수기 입력 — 설비 분할 비율 · 영구장 수량 <span style="font-weight:500;font-size:11.5px;color:#92400e">(노란색 = 직접 입력 / 연한 노랑 = 이번 달 입력 없이 이전 값 승계 중)</span></div>
     <div class="tablewrap"><table class="bomtbl" style="min-width:0"><thead><tr><th>품목(사용량 분할)</th><th class="n">총 사용량(kg)</th><th class="n">앞 설비 비율(입력)</th><th class="n">나머지 설비(자동)</th><th class="n">분할 사용량(kg)</th><th>출처</th></tr></thead><tbody>${rtRows}</tbody></table></div>
     <div class="tablewrap" style="margin-top:6px"><table class="bomtbl" style="min-width:0"><thead><tr><th>영구장 수량(수기)</th><th class="n">총 사용량</th><th class="n">입력 칸</th><th class="n">나머지(자동)</th><th></th><th>출처</th></tr></thead><tbody>${fxRows}</tbody></table></div>
     <div style="font-size:11px;color:#92400e;margin-top:4px">분할 비율 변경은 해당 월에만 적용되고, 입력하지 않은 달은 직전 입력 달의 값을 이어받습니다(엑셀 기본값: MUD재 전기로 30% · CA-180MH 래들 80% · CA-160 래들 60%).</div></div>`;
-  // ── 표 ──
+  // ── 표(엑셀 양식) ──
+  document.getElementById('invtWrap').innerHTML='<style>#invtWrap .xltot tbody tr,#invtWrap .xltot tbody tr:nth-child(even){background:#fff!important}#invtWrap .xltot tbody tr:hover td{filter:brightness(.97)}</style>'+invTotXlHtml(ym,!lock,false);
+  try{stkhSoon();}catch(e){}
+}
+const INV_TOT_XLC={EAF:{lab:'EAF',sub:'전기로',bg:'#fde0c2',dk:'#c2570c',tot:'#f9c590'},LF:{lab:'L/D',sub:'래들',bg:'#d3e5fa',dk:'#1d5fb4',tot:'#a9ccf3'},CC:{lab:'Tundish',sub:'턴디쉬',bg:'#d6efd5',dk:'#1f7a3a',tot:'#aadba7'}};
+function invTotXlHtml(ym,edit,xls){
+  const pv=prevYm(ym);const c=invTotCalc(ym),p=invTotCalc(pv);
+  const dis=!edit?' disabled':'';
+  const yc=(s)=>s.src==='set'?'inp-yel':'inp-yel inp-yel-soft';
   const pmap={};p.rows.forEach(r=>{pmap[r.k]=r;});
-  let body='';
-  const rowsByEq={EAF:[],LF:[],CC:[]};INV_TOT_ROWS.forEach(x=>rowsByEq[x.eq].push(x));
   const cm={};c.rows.forEach(r=>{cm[r.k]=r;});
+  const rowsByEq={EAF:[],LF:[],CC:[]};INV_TOT_ROWS.forEach(x=>rowsByEq[x.eq].push(x));
+  const bd='border:1px solid #94a3b8;',th='background:#e2e8f0;color:#1e293b;font-weight:800;text-align:center;'+bd+'padding:4px 6px;white-space:nowrap;';
+  const YL='background:#fffbd0;',YB='background:#ffeb3b;';
+  const nz=(v,f)=>Math.abs(v)<(f===3?0.0005:f===2?0.005:0.5)?'–':(f===0?iN(v):v.toFixed(f));
+  const dz=(v,f)=>{const m=f===3?0.0005:f===2?0.005:0.5;if(Math.abs(v)<m)return '<span style="color:#94a3b8">–</span>';const t=(v>0?'+':'')+(f===0?iN(v):v.toFixed(f));return `<span style="color:${v<0?'#15803d':'#c81e1e'}">${t}</span>`;};
+  const hasP=!!p.prod,hasC=!!c.prod;
+  let h='<table class="bomtbl xltot" style="min-width:1240px;border-collapse:collapse;font-size:12px">';
+  h+='<thead>';
+  if(xls){h+=`<tr><td colspan="9" style="font-size:16px;font-weight:900">${esc(ym.slice(5).replace(/^0/,''))}월 제강 내화물 원단위(전체)</td><td colspan="2">전월생산량(TON)</td><td>${p.prod?iN(p.prod):''}</td><td colspan="2">당월생산량(TON)</td><td>${c.prod?iN(c.prod):''}</td></tr>`;}
+  h+=`<tr><th rowspan="2" style="${th}">설비</th><th rowspan="2" style="${th}">PART</th><th rowspan="2" style="${th}">품명</th><th rowspan="2" style="${th}">규격</th><th rowspan="2" style="${th}">단가</th><th rowspan="2" style="${th}">단위</th>
+    <th colspan="3" style="${th}background:#dbeafe">전 월 (${esc(pv)})</th><th colspan="3" style="${th}background:#fef3c7">당 월 (${esc(ym)})</th><th colspan="3" style="${th}background:#e5e7eb">증 감 내 역</th></tr>`;
+  const sh=(bg)=>['사용량','수량 원단위','금액 원단위'].map(t=>`<th style="${th}background:${bg};font-size:11px">${t}</th>`).join('');
+  h+=`<tr>${sh('#dbeafe')}${sh('#fef3c7')}${sh('#e5e7eb')}</tr></thead><tbody>`;
   ['EAF','LF','CC'].forEach(g=>{
-    let pts=[];rowsByEq[g].forEach(x=>{if(!pts.includes(x.pt))pts.push(x.pt);});
+    const K=INV_TOT_XLC[g];
+    const pts=[];rowsByEq[g].forEach(x=>{if(!pts.includes(x.pt))pts.push(x.pt);});
+    const nRows=rowsByEq[g].length+pts.length; // 품목행+소계행 (합계행 제외)
+    let firstOfEq=true;
     pts.forEach(pt=>{
-      let sa=0,spa=0,first=true;
-      rowsByEq[g].filter(x=>x.pt===pt).forEach(x=>{const r=cm[x.k],pr=pmap[x.k];sa+=r.a;spa+=pr?pr.a:0;
+      const items=rowsByEq[g].filter(x=>x.pt===pt);
+      let su=0,spu=0,sq=0,spq=0,sa=0,spa=0;
+      // 품명 병합 범위
+      const span=items.map((x,i)=>{if(i>0&&items[i-1].nm===x.nm)return 0;let n=1;while(i+n<items.length&&items[i+n].nm===x.nm)n++;return n;});
+      items.forEach((x,i)=>{
+        const r=cm[x.k],pr=pmap[x.k];
+        su+=r.u;sq+=hasC?r.q:0;sa+=hasC?r.a:0;
+        if(pr){spu+=pr.u;spq+=hasP?pr.q:0;spa+=hasP?pr.a:0;}
         const fxr=x.fx!=null;const rtr=x.u.some(t=>t.rt);
         const s=fxr?invTotFxSrc(ym,x.k):null;
-        const useCell=fxr?`<input type="number" class="iinp ${yc(s)}" style="width:86px;font-weight:700" value="${+r.u.toFixed(2)}"${dis} title="수기 입력 항목(엑셀에서 매달 직접 입력하던 칸)${x.k==='r20'?' · 비우면 DC-15 사용량÷3 자동':''}" onchange="invTotFxSet('${ym}','${x.k}',this.value)">`:iN(r.u);
-        const d=pr?r.a-pr.a:r.a;
-        const tag=rtr?` <span style="font-size:10px;background:#fff176;border-radius:3px;padding:0 3px" title="설비 분할 비율 적용(위 노란 박스에서 조정)">분할 ${Math.round((x.u.find(t=>t.rt).sd?invTotRt(ym,x.u.find(t=>t.rt).rt):1-invTotRt(ym,x.u.find(t=>t.rt).rt))*1000)/10}%</span>`:'';
-        const bug=(r.bug&&invTotL13Mode()==='xl')?` <span style="font-size:10px;color:#b45309" title="엑셀 L13 수식(앙카허스 사용량×올리빈 단가) 그대로 적용 중">엑셀식</span>`:'';
-        body+=`<tr${fxr?' style="background:#fffde7"':''}><td style="font-size:10.5px;color:var(--muted)">${first?INV_TOT_EQN[g]+' · '+esc(pt):''}</td><td>${esc(x.nm)}${tag}${bug}</td><td style="font-size:11px">${esc(x.sp)}</td><td class="n">${iN(r.p)}</td><td>${esc(x.un)}</td>
-          <td class="n">${useCell}</td><td class="n">${c.prod?(r.q).toFixed(3):'-'}</td><td class="n"><b>${c.prod?r.a.toFixed(2):'-'}</b></td>
-          <td class="n" style="color:var(--muted)">${pr?iN(pr.u):'-'}</td><td class="n" style="color:var(--muted)">${pr&&p.prod?pr.a.toFixed(2):'-'}</td><td class="n" style="color:${d<-0.005?'#15803d':d>0.005?'#c81e1e':'#888'}">${c.prod&&p.prod?(d>=0?'+':'')+d.toFixed(2):'-'}</td></tr>`;first=false;});
-      body+=`<tr class="grp-row"><td colspan="7">${INV_TOT_EQN[g]} · ${esc(pt)} 소계</td><td class="n">${c.prod?sa.toFixed(2):'-'}</td><td></td><td class="n">${p.prod?spa.toFixed(2):'-'}</td><td class="n">${c.prod&&p.prod?((sa-spa>=0?'+':'')+(sa-spa).toFixed(2)):'-'}</td></tr>`;
+        const useCell=(fxr&&!xls)?`<input type="number" class="iinp ${yc(s)}" style="width:84px;font-weight:700;text-align:right" value="${+r.u.toFixed(2)}"${dis} title="수기 입력 항목(엑셀에서 매달 직접 입력하던 칸)${x.k==='r20'?' · 비우면 DC-15 사용량÷3 자동':''}" onchange="invTotFxSet('${ym}','${x.k}',this.value)">`:nz(r.u,0);
+        const tag=(rtr&&!xls)?` <span style="font-size:10px;background:#fff176;border-radius:3px;padding:0 3px" title="설비 분할 비율 적용(아래 노란 박스에서 조정)">분할 ${Math.round((x.u.find(t=>t.rt).sd?invTotRt(ym,x.u.find(t=>t.rt).rt):1-invTotRt(ym,x.u.find(t=>t.rt).rt))*1000)/10}%</span>`:'';
+        const bug=(!xls&&r.bug&&invTotL13Mode()==='xl')?` <span style="font-size:10px;color:#b45309" title="엑셀 L13 수식(앙카허스 사용량×올리빈 단가) 그대로 적용 중">엑셀식</span>`:'';
+        const topB=(firstOfEq&&i===0)?'border-top:2px solid #334155;':'';
+        let tr='<tr>';
+        if(firstOfEq&&i===0)tr+=`<td rowspan="${nRows}" style="${bd}${topB}background:${K.bg};color:${K.dk};text-align:center;font-weight:900;font-size:15px;width:44px;${xls?'':'writing-mode:vertical-rl;text-orientation:upright;letter-spacing:1px;'}">${K.lab}<br><span style="font-size:11px;font-weight:700">${K.sub}</span></td>`;
+        if(i===0)tr+=`<td rowspan="${items.length}" style="${bd}${topB}background:${K.bg};text-align:center;font-weight:800;white-space:nowrap">${pt==='부속'&&g==='EAF'?"Acce'":esc(pt)}</td>`;
+        if(span[i])tr+=`<td rowspan="${span[i]}" style="${bd}${topB}font-weight:700;vertical-align:middle;white-space:nowrap">${esc(x.nm)}</td>`;
+        tr+=`<td style="${bd}${topB}font-size:11px">${esc(x.sp)}${tag}${bug}</td><td class="n" style="${bd}${topB}">${nz(r.p,0)}</td><td style="${bd}${topB}text-align:center">${esc(x.un)}</td>`;
+        const cell=(v,f,bg,on)=>`<td class="n" style="${bd}${topB}${bg}">${on?nz(v,f):'–'}</td>`;
+        tr+=cell(pr?pr.u:0,0,YL,!!pr)+cell(pr?pr.q:0,3,YL,!!pr&&hasP)+cell(pr?pr.a:0,2,YL,!!pr&&hasP);
+        tr+=`<td class="n" style="${bd}${topB}${fxr?YB:YL}">${useCell}</td>${cell(r.q,3,YL,hasC)}<td class="n" style="${bd}${topB}${YL}font-weight:800">${hasC?nz(r.a,2):'–'}</td>`;
+        tr+=`<td class="n" style="${bd}${topB}">${dz(r.u-(pr?pr.u:0),0)}</td><td class="n" style="${bd}${topB}">${hasC&&hasP?dz(r.q-(pr?pr.q:0),3):'–'}</td><td class="n" style="${bd}${topB}font-weight:700">${hasC&&hasP?dz(r.a-(pr?pr.a:0),2):'–'}</td></tr>`;
+        h+=tr;
+      });
+      const sb=`${bd}background:#f1f5f9;font-weight:800;`;
+      h+=`<tr><td colspan="5" style="${sb}text-align:center">${pt==='부속'&&g==='EAF'?"Acce'":esc(pt)} 소계</td>
+        <td class="n" style="${sb}">${nz(spu,0)}</td><td class="n" style="${sb}">${hasP?nz(spq,3):'–'}</td><td class="n" style="${sb}">${hasP?nz(spa,2):'–'}</td>
+        <td class="n" style="${sb}">${nz(su,0)}</td><td class="n" style="${sb}">${hasC?nz(sq,3):'–'}</td><td class="n" style="${sb}">${hasC?nz(sa,2):'–'}</td>
+        <td class="n" style="${sb}">${dz(su-spu,0)}</td><td class="n" style="${sb}">${hasC&&hasP?dz(sq-spq,3):'–'}</td><td class="n" style="${sb}">${hasC&&hasP?dz(sa-spa,2):'–'}</td></tr>`;
+      firstOfEq=false;
     });
-    body+=`<tr style="background:#e8eef5;font-weight:800"><td colspan="7">${INV_TOT_EQN[g]} 합계</td><td class="n">${c.prod?c.eq[g].a.toFixed(2):'-'}</td><td></td><td class="n">${p.prod?p.eq[g].a.toFixed(2):'-'}</td><td class="n">${c.prod&&p.prod?((c.eq[g].a-p.eq[g].a>=0?'+':'')+(c.eq[g].a-p.eq[g].a).toFixed(2)):'-'}</td></tr>`;
+    const tb=`${bd}background:${K.tot};font-weight:900;font-size:13px;border-top:2px solid #334155;border-bottom:2px solid #334155;`;
+    const ec=c.eq[g].a,ep=p.eq[g].a;
+    h+=`<tr><td colspan="6" style="${tb}text-align:center;color:${K.dk}">${K.lab}(${K.sub}) 합계</td>
+      <td style="${tb}"></td><td style="${tb}"></td><td class="n" style="${tb}">${hasP?nz(ep,2):'–'}</td>
+      <td style="${tb}"></td><td style="${tb}"></td><td class="n" style="${tb}">${hasC?nz(ec,2):'–'}</td>
+      <td style="${tb}"></td><td style="${tb}"></td><td class="n" style="${tb}">${hasC&&hasP?dz(ec-ep,2):'–'}</td></tr>`;
   });
-  body+=`<tr style="background:#dbe4ee;font-weight:900"><td colspan="7">총 합계 (원/톤)</td><td class="n">${c.prod?c.tot.a.toFixed(2):'-'}</td><td></td><td class="n">${p.prod?p.tot.a.toFixed(2):'-'}</td><td class="n">${c.prod&&p.prod?((c.tot.a-p.tot.a>=0?'+':'')+(c.tot.a-p.tot.a).toFixed(2)):'-'}</td></tr>`;
-  document.getElementById('invtBody').innerHTML=body;
+  const gt=`${bd}background:#334155;color:#fff;font-weight:900;font-size:14px;`;
+  h+=`<tr><td colspan="6" style="${gt}text-align:center">총 합계 (원/톤)</td><td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasP?nz(p.tot.a,2):'–'}</td>
+    <td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasC?nz(c.tot.a,2):'–'}</td>
+    <td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasC&&hasP?(c.tot.a-p.tot.a>=0?'+':'')+(c.tot.a-p.tot.a).toFixed(2):'–'}</td></tr>`;
+  h+='</tbody></table>';
+  return h;
 }
 function downloadInvTot(){
-  const ym=(document.getElementById('invt_ym')||{}).value||curYm();const c=invTotCalc(ym);
-  let t='<table><tr><th>설비</th><th>PART</th><th>품명</th><th>규격</th><th>단가</th><th>단위</th><th>사용량</th><th>수량원단위</th><th>금액원단위</th></tr>';
-  c.rows.forEach(r=>{const x=INV_TOT_BYK[r.k];t+=`<tr><td>${esc(INV_TOT_EQN[x.eq])}</td><td>${esc(x.pt)}</td><td>${esc(x.nm)}</td><td>${esc(x.sp)}</td><td>${Math.round(r.p)}</td><td>${esc(x.un)}</td><td>${+r.u.toFixed(3)}</td><td>${r.q.toFixed(4)}</td><td>${r.a.toFixed(3)}</td></tr>`;});
-  ['EAF','LF','CC'].forEach(g=>{t+=`<tr><td colspan="8">${INV_TOT_EQN[g]} 합계</td><td>${c.eq[g].a.toFixed(2)}</td></tr>`;});
-  t+=`<tr><td colspan="8">총 합계(원/톤)</td><td>${c.tot.a.toFixed(2)}</td></tr></table>`;
-  downloadXls('전체원단위_'+ym,t);
+  const ym=(document.getElementById('invt_ym')||{}).value||curYm();
+  downloadXls('전체원단위_'+ym,invTotXlHtml(ym,false,true));
 }
 function invTotCopyFx(){
   const ym=document.getElementById('invt_ym').value,pv=prevYm(ym);
