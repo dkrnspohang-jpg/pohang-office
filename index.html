@@ -31899,6 +31899,68 @@ function stkWtFillMig(){
   }catch(e){console.warn('stkWtFillMig',e);}
 }
 stkWtFillMig();
+/* ===== 2026-11-05: 중량을 직접 넣던 줄(SPRAY재·T/D GUNNING재·EBT충진재·ANKERHARTH·T/D 유입재 등)을 '수량 입력 → 수량×단중 = 중량' 으로 전환 =====
+   · 단중이 숫자인데 중량 칸이 입력 칸이고 수량 칸이 없는 줄을 찾아 수량 칸을 열고 중량 칸을 =수량*단중 수식으로 바꾼다(모든 구역 공통).
+   · 이미 입력해 둔 중량은 단중으로 나눠 수량으로 옮겨서(예: 46,000 ÷ 2,000 = 23) 월말재고 값이 그대로 유지되고,
+     나누어 떨어지지 않는 값은 그 달에 한해 중량 직접 지정으로 남긴다. 양식 수정 시각은 바꾸지 않는다(다른 PC의 입력을 덮지 않도록). */
+function stkWtQtyScan(){
+  const c=INV_STK.cells,mg=INV_STK.merges.map(m=>{const p=String(m).split(':'),a=stkRefP(p[0]),b=stkRefP(p[1]);return a&&b?{r1:a.r,r2:b.r,c1:a.c,c2:b.c}:null;}).filter(Boolean);
+  const inMg=ref=>{const q=stkRefP(ref);return !!q&&mg.some(m=>q.r>=m.r1&&q.r<=m.r2&&q.c>=m.c1&&q.c<=m.c2);};
+  const list=[],maxR=stkMaxRow();
+  STK_WBLK.forEach(b=>{
+    const r1=b.lo?STK_BOT+2:4,r2=b.lo?maxR:STK_BOT-1;
+    for(let r=r1;r<=r2;r++){
+      const qr=b.q+r,wr=b.w+r,ur=b.u+r,wc=c[wr],uc=c[ur],qc=c[qr];
+      if(!((wc&&wc[0]==='i')||(!wc&&STK_SLOTS.has(wr))))continue;
+      if(!uc||uc[0]!=='n'||typeof uc[1]!=='number'||!(uc[1]>0))continue;
+      if(STK_SLOTS.has(qr)||qc)continue;
+      if(b.cols.some(cl=>c[cl+r]&&c[cl+r][1]==='계'))continue;
+      if(inMg(qr)||inMg(wr))continue;
+      list.push({r,qr,wr,ur,u:uc[1]});
+    }
+  });
+  return list;
+}
+function stkWtQtyMig(){
+  try{
+    const ID='wtqty1105';if(STK_MIG.indexOf(ID)>=0)return 0;
+    const list=stkWtQtyScan();
+    if(!list.length){if(localStorage.getItem(STK_LAY_KEY)){STK_MIG.push(ID);stkLayQ();}return 0;}
+    const c=INV_STK.cells,all=stkAll(),yms=Object.keys(all);
+    const nice=(w,u)=>{const q=Math.round(w/u*10000)/10000;return Math.abs(q*u-w)<1e-6?q:null;};
+    // 1) 바꾸기 전: 기본값과 각 달의 중량
+    const def={},mon={},M0=stkMk({},{});
+    list.forEach(x=>{def[x.wr]=+M0.V(x.wr)||0;});
+    yms.forEach(ym=>{const rec=all[ym];if(!rec)return;const M=stkMk(rec.ov||{},rec.adj);mon[ym]={};list.forEach(x=>{mon[ym][x.wr]=+M.V(x.wr)||0;});});
+    // 2) 양식 바꾸기
+    list.forEach(x=>{
+      const dq=def[x.wr]?nice(def[x.wr],x.u):null;
+      if(dq!=null)c[x.qr]=['i',dq];
+      if(INV_STK.slots.indexOf(x.qr)<0)INV_STK.slots.push(x.qr);
+      INV_STK.slots=INV_STK.slots.filter(k=>k!==x.wr);
+      c[x.wr]=['f','='+x.qr+'*'+x.ur];
+    });
+    STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
+    // 3) 저장된 달 값 옮기기
+    let chAny=false;
+    yms.forEach(ym=>{const rec=all[ym];if(!rec)return;rec.ov=rec.ov||{};let ch=false;
+      list.forEach(x=>{
+        const w=mon[ym][x.wr],has=rec.ov[x.wr]!==undefined;
+        if(has){
+          if(w===0&&!def[x.wr]){delete rec.ov[x.wr];ch=true;return;}
+          const q=nice(w,x.u);
+          if(q!=null){rec.ov[x.qr]=String(q);delete rec.ov[x.wr];}
+          else rec.ov[x.wr]=String(w);
+          ch=true;
+        }else if(def[x.wr]&&nice(def[x.wr],x.u)==null){rec.ov[x.wr]=String(w);ch=true;}
+      });
+      if(ch)chAny=true;});
+    if(chAny)stkSaveAll(all);
+    STK_MIG.push(ID);stkLayQ();
+    return list.length;
+  }catch(e){console.warn('stkWtQtyMig',e);return 0;}
+}
+stkWtQtyMig();
 const STK_GRPDEF=[
   {n:'SLOT PLUG (D370H·D520H)',b:'UL',a:'D370H',z:'D520H'},
   {n:'MORTAR (MAL·SK38)',b:'UL',a:'MAL',z:'SK38'},
@@ -34969,7 +35031,7 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     try{sgPrice=loadSgPrice();}catch(e){}
     try{sgSize=loadSgSize();}catch(e){}
     try{stkLayLoad();}catch(e){}
-    setTimeout(()=>{try{if(stkSumFixFormulas()&&curView==='inv'&&typeof stkRender==='function')stkRender();}catch(e){}},120);   // 팀에서 옛 계 수식 양식이 내려와도 다시 교정
+    setTimeout(()=>{try{const a1=stkSumFixFormulas(),a2=stkWtQtyMig();if((a1||a2)&&curView==='inv'&&typeof stkRender==='function')stkRender();}catch(e){}},120);   // 팀에서 옛 계 수식 양식이 내려와도 다시 교정
     /* rpt149: 아래 값들은 메모리에 따로 들고 있어서, 새로 받은 값으로 다시 읽지 않으면 이 PC가 다음에 저장할 때 오래된 내용으로 팀 값을 덮어쓸 수 있었음 */
     try{invMOv=invMasterOv();}catch(e){}
     try{invProd=invProdMap();}catch(e){}
