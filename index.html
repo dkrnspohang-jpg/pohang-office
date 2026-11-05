@@ -3360,6 +3360,7 @@ service cloud.firestore {
         <button class="btn primary" onclick="sxOpen(stkYm())" title="엑셀 원단위 파일과 대조한 연동 현황 · 연결/수정/확인 (전체화면)">🧭 연동 센터</button>
         <button class="btn" onclick="stkMapOpen()">🔗 연동 설정</button>
         <button class="btn" onclick="stkAuditOpen()" title="수식을 직접 바꾼 칸·가감·참조 오류·연동 오류·음수 중량을 한 번에 찾아서 고칩니다">🩺 시트 점검</button>
+        <button class="btn" onclick="stkSafeOpen()" title="재고량 시트 입력값·양식과 실적 생산량을 이 PC가 자동으로 보관해 둔 본에서 되돌립니다">🛟 보관본 복구</button>
         <button class="btn" onclick="stkPullPrev()" title="전월 재고량 시트의 수량(노란 입력 칸)을 이번 달 시트로 가져옵니다">⏪ 전월 재고 가져오기</button>
         <button class="btn" onclick="stkSyncNow()">월말재고로 반영</button>
         <button class="btn" onclick="stkExcel()">📥 엑셀</button>
@@ -15823,6 +15824,7 @@ function getProdInfo(ym){
 }
 function getProd(ym){return getProdInfo(ym).v;}
 function eafProdActSet(ym,val){
+  invProd=invProdMap();   // 2026-11-04: 화면에 오래 떠 있던 예전 값이 아니라 지금 저장된 값에서 시작(다른 달 실적이 지워지는 것 방지)
   const v=(val===''||val==null)?null:Math.max(0,+val||0);
   if(v==null||v===0)delete invProd[ym];else invProd[ym]=v;
   try{localStorage.setItem('dgrns_invprod',JSON.stringify(invProd));}catch(e){}
@@ -15841,11 +15843,13 @@ async function loadInv(){
   try{await invMigrate26();}catch(e){}
 }
 function invRec(code,ym){return invData.find(r=>r.code===code&&r.ym===ym);}
-function invEnd(code,ym){const r=invRec(code,ym);if(r&&r.end!=null)return +r.end;if(ym==='2026-09'&&INV_M09[code])return INV_M09[code][2];return 0;}
+/* 2026-11-04: 원단위 수량(전월·입고·월말·사용)은 소수점 없이 반올림(0.5는 절댓값 기준 올림, -0 방지) — 단중은 대상 아님 */
+function invR(v){v=+v;if(!isFinite(v))return 0;return (v<0?-Math.round(-v):Math.round(v))||0;}
+function invEnd(code,ym){const r=invRec(code,ym);if(r&&r.end!=null)return invR(r.end);if(ym==='2026-09'&&INV_M09[code])return invR(INV_M09[code][2]);return 0;}
 function invInDaily(code,ym){let s=0,has=false;invInData.forEach(r=>{if(r.code===code&&(r.ymd||'').slice(0,7)===ym){s+=(+r.qty||0);has=true;}});return has?s:null;}
-function invIn(code,ym){const d=invInDaily(code,ym);if(d!=null)return d;const r=invRec(code,ym);if(r&&r.in!=null)return +r.in;if(ym==='2026-09'&&INV_M09[code])return INV_M09[code][1];return 0;}
-function invPrev(code,ym){const r=invRec(code,ym);if(r&&r.prev!=null&&(ym<='2026-09'||r.pm))return +r.prev;if(ym==='2026-09'&&INV_M09[code])return INV_M09[code][0];return invEnd(code,prevYm(ym));}
-function invUse(code,ym){const r=invRec(code,ym);if(r&&r.use!=null)return +r.use;return invPrev(code,ym)+invIn(code,ym)-invEnd(code,ym);}
+function invIn(code,ym){const d=invInDaily(code,ym);if(d!=null)return invR(d);const r=invRec(code,ym);if(r&&r.in!=null)return invR(r.in);if(ym==='2026-09'&&INV_M09[code])return invR(INV_M09[code][1]);return 0;}
+function invPrev(code,ym){const r=invRec(code,ym);if(r&&r.prev!=null&&(ym<='2026-09'||r.pm))return invR(r.prev);if(ym==='2026-09'&&INV_M09[code])return invR(INV_M09[code][0]);return invEnd(code,prevYm(ym));}
+function invUse(code,ym){const r=invRec(code,ym);if(r&&r.use!=null)return invR(r.use);return invPrev(code,ym)+invIn(code,ym)-invEnd(code,ym);}
 async function setInvFieldOld(code,ym,field,val){
   let r=invRec(code,ym);
   if(!r){r={id:code+'|'+ym,code,ym};invData.push(r);}
@@ -15853,7 +15857,7 @@ async function setInvFieldOld(code,ym,field,val){
   try{await putRec('inv',r);flashSave();}catch(e){}
   renderInvMonth();
 }
-function setInvProd(){const ym=document.getElementById('inv_ym').value;const v=num(document.getElementById('inv_prod').value)||0;if(v>0)invProd[ym]=v;else delete invProd[ym];
+function setInvProd(){invProd=invProdMap();const ym=document.getElementById('inv_ym').value;const v=num(document.getElementById('inv_prod').value)||0;if(v>0)invProd[ym]=v;else delete invProd[ym];
   try{localStorage.setItem('dgrns_invprod',JSON.stringify(invProd));}catch(e){}renderInvMonth();try{renderEafBoard();}catch(e){}}
 async function carryPrevOld(){const ym=document.getElementById('inv_ym').value;const pv=prevYm(ym);
   if(!confirm(`${pv} 월말실재고를 ${ym} 전월재고로 불러올까요?`))return;
@@ -16082,7 +16086,7 @@ async function setInvField(code,ym,field,val){
   if(field==='end'&&stkLinked(code,ym)){toast('월말재고는 [재고량(월말재고 입력)] 시트와 연동되어 있습니다 — 시트에서 입력하세요 (연동 끄기·해제는 시트 화면에서)');renderInvMonth();return;}
   let r=invRec(code,ym);
   if(!r){r={id:code+'|'+ym,code,ym};invData.push(r);}
-  const v=(val===''||val==null)?null:(+val);
+  const v=(val===''||val==null)?null:invR(val);
   if(field==='prev'&&ym>INV_TOT_FROM){
     if(v==null||Math.abs(v-invEnd(code,prevYm(ym)))<1e-9){r.prev=null;r.pm=0;}else{r.prev=v;r.pm=1;}
   }else r[field]=v;
@@ -16102,7 +16106,7 @@ let STK_BOT=70,STK_MAXR=97;const STK_EXTRA=new Set();
 function stkColN(s){let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n;}
 function stkColL(n){let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;}
 function stkAll(){try{const o=JSON.parse(localStorage.getItem(STK_KEY)||'{}');return(o&&typeof o==='object')?o:{};}catch(e){return {};}}
-function stkSaveAll(o){try{localStorage.setItem(STK_KEY,JSON.stringify(o));}catch(e){}}
+function stkSaveAll(o){try{stkSafeSnap('입력 중 자동 보관',30*60*1000);}catch(e){}try{localStorage.setItem(STK_KEY,JSON.stringify(o));}catch(e){}}
 function stkMapOv(){try{const o=JSON.parse(localStorage.getItem(STK_MAP_KEY)||'{}');return(o&&typeof o==='object')?o:{};}catch(e){return {};}}
 function stkMapAll(){const m=Object.assign({},INV_STK.map),ov=stkMapOv();Object.keys(ov).forEach(c=>{if(ov[c]==='')delete m[c];else m[c]=ov[c];});return m;}
 function stkRec(ym){const a=stkAll();return a[ym]||(ym==='2026-09'?{on:1,ov:{}}:null);}
@@ -16465,8 +16469,8 @@ function stkRender(){
 function stkMismatch(ym){
   const M=stkCtx(ym),map=stkMapAll(),out=[];
   Object.keys(map).forEach(code=>{if(!INV_MASTER.some(m=>m.c===code))return;
-    const v=Math.round(M.ev(map[code])*10000)/10000;if(!isFinite(v))return;
-    const cur=invEnd(code,ym);if(Math.abs(cur-v)>1e-6)out.push({code,v,cur});});
+    const v0=M.ev(map[code]);if(!isFinite(v0))return;const v=invR(v0);
+    const cur=invEnd(code,ym);if(Math.abs(cur-invR(v))>1e-6)out.push({code,v,cur});});
   return out;
 }
 /* 2026-11-03: 합계(계) 점검 — 계 칸 값과 그 위 표시 항목 합계 비교 */
@@ -16639,9 +16643,9 @@ async function stkSync(ym,force){
   const M=stkCtx(ym),map=stkMapAll();let n=0;
   for(const code of Object.keys(map)){
     if(!INV_MASTER.some(m=>m.c===code))continue;
-    let v=M.ev(map[code]);if(!isFinite(v))continue;v=Math.round(v*10000)/10000;
-    const cur=invEnd(code,ym);let r=invRec(code,ym);
-    if(Math.abs(cur-v)<1e-6&&(r&&r.end!=null||ym==='2026-09'||!force))continue;
+    let v=M.ev(map[code]);if(!isFinite(v))continue;v=invR(v);
+    const cur=invEnd(code,ym);let r=invRec(code,ym);const rawCur=(r&&r.end!=null)?+r.end:cur;
+    if(Math.abs(rawCur-v)<1e-9&&(r&&r.end!=null||ym==='2026-09'||!force))continue;
     if(!r){r={id:code+'|'+ym,code,ym};invData.push(r);}
     r.end=v;n++;try{await putRec('inv',r);}catch(e){}
   }
@@ -16769,7 +16773,7 @@ function stkVzRender(force){
   const sl=oldL?oldL.scrollTop:0,srT=oldR?oldR.scrollTop:0,srL=oldR?oldR.scrollLeft:0;
   const blkA=stkVz.blk?anchors.find(a=>a.ref===stkVz.blk):null;
   const q=(stkVz.q||'').trim().toUpperCase();
-  const stOf=m=>{const ex=map[m.c];if(!ex)return 'no';const v=M.ev(ex);if(isNaN(v))return 'bad';return Math.abs(invEnd(m.c,ym)-v)<1e-6?'ok':'bad';};
+  const stOf=m=>{const ex=map[m.c];if(!ex)return 'no';const v=M.ev(ex);if(isNaN(v))return 'bad';return invEnd(m.c,ym)===invR(v)?'ok':'bad';};
   let list=INV_MASTER.filter(m=>m.c&&(!q||(m.n+' '+m.g).toUpperCase().includes(q)));
   const cnt={all:list.length,no:list.filter(m=>!map[m.c]).length,ok:list.filter(m=>map[m.c]).length};
   if(stkVz.f==='no')list=list.filter(m=>!map[m.c]);else if(stkVz.f==='ok')list=list.filter(m=>map[m.c]);
@@ -16783,7 +16787,7 @@ function stkVzRender(force){
     let stt;
     if(!ex)stt='<span class="st no">미연동 — 월별 원단위에서 직접 입력</span>';
     else{const ba=stkVzBlockOf((String(ex).match(/[A-Z]{1,2}\d+/)||[''])[0],anchors);
-      stt=`<span class="st ${st}">${st==='bad'?'⚠ ':'✓ '}시트 ${esc(ex)}${ba?' · '+esc(ba.label):''} = ${v!=null&&isFinite(v)?stkFmt(v):'?'} ${esc(m.u)}${st==='bad'?' (월말재고와 다름)':''}</span>`;}
+      stt=`<span class="st ${st}">${st==='bad'?'⚠ ':'✓ '}시트 ${esc(ex)}${ba?' · '+esc(ba.label):''} = ${v!=null&&isFinite(v)?stkFmt(invR(v)):'?'} ${esc(m.u)}${st==='bad'?' (월말재고와 다름)':''}</span>`;}
     lh+=`<div class="vz-it${m.c===stkVz.code?' on':''}" onclick="stkVzPick('${m.c}')"><b>${esc(m.n)}</b> <span style="color:var(--muted)">[${esc(m.g)}] (${esc(m.u)})</span>${it.rec?' <span style="background:#fef08a;color:#854d0e;font-size:10px;font-weight:800;padding:0 4px;border-radius:3px">추천</span>':''}<div>${stt}</div></div>`;});
   if(!list.length)lh='<div style="padding:14px;color:var(--muted);font-size:12px">해당하는 품목이 없습니다.</div>';
   b.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap"><b style="font-size:15px">🔗 재고량 시트 ↔ 월별 원단위 연동 (${esc(ym)})</b>
@@ -16879,7 +16883,7 @@ function stkVzFoot(){
   const tp=[...new Set(stkVz.sel.map(stkVzType).filter(Boolean))];
   const warn=((m.u==='EA'&&tp.length===1&&tp[0]==='중량')||(m.u==='KG'&&tp.length===1&&tp[0]==='수량'))?`<div style="color:#b45309">⚠ 품목 단위(${esc(m.u)})와 선택한 칸(${tp[0]})이 맞지 않을 수 있습니다 — ${m.u==='KG'?'중량':'수량'} 칸을 고르세요</div>`:'';
   box.innerHTML=`<div><b>[${esc(m.g)}] ${esc(m.n)}</b> (${esc(m.u)}) ← ${stkVz.sel.length?stkVz.sel.map(r=>`<span style="background:#fed7aa;border-radius:4px;padding:0 5px;font-weight:700">${esc(r)} <span style="font-weight:400">${esc(stkVzType(r))} ${esc(stkFmt(M.V(r)))}</span> <a href="javascript:stkVzUnsel('${r}')" style="color:#b91c1c;text-decoration:none">×</a></span>`).join(' + '):'<span style="color:#b91c1c">연결할 시트 칸을 눌러 선택하세요</span>'}
-    ${v!=null&&isFinite(v)?` = <b>${stkFmt(v)} ${esc(m.u==='KG'?'kg':m.u)}</b> <span style="color:var(--muted)">(현재 월말재고 ${stkFmt(invEnd(m.c,ym))})</span>`:''}</div>
+    ${v!=null&&isFinite(v)?` = <b>${stkFmt(invR(v))} ${esc(m.u==='KG'?'kg':m.u)}</b> <span style="color:var(--muted)">(현재 월말재고 ${stkFmt(invEnd(m.c,ym))})</span>`:''}</div>
     ${cur&&cur!==ex?`<div style="color:#475569">현재 연동: 시트 ${esc(cur)} — [연동하기]를 누르면 바뀝니다</div>`:''}${stkVz.note?`<div style="color:#92400e">${esc(stkVz.note)}</div>`:''}${warn}
     <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn primary" ${stkVz.sel.length?'':'disabled'} onclick="stkVzApply()">${cur?'연동 변경':'연동하기'}</button>
       <button class="btn" onclick="stkVz.sel=[];stkVz.note='';stkVzRender()">선택 지우기</button>${cur?`<button class="btn danger" onclick="stkVzUnlink()">연동 해제</button>`:''}</div>`;
@@ -16911,10 +16915,10 @@ function stkMapRender(){
   let rows='',lg=null;
   INV_MASTER.slice().sort((a,c)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(c.g);return(ia<0?9:ia)-(ib<0?9:ib);}).forEach(m=>{
     const ex=map[m.c]||'',v=ex?M.ev(ex):null,cur=invEnd(m.c,ym);
-    const st=!ex?'<span style="color:#94a3b8">미연결</span>':(isNaN(v)?'<span style="color:#b91c1c">수식 오류</span>':(Math.abs(cur-v)<1e-6?'<span style="color:#047857">일치</span>':'<span style="color:#b45309">불일치</span>'));
+    const st=!ex?'<span style="color:#94a3b8">미연결</span>':(isNaN(v)?'<span style="color:#b91c1c">수식 오류</span>':(Math.abs(cur-invR(v))<1e-6?'<span style="color:#047857">일치</span>':'<span style="color:#b45309">불일치</span>'));
     rows+=`<tr><td style="font-size:10.5px;color:var(--muted)">${esc(m.g)}</td><td>${esc(m.n)}</td><td>${esc(m.u)}</td>
       <td><input class="iinp" style="width:130px;text-align:left" value="${esc(ex)}" placeholder="예: F64+F63" onchange="stkMapSet('${m.c}',this.value)"${mo[m.c]!==undefined?' title="수기 설정"':''}></td>
-      <td class="n">${ex&&!isNaN(v)?stkFmt(v):''}</td><td class="n">${stkFmt(cur)}</td><td>${st}</td></tr>`;});
+      <td class="n">${ex&&!isNaN(v)?stkFmt(invR(v)):''}</td><td class="n">${stkFmt(cur)}</td><td>${st}</td></tr>`;});
   b.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="font-size:15px">🔗 재고량 시트 ↔ 월말재고 연결 (${esc(ym)})</b><span style="flex:1"></span><button class="btn sm" onclick="stkMapClose()">닫기</button></div>
    <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">기본값은 엑셀 '사용량' 시트의 현재고 연결(예: MUD재 = F64+F63)입니다. 칸을 비우면 연결이 해제되어 월별 화면에서 직접 입력합니다.</div>
    <div style="max-height:60vh;overflow:auto"><table class="bomtbl" style="min-width:0;width:100%"><thead><tr><th>설비</th><th>품명</th><th>단위</th><th>시트 셀·수식</th><th class="n">시트값</th><th class="n">월말재고</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -17107,7 +17111,7 @@ function stkLkCurRender(){
   const box=document.getElementById('stkLkCur');if(!box)return;const ym=stkYm(),M=stkCtx(ym);
   const items=stkLkEntries().items(stkLkRef);
   box.innerHTML=items.length?`<table class="bomtbl" style="min-width:0;width:100%"><thead><tr><th>연동된 월별 원단위 품목</th><th>설비</th><th>단위</th><th>시트 셀·수식</th><th class="n">시트값</th><th class="n">월말재고</th><th></th></tr></thead><tbody>${items.map(it=>{const m=INV_MASTER.find(x=>x.c===it.code),v=M.ev(it.ex),cur=invEnd(it.code,ym);
-    return `<tr><td>${esc(it.n)}</td><td>${esc(m?m.g:'')}</td><td>${esc(it.u)}</td><td>${esc(it.ex)}</td><td class="n">${isFinite(v)?stkFmt(v):''}</td><td class="n">${stkFmt(cur)}</td><td><button class="btn sm danger" onclick="stkLkUnlink('${it.code}')">해제</button></td></tr>`;}).join('')}</tbody></table>`
+    return `<tr><td>${esc(it.n)}</td><td>${esc(m?m.g:'')}</td><td>${esc(it.u)}</td><td>${esc(it.ex)}</td><td class="n">${isFinite(v)?stkFmt(invR(v)):''}</td><td class="n">${stkFmt(cur)}</td><td><button class="btn sm danger" onclick="stkLkUnlink('${it.code}')">해제</button></td></tr>`;}).join('')}</tbody></table>`
    :'<div style="font-size:12px;color:var(--muted);padding:6px 0">아직 연동된 월별 원단위 품목이 없습니다.</div>';
 }
 let stkLkCode='',stkLkCands_=[];
@@ -17130,7 +17134,7 @@ function stkLkPrev(){
   if(!ex){box.innerHTML='<span style="color:var(--muted)">연동할 시트 값을 선택하세요</span>';return;}
   const v=stkCtx(stkYm()).ev(ex);if(isNaN(v)){box.innerHTML='<span style="color:#b91c1c">수식을 확인하세요</span>';return;}
   const c=stkLkCands_.find(x=>x.ex===ex);const warn=(c&&((m.u==='EA'&&c.type==='중량')||(m.u==='KG'&&c.type==='수량')))?` <span style="color:#b45309">⚠ 품목 단위(${esc(m.u)})와 ${c.type}이 맞지 않을 수 있습니다</span>`:'';
-  box.innerHTML=`시트값 <b>${stkFmt(v)}</b> ${esc(m.u)} → ${esc(stkYm())} 월말재고에 반영${warn}`;
+  box.innerHTML=`시트값 <b>${stkFmt(invR(v))}</b> ${esc(m.u)} → ${esc(stkYm())} 월말재고에 반영${warn}`;
 }
 async function stkLkApply(){
   const code=stkLkCode,ex=((document.getElementById('stkLkExp')||{}).value||'').trim().toUpperCase();const m=INV_MASTER.find(x=>x.c===code);
@@ -18983,12 +18987,12 @@ async function invXlApply(){
   let n=0;
   for(const x of D.rows){const m=invM.get(x.c);if(!m)continue;
     let r=invRec(x.c,ym);if(!r){r={id:x.c+'|'+ym,code:x.c,ym};invData.push(r);}
-    r.prev=x.prev;r.in=x.inn;r.end=x.end;r.use=null;if(ym>INV_TOT_FROM)r.pm=(Math.abs(x.prev-invEnd(x.c,prevYm(ym)))>0.001)?1:0;
+    r.prev=invR(x.prev);r.in=invR(x.inn);r.end=invR(x.end);r.use=null;if(ym>INV_TOT_FROM)r.pm=(Math.abs(invR(x.prev)-invEnd(x.c,prevYm(ym)))>0.001)?1:0;
     try{await putRec('inv',r);}catch(e){}
     if(withPrice&&Math.abs(invPriceAt(x.c,ym)-x.p)>0.5&&!invItem(x.c).linkedProdId){const arr=invPriceHist[x.c]=invPriceHist[x.c]||[];const h=arr.find(q=>q.ym===ym);if(h)h.p=x.p;else{arr.push({ym,p:x.p});arr.sort((a,b)=>a.ym.localeCompare(b.ym));}}
     n++;}
   if(withPrice)saveInvPriceHist();
-  if(D.prodXl!=null&&D.prodXl>0){invProd[ym]=D.prodXl;try{localStorage.setItem('dgrns_invprod',JSON.stringify(invProd));}catch(e){}}
+  if(D.prodXl!=null&&D.prodXl>0){invProd=invProdMap();invProd[ym]=D.prodXl;try{localStorage.setItem('dgrns_invprod',JSON.stringify(invProd));}catch(e){}}
   flashSave();toast(`엑셀 ${n}품목을 ${ym}에 반영했습니다`);
   try{renderInvMonth();renderInvTot();}catch(e){}
   invXlRender();
@@ -31299,24 +31303,27 @@ const SX_CONF_KEY='dgrns_stkx_conf';
 const STK_LAY_KEY='dgrns_invstock_layout';
 const STK_MIG=[];
 const STK_PRISTINE=JSON.stringify({cells:INV_STK.cells,merges:INV_STK.merges,slots:INV_STK.slots,map:INV_STK.map,xl:STK_XL_REF});
+let STK_LAY_TS=0,STK_LAY_QUIET=false;
 let stkRowMode=false,stkRowScope='blk',stkRowSel={r:0,c:1},stkRowGrp=true,stkRowAutoEdit=false,stkUndoStk=[];
 function stkLayApply(L){
   INV_STK.cells=L.cells;INV_STK.merges=L.merges||[];INV_STK.slots=L.slots||[];INV_STK.map=L.map||{};
   STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
   STK_EXTRA.clear();(L.extra||[]).forEach(r=>STK_EXTRA.add(+r));
-  STK_BOT=+L.bot||70;STK_MAXR=+L.maxr||97;
+  STK_BOT=+L.bot||70;STK_MAXR=+L.maxr||97;STK_LAY_TS=+L.ts||0;
   Object.keys(STK_XL_REF).forEach(k=>delete STK_XL_REF[k]);Object.assign(STK_XL_REF,L.xl||{});
   STK_MIG.length=0;(L.mig||[]).forEach(x=>STK_MIG.push(x));
   stkMerges._c=null;stkRowsList._c=null;
 }
+function stkLayQ(){STK_LAY_QUIET=true;try{stkLaySave();}finally{STK_LAY_QUIET=false;}}
 function stkLayPristine(){const o=JSON.parse(STK_PRISTINE);o.extra=[];o.bot=70;o.maxr=97;o.mig=[];return o;}
 function stkLayLoad(){
   let L=null;try{L=JSON.parse(localStorage.getItem(STK_LAY_KEY)||'null');}catch(e){}
   if(!L||L.v!==1||!L.cells)return false;
   stkLayApply(L);return true;
 }
-function stkLayObj(){return{v:1,cells:INV_STK.cells,merges:INV_STK.merges,slots:INV_STK.slots,map:INV_STK.map,extra:[...STK_EXTRA].sort((a,b)=>a-b),bot:STK_BOT,maxr:STK_MAXR,xl:STK_XL_REF,mig:STK_MIG.slice()};}
+function stkLayObj(){return{v:1,cells:INV_STK.cells,merges:INV_STK.merges,slots:INV_STK.slots,map:INV_STK.map,extra:[...STK_EXTRA].sort((a,b)=>a-b),bot:STK_BOT,maxr:STK_MAXR,xl:STK_XL_REF,mig:STK_MIG.slice(),ts:STK_LAY_TS};}
 function stkLaySave(){
+  if(!STK_LAY_QUIET)STK_LAY_TS=Date.now();   // 사용자가 줄을 넣고 빼는 등 직접 고친 때만 '양식 수정 시각' 갱신(시작 시 자동 교정은 제외)
   INV_STK.slots=[...new Set(INV_STK.slots)];STK_SLOTS.clear();INV_STK.slots.forEach(k=>STK_SLOTS.add(k));
   try{localStorage.setItem(STK_LAY_KEY,JSON.stringify(stkLayObj()));}catch(e){}
   stkMerges._c=null;stkRowsList._c=null;try{flashSave();}catch(e){}
@@ -31665,15 +31672,80 @@ function stkAlSpec(){const o=stkAlAll();Object.keys(STK_AL_DEF).forEach(k=>{o[k]
 function stkLayMigrate(){
   const ID='rpt146_ca160_b250';if(STK_MIG.indexOf(ID)>=0)return;
   const c=INV_STK.cells,ok=c.B55&&c.B55[1]==='CA-160'&&c.C55&&c.C55[1]===1000&&c.C56&&c.C56[1]===25&&c.B57&&c.B57[1]==='CA-180M'&&c.F55&&/C56\*E56/.test(String(c.F55[1]));
-  if(!ok){if(localStorage.getItem(STK_LAY_KEY)){STK_MIG.push(ID);stkLaySave();}return;}
+  if(!ok){if(localStorage.getItem(STK_LAY_KEY)){STK_MIG.push(ID);stkLayQ();}return;}
   try{
     const b=stkBlk(55,3);
     stkInsertCore(56,1,55,b,true,false);
     INV_STK.cells.C56=['n',250];
-    STK_MIG.push(ID);stkLaySave();
+    STK_MIG.push(ID);stkLayQ();
   }catch(e){console.warn('stkLayMigrate',e);}
 }
+/* ===== 2026-11-04: 🛟 자동 보관본 — 재고량 시트(양식·입력값)와 월 실적 생산량을 이 PC 안에 따로 보관 =====
+   · 시작할 때, 팀 자료를 받기 직전, 입력 중(30분마다) 자동으로 보관하며 같은 내용은 새로 만들지 않습니다.
+   · 최근 6개 + 날짜별 마지막 본(최대 8일)을 남깁니다. 팀 공유(클라우드)·백업 파일과 무관하게 이 PC 브라우저에만 저장됩니다. */
+const STK_SAFE_KEY='stk_safe_ring',STK_SAFE_KEYS=['dgrns_invstock','dgrns_invstock_layout','dgrns_invstock_map','dgrns_invstock_merge','dgrns_invprod'];
+function stkSafeRing(){try{const a=JSON.parse(localStorage.getItem(STK_SAFE_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+function stkSafeTrim(a){
+  a=a.slice().sort((x,y)=>y.t-x.t);const keep=a.slice(0,6),days=new Set(keep.map(e=>new Date(e.t).toDateString()));
+  a.slice(6).forEach(e=>{const d=new Date(e.t).toDateString();if(!days.has(d)&&days.size<14){days.add(d);keep.push(e);}});
+  return keep.slice(0,14);
+}
+function stkSafeSnap(why,minGapMs){
+  try{
+    const ring=stkSafeRing(),now=Date.now(),snap={t:now,why:why||'',k:{}};
+    STK_SAFE_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)snap.k[k]=v;});
+    if(!snap.k.dgrns_invstock&&!snap.k.dgrns_invprod)return false;
+    const last=ring[0];
+    if(last&&STK_SAFE_KEYS.every(k=>(last.k[k]||null)===(snap.k[k]||null)))return false;
+    if(minGapMs&&last&&now-last.t<minGapMs)return false;
+    ring.unshift(snap);let a=stkSafeTrim(ring);
+    for(;;){try{localStorage.setItem(STK_SAFE_KEY,JSON.stringify(a));break;}catch(e){if(a.length<=2)break;a=a.slice(0,Math.ceil(a.length/2));}}
+    return true;
+  }catch(e){return false;}
+}
+function stkSafeInfo(e){
+  let st={};try{st=JSON.parse(e.k.dgrns_invstock||'{}')||{};}catch(x){}
+  let pr={};try{pr=JSON.parse(e.k.dgrns_invprod||'{}')||{};}catch(x){}
+  const ms=Object.keys(st).sort().slice(-3).map(ym=>`${ym.slice(2)} ${Object.keys((st[ym]||{}).ov||{}).length}칸`).join(' · ');
+  const ps=Object.keys(pr).sort().slice(-3).map(ym=>`${+ym.slice(5)}월 ${Math.round(+pr[ym]||0).toLocaleString()}`).join(' · ');
+  return {ms,ps};
+}
+function stkSafeOpen(){
+  stkSafeClose();const ring=stkSafeRing();
+  const rows=ring.length?ring.map((e,i)=>{const f=stkSafeInfo(e),d=new Date(e.t),p=x=>String(x).padStart(2,'0');
+    return `<div style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;font-size:12px;line-height:1.6">
+      <div><b>${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}</b> <span style="color:#64748b">· ${esc(e.why||'')}</span></div>
+      <div style="color:#334155">재고량 시트 입력칸: ${esc(f.ms||'없음')}<br>실적 생산량(TON): ${esc(f.ps||'없음')}</div>
+      <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm primary" onclick="stkSafeRestore(${i},'sheet')">재고량 시트 복구 (양식+입력값)</button><button class="btn sm" onclick="stkSafeRestore(${i},'prod')">실적 생산량만 복구</button></div></div>`;}).join('')
+    :'<div style="color:#64748b;font-size:12px">아직 보관본이 없습니다. 이 버전을 연 이후부터 자동으로 쌓입니다.</div>';
+  const ov=document.createElement('div');ov.id='stkSafeOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:16px 18px;max-width:640px;width:96%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:13px">
+    <div style="display:flex;align-items:center;gap:8px"><div style="font-size:15px;font-weight:800;flex:1">🛟 자동 보관본 복구</div><button class="btn sm" onclick="stkSafeClose()">닫기</button></div>
+    <div style="margin:8px 0 10px;color:#475569;font-size:12px;line-height:1.6">시작할 때 · 팀 자료를 받기 직전 · 입력 중(30분마다)에 이 PC가 자동으로 보관한 본입니다. 복구하면 지금 상태도 보관본에 남으므로 되돌릴 수 있습니다.</div>${rows}</div>`;
+  ov.addEventListener('mousedown',e=>{if(e.target===ov)stkSafeClose();});document.body.appendChild(ov);
+}
+function stkSafeClose(){const o=document.getElementById('stkSafeOv');if(o)o.remove();}
+function stkSafeRestore(i,mode){
+  const e=stkSafeRing()[i];if(!e)return;
+  const keys=mode==='prod'?['dgrns_invprod']:['dgrns_invstock','dgrns_invstock_layout','dgrns_invstock_map','dgrns_invstock_merge'];
+  const f=stkSafeInfo(e),d=new Date(e.t);
+  if(!confirm(`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 보관본으로 ${mode==='prod'?'실적 생산량':'재고량 시트(양식·입력값)'}을(를) 되돌립니다.\n\n${mode==='prod'?'생산량: '+(f.ps||'없음'):'입력칸: '+(f.ms||'없음')}\n\n지금 상태도 보관본에 남습니다. 계속할까요?`))return;
+  stkSafeSnap('복구 직전 상태');
+  keys.forEach(k=>{
+    if(e.k[k]==null){try{localStorage.removeItem(k);}catch(x){}return;}
+    let v=e.k[k];
+    if(k==='dgrns_invstock_layout'){try{const L=JSON.parse(v);L.ts=Date.now();v=JSON.stringify(L);}catch(x){}}   // 복구한 양식이 팀에서도 최신으로 인정되도록 시각 갱신
+    try{localStorage.setItem(k,v);}catch(x){}
+  });
+  try{stkLayLoad();}catch(x){}try{invProd=invProdMap();}catch(x){}
+  stkSafeClose();try{stkRender();}catch(x){}try{if(document.getElementById('isp-month').classList.contains('active'))renderInvMonth();}catch(x){}
+  try{stkSyncSoon(stkYm());}catch(x){}
+  toast('보관본으로 복구했습니다');
+}
+try{stkSafeSnap('시작 시 (업데이트·팀 동기화 전)');}catch(e){}
 stkLayLoad();stkLayMigrate();
+/* 2026-11-04: 예전에 저장된 양식에는 '양식 수정 시각'이 없다 — 이 PC가 마지막으로 바꾼 시각(kvTimes)을 한 번 기록해 두어, 다른 PC의 오래된 양식이 시각만 새롭다는 이유로 덮지 못하게 한다 */
+try{if(localStorage.getItem(STK_LAY_KEY)&&!STK_LAY_TS){let kt={};try{kt=JSON.parse(localStorage.getItem('dgrns_kvtimes')||'{}')||{};}catch(e){}STK_LAY_TS=+kt[STK_LAY_KEY]||1;stkLayQ();}}catch(e){}
 /* 2026-11-03: 엑셀 기본식에 들어 있던 고정 가감(-10000·-5000·-1800 등)과 잘못된 SUM 범위(MAC-W 21K 제외, AMC-BS 9·9-5 제외)를 바로잡고,
    품명을 합계(계) 기준으로 병합. 9월 값은 그대로 보이도록 9월에만 옛 식을 입력값으로 남긴다. 저장된 양식(layout)에도 적용(한 번만 실행). */
 /* 2026-11-03: 옛 계 수식(-10000 등)을 바로잡는 부분을 따로 뺌 — 팀 공유(클라우드)에서 옛 양식이 내려와 되살아나는 경우에도 다시 교정하려고,
@@ -31689,7 +31761,7 @@ function stkSumFixFormulas(){
     /* 9월 이후 달 시트에 옛 계 수식이 값으로 복사돼 들어간 경우도 제거(9월 시트 자체는 당시 기록이라 그대로 둔다) */
     Object.keys(all).forEach(ym=>{if(ym==='2026-09')return;const ov=(all[ym]||{}).ov;if(!ov)return;
       OLD.forEach(o=>{if(ov[o[2]]===o[0]){delete ov[o[2]];ch=true;chOv=true;}});});
-    if(ch){stkLaySave();
+    if(ch){stkLayQ();
       if(JSON.stringify(all['2026-09']||null)!==JSON.stringify(r9)||chOv){all['2026-09']=r9;stkSaveAll(all);}   // 재고량 값이 실제로 바뀐 때만 저장(다른 PC에 오래된 값이 새 값으로 올라가는 것 방지)
     }
     return ch;
@@ -31724,7 +31796,7 @@ function stkSumFixMig(){
       if(f&&f[0]==='f'&&f[1]==='=(C57*E57)+(E55*C55)+(E56*C56)'&&!c.F56&&!c.F57&&!mg.some(m=>{const q=/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m);return q&&q[1]<='F'&&q[3]>='F'&&+q[2]<=57&&+q[4]>=55;})){mg.push('F55:F57');lay=true;}
       localStorage.setItem('dgrns_stk_mig1103b','1');
     }
-    if(lay)stkLaySave();
+    if(lay)stkLayQ();
     if(lay||!done){all['2026-09']=r9;stkSaveAll(all);}
     localStorage.setItem('dgrns_stk_mig1103','1');
   }catch(e){console.warn('stkSumFixMig',e);}
@@ -31823,7 +31895,7 @@ function stkWtFillMig(){
     const hasLay=!!localStorage.getItem(STK_LAY_KEY);
     if(hasLay&&localStorage.getItem('dgrns_stk_mig1103c'))return;
     const n=stkWtFill();
-    if(hasLay){if(n)stkLaySave();localStorage.setItem('dgrns_stk_mig1103c','1');}
+    if(hasLay){if(n)stkLayQ();localStorage.setItem('dgrns_stk_mig1103c','1');}
   }catch(e){console.warn('stkWtFillMig',e);}
 }
 stkWtFillMig();
@@ -31869,7 +31941,7 @@ function sxRows(ym0){
   const ym=ym0||sxYm(),map=stkMapAll(),rec=stkRec(ym),on=!!(rec&&rec.on!==0),M=stkCtx(ym),cf=sxConfAll()[ym]||{},out=[];
   INV_MASTER.forEach(m=>{
     const c=m.c,ex=map[c]||'',xr=STK_XL_REF[c]||'',xman=STK_XL_MAN.indexOf(c)>=0;
-    let v=null;if(ex){v=M.ev(ex);v=isFinite(v)?Math.round(v*10000)/10000:NaN;}
+    let v=null;if(ex){v=M.ev(ex);v=isFinite(v)?invR(v):NaN;}
     const end=invEnd(c,ym),prev=invPrev(c,ym),inn=invIn(c,ym),use=invUse(c,ym);
     let st;
     if(ex){ if(isNaN(v))st='err'; else if(!on)st='off'; else st=Math.abs(end-v)<1e-6?'ok':'mis'; }
@@ -31927,7 +31999,7 @@ function sxRender(){
       <td><input class="iinp" style="width:104px;text-align:left" value="${esc(r.ex)}" placeholder="${r.xr?'엑셀: '+esc(r.xr):'예: F64+F63'}" ${locked?'disabled':''} onchange="sxMapSet('${r.c}',this.value)"></td>
       <td style="font-size:11.5px">${r.xr?`<span style="${r.diffX?'color:#b45309;font-weight:700':'color:#64748b'}">${esc(r.xr)}</span>${r.diffX?'<div style="font-size:10px;color:#b45309">연결 수식 다름</div>':''}`:(r.xman?'<span style="color:#94a3b8">직접입력</span>':'<span style="color:#cbd5e1">—</span>')}</td>
       <td class="n">${r.ex?fmt(r.v):''}</td><td class="n">${stkFmt(r.prev)}</td><td class="n">${stkFmt(r.inn)}</td>
-      <td class="n"><b>${stkFmt(r.end)}</b></td><td class="n" style="${r.use<-0.001?'color:#b91c1c;font-weight:700':''}">${stkFmt(Math.round(r.use*10000)/10000)}</td>
+      <td class="n"><b>${stkFmt(r.end)}</b></td><td class="n" style="${r.use<-0.001?'color:#b91c1c;font-weight:700':''}">${stkFmt(r.use)}</td>
       <td><span style="color:${s[0]};background:${s[1]};border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;white-space:nowrap">${s[2]}</span>${r.st==='man'&&r.stock?'<div style="font-size:10px;color:#b45309">재고 있음 · 직접 입력</div>':''}</td>
       <td style="white-space:nowrap">${cfTxt}</td>
       <td style="white-space:nowrap">
@@ -34818,7 +34890,53 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
   try{
     remoteTimes=remoteTimes||{};
     const raw=window.rawSetItem||localStorage.setItem.bind(localStorage);
+    /* 2026-11-04: 재고량 시트는 '양식(줄 구조)'과 '입력값'이 짝이 맞아야 한다. 오래된 PC의 값이 시각만 새롭다는 이유로 한쪽만 덮으면
+       입력값이 줄 위치에서 어긋나거나(9월 값이 2줄 밀려 10월 칸에 들어감) 10월 입력이 사라진다 → 양식이 같을 때만 달(月)별로 합치고,
+       양식이 다르면 '양식 수정 시각'이 더 최신인 쪽 전체를 따르며, 받기 직전 이 PC 상태는 [🛟 보관본]에 남긴다. */
+    let stkD=null;
+    if(!force){try{
+      const LAY='dgrns_invstock_layout';
+      if(kv[LAY]!==undefined||kv.dgrns_invstock!==undefined){
+        const lL=localStorage.getItem(LAY)||'',rL=(kv[LAY]===undefined)?null:kv[LAY];let layAccept=false;
+        if(rL!==null&&rL!==lL){
+          if(!lL)layAccept=true;
+          else{let ro={},lo={};try{ro=JSON.parse(rL)||{};}catch(e){}try{lo=JSON.parse(lL)||{};}catch(e){}
+            const rT=+ro.ts||0,lT=+lo.ts||0;layAccept=(rT||lT)?(rT>lT):((+remoteTimes[LAY]||0)>=(+kvTimes[LAY]||0));}
+        }
+        stkD={LAY,layAccept,sameLay:(rL===null||rL===lL)};
+        try{stkSafeSnap('팀 자료 받기 직전');}catch(e){}
+      }
+    }catch(e){stkD=null;}}
     Object.keys(kv||{}).forEach(k=>{try{
+      if(stkD&&!force){
+        const FAM=['dgrns_invstock_layout','dgrns_invstock_map','dgrns_invstock_merge'];
+        if(FAM.indexOf(k)>=0){
+          if(k===stkD.LAY){if(stkD.layAccept){raw(k,kv[k]);kvTimes[k]=(+remoteTimes[k])||Date.now();}return;}
+          if(stkD.layAccept){raw(k,kv[k]);kvTimes[k]=(+remoteTimes[k])||Date.now();return;}
+          if(!stkD.sameLay){console.warn('재고량 시트: 팀의 양식이 이 PC보다 오래되어 '+k+' 반영 안 함');return;}
+        }
+        if(k==='dgrns_invstock'){
+          if(stkD.layAccept){raw(k,kv[k]);kvTimes[k]=(+remoteTimes[k])||Date.now();return;}
+          if(!stkD.sameLay){console.warn('재고량 시트: 팀 입력값이 다른(오래된) 양식 기준이라 반영 안 함');try{toast('팀의 재고량 시트가 이 PC보다 오래된 양식이라 반영하지 않았습니다(이 PC 입력값 보존)');}catch(e){}return;}
+          const L=JSON.parse(localStorage.getItem(k)||'{}')||{},R=JSON.parse(kv[k]||'{}')||{},M={};let diffR=false,diffL=false;
+          new Set(Object.keys(L).concat(Object.keys(R))).forEach(ym=>{const l=L[ym],r=R[ym];
+            let w=!l?r:(!r?l:((+r.ts||0)>(+l.ts||0)?r:l));M[ym]=w;if(w!==r)diffR=true;if(w!==l)diffL=true;});
+          if(diffL){raw(k,JSON.stringify(M));}
+          if(diffR){kvTimes[k]=Date.now();setTimeout(()=>{try{kvTouch(k);if(window.fbOnKv)window.fbOnKv();}catch(e){}},300);}
+          else kvTimes[k]=(+remoteTimes[k])||kvTimes[k]||Date.now();
+          return;
+        }
+      }
+      if(!force&&k==='dgrns_invprod'){   // 실적 생산량: 달(月)별 합치기 — 한쪽에 없는 달은 보존, 양쪽에 있으면 더 최신 쪽
+        const rt0=+remoteTimes[k]||0,lt0=+kvTimes[k]||0;
+        const L=JSON.parse(localStorage.getItem(k)||'{}')||{},R=JSON.parse(kv[k]||'{}')||{},M={};let diffR=false,diffL=false;
+        new Set(Object.keys(L).concat(Object.keys(R))).forEach(m=>{const l=L[m],r=R[m];
+          let w=(l==null||!(+l>0))?r:((r==null||!(+r>0))?l:(rt0>=lt0?r:l));if(w==null)return;M[m]=w;if(w!==r)diffR=true;if(w!==l)diffL=true;});
+        if(diffL)raw(k,JSON.stringify(M));
+        if(diffR){kvTimes[k]=Date.now();setTimeout(()=>{try{kvTouch(k);if(window.fbOnKv)window.fbOnKv();}catch(e){}},300);}
+        else kvTimes[k]=rt0||kvTimes[k]||Date.now();
+        return;
+      }
       const rt=+remoteTimes[k]||0, lt=+kvTimes[k]||0;
       // 로컬이 더 최신으로 기록된 키는 건너뛰어 보존(이 PC가 방금 수정한 내용이 되돌아가지 않게),
       // 그 외(원격이 같거나 더 최신·시각 기록이 없는 구버전 데이터)는 기존처럼 반영
@@ -34832,15 +34950,6 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
       if(k==='dgrns_dia'&&!force){try{ // 팀에서 온 모식도가 이 PC보다 크게 적으면(비어 있는 PC가 올린 경우 등) 덮어쓰지 않고 이 PC 것을 지킨다
         const lc=Object.keys(JSON.parse(localStorage.getItem('dgrns_dia')||'{}')).length,rc=Object.keys(JSON.parse(kv[k]||'{}')).length;
         if(lc>0&&rc<lc*0.5){console.warn('모식도: 팀 자료가 더 적어 덮어쓰지 않음',lc,rc);try{toast('팀 공유의 모식도가 이 PC보다 크게 적어 덮어쓰지 않았습니다');}catch(e){}return;}
-      }catch(e){}}
-      /* 2026-11-03: 재고량 시트(dgrns_invstock) — 팀에서 온 값에 이 PC에만 있는 달(또는 이 PC가 입력을 더 많이 한 달)이 빠져 있으면 합쳐서 반영한다.
-         다른 PC가 오래된 자료로 팀 저장소를 덮은 뒤 내려와 입력한 10월 시트가 통째로 사라지는 일을 막는다. */
-      if(k==='dgrns_invstock'&&!force){try{
-        const L=JSON.parse(localStorage.getItem(k)||'{}')||{},R=JSON.parse(kv[k]||'{}')||{};
-        const nn=r=>r?Object.keys(r.ov||{}).length+Object.keys(r.adj||{}).length:-1;
-        let mg=0;Object.keys(L).forEach(ym=>{if(!R[ym]||nn(L[ym])>nn(R[ym])){R[ym]=L[ym];mg++;}});
-        if(mg){kv[k]=JSON.stringify(R);console.warn('재고량 시트: 이 PC 입력 '+mg+'개월 분을 보존해 합쳤습니다');
-          setTimeout(()=>{try{kvTouch(k);if(window.fbOnKv)window.fbOnKv();}catch(e){}},300);}
       }catch(e){}}
       if(force||rt>=lt){raw(k,kv[k]);kvTimes[k]=force?Date.now():(rt||Date.now());}
     }catch(e){}});
@@ -34863,6 +34972,7 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     setTimeout(()=>{try{if(stkSumFixFormulas()&&curView==='inv'&&typeof stkRender==='function')stkRender();}catch(e){}},120);   // 팀에서 옛 계 수식 양식이 내려와도 다시 교정
     /* rpt149: 아래 값들은 메모리에 따로 들고 있어서, 새로 받은 값으로 다시 읽지 않으면 이 PC가 다음에 저장할 때 오래된 내용으로 팀 값을 덮어쓸 수 있었음 */
     try{invMOv=invMasterOv();}catch(e){}
+    try{invProd=invProdMap();}catch(e){}
     try{invPriceHist=loadInvPriceHist();}catch(e){}
     try{invPriceForce=JSON.parse(localStorage.getItem('dgrns_invforce')||'{}');}catch(e){}
     try{poscoMaster=loadPoscoMaster();}catch(e){}
@@ -35295,7 +35405,12 @@ setTimeout(async()=>{try{const M=await capMeasure();if(M.max.pct>=70)toast('⚠ 
 window.rawSetItem=localStorage.setItem.bind(localStorage);
 (function(){const _si=window.rawSetItem;const _ri=localStorage.removeItem.bind(localStorage);
   localStorage.removeItem=function(k){try{if(vwLsBlocked(k)){window.vwNotice();return;}}catch(e){}return _ri(k);};
-  localStorage.setItem=function(k,v){try{if(vwLsBlocked(k)){window.vwNotice();return;}}catch(e){}_si(k,v);
+  localStorage.setItem=function(k,v){try{if(vwLsBlocked(k)){window.vwNotice();return;}}catch(e){}
+  /* 2026-11-04: 값이 실제로 바뀔 때만 '수정 시각'을 새로 찍는다 — 업데이트 직후 시작 코드가 같은 값을 다시 쓰기만 해도 시각이 갱신돼
+     오래된 자료가 팀 저장소의 최신본으로 올라가 다른 PC 입력(재고량 시트·실적 생산량)을 덮던 문제 방지 */
+  let same=false;try{same=(localStorage.getItem(k)===String(v));}catch(e){}
+  _si(k,v);
+  if(same)return;
   try{kvTouch(k);}catch(e){}
   try{if(window.fbOnKv&&typeof k==='string'&&k.indexOf('dgrns_')===0&&k!=='dgrns_fbcfg'&&k!=='dgrns_clientid'&&k!==FB_KV_TIMES_KEY)fbOnKv();}catch(e){}};})();
 async function fbAutoConnect(){
