@@ -3344,7 +3344,7 @@ service cloud.firestore {
       <div class="costgrid" id="inflowCards"></div>
       <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 10px">※ 매일 입고분을 품목별로 입력하세요. 그 달 1~말일 입고가 합산되어 [월별 원단위]의 입고량으로 자동 반영됩니다. 오른쪽 '월 누적'은 해당 월 총 입고입니다. <b>매출합계</b> 칸에서 포함/미포함·구분(직매출·원진·KR·조선내화·오성)을 고치면 아래 구역과 합계가 바뀌고, <b>단가 ✎</b>는 그 달만 직접 수정됩니다(노랑=수정됨, ↺=원래 단가로 복원).</div>
       <div class="tablewrap"><table class="bomtbl" id="inflowTbl" style="min-width:980px">
-        <thead><tr><th>설비</th><th title="체크 = 매출합계 포함 · 구분 선택">매출합계</th><th style="min-width:200px">고객사 품명</th><th>단위</th><th class="n" title="직접 수정 가능(그 달만 적용)">단가 ✎</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n">월 누적입고</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
+        <thead><tr><th>설비</th><th title="체크 = 매출합계 포함 · 구분 선택">매출합계</th><th style="min-width:200px">고객사 품명</th><th>단위</th><th class="n" title="직접 수정 가능(그 달만 적용)">단가 ✎</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n" title="한 달 입고 합계 — 직접 수정 가능(차액은 날짜별 기록에 반영)">월 누적입고 ✎</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
         <tbody id="inflowBody"></tbody>
       </table></div>
     </div>
@@ -3391,10 +3391,7 @@ service cloud.firestore {
       </div>
       <div class="costgrid" id="invCards"></div>
       <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 10px">※ 사용량 = 전월재고 + 입고 − 월말실재고. 전월재고는 전월 월말실재고에서 자동 이월(수정 가능). 입고·월말실재고·사용량 모두 직접 수정할 수 있습니다.</div>
-      <div class="tablewrap"><table class="bomtbl" id="invTbl" style="min-width:1040px">
-        <thead><tr><th>설비</th><th>품명</th><th class="n">단가</th><th>단위</th><th class="n">전월재고</th><th class="n">입고</th><th class="n">월말실재고</th><th class="n">사용량</th><th class="n">수량 원단위</th><th class="n">금액 원단위</th></tr></thead>
-        <tbody id="invBody"></tbody>
-      </table></div>
+      <div id="invTitle"></div><div class="tablewrap" id="invWrap"></div>
     </div>
     <!-- 전체원단위(엑셀 양식) -->
     <div class="subpanel" id="isp-tot">
@@ -4722,8 +4719,15 @@ function openDB(){return new Promise((res,rej)=>{const rq=indexedDB.open(DB_NAME
   rq.onsuccess=e=>res(e.target.result);rq.onerror=e=>rej(e.target.error);});}
 function txAll(s){return new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).getAll();
   r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});}
-function putRec(s,rec){return new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).put(rec);
-  r.onsuccess=()=>{try{window.fbOnWrite&&fbOnWrite(s);}catch(e){}try{SaveMgr.wrote();}catch(e){}res();};r.onerror=()=>rej(r.error);});}
+function putRec(s,rec){return new Promise((res,rej)=>{
+  /* 2026-11-05: 오래 켜 둔 화면·다른 창의 DB 업그레이드 등으로 저장소 연결이 닫혀 있으면 입력이 조용히 저장 안 되던 문제 —
+     연결을 다시 열어 1회 재시도하고, 그래도 안 되면 오류를 호출한 쪽에 알린다. */
+  const go=(retry)=>{let r;
+    try{r=db.transaction(s,'readwrite').objectStore(s).put(rec);}
+    catch(e){if(retry){openDB().then(d=>{db=d;go(false);}).catch(rej);}else rej(e);return;}
+    r.onsuccess=()=>{try{window.fbOnWrite&&fbOnWrite(s);}catch(e){}try{SaveMgr.wrote();}catch(e){}res();};
+    r.onerror=()=>{if(retry){openDB().then(d=>{db=d;go(false);}).catch(()=>rej(r.error));}else rej(r.error);};};
+  go(true);});}
 window.fbTomb={};   // {store:Set(id)} — 이 PC에서 지운 항목
 function delRec(s,id){return new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).delete(id);
   r.onsuccess=()=>{try{(window.fbTomb[s]=window.fbTomb[s]||new Set()).add(id);window.fbOnWrite&&fbOnWrite(s);}catch(e){}try{SaveMgr.wrote();}catch(e){}res();};
@@ -19117,11 +19121,33 @@ async function invInEditAdd(code,ym){
   if(!q){toast('수량을 입력하세요');return;}
   await setInflow(code,d,q);invInEditRender(code,ym);try{renderInvMonth();}catch(e){}
 }
-async function setInflow(code,ymd,val){
+async function setInflow(code,ymd,val,noRender){
   let r=invInRec(code,ymd);const q=num(val)||0;
   if(!r){r={id:code+'|'+ymd,code,ymd,qty:q};invInData.push(r);}else r.qty=q;
-  try{await putRec('invin',r);flashSave();}catch(e){}
-  renderInflow();
+  try{await putRec('invin',r);flashSave();}catch(e){console.error('setInflow',e);try{toast('⚠ 입고량 저장 실패 — 화면을 새로고침(F5)한 뒤 다시 입력하세요 ('+((e&&e.message)||e)+')');}catch(e2){}}
+  if(!noRender)renderInflow();
+}
+/* 2026-11-05: '월 누적입고' 칸을 직접 고칠 수 있게 함 — 합계만 알고 있을 때(예: 엑셀 월 입고 합계) 날짜별로 나누지 않고 입력.
+   늘릴 때는 선택한 입고일자(같은 달이면) · 없으면 마지막 입고일 · 없으면 말일 기록에 차액을 더하고,
+   줄일 때는 늦은 날짜 기록부터 차례로 뺍니다. 날짜별 기록은 [기간별 입고 내역 조회]·월별 원단위 ‘일별✎’에서 확인·수정됩니다. */
+async function setInflowMonth(code,ym,val){
+  const T=Math.max(0,Math.round(num(val)||0));const cur=Math.round(invInDaily(code,ym)||0);const delta=T-cur;
+  if(!delta){renderInflow();return;}
+  const recs=invInData.filter(r=>r.code===code&&(r.ymd||'').slice(0,7)===ym).sort((a,b)=>b.ymd.localeCompare(a.ymd));
+  const dsel=(document.getElementById('ii_date')||{}).value||'';
+  let msg='';
+  if(delta>0){
+    const last=new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate();
+    const target=(dsel&&dsel.slice(0,7)===ym)?dsel:(recs.length?recs[0].ymd:ym+'-'+String(last).padStart(2,'0'));
+    await setInflow(code,target,invInDay(code,target)+delta,true);
+    msg=target.slice(5)+' 입고에 +'+delta.toLocaleString()+' 반영';
+  }else{
+    let need=-delta;
+    for(const r of recs){if(need<=0)break;const q=+r.qty||0;if(q<=0)continue;const take=Math.min(q,need);await setInflow(code,r.ymd,q-take,true);need-=take;}
+    msg='늦은 입고일부터 '+(-delta).toLocaleString()+' 차감';
+  }
+  try{toast(ym+' 월 입고 합계 '+T.toLocaleString()+' 으로 수정 ('+msg+')');}catch(e){}
+  renderInflow();try{renderInvMonth();}catch(e){}
 }
 /* 2026-10-05: 매출합계 포함/미포함 구분 — 엑셀 '입고량' 시트 기준(제강합계 = 동국 매출 + 직매출, 원진·KR·조선내화·오성은 타사내화물로 별도 매출)
    자동 구분은 기본값일 뿐이며 품목별로 구분·포함 여부를 직접 고칠 수 있다(강제수정, 브라우저에 저장). */
@@ -19192,7 +19218,7 @@ function renderInflow(){
       <td class="n" style="white-space:nowrap"><input type="number" class="iinp" style="width:92px;${fp?'background:#fef08a;font-weight:700':''}" value="${Math.round(pr*100)/100}" title="단가 수정 (${ym} 이 달만 적용) · 출처: ${invPriceSrc(m.c,ym)}" onchange="setInvForcePrice('${m.c}','${ym}',this.value)">${fp?` <button class="btn sm" style="padding:0 5px" title="강제수정 해제 → 원래 단가로 복원" onclick="setInvForcePrice('${m.c}','${ym}','')">↺</button>`:''}<div style="font-size:9.5px;color:${fp?'#a16207':'#94a3b8'}">${invPriceSrc(m.c,ym)}</div></td>
       <td class="n"><input type="number" class="iinp" value="${dq||''}" placeholder="0" onchange="setInflow('${m.c}','${d}',this.value)"></td>
       <td class="n">${dq?iN(dq*pr):'-'}</td>
-      <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq):'-'}</td>
+      <td class="n"><input type="number" class="iinp" style="width:92px;font-weight:700;color:#1d4ed8" value="${mq||''}" placeholder="0" title="${ym} 한 달 입고 합계 — 직접 고치면 차액이 날짜별 기록에 반영됩니다(늘리면 선택한 입고일자, 줄이면 늦은 날짜부터 차감)" onchange="setInflowMonth('${m.c}','${ym}',this.value)"></td>
       <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq*pr):'-'}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${days?days+'일':'-'}</td></tr>`;});
   flush();
@@ -19332,28 +19358,55 @@ function renderInvMonth(){
   if(vm)items.sort((a,b)=>invVendIdx(invMonthVend(a))-invVendIdx(invMonthVend(b)));   // 업체별 우선(업체 안에서는 위의 설비 순 유지 — 정렬은 안정 정렬)
   else items.sort((a,b)=>(invRhf(a)?1:0)-(invRhf(b)?1:0));   // 형강가열로는 맨 아래 별도 구역
   const keyOf=m=>vm?invMonthVend(m):m.g,cntK={};items.forEach(m=>{const k=keyOf(m);cntK[k]=(cntK[k]||0)+1;});
-  let body='',lastG=null,gSum={amt:0},tot={amt:0,useKg:0},totDone=false;
-  const totRow=()=>{body+=`<tr style="background:#eef2f6;font-weight:800"><td colspan="7">합계 (형강가열로 제외)</td><td></td><td class="n"></td><td class="n">${prod?iU(tot.amt/prod):'-'}</td></tr>`;totDone=true;};
-  const flushG=()=>{if(lastG!=null)body+=`<tr class="grp-row"><td colspan="7">${esc(lastG)} 소계${lastG===INV_RHF?' (매출 기록용 · 원단위 제외)':''}</td><td></td><td class="n"></td><td class="n">${lastG===INV_RHF?'-':(prod?iU(gSum.amt/prod):'-')}</td></tr>`;};
+  const NC=16,Z=v=>v?iN(v):'<span style="color:#94a3b8">-</span>';
+  const mk0=()=>({ps:0,is:0,us:0,es:0});
+  let body='',lastG=null,gSum=mk0(),tot=mk0(),totDone=false;
+  const sumCells=(S,showUnit,rhf)=>`<td></td><td></td><td></td><td></td><td></td><td class="n">${Z(S.ps)}</td><td class="n">${Z(S.is)}</td><td class="n">${Z(S.us)}</td><td class="n">${Z(S.es)}</td><td></td><td class="n">${showUnit&&prod?iU(S.us/prod):'-'}</td>`;
+  const totRow=()=>{body+=`<tr class="xl-tot"><td colspan="5">합계 (형강가열로 제외)</td>${sumCells(tot,true)}</tr>`;totDone=true;};
+  const flushG=()=>{if(lastG!=null)body+=`<tr class="xl-sub"><td colspan="5">${esc(lastG)} 소계${lastG===INV_RHF?' (매출 기록용 · 원단위 제외)':''}</td>${sumCells(gSum,lastG!==INV_RHF)}</tr>`;};
+  const EQC={EAF:['#fde0c2','#9a4a0a'],LF:['#d3e5fa','#1d5fb4'],CC:['#d6efd5','#1f7a3a']};
   items.forEach(m=>{const it=invItem(m.c);const code=m.c;const pr=invPriceAt(code,ym);
-    {const K=keyOf(m);if(K!==lastG){flushG();lastG=K;gSum={amt:0};
-      if(invRhf(m)){if(!totDone)totRow();body+=`<tr><td colspan="10" style="background:#ffedd5;font-weight:800;padding:7px 10px;color:#1e293b">🔥 형강가열로 — 제강 원가(원단위)와 무관 · 입고·사용 기록과 매출 기록용</td></tr>`;}
-      else if(vm){body+=`<tr><td colspan="10" style="background:${K==='동국R&S'?'#dbeafe':'#e5e7eb'};font-weight:800;padding:6px 10px;color:#1e293b">▣ ${esc(K)} <span style="font-weight:500;font-size:11.5px">${cntK[K]}품목 · ${K==='동국R&S'?'일반 + 직매출 (동국R&S 매출 포함)':'타사 공급 (동국R&S 매출 미포함)'}</span></td></tr>`;}}}
+    {const K=keyOf(m);if(K!==lastG){flushG();lastG=K;gSum=mk0();
+      if(invRhf(m)){if(!totDone)totRow();body+=`<tr><td colspan="${NC}" style="background:#ffedd5;font-weight:800;padding:7px 10px;color:#1e293b">🔥 형강가열로 — 제강 원가(원단위)와 무관 · 입고·사용 기록과 매출 기록용</td></tr>`;}
+      else if(vm){body+=`<tr><td colspan="${NC}" style="background:${K==='동국R&S'?'#dbeafe':'#e5e7eb'};font-weight:800;padding:6px 10px;color:#1e293b">▣ ${esc(K)} <span style="font-weight:500;font-size:11.5px">${cntK[K]}품목 · ${K==='동국R&S'?'일반 + 직매출 (동국R&S 매출 포함)':'타사 공급 (동국R&S 매출 미포함)'}</span></td></tr>`;}}}
     const prev=invPrev(code,ym),inq=invIn(code,ym),end=invEnd(code,ym),use=invUse(code,ym);
-    const amt=use*pr;gSum.amt+=amt;if(!invRhf(m))tot.amt+=amt;
-    const qOv=invRhf(m)?0:use/(prod||1),aOv=invRhf(m)?0:amt/(prod||1);
+    const aP=prev*pr,aI=inq*pr,aU=use*pr,aE=end*pr;
+    [gSum,...(invRhf(m)?[]:[tot])].forEach(S=>{S.ps+=aP;S.is+=aI;S.us+=aU;S.es+=aE;});
+    const qOv=invRhf(m)?0:use/(prod||1),aOv=invRhf(m)?0:aU/(prod||1);
+    const ec=EQC[m.g]||['#e5e7eb','#334155'];
     body+=`<tr>
-      <td style="font-size:10.5px;color:var(--muted)">${esc(m.g)}</td>
-      <td><b>${esc(it.n)}</b></td>
-      <td class="n">${iN(pr)}</td><td>${esc(it.u)}</td>
+      <td class="xl-eq" style="background:${ec[0]};color:${ec[1]}">${esc(m.g)}</td>
+      <td class="xl-cd">${esc(code||'')}</td>
+      <td class="xl-nm" title="${esc(it.n)}"><b>${esc(it.n)}</b></td>
+      <td style="text-align:center">${esc(it.u)}</td>
+      <td class="n">${iN(pr)}</td>
       <td class="n"><input type="number" class="iinp"${invPrevAttr(code,ym)}${invLockAttr(ym)} value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
       <td class="n">${invInDaily(code,ym)!=null?`<a href="#" onclick="invInEdit('${code}','${ym}');return false" title="일별 입고 내역 보기·수정 (입고량 탭의 일별 합계: ${esc(invInData.filter(r=>r.code===code&&(r.ymd||'').slice(0,7)===ym&&(+r.qty||0)>0).map(r=>r.ymd.slice(5)+' '+r.qty).join(', '))})" style="color:#1d4ed8;font-weight:700;text-decoration:underline dotted">${iN(inq)}</a> <span style="font-size:9px;color:#1d4ed8;cursor:pointer" onclick="invInEdit('${code}','${ym}')">일별✎</span>`:`<input type="number" class="iinp inp-yel"${invLockAttr(ym)} value="${inq}" onchange="setInvField('${code}','${ym}','in',this.value)">`}</td>
+      <td class="n xl-use"><input type="number" class="iinp" style="font-weight:800;color:#b45309"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
       <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 '+esc(stkMapAll()[code])+' 에서 가져옴 — 눌러서 시트 위치로 이동" style="font-size:10px;cursor:pointer;color:#15803d;font-weight:700" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗'+esc(stkMapAll()[code])+'</span>':(invConfLocked(ym)?'':'<span title="이 품목의 월말재고를 재고량 시트의 칸과 연결합니다 — 연결하면 시트에서 입력한 값이 자동으로 들어옵니다" style="display:inline-block;margin-left:3px;padding:0 6px;border:1px dashed #94a3b8;border-radius:10px;font-size:10.5px;color:#475569;background:#fff;cursor:pointer;white-space:nowrap" onclick="stkVzOpenItem(\''+code+'\',\''+ym+'\')">＋시트 연동</span>')}</td>
-      <td class="n"><input type="number" class="iinp" style="font-weight:700;color:#c2410c"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
-      <td class="n">${prod&&!invRhf(m)?iU(qOv):'-'}</td><td class="n">${prod&&!invRhf(m)?iU(aOv):'-'}</td></tr>`;});
+      <td class="n">${Z(prev+inq)}</td>
+      <td class="n">${Z(aP)}</td><td class="n">${Z(aI)}</td><td class="n xl-use2">${Z(aU)}</td><td class="n">${Z(aE)}</td>
+      <td class="n">${prod&&!invRhf(m)?iU(qOv):'-'}</td><td class="n"><b>${prod&&!invRhf(m)?iU(aOv):'-'}</b></td></tr>`;});
   flushG();
   if(!totDone)totRow();
-  document.getElementById('invBody').innerHTML=body||`<tr><td colspan="10"><div class="empty">품목이 없습니다.</div></td></tr>`;
+  const hd=t=>`<th>${t}</th>`;
+  document.getElementById('invTitle').innerHTML=`<div style="font-size:17px;font-weight:900;margin:4px 2px 6px;color:#1e293b">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 <span style="font-size:12px;font-weight:600;color:var(--muted)">${esc(ym)} · 생산량 ${prod?Math.round(prod).toLocaleString()+' TON':'없음'}</span></div>`;
+  document.getElementById('invWrap').innerHTML=`<style>
+    #invWrap .xlm{border-collapse:collapse;font-size:12.5px;min-width:1560px;width:100%}
+    #invWrap .xlm th{background:#c9eef5;color:#1e293b;border:1px solid #6b7b8c;padding:6px 8px;font-weight:800;text-align:center;white-space:nowrap}
+    #invWrap .xlm td{border:1px solid #c3cad3;padding:2px 7px;white-space:nowrap;background:#fff;height:28px}
+    #invWrap .xlm td.n{text-align:right;font-variant-numeric:tabular-nums}
+    #invWrap .xlm tr:hover td{filter:brightness(.97)}
+    #invWrap .xlm .xl-eq{text-align:center;font-weight:800;width:44px}
+    #invWrap .xlm .xl-cd{font-family:monospace;font-size:11px;color:#475569}
+    #invWrap .xlm .xl-nm{max-width:340px;overflow:hidden;text-overflow:ellipsis}
+    #invWrap .xlm td.xl-use,#invWrap .xlm td.xl-use2{background:#fff59d}
+    #invWrap .xlm .iinp{width:84px;text-align:right}
+    #invWrap .xlm td.xl-use .iinp{background:#fff59d;border-color:#d9c64a}
+    #invWrap .xlm tr.xl-sub td{background:#eef2f7;font-weight:800;border-top:1.5px solid #64748b}
+    #invWrap .xlm tr.xl-tot td{background:#334155;color:#fff;font-weight:900;font-size:13px}
+  </style><table class="xlm"><thead><tr>${['구분','신규코드','신규품명','단위','단가','전월재고','입고량','전체사용량','현재고(월말실재고)','합계','재고금액','입고금액','전체사용량금액','현재고금액','수량 원단위','금액 원단위'].map(hd).join('')}</tr></thead><tbody>${body||`<tr><td colspan="${NC}"><div class="empty">품목이 없습니다.</div></td></tr>`}</tbody></table>`;
+  try{stkhSoon();}catch(e){}
   document.getElementById('inv_count').textContent=items.length+' 품목';
   (function(){let bx=document.getElementById('invCatBox');
     if(!bx){const c=document.getElementById('invCards');if(c&&c.parentNode){bx=document.createElement('div');bx.id='invCatBox';bx.style.margin='8px 0';c.parentNode.insertBefore(bx,c.nextSibling);}}
@@ -19369,8 +19422,8 @@ function renderInvMonth(){
   const cb=(l,v,u,hl)=>`<div class="costbox${hl?' hl':''}"><div class="cb-lab">${l}</div><div class="cb-val">${v}<small> ${u}</small></div></div>`;
   document.getElementById('invCards').innerHTML=
     cb(ym+' 생산량',prod.toLocaleString(),'TON',true)
-    +cb('총 사용금액',(tot.amt/1e6).toFixed(1),'백만원')
-    +cb('전체 금액 원단위',prod?iN(tot.amt/prod):'-','원/톤',true)
+    +cb('총 사용금액',(tot.us/1e6).toFixed(1),'백만원')
+    +cb('전체 금액 원단위',prod?iN(tot.us/prod):'-','원/톤',true)
     +cb('품목수',items.length,'개');
   try{invConfBar(ym);}catch(e){}
 }
@@ -19474,10 +19527,15 @@ function renderInvMaster(){
 }
 function downloadInv(){
   const ym=document.getElementById('inv_ym').value;const prod=getProd(ym)||0;
-  let t=`<table><tr><th>설비</th><th>품명</th><th>단가</th><th>단위</th><th>전월재고</th><th>입고</th><th>월말실재고</th><th>사용량</th><th>수량원단위</th><th>금액원단위</th></tr>`;
-  INV_MASTER.forEach(m=>{if(invRhf(m))return;const it=invItem(m.c);const pr=invPriceAt(m.c,ym);const use=invUse(m.c,ym);const amt=use*pr;
-    t+=`<tr><td>${esc(m.g)}</td><td>${esc(it.n)}</td><td>${pr}</td><td>${esc(it.u)}</td><td>${invPrev(m.c,ym)}</td><td>${invIn(m.c,ym)}</td><td>${invEnd(m.c,ym)}</td><td>${use}</td><td>${prod?(use/prod).toFixed(3):''}</td><td>${prod?(amt/prod).toFixed(2):''}</td></tr>`;});
-  t+=`</table>`;downloadXls('내화물원단위_'+ym,t);
+  const items=INV_MASTER.slice().sort((a,b)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(b.g);return (ia<0?9:ia)-(ib<0?9:ib);}).sort((a,b)=>(invRhf(a)?1:0)-(invRhf(b)?1:0));
+  const H=['구분','신규코드','신규품명','단위','단가','전월재고','입고량','전체사용량','현재고','합계','재고금액','입고금액','전체사용량금액','현재고금액','수량원단위','금액원단위'];
+  let t=`<table><tr><td colspan="16" style="font-size:16pt;font-weight:bold">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 (생산량 ${Math.round(prod)}TON)</td></tr><tr>${H.map(h=>`<th style="background:#c9eef5">${h}</th>`).join('')}</tr>`;
+  const S={ps:0,is:0,us:0,es:0};
+  items.forEach(m=>{const it=invItem(m.c);const pr=invPriceAt(m.c,ym);const prev=invPrev(m.c,ym),inq=invIn(m.c,ym),end=invEnd(m.c,ym),use=invUse(m.c,ym);
+    if(!invRhf(m)){S.ps+=prev*pr;S.is+=inq*pr;S.us+=use*pr;S.es+=end*pr;}
+    t+=`<tr><td>${esc(m.g)}</td><td>${esc(m.c||'')}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${Math.round(pr)}</td><td>${prev}</td><td>${inq}</td><td style="background:#fff59d">${use}</td><td>${end}</td><td>${prev+inq}</td><td>${Math.round(prev*pr)}</td><td>${Math.round(inq*pr)}</td><td>${Math.round(use*pr)}</td><td>${Math.round(end*pr)}</td><td>${prod&&!invRhf(m)?(use/prod).toFixed(3):''}</td><td>${prod&&!invRhf(m)?(use*pr/prod).toFixed(2):''}</td></tr>`;});
+  t+=`<tr style="font-weight:bold"><td colspan="10">합계 (형강가열로 제외)</td><td>${Math.round(S.ps)}</td><td>${Math.round(S.is)}</td><td>${Math.round(S.us)}</td><td>${Math.round(S.es)}</td><td></td><td>${prod?(S.us/prod).toFixed(2):''}</td></tr></table>`;
+  downloadXls('내화물_재고현황및사용량_'+ym,t);
 }
 function downloadInvCompare(){
   const rows=[...document.querySelectorAll('#invCompareTbl tr')].map(tr=>'<tr>'+[...tr.children].map(td=>`<td>${td.innerText}</td>`).join('')+'</tr>').join('');
