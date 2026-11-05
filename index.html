@@ -3344,7 +3344,7 @@ service cloud.firestore {
       <div class="costgrid" id="inflowCards"></div>
       <div style="font-size:11.5px;color:var(--accent);margin:2px 2px 10px">※ 매일 입고분을 품목별로 입력하세요. 그 달 1~말일 입고가 합산되어 [월별 원단위]의 입고량으로 자동 반영됩니다. 오른쪽 '월 누적'은 해당 월 총 입고입니다. <b>매출합계</b> 칸에서 포함/미포함·구분(직매출·원진·KR·조선내화·오성)을 고치면 아래 구역과 합계가 바뀌고, <b>단가 ✎</b>는 그 달만 직접 수정됩니다(노랑=수정됨, ↺=원래 단가로 복원).</div>
       <div class="tablewrap"><table class="bomtbl" id="inflowTbl" style="min-width:980px">
-        <thead><tr><th>설비</th><th title="체크 = 매출합계 포함 · 구분 선택">매출합계</th><th style="min-width:200px">고객사 품명</th><th>단위</th><th class="n" title="직접 수정 가능(그 달만 적용)">단가 ✎</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n" title="한 달 입고 합계 — 직접 수정 가능(차액은 날짜별 기록에 반영)">월 누적입고 ✎</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
+        <thead><tr><th>설비</th><th title="체크 = 매출합계 포함 · 구분 선택">매출합계</th><th style="min-width:200px">고객사 품명</th><th>단위</th><th class="n" title="직접 수정 가능(그 달만 적용)">단가 ✎</th><th class="n">해당일 입고</th><th class="n">해당일 입고금액</th><th class="n" title="한 달 입고 합계 — 직접 수정 가능(차액은 날짜별 기록에 반영). 타사(미포함) 품목은 월말에 이 칸에 한 번에 입력">월 누적입고 ✎</th><th class="n">월 누적 입고금액</th><th>입고일수</th></tr></thead>
         <tbody id="inflowBody"></tbody>
       </table></div>
     </div>
@@ -15556,7 +15556,7 @@ function invAutoCatAll(manual){
     invMOv[m.c]=Object.assign(invMOv[m.c]||{},{costCat:c,catAuto:true});n++;});
   if(n)saveInvMOv();
   if(manual||n){try{toast(n?'원가보고서 분류 '+n+'품목을 자동 지정했습니다 — 원단위 품명에서 확인·수정하세요 ("자동" 표시)':'모두 분류되어 있습니다');}catch(e){}}
-  try{if(document.getElementById('invMasterBody'))renderInvMaster();}catch(e){}
+  try{const mp=document.getElementById('isp-master');if(document.getElementById('invMasterBody')&&(manual||n||(mp&&mp.classList.contains('active'))))renderInvMaster();}catch(e){}
   return n;
 }
 function invCostCatOptions(g,sel){
@@ -15926,7 +15926,7 @@ function invTotFxIsSet(ym,k){const o=invTotFx[ym];return !!(o&&o[k]!=null&&o[k]!
 function invTotFxSet(ym,k,val){
   if(invConfLocked(ym)){toast('확정된 달입니다 — 확정 해제 후 수정하세요');renderInvTot();return;}
   const o=invTotFx[ym]=invTotFx[ym]||{};
-  if(val===''||val==null)delete o[k];else o[k]=+val;
+  if(val===''||val==null)delete o[k];else o[k]=Math.round(+val)||0;   // 2026-11-05: 영구장 수량은 정수(반올림)
   if(!Object.keys(o).length)delete invTotFx[ym];
   saveInvTotFx();flashSave();renderInvTot();try{renderInvMonth();}catch(e){}
 }
@@ -15945,7 +15945,7 @@ function invTotCalcLive(ym){
     return uM[x.k]=s;};
   const eq={EAF:{ab:0,q:0},LF:{ab:0,q:0},CC:{ab:0,q:0}};
   let qSum=0,r19=0,l13gap=0;
-  const rows=INV_TOT_ROWS.map(x=>{const u=use(x),p=price(x);let ab=u*p,pp=p;const q0=ab;
+  const rows=INV_TOT_ROWS.map(x=>{const u=(ym===INV_TOT_FROM)?use(x):invR(use(x)),p=price(x);let ab=u*p,pp=p;const q0=ab;
     if(x.ea){ab=x.u.reduce((s,t)=>s+(t.c?ivU(t.c,ym)*invPriceAt(t.c,ym):0),0);pp=u?ab/u:p;}
     if(x.xl){const xab=x.xl.reduce((s,a)=>s+ivU(a[0],ym)*invPriceAt(a[1],ym),0);l13gap+=q0-xab;if(l13xl){ab=xab;pp=u?ab/u:p;}}
     qSum+=q0;if(x.k==='r19')r19=q0;
@@ -18883,7 +18883,7 @@ function renderInvTot(){
   const fxRows=fxDefs.map(d=>{const s=invTotFxSrc(ym,d.k);const tot=d.cd?useOf(d.cd):null;const rr=d.restK?c.rows.find(r=>r.k===d.restK):null;
     const neg=rr&&rr.u<-0.001;
     return `<tr><td><b>${esc(d.nm)}</b></td><td class="n">${tot!=null?iN(tot):'-'}</td>
-      <td class="n">${esc(d.in)} <input type="number" class="iinp ${yc(s)}" style="width:86px" value="${+s.v.toFixed(2)}"${dis} title="${d.k==='r20'?'비우면 DC-15 사용량÷3 자동':'수기 입력 — 비우면 이전 달 값 승계'}" onchange="invTotFxSet('${ym}','${d.k}',this.value)"></td>
+      <td class="n">${esc(d.in)} <input type="number" class="iinp ${yc(s)}" style="width:86px" value="${Math.round(s.v)}"${dis} title="${d.k==='r20'?'비우면 DC-15 사용량÷3 자동':'수기 입력 — 비우면 이전 달 값 승계'}" onchange="invTotFxSet('${ym}','${d.k}',this.value)"></td>
       <td class="n">${d.rest?esc(d.rest)+' <b style="color:'+(neg?'#c81e1e':'inherit')+'">'+iN(rr?rr.u:0)+'</b>'+(neg?' ⚠':''):''}</td>
       <td class="n" style="font-size:11px">${d.rest?'총 사용량 − 입력':''}</td><td style="font-size:11px">${srcTag(s)}</td></tr>`;}).join('');
   let box=document.getElementById('invtRt');
@@ -18908,8 +18908,9 @@ function invTotXlHtml(ym,edit,xls){
   const rowsByEq={EAF:[],LF:[],CC:[]};INV_TOT_ROWS.forEach(x=>rowsByEq[x.eq].push(x));
   const bd='border:1px solid #94a3b8;',th='background:#e2e8f0;color:#1e293b;font-weight:800;text-align:center;'+bd+'padding:4px 6px;white-space:nowrap;';
   const YL='background:#fffbd0;',YB='background:#ffeb3b;';
-  const nz=(v,f)=>Math.abs(v)<(f===3?0.0005:f===2?0.005:0.5)?'–':(f===0?iN(v):v.toFixed(f));
-  const dz=(v,f)=>{const m=f===3?0.0005:f===2?0.005:0.5;if(Math.abs(v)<m)return '<span style="color:#94a3b8">–</span>';const t=(v>0?'+':'')+(f===0?iN(v):v.toFixed(f));return `<span style="color:${v<0?'#15803d':'#c81e1e'}">${t}</span>`;};
+  /* 2026-11-05: 전체원단위는 소수점 없이 반올림 정수로 표시(수량·금액 원단위·증감·소계·합계 모두). 0.5 미만이라도 실제 값이 있으면 0, 값이 없으면 – */
+  const nz=(v,f)=>{if(f===3)return Math.abs(v)<1e-9?'–':iN(v);return Math.abs(v)<0.5?'–':iN(v);};
+  const dz=(v,f)=>{if(Math.abs(v)<(f===3?1e-9:0.5))return '<span style="color:#94a3b8">–</span>';const r=Math.round(v);const t=(r>0?'+':'')+iN(v);return `<span style="color:${v<0?'#15803d':'#c81e1e'}">${r===0?'0':t}</span>`;};
   const hasP=!!p.prod,hasC=!!c.prod;
   let h='<table class="bomtbl xltot" style="min-width:1240px;border-collapse:collapse;font-size:12px">';
   h+='<thead>';
@@ -18934,7 +18935,7 @@ function invTotXlHtml(ym,edit,xls){
         if(pr){spu+=pr.u;spq+=hasP?pr.q:0;spa+=hasP?pr.a:0;}
         const fxr=x.fx!=null;const rtr=x.u.some(t=>t.rt);
         const s=fxr?invTotFxSrc(ym,x.k):null;
-        const useCell=(fxr&&!xls)?`<input type="number" class="iinp ${yc(s)}" style="width:84px;font-weight:700;text-align:right" value="${+r.u.toFixed(2)}"${dis} title="수기 입력 항목(엑셀에서 매달 직접 입력하던 칸)${x.k==='r20'?' · 비우면 DC-15 사용량÷3 자동':''}" onchange="invTotFxSet('${ym}','${x.k}',this.value)">`:nz(r.u,0);
+        const useCell=(fxr&&!xls)?`<input type="number" class="iinp ${yc(s)}" style="width:84px;font-weight:700;text-align:right" value="${Math.round(r.u)}"${dis} title="수기 입력 항목(엑셀에서 매달 직접 입력하던 칸)${x.k==='r20'?' · 비우면 DC-15 사용량÷3 자동':''}" onchange="invTotFxSet('${ym}','${x.k}',this.value)">`:nz(r.u,0);
         const tag=(rtr&&!xls)?` <span style="font-size:10px;background:#fff176;border-radius:3px;padding:0 3px" title="설비 분할 비율 적용(아래 노란 박스에서 조정)">분할 ${Math.round((x.u.find(t=>t.rt).sd?invTotRt(ym,x.u.find(t=>t.rt).rt):1-invTotRt(ym,x.u.find(t=>t.rt).rt))*1000)/10}%</span>`:'';
         const bug=(!xls&&r.bug&&invTotL13Mode()==='xl')?` <span style="font-size:10px;color:#b45309" title="엑셀 L13 수식(앙카허스 사용량×올리빈 단가) 그대로 적용 중">엑셀식</span>`:'';
         const topB=(firstOfEq&&i===0)?'border-top:2px solid #334155;':'';
@@ -18966,7 +18967,7 @@ function invTotXlHtml(ym,edit,xls){
   const gt=`${bd}background:#334155;color:#fff;font-weight:900;font-size:14px;`;
   h+=`<tr><td colspan="6" style="${gt}text-align:center">총 합계 (원/톤)</td><td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasP?nz(p.tot.a,2):'–'}</td>
     <td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasC?nz(c.tot.a,2):'–'}</td>
-    <td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasC&&hasP?(c.tot.a-p.tot.a>=0?'+':'')+(c.tot.a-p.tot.a).toFixed(2):'–'}</td></tr>`;
+    <td style="${gt}"></td><td style="${gt}"></td><td class="n" style="${gt}">${hasC&&hasP?(Math.round(c.tot.a-p.tot.a)>0?'+':'')+iN(c.tot.a-p.tot.a):'–'}</td></tr>`;
   h+='</tbody></table>';
   return h;
 }
@@ -19130,6 +19131,7 @@ async function setInflow(code,ymd,val,noRender){
 /* 2026-11-05: '월 누적입고' 칸을 직접 고칠 수 있게 함 — 합계만 알고 있을 때(예: 엑셀 월 입고 합계) 날짜별로 나누지 않고 입력.
    늘릴 때는 선택한 입고일자(같은 달이면) · 없으면 마지막 입고일 · 없으면 말일 기록에 차액을 더하고,
    줄일 때는 늦은 날짜 기록부터 차례로 뺍니다. 날짜별 기록은 [기간별 입고 내역 조회]·월별 원단위 ‘일별✎’에서 확인·수정됩니다. */
+function ymLast(ym){const l=new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate();return ym+'-'+String(l).padStart(2,'0');}
 async function setInflowMonth(code,ym,val){
   const T=Math.max(0,Math.round(num(val)||0));const cur=Math.round(invInDaily(code,ym)||0);const delta=T-cur;
   if(!delta){renderInflow();return;}
@@ -19137,10 +19139,11 @@ async function setInflowMonth(code,ym,val){
   const dsel=(document.getElementById('ii_date')||{}).value||'';
   let msg='';
   if(delta>0){
-    const last=new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate();
-    const target=(dsel&&dsel.slice(0,7)===ym)?dsel:(recs.length?recs[0].ymd:ym+'-'+String(last).padStart(2,'0'));
+    const isOut=invSalesSec(code)==='out';   // 타사: 월말 일괄 입력 → 항상 말일 기록
+    const target=isOut?ymLast(ym):((dsel&&dsel.slice(0,7)===ym)?dsel:(recs.length?recs[0].ymd:ymLast(ym)));
     await setInflow(code,target,invInDay(code,target)+delta,true);
-    msg=target.slice(5)+' 입고에 +'+delta.toLocaleString()+' 반영';
+    if(isOut){const rr=invInRec(code,target);if(rr&&!rr.mo){rr.mo=1;try{await putRec('invin',rr);}catch(e){}}}
+    msg=target.slice(5)+' 입고'+(isOut?'(월말 일괄)':'')+'에 +'+delta.toLocaleString()+' 반영';
   }else{
     let need=-delta;
     for(const r of recs){if(need<=0)break;const q=+r.qty||0;if(q<=0)continue;const take=Math.min(q,need);await setInflow(code,r.ymd,q-take,true);need-=take;}
@@ -19179,7 +19182,22 @@ function invSalesTidy(code){const o=invSalesOv[code];if(!o)return;const a=invSal
 function setInvSalesEx(code,ex){(invSalesOv[code]=invSalesOv[code]||{}).ex=!!ex;invSalesTidy(code);saveInvSalesOv();flashSave();renderInflow();}
 function setInvSalesCat(code,cat){const o=invSalesOv[code]=invSalesOv[code]||{};o.cat=cat;delete o.ex;invSalesTidy(code);saveInvSalesOv();flashSave();renderInflow();}
 function invSalesSec(code){if(invRhf(invM.get(code)))return 'rhf';const i=invSalesInfo(code);return i.ex?'out':(i.cat==='직매출'?'direct':'main');}
+/* 2026-11-05: 팀 동기화·저장 직후 화면이 다시 그려질 때 입력 중이던 칸이 사라지고(깜빡임) 방금 친 숫자가 날아가던 문제 —
+   다시 그리기 전에 포커스된 칸·아직 확정 안 된 입력값·스크롤 위치를 기억했다가 그대로 복원하고,
+   그려질 내용이 이전과 같으면 아예 화면을 건드리지 않는다. */
 function renderInflow(){
+  const tb=document.getElementById('inflowBody'),sw=tb?tb.closest('.tablewrap'):null,sy=window.scrollY,sl=sw?sw.scrollLeft:0,st=sw?sw.scrollTop:0;
+  const ae=document.activeElement;let keep=null;
+  if(tb&&ae&&ae.dataset&&ae.dataset.ik&&tb.contains(ae)){keep={k:ae.dataset.ik,v:ae.value,dirty:ae.value!==ae.defaultValue};try{keep.s=ae.selectionStart;keep.e=ae.selectionEnd;}catch(e){}}
+  renderInflowCore();
+  try{
+    if(sw){sw.scrollLeft=sl;sw.scrollTop=st;}if(window.scrollY!==sy)window.scrollTo(window.scrollX,sy);
+    if(keep){const el=tb.querySelector('[data-ik="'+keep.k+'"]');
+      if(el&&document.activeElement!==el){if(keep.dirty)el.value=keep.v;el.focus({preventScroll:true});try{if(keep.s!=null)el.setSelectionRange(keep.s,keep.e);}catch(e){}}
+      else if(el&&keep.dirty&&el.value!==keep.v)el.value=keep.v;}
+  }catch(e){}
+}
+function renderInflowCore(){
   const d=document.getElementById('ii_date').value||todayStr();const ym=d.slice(0,7);
   const q=(document.getElementById('ii_search').value||'').toLowerCase();
   const gf=document.getElementById('ii_grp').value;const only=document.getElementById('ii_only').checked;
@@ -19203,7 +19221,7 @@ function renderInflow(){
       body+=sub('out','▶ 매출합계 미포함 소계');}
     else if(cur==='rhf')body+=sub('rhf','▶ 형강가열로 소계 (매출 기록)');};
   items.forEach(({m,sec,inf})=>{
-    if(sec!==cur){flush();cur=sec;body+=`<tr><td colspan="10" style="background:${hdrCol[sec]};font-weight:800;padding:7px 10px;color:#1e293b">${hdr[sec]}</td></tr>`;}
+    if(sec!==cur){flush();cur=sec;body+=`<tr><td colspan="10" style="background:${hdrCol[sec]};font-weight:800;padding:7px 10px;color:#1e293b">${hdr[sec]}${sec==='out'?`<div style="font-weight:600;font-size:11.5px;color:#92400e;margin-top:2px">✎ 타사 입고는 중량·수량 확인이 늦어지면 월말에 <b>‘월 누적입고’ 칸(노랑)</b>에 한 번에 입력하세요 — ${ymLast(ym)} 입고로 기록되고, 날짜별 입력도 그대로 쓸 수 있습니다.</div>`:''}</td></tr>`;}
     const it=invItem(m.c),pr=invPriceAt(m.c,ym),fp=invPriceForced(m.c,ym)!=null,dq=invInDay(m.c,d),mq=invInDaily(m.c,ym)||0,days=invInDays(m.c,ym);
     S[sec].d+=dq*pr;S[sec].m+=mq*pr;
     if(sec==='out'){const o=OC[inf.cat]=OC[inf.cat]||{d:0,m:0};o.d+=dq*pr;o.m+=mq*pr;}
@@ -19215,32 +19233,34 @@ function renderInflow(){
       <td style="white-space:nowrap"><label title="체크 = 매출합계에 포함 · 해제 = 미포함(타사 공급품 등)" style="cursor:pointer"><input type="checkbox" ${inf.ex?'':'checked'} onchange="setInvSalesEx('${m.c}',!this.checked)"> 포함</label>
         <div><select style="width:84px;font-size:11px;border:1px solid #cbd5e1;border-radius:4px;padding:1px;${inf.forced?'background:#fef08a':''}" title="매출 구분${inf.forced?' (직접 지정함 · 자동 구분: '+inf.autoCat+(inf.autoEx?'/미포함':'/포함')+')':' (자동 구분)'}" onchange="setInvSalesCat('${m.c}',this.value)">${INV_SALES_CATS.map(c=>`<option${c===inf.cat?' selected':''}>${c}</option>`).join('')}</select></div></td>
       <td title="자재코드·품명은 [원단위 품명] 탭에서만 수정합니다"><div style="font-size:10px;font-weight:700;font-family:monospace;margin-bottom:2px;${m.c?'color:#334155':'color:#b45309;background:#fef08a;display:inline-block;padding:0 4px;border-radius:3px'}">${m.c?esc(m.c):'코드 없음 — 원단위 품명 탭에서 입력'}</div><div style="min-width:190px;font-weight:600" title="${esc(it.n)}">${esc(it.n)}</div></td><td style="text-align:center" title="단위는 [원단위 품명] 탭에서 수정">${esc(it.u)}</td>
-      <td class="n" style="white-space:nowrap"><input type="number" class="iinp" style="width:92px;${fp?'background:#fef08a;font-weight:700':''}" value="${Math.round(pr*100)/100}" title="단가 수정 (${ym} 이 달만 적용) · 출처: ${invPriceSrc(m.c,ym)}" onchange="setInvForcePrice('${m.c}','${ym}',this.value)">${fp?` <button class="btn sm" style="padding:0 5px" title="강제수정 해제 → 원래 단가로 복원" onclick="setInvForcePrice('${m.c}','${ym}','')">↺</button>`:''}<div style="font-size:9.5px;color:${fp?'#a16207':'#94a3b8'}">${invPriceSrc(m.c,ym)}</div></td>
-      <td class="n"><input type="number" class="iinp" value="${dq||''}" placeholder="0" onchange="setInflow('${m.c}','${d}',this.value)"></td>
+      <td class="n" style="white-space:nowrap"><input type="number" class="iinp" data-ik="${m.c}|p" style="width:92px;${fp?'background:#fef08a;font-weight:700':''}" value="${Math.round(pr*100)/100}" title="단가 수정 (${ym} 이 달만 적용) · 출처: ${invPriceSrc(m.c,ym)}" onchange="setInvForcePrice('${m.c}','${ym}',this.value)">${fp?` <button class="btn sm" style="padding:0 5px" title="강제수정 해제 → 원래 단가로 복원" onclick="setInvForcePrice('${m.c}','${ym}','')">↺</button>`:''}<div style="font-size:9.5px;color:${fp?'#a16207':'#94a3b8'}">${invPriceSrc(m.c,ym)}</div></td>
+      <td class="n"><input type="number" class="iinp" data-ik="${m.c}|d" value="${dq||''}" placeholder="0" onchange="setInflow('${m.c}','${d}',this.value)"></td>
       <td class="n">${dq?iN(dq*pr):'-'}</td>
-      <td class="n"><input type="number" class="iinp" style="width:92px;font-weight:700;color:#1d4ed8" value="${mq||''}" placeholder="0" title="${ym} 한 달 입고 합계 — 직접 고치면 차액이 날짜별 기록에 반영됩니다(늘리면 선택한 입고일자, 줄이면 늦은 날짜부터 차감)" onchange="setInflowMonth('${m.c}','${ym}',this.value)"></td>
+      <td class="n"><input type="number" class="iinp" data-ik="${m.c}|m" style="width:92px;font-weight:700;color:#1d4ed8${sec==='out'?';background:#fffbeb;border-color:#f59e0b':''}" value="${mq||''}" placeholder="${sec==='out'?'월말 입력':'0'}" title="${sec==='out'?ym+' 월말 일괄 입력 — 타사 입고를 중량·수량 확인 후 한 번에 입력하면 '+ymLast(ym)+' 입고로 기록됩니다(다시 고치면 차액만 반영)':ym+' 한 달 입고 합계 — 직접 고치면 차액이 날짜별 기록에 반영됩니다(늘리면 선택한 입고일자, 줄이면 늦은 날짜부터 차감)'}" onchange="setInflowMonth('${m.c}','${ym}',this.value)"></td>
       <td class="n" style="font-weight:700;color:#1d4ed8">${mq?iN(mq*pr):'-'}</td>
-      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${days?days+'일':'-'}</td></tr>`;});
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${days?days+'일':'-'}${(sec==='out'&&mq&&invInData.some(r=>r.code===m.c&&r.mo&&(r.ymd||'').slice(0,7)===ym))?'<div style="color:#b45309;font-weight:700">월말입력</div>':''}</td></tr>`;});
   flush();
   const tD=S.main.d+S.direct.d+S.out.d,tM=S.main.m+S.direct.m+S.out.m,sD=S.main.d+S.direct.d,sM=S.main.m+S.direct.m;   // 제강 매출합계(형강가열로 별도)
   const tot=(lab,dv,mv,bg)=>`<tr style="background:${bg};font-weight:800"><td colspan="6">${lab}</td><td class="n">${iN(dv)}</td><td></td><td class="n">${iN(mv)}</td><td></td></tr>`;
-  document.getElementById('inflowBody').innerHTML=items.length?body
+  const __ibody=items.length?body
     +tot('★ 매출합계 (직매출 제외 · 일반)',S.main.d,S.main.m,'#e0f2fe')
     +tot('🏷 직매출 (별도)',S.direct.d,S.direct.m,'#ede9fe')
     +tot('★ 동국R&S 마감금액 (매출합계 + 직매출) — 매출 마감 기준',sD,sM,'#dbeafe')
     +tot('전체 합계 (미포함 포함 · 원단위 기준 · 형강가열로 제외)',tD,tM,'#eef2f6')
     +(S.rhf.m||S.rhf.d?tot('🔥 형강가열로 매출 (원단위 제외 · 별도 기록)',S.rhf.d,S.rhf.m,'#ffedd5')+tot('★ 총 매출 (제강 매출합계 + 형강가열로)',sD+S.rhf.d,sM+S.rhf.m,'#dbeafe'):'')
     :`<tr><td colspan="10"><div class="empty">품목이 없습니다.</div></td></tr>`;
+  {const tbe=document.getElementById('inflowBody');if(tbe.__h!==__ibody||!tbe.firstChild){tbe.innerHTML=__ibody;tbe.__h=__ibody;}}
   document.getElementById('ii_count').textContent=items.length+' 품목';
   const cb=(l,v,u,hl,sub)=>`<div class="costbox${hl?' hl':''}"><div class="cb-lab">${l}</div><div class="cb-val">${v}<small> ${u}</small></div>${sub?`<div style="font-size:10.5px;opacity:.85;margin-top:2px">${sub}</div>`:''}</div>`;
   const mn=(+ym.slice(5))+'월',M=x=>(x/1e6).toFixed(1);
-  document.getElementById('inflowCards').innerHTML=
+  const __ic=
     cb(d+' 입고금액 (동국R&S 마감)',M(sD),'백만원',true,`미포함 ${M(S.out.d)} · 전체 ${M(tD)}`)
     +cb(mn+' 누적 동국R&S 마감금액',M(sM),'백만원',false,`매출합계(직매출 제외) ${M(S.main.m)} + 직매출 ${M(S.direct.m)}`)
     +cb(mn+' 누적 미포함(타사)',M(S.out.m),'백만원',false,Object.keys(OC).filter(c=>OC[c].m).map(c=>c+' '+M(OC[c].m)).join(' · ')||'-')
     +cb(mn+' 누적 전체(원단위 기준)',M(tM),'백만원',false,'형강가열로 제외')
     +cb(mn+' 누적 형강가열로(매출 기록)',M(S.rhf.m),'백만원',false,'원단위·제강 원가 미포함')
     +cb('입고 품목수(당일/월)',items.filter(x=>invInDay(x.m.c,d)>0).length+' / '+items.filter(x=>(invInDaily(x.m.c,ym)||0)>0).length,'개');
+  {const ce=document.getElementById('inflowCards');if(ce.__h!==__ic){ce.innerHTML=__ic;ce.__h=__ic;}}
 }
 function downloadInflow(){
   const d=document.getElementById('ii_date').value;const ym=d.slice(0,7);
@@ -19360,7 +19380,7 @@ function renderInvMonth(){
   const keyOf=m=>vm?invMonthVend(m):m.g,cntK={};items.forEach(m=>{const k=keyOf(m);cntK[k]=(cntK[k]||0)+1;});
   const NC=16,Z=v=>v?iN(v):'<span style="color:#94a3b8">-</span>';
   const mk0=()=>({ps:0,is:0,us:0,es:0});
-  let body='',lastG=null,gSum=mk0(),tot=mk0(),totDone=false;
+  let body='',lastG=null,gSum=mk0(),tot=mk0(),totDone=false;const negs=[];
   const sumCells=(S,showUnit,rhf)=>`<td></td><td></td><td></td><td></td><td></td><td class="n">${Z(S.ps)}</td><td class="n">${Z(S.is)}</td><td class="n">${Z(S.us)}</td><td class="n">${Z(S.es)}</td><td></td><td class="n">${showUnit&&prod?iU(S.us/prod):'-'}</td>`;
   const totRow=()=>{body+=`<tr class="xl-tot"><td colspan="5">합계 (형강가열로 제외)</td>${sumCells(tot,true)}</tr>`;totDone=true;};
   const flushG=()=>{if(lastG!=null)body+=`<tr class="xl-sub"><td colspan="5">${esc(lastG)} 소계${lastG===INV_RHF?' (매출 기록용 · 원단위 제외)':''}</td>${sumCells(gSum,lastG!==INV_RHF)}</tr>`;};
@@ -19370,7 +19390,7 @@ function renderInvMonth(){
       if(invRhf(m)){if(!totDone)totRow();body+=`<tr><td colspan="${NC}" style="background:#ffedd5;font-weight:800;padding:7px 10px;color:#1e293b">🔥 형강가열로 — 제강 원가(원단위)와 무관 · 입고·사용 기록과 매출 기록용</td></tr>`;}
       else if(vm){body+=`<tr><td colspan="${NC}" style="background:${K==='동국R&S'?'#dbeafe':'#e5e7eb'};font-weight:800;padding:6px 10px;color:#1e293b">▣ ${esc(K)} <span style="font-weight:500;font-size:11.5px">${cntK[K]}품목 · ${K==='동국R&S'?'일반 + 직매출 (동국R&S 매출 포함)':'타사 공급 (동국R&S 매출 미포함)'}</span></td></tr>`;}}}
     const prev=invPrev(code,ym),inq=invIn(code,ym),end=invEnd(code,ym),use=invUse(code,ym);
-    const aP=prev*pr,aI=inq*pr,aU=use*pr,aE=end*pr;
+    const aP=prev*pr,aI=inq*pr,aU=use*pr,aE=end*pr;if(use<0)negs.push(it.n);
     [gSum,...(invRhf(m)?[]:[tot])].forEach(S=>{S.ps+=aP;S.is+=aI;S.us+=aU;S.es+=aE;});
     const qOv=invRhf(m)?0:use/(prod||1),aOv=invRhf(m)?0:aU/(prod||1);
     const ec=EQC[m.g]||['#e5e7eb','#334155'];
@@ -19382,7 +19402,7 @@ function renderInvMonth(){
       <td class="n">${iN(pr)}</td>
       <td class="n"><input type="number" class="iinp"${invPrevAttr(code,ym)}${invLockAttr(ym)} value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
       <td class="n">${invInDaily(code,ym)!=null?`<a href="#" onclick="invInEdit('${code}','${ym}');return false" title="일별 입고 내역 보기·수정 (입고량 탭의 일별 합계: ${esc(invInData.filter(r=>r.code===code&&(r.ymd||'').slice(0,7)===ym&&(+r.qty||0)>0).map(r=>r.ymd.slice(5)+' '+r.qty).join(', '))})" style="color:#1d4ed8;font-weight:700;text-decoration:underline dotted">${iN(inq)}</a> <span style="font-size:9px;color:#1d4ed8;cursor:pointer" onclick="invInEdit('${code}','${ym}')">일별✎</span>`:`<input type="number" class="iinp inp-yel"${invLockAttr(ym)} value="${inq}" onchange="setInvField('${code}','${ym}','in',this.value)">`}</td>
-      <td class="n xl-use"><input type="number" class="iinp" style="font-weight:800;color:#b45309"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
+      <td class="n xl-use"${use<0?' style="background:#fecaca"':''}><input type="number" class="iinp" style="font-weight:800;color:${use<0?'#b91c1c':'#b45309'}${use<0?';background:#fee2e2;border-color:#f87171':''}"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
       <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 '+esc(stkMapAll()[code])+' 에서 가져옴 — 눌러서 시트 위치로 이동" style="font-size:10px;cursor:pointer;color:#15803d;font-weight:700" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗'+esc(stkMapAll()[code])+'</span>':(invConfLocked(ym)?'':'<span title="이 품목의 월말재고를 재고량 시트의 칸과 연결합니다 — 연결하면 시트에서 입력한 값이 자동으로 들어옵니다" style="display:inline-block;margin-left:3px;padding:0 6px;border:1px dashed #94a3b8;border-radius:10px;font-size:10.5px;color:#475569;background:#fff;cursor:pointer;white-space:nowrap" onclick="stkVzOpenItem(\''+code+'\',\''+ym+'\')">＋시트 연동</span>')}</td>
       <td class="n">${Z(prev+inq)}</td>
       <td class="n">${Z(aP)}</td><td class="n">${Z(aI)}</td><td class="n xl-use2">${Z(aU)}</td><td class="n">${Z(aE)}</td>
@@ -19390,7 +19410,7 @@ function renderInvMonth(){
   flushG();
   if(!totDone)totRow();
   const hd=t=>`<th>${t}</th>`;
-  document.getElementById('invTitle').innerHTML=`<div style="font-size:17px;font-weight:900;margin:4px 2px 6px;color:#1e293b">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 <span style="font-size:12px;font-weight:600;color:var(--muted)">${esc(ym)} · 생산량 ${prod?Math.round(prod).toLocaleString()+' TON':'없음'}</span></div>`;
+  document.getElementById('invTitle').innerHTML=`<div style="font-size:17px;font-weight:900;margin:4px 2px 6px;color:#1e293b">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 <span style="font-size:12px;font-weight:600;color:var(--muted)">${esc(ym)} · 생산량 ${prod?Math.round(prod).toLocaleString()+' TON':'없음'}</span></div>${negs.length?`<div style="font-size:12px;margin:0 2px 8px;padding:6px 10px;border-radius:7px;background:#fef2f2;border:1px solid #fca5a5;color:#991b1b">⚠ <b>사용량이 음수인 품목 ${negs.length}건</b> — 전월재고+입고보다 월말재고가 큽니다. 입고 누락 또는 전월·월말재고 오입력을 확인하세요(빨간 칸): ${negs.slice(0,6).map(esc).join(' · ')}${negs.length>6?' 외 '+(negs.length-6)+'건':''}</div>`:''}`;
   document.getElementById('invWrap').innerHTML=`<style>
     #invWrap .xlm{border-collapse:collapse;font-size:12.5px;min-width:1560px;width:100%}
     #invWrap .xlm th{background:#c9eef5;color:#1e293b;border:1px solid #6b7b8c;padding:6px 8px;font-weight:800;text-align:center;white-space:nowrap}
