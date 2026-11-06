@@ -15916,10 +15916,17 @@ function invTotFxSrc(ym,k){
   const x=INV_TOT_BYK[k];
   if(k==='r20'&&x.pr&&x.pr.sum&&x.pr.sum[0]){const a=invUse(x.pr.sum[0][0],ym);if(a)return {v:a/x.pr.sum[0][1],src:'auto'};}
   if(k==='r20')return {v:ym===INV_TOT_FROM&&x.fx!=null?x.fx:0,src:ym===INV_TOT_FROM?'seed':'none'}; // 전극 SET는 승계하지 않음(금액이 커서 DC-15 사용량 자동 또는 직접 입력)
+  /* 2026-11-06: 영구장 수량 등 수기 고정량은 이전 달 값을 자동 승계하지 않음 — 이번 달에 직접 입력해야 반영(미입력 = 0).
+     직전 입력값은 참고(ref)로만 보여주고 [직전값 적용] 버튼으로 가져옴. 9월은 엑셀 값(seed) 그대로. */
+  if(ym===INV_TOT_FROM&&x.fx!=null)return {v:x.fx,src:'seed'};
   const ms=Object.keys(invTotFx).filter(m=>m<ym&&invTotFx[m]&&invTotFx[m][k]!=null&&invTotFx[m][k]!=='').sort();
-  if(ms.length)return {v:+invTotFx[ms[ms.length-1]][k],src:'inh',from:ms[ms.length-1]};
-  if(ym>=INV_TOT_FROM&&x.fx!=null)return {v:x.fx,src:ym===INV_TOT_FROM?'seed':'inh',from:INV_TOT_FROM};
-  return {v:0,src:'none'};
+  const ref=ms.length?{v:+invTotFx[ms[ms.length-1]][k],from:ms[ms.length-1]}:((ym>INV_TOT_FROM&&x.fx!=null)?{v:x.fx,from:INV_TOT_FROM}:null);
+  return {v:0,src:'none',ref};
+}
+function invTotFxCopyPrev(ym,k){
+  if(invConfLocked(ym)){toast('확정된 달입니다 — 확정 해제 후 수정하세요');return;}
+  const sr=invTotFxSrc(ym,k);if(!sr.ref){toast('가져올 직전 값이 없습니다');return;}
+  invTotFxSet(ym,k,sr.ref.v);
 }
 function invTotFxGet(ym,k){return invTotFxSrc(ym,k).v;}
 function invTotFxIsSet(ym,k){const o=invTotFx[ym];return !!(o&&o[k]!=null&&o[k]!=='');}
@@ -16052,7 +16059,7 @@ function invConfChecks(ym){
   if(inMis.length)warn.push(`입고량 불일치 ${inMis.length}건(일별 입고 우선 적용): `+inMis.slice(0,4).join(' / '));
   if(ym>=INV_TOT_FROM){
     const miss=INV_TOT_ROWS.filter(x=>x.fx!=null&&!invTotFxIsSet(ym,x.k)&&!(x.k==='r20'&&invTotFxSrc(ym,x.k).src==='auto')&&!(ym===INV_TOT_FROM));
-    if(miss.length)warn.push(`영구장 수량 등 수기 입력 ${miss.length}항목이 이번 달 입력 없이 이전 달 값(승계)으로 계산됩니다: `+miss.map(x=>x.nm+(x.sp?' '+x.sp:'')+'('+invTotFxGet(ym,x.k).toLocaleString()+')').join(', ')+' — [전체원단위] 탭 노란 칸에서 확인·입력');
+    if(miss.length)warn.push(`영구장 수량 등 수기 입력 ${miss.length}항목이 이번 달 입력되지 않아 0으로 계산됩니다(사용량 전부가 '나머지' 설비로 잡힘): `+miss.map(x=>{const r=invTotFxSrc(ym,x.k).ref;return x.nm+(x.sp?' '+x.sp:'')+(r?'(직전 '+r.from+' 입력 '+r.v.toLocaleString()+')':'');}).join(', ')+' — [전체원단위] 탭 노란 칸에 이번 달 값을 입력하세요');
     const rtm=INV_TOT_RT.filter(t=>invTotRtSrc(ym,t.k).src!=='set'&&ym!==INV_TOT_FROM);
     if(rtm.length)warn.push(`설비 분할 비율 ${rtm.length}항목이 이번 달 입력 없이 이전 값으로 적용됩니다: `+rtm.map(t=>t.nm+' '+t.a+' '+Math.round(invTotRt(ym,t.k)*1000)/10+'%').join(', ')+' — 맞는지 확인하세요');
     const c=invTotCalc(ym),p=invTotCalc(pv);
@@ -18867,7 +18874,7 @@ function renderInvTot(){
     :(INV_XL_PIN[ym]||INV_XL_PIN[pv])?`<div style="font-size:12px;margin:6px 0;color:#92400e">⚠ 프로그램 계산값으로 표시 중입니다(9월·8월은 엑셀 값과 다를 수 있음). <a href="#" onclick="invTotPinSet(true);return false" style="font-weight:700">엑셀 확정값(고정)으로 보기</a></div>`:'';
   document.getElementById('invtNote').innerHTML=`<div style="font-size:12px;margin:4px 2px">${st.join(' · ')}</div>${pinBar}${note}`;
   // ── 수기 입력 박스(노란색): 분할 비율 + 영구장 수량 ──
-  const srcTag=(s)=>s.src==='set'?'<span style="color:#15803d">이번 달 입력</span>':s.src==='inh'?`<span style="color:#b45309">${esc(s.from)} 값 승계 — 확인 필요</span>`:s.src==='auto'?'<span style="color:#15803d">자동(DC-15÷3)</span>':s.src==='seed'?'<span style="color:#15803d">엑셀 9월 값</span>':s.src==='def'?'<span style="color:#64748b">엑셀 기본값</span>':'<span style="color:#c81e1e">미입력</span>';
+  const srcTag=(s,k)=>s.src==='set'?'<span style="color:#15803d">이번 달 입력</span>':s.src==='inh'?`<span style="color:#b45309">${esc(s.from)} 값 승계 — 확인 필요</span>`:s.src==='auto'?'<span style="color:#15803d">자동(DC-15÷3)</span>':s.src==='seed'?'<span style="color:#15803d">엑셀 9월 값</span>':s.src==='def'?'<span style="color:#64748b">엑셀 기본값</span>':'<span style="color:#c81e1e;font-weight:700">미입력</span>'+(s.ref&&!dis?` <span style="color:#64748b">· 직전(${esc(s.ref.from)}) ${iN(s.ref.v)}</span> <a href="#" onclick="invTotFxCopyPrev('${ym}','${k||''}');return false" style="font-weight:700">직전값 적용</a>`:'');
   const yc=(s)=>s.src==='set'?'inp-yel':'inp-yel inp-yel-soft';
   const useOf=cd=>invUse(cd,ym);
   const rtRows=INV_TOT_RT.map(t=>{const s=invTotRtSrc(ym,t.k);const tot=useOf(t.cd);const ra=c.rows.find(r=>r.k===t.ra),rb=c.rows.find(r=>r.k===t.rb);
@@ -18883,16 +18890,16 @@ function renderInvTot(){
   const fxRows=fxDefs.map(d=>{const s=invTotFxSrc(ym,d.k);const tot=d.cd?useOf(d.cd):null;const rr=d.restK?c.rows.find(r=>r.k===d.restK):null;
     const neg=rr&&rr.u<-0.001;
     return `<tr><td><b>${esc(d.nm)}</b></td><td class="n">${tot!=null?iN(tot):'-'}</td>
-      <td class="n">${esc(d.in)} <input type="number" class="iinp ${yc(s)}" style="width:86px" value="${Math.round(s.v)}"${dis} title="${d.k==='r20'?'비우면 DC-15 사용량÷3 자동':'수기 입력 — 비우면 이전 달 값 승계'}" onchange="invTotFxSet('${ym}','${d.k}',this.value)"></td>
+      <td class="n">${esc(d.in)} <input type="number" class="iinp ${yc(s)}" style="width:104px" value="${s.src==='none'?'':Math.round(s.v)}" placeholder="${s.src==='none'?(s.ref?'직전 '+iN(s.ref.v):'미입력'):''}"${dis} title="${d.k==='r20'?'비우면 DC-15 사용량÷3 자동':'수기 입력 — 이번 달 값을 입력하세요(이전 달 값은 자동으로 가져오지 않습니다)'}" onchange="invTotFxSet('${ym}','${d.k}',this.value)"></td>
       <td class="n">${d.rest?esc(d.rest)+' <b style="color:'+(neg?'#c81e1e':'inherit')+'">'+iN(rr?rr.u:0)+'</b>'+(neg?' ⚠':''):''}</td>
-      <td class="n" style="font-size:11px">${d.rest?'총 사용량 − 입력':''}</td><td style="font-size:11px">${srcTag(s)}</td></tr>`;}).join('');
+      <td class="n" style="font-size:11px">${d.rest?'총 사용량 − 입력':''}</td><td style="font-size:11px">${srcTag(s,d.k)}</td></tr>`;}).join('');
   let box=document.getElementById('invtRt');
   if(!box){box=document.createElement('div');box.id='invtRt';const n=document.getElementById('invtWrap');if(n&&n.parentNode)n.parentNode.insertBefore(box,n.nextSibling);}
   box.innerHTML=`<div style="border:1px solid #eab308;background:#fffde7;border-radius:8px;padding:8px 10px;margin:8px 0">
-    <div style="font-weight:800;font-size:13px;margin-bottom:4px">🟨 수기 입력 — 설비 분할 비율 · 영구장 수량 <span style="font-weight:500;font-size:11.5px;color:#92400e">(노란색 = 직접 입력 / 연한 노랑 = 이번 달 입력 없이 이전 값 승계 중)</span></div>
+    <div style="font-weight:800;font-size:13px;margin-bottom:4px">🟨 수기 입력 — 설비 분할 비율 · 영구장 수량 <span style="font-weight:500;font-size:11.5px;color:#92400e">(노란색 = 이번 달 직접 입력 / 연한 노랑 = 분할 비율은 입력 없으면 이전 값 승계 · 영구장 수량은 승계하지 않고 미입력 = 0)</span></div>
     <div class="tablewrap"><table class="bomtbl" style="min-width:0"><thead><tr><th>품목(사용량 분할)</th><th class="n">총 사용량(kg)</th><th class="n">앞 설비 비율(입력)</th><th class="n">나머지 설비(자동)</th><th class="n">분할 사용량(kg)</th><th>출처</th></tr></thead><tbody>${rtRows}</tbody></table></div>
     <div class="tablewrap" style="margin-top:6px"><table class="bomtbl" style="min-width:0"><thead><tr><th>영구장 수량(수기)</th><th class="n">총 사용량</th><th class="n">입력 칸</th><th class="n">나머지(자동)</th><th></th><th>출처</th></tr></thead><tbody>${fxRows}</tbody></table></div>
-    <div style="font-size:11px;color:#92400e;margin-top:4px">분할 비율 변경은 해당 월에만 적용되고, 입력하지 않은 달은 직전 입력 달의 값을 이어받습니다(엑셀 기본값: MUD재 전기로 30% · CA-180MH 래들 80% · CA-160 래들 60%).</div></div>`;
+    <div style="font-size:11px;color:#92400e;margin-top:4px">분할 비율 변경은 해당 월에만 적용되고, 입력하지 않은 달은 직전 입력 달의 값을 이어받습니다. <b>영구장 수량은 이어받지 않으니 매달 직접 입력하세요</b>(직전 값은 [직전값 적용]으로 가져올 수 있음). (엑셀 기본값: MUD재 전기로 30% · CA-180MH 래들 80% · CA-160 래들 60%).</div></div>`;
   if(pin)box.innerHTML='';
   // ── 표(엑셀 양식) ──
   document.getElementById('invtWrap').innerHTML='<style>#invtWrap .xltot tbody tr,#invtWrap .xltot tbody tr:nth-child(even){background:#fff!important}#invtWrap .xltot tbody tr:hover td{filter:brightness(.97)}</style>'+invTotXlHtml(ym,!lock,false);
@@ -18935,7 +18942,7 @@ function invTotXlHtml(ym,edit,xls){
         if(pr){spu+=pr.u;spq+=hasP?pr.q:0;spa+=hasP?pr.a:0;}
         const fxr=x.fx!=null;const rtr=x.u.some(t=>t.rt);
         const s=fxr?invTotFxSrc(ym,x.k):null;
-        const useCell=(fxr&&!xls)?`<input type="number" class="iinp ${yc(s)}" style="width:84px;font-weight:700;text-align:right" value="${Math.round(r.u)}"${dis} title="수기 입력 항목(엑셀에서 매달 직접 입력하던 칸)${x.k==='r20'?' · 비우면 DC-15 사용량÷3 자동':''}" onchange="invTotFxSet('${ym}','${x.k}',this.value)">`:nz(r.u,0);
+        const useCell=(fxr&&!xls)?`<input type="number" class="iinp ${yc(s)}" style="width:84px;font-weight:700;text-align:right" value="${(s&&s.src==='none')?'':Math.round(r.u)}" placeholder="${(s&&s.src==='none')?(s.ref?'직전 '+iN(s.ref.v):'미입력'):''}"${dis} title="수기 입력 항목(엑셀에서 매달 직접 입력하던 칸)${x.k==='r20'?' · 비우면 DC-15 사용량÷3 자동':''}" onchange="invTotFxSet('${ym}','${x.k}',this.value)">`:nz(r.u,0);
         const tag=(rtr&&!xls)?` <span style="font-size:10px;background:#fff176;border-radius:3px;padding:0 3px" title="설비 분할 비율 적용(아래 노란 박스에서 조정)">분할 ${Math.round((x.u.find(t=>t.rt).sd?invTotRt(ym,x.u.find(t=>t.rt).rt):1-invTotRt(ym,x.u.find(t=>t.rt).rt))*1000)/10}%</span>`:'';
         const bug=(!xls&&r.bug&&invTotL13Mode()==='xl')?` <span style="font-size:10px;color:#b45309" title="엑셀 L13 수식(앙카허스 사용량×올리빈 단가) 그대로 적용 중">엑셀식</span>`:'';
         const topB=(firstOfEq&&i===0)?'border-top:2px solid #334155;':'';
@@ -18980,7 +18987,7 @@ function invTotCopyFx(){
   if(invConfLocked(ym)){toast('확정된 달입니다');return;}
   if(!confirm(`${pv}의 수기 입력값(영구장 수량 ${INV_TOT_ROWS.filter(x=>x.fx!=null&&x.k!=='r20').length}항목)과 설비 분할 비율(${INV_TOT_RT.length}항목)을 ${ym}에 입력값으로 복사할까요?\n(Bottom electrode는 DC-15 사용량에서 자동 계산되므로 제외)`))return;
   const o=invTotFx[ym]=invTotFx[ym]||{};
-  INV_TOT_ROWS.filter(x=>x.fx!=null&&x.k!=='r20').forEach(x=>{o[x.k]=invTotFxGet(pv,x.k);});
+  INV_TOT_ROWS.filter(x=>x.fx!=null&&x.k!=='r20').forEach(x=>{const sp=invTotFxSrc(pv,x.k);o[x.k]=sp.src==='none'?(sp.ref?sp.ref.v:0):sp.v;});
   const r=invTotRtD[ym]=invTotRtD[ym]||{};
   INV_TOT_RT.forEach(t=>{r[t.k]=invTotRt(pv,t.k);});
   saveInvTotFx();saveInvTotRt();flashSave();renderInvTot();try{renderInvMonth();}catch(e){}
