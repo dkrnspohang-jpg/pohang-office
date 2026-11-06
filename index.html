@@ -19373,14 +19373,14 @@ function renderInvMonth(){
 }
 /* 2026-11-06: 월별 원단위의 [시트연동] 칸 — 월말재고가 재고량 시트의 어느 칸에서 오는지를 따로 보여주고 이 칸에서 바로 수정.
    칸(예: J65) 또는 합산식(예: F64+F63)을 입력하면 즉시 연결·월말재고 반영, 비우면 연결 해제. 연동은 모든 달에 공통 적용됩니다. */
-const INV_MCOLW=[44,84,232,42,74,88,100,92,98,172,66,96,96,104,96,70,80],INV_MCOLT=INV_MCOLW.reduce((a,b)=>a+b,0);
+const INV_MCOLW=[44,84,232,42,74,88,100,92,98,112,66,96,96,104,96,70,80],INV_MCOLT=INV_MCOLW.reduce((a,b)=>a+b,0);
 function invLkCtx(ym){const rec=stkRec(ym);return {map:stkMapAll(),M:stkCtx(ym),on:!!(rec&&rec.on!==0),lkr:stkLkRefMap(ym)};}
 function invLkCell(code,ym,u,end,C){
   const ex=C.map[code]||'',lock=invConfLocked(ym),refs=ex.match(/[A-Z]{1,2}\d+/g)||[];
   let st='',bg='',tip='';
   const fmt=v=>stkFmt(v);
   if(ex){
-    if(!C.on){st='<span class="lk-s" style="color:#94a3b8" title="이 달은 재고량 시트가 없거나 월말재고 연동이 꺼져 있습니다">시트없음</span>';}
+    if(!C.on){st='<span class="lk-s" style="color:#94a3b8" title="이 달은 재고량 시트가 없거나 월말재고 연동이 꺼져 있습니다">–</span>';}
     else{
       const v=C.M.ev(ex);
       if(!isFinite(v)){st='<span class="lk-s" style="color:#b91c1c;font-weight:800" title="연동 수식 오류">✖오류</span>';bg='#fecaca';}
@@ -19401,7 +19401,7 @@ function invLkCell(code,ym,u,end,C){
     }
   }
   const dis=lock?' disabled':'';
-  return `<td class="lk"${bg?` style="background:${bg}"`:''}><div class="lk-w"><input class="lkx" value="${esc(ex)}" placeholder="셀 연결" title="${ex?'재고량 시트 연동 칸/식 — 바꾸면 모든 달에 적용됩니다. 비우면 연결 해제':'재고량 시트의 칸(예: J65) 또는 합산식(예: F64+F63)을 입력하면 월말재고가 자동으로 들어옵니다'}" autocomplete="off"${dis} onfocus="this.select()" onchange="invLkSet('${code}','${ym}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}else if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">${ex?`<span class="lk-b" title="재고량 시트의 해당 칸으로 이동" onclick="stkGo('${ym}','${code}')">↗</span>`:''}<span class="lk-b" title="재고량 시트에서 칸을 눌러 고르는 연동 작업대 열기" onclick="stkVzOpenItem('${code}','${ym}')">⚙</span>${st}</div></td>`;
+  return `<td class="lk"${bg?` style="background:${bg}"`:''}><div class="lk-w"><input class="lkx" value="${esc(ex)}" placeholder="연결" title="${ex?'재고량 시트 연동 칸/식 — 바꾸면 모든 달에 적용됩니다. 비우면 연결 해제':'재고량 시트의 칸(예: J65) 또는 합산식(예: F64+F63)을 입력하면 월말재고가 자동으로 들어옵니다'}" autocomplete="off"${dis} onfocus="this.select()" onchange="invLkSet('${code}','${ym}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}else if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">${ex?`<span class="lk-b" title="재고량 시트의 해당 칸으로 이동" onclick="stkGo('${ym}','${code}')">↗</span>`:''}<span class="lk-b" title="재고량 시트에서 칸을 눌러 고르는 연동 작업대 열기" onclick="stkVzOpenItem('${code}','${ym}')">⚙</span>${st}</div></td>`;
 }
 async function invLkPull(ym){const n=await stkSync(ym,true);toast(n?'월말재고 '+n+'품목을 시트 값으로 반영했습니다':'이미 일치합니다');renderInvMonth();}
 async function invLkSet(code,ym,val){
@@ -19487,14 +19487,14 @@ function renderInvMonthCore(){
   const hd=t=>`<th>${t}</th>`;
   document.getElementById('invTitle').innerHTML=`<div style="font-size:17px;font-weight:900;margin:4px 2px 6px;color:#1e293b">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 <span style="font-size:12px;font-weight:600;color:var(--muted)">${esc(ym)} · 생산량 ${prod?Math.round(prod).toLocaleString()+' TON':'없음'}</span></div>${negs.length?`<div style="font-size:12px;margin:0 2px 8px;padding:6px 10px;border-radius:7px;background:#fef2f2;border:1px solid #fca5a5;color:#991b1b">⚠ <b>사용량이 음수인 품목 ${negs.length}건</b> — 전월재고+입고보다 월말재고가 큽니다. 입고 누락 또는 전월·월말재고 오입력을 확인하세요(빨간 칸): ${negs.slice(0,6).map(esc).join(' · ')}${negs.length>6?' 외 '+(negs.length-6)+'건':''}</div>`:''}`;
   document.getElementById('invWrap').innerHTML=`<style>
-    #invWrap .xlm{border-collapse:collapse;font-size:12.5px;min-width:1560px;width:100%;table-layout:fixed}
-    #invWrap .xlm td.lk{padding:2px 4px}
+    #invWrap .xlm{border-collapse:collapse;font-size:12.5px;min-width:1500px;width:100%;table-layout:fixed}
+    #invWrap .xlm td.lk{padding:2px 3px}
     #invWrap .xlm .lk-w{display:flex;align-items:center;gap:3px}
-    #invWrap .xlm .lkx{flex:1 1 auto;min-width:0;width:64px;height:22px;box-sizing:border-box;padding:1px 5px;border:1px solid #cbd5e1;border-radius:5px;font-family:monospace;font-size:11.5px;text-align:left;background:#fff}
+    #invWrap .xlm .lkx{flex:1 1 auto;min-width:0;width:40px;height:22px;box-sizing:border-box;padding:1px 5px;border:1px solid #cbd5e1;border-radius:5px;font-family:monospace;font-size:11.5px;text-align:left;background:#fff}
     #invWrap .xlm .lkx:focus{border-color:#2563eb;outline:none;background:#eff6ff}
     #invWrap .xlm .lk-b{cursor:pointer;font-size:11.5px;color:#475569;padding:0 2px;border-radius:4px;flex:none}
     #invWrap .xlm .lk-b:hover{background:#e2e8f0}
-    #invWrap .xlm .lk-s{font-size:11px;white-space:nowrap;flex:none}
+    #invWrap .xlm .lk-s{font-size:10.5px;white-space:nowrap;flex:none}
     #invWrap .xlm th{background:#c9eef5;color:#1e293b;border:1px solid #6b7b8c;padding:5px 4px;font-weight:800;text-align:center;white-space:normal;line-height:1.2}
     #invWrap .xlm td{border:1px solid #c3cad3;padding:2px 6px;white-space:nowrap;background:#fff;height:28px;overflow:hidden}
     #invWrap .xlm td.n{text-align:right;font-variant-numeric:tabular-nums}
