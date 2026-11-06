@@ -1951,7 +1951,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
           <button class="btn hidden" id="l_cancel" onclick="resetLadleForm()">취소</button>
         </div></div>
       </div>
-      <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ 누적수명은 신축·대수리(영구장)·철피신규 시 초기화되며, 영구장 누적수명은 대수리(영구장)·철피신규 전까지 신축과 무관하게 계속 누적됩니다. 일일수명만 입력하면 누적은 자동 계산됩니다.</div>
+      <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ 누적수명은 신축·대수리(영구장)·철피신규 시 초기화되며, 영구장 누적수명은 대수리(영구장)·철피신규 전까지 신축과 무관하게 계속 누적됩니다. 영구장 누적수명 = 해체 총수명 + 진행 중 보수(콘·SL) 확정분의 합이며, 일일 '사용' 기록은 현재수명(진행 중 구간) 표시에만 쓰고 합산하지 않습니다(진행 중 래들은 '사용' 1건만 유지).</div>
     </div>
     <div class="toolrow">
       <input class="search" id="l_search" placeholder="래들번호·업체·비고 검색" oninput="renderLadle()">
@@ -2183,7 +2183,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <button class="btn primary" id="pm_save" onclick="saveProdMaster()" style="display:none">💾 저장</button>
     </div>
     <div class="toolrow">
-      <span class="ddw"><button class="btn primary" title="새 품목을 등록합니다" onclick="ddT(this,event)">＋ 등록 ▾</button><div class="ddm"><button class="ddi" onclick="addProd()">＋ 제품 한 줄 추가<small>마스터에만 빈 행을 추가합니다</small></button><button class="ddi" onclick="ncOpen()">⚡ 신규 품목(원스텝)<small>품명·자재코드·규격·단중·단가를 한 번 입력 → 원단위+마스터+연동+자재코드 동시 생성</small></button></div></span><span class="ddw"><button class="btn primary" title="점검·연결·누락 조회를 모았습니다" onclick="ddT(this,event)">📋 점검·연결 ▾</button><div class="ddm"><div class="ddh">기준 점검 (자재코드 기준)</div><button class="ddi" onclick="lxOpen()">🔗 연동 센터 (마스터 기준 · 한 페이지)<small>원단위·판매계획·사업계획 연동 / 누락 / 단가 확인 + 1차 자동 매칭 + 직접 연결</small></button><button class="ddi" onclick="psOpen('sync')">🔗 사업계획 ↔ 마스터 연결 센터<small>연결된 계획 품명·규격을 마스터와 동일하게 표시 · 미연결 계획 품목/마스터 전체 연결</small></button><button class="ddi" onclick="ccAuditXls()">📋 자재코드 3자 대조 (엑셀)<small>마스터·원단위·사업계획 누락 확인 + 마스터 미입력 품명 목록</small></button><button class="ddi" onclick="ccMisOpen()">🛠 원단위 자재코드 맞추기<small>원단위 코드가 마스터와 다른 품목을 한 번에 마스터 코드로 변경</small></button><button class="ddi" onclick="scOpen('0')">📋 내화물 기준 점검<small>마스터 → 원단위 → 물량표 → 사업계획 연결·단가를 한 화면에서 점검</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>코드별로 계획·마스터·원단위가 모두 있는지 확인·연결</small></button><button class="ddi" onclick="scOpen('6')">💲 Q코드 단가 변경<small>같은 자재코드의 모든 규격 단가를 한 번에 변경</small></button><div class="ddh">누락·빈칸 채우기</div><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>사업계획·물량표·원단위에는 있는데 마스터에 없는 품목 조회·추가</small></button><button class="ddi" onclick="invImportMissingToMaster()">⬇ 원단위 누락품목 일괄 가져오기<small>원단위에만 있는 품목을 단가와 함께 마스터로 한 번에 가져와 연동</small></button><button class="ddi" onclick="bulkFillQcodeFromInv()">🔄 자재코드 일괄채우기<small>제품명은 있고 자재코드가 빈 품목을 원단위 코드로 채움</small></button><div class="ddh">분류</div><button class="ddi" onclick="supOpen()">🏷 납품업체 구분<small>동국R&amp;S 납품 / 타사 납품(업체별)을 품명 단위로 지정</small></button></div></span><span class="ddw"><button class="btn" title="단가 파일·엑셀" onclick="ddT(this,event)">📤 단가·엑셀 ▾</button><div class="ddm"><button class="ddi" onclick="exportPriceCSV()">📤 단가양식 내보내기<small>단가 수정용 CSV 양식(엑셀에서 편집)</small></button><button class="ddi" onclick="document.getElementById('priceFile').click()">📥 단가일괄수정 (단가변동 파일 반영)<small>CSV(단가양식 편집본) 또는 동국제강 단가조정 세부내역 엑셀(.xlsx)을 형식에 맞게 자동 반영</small></button><button class="ddi" onclick="downloadProd()">📥 전체 엑셀<small>품목마스터 전체를 엑셀로 내려받기</small></button></div></span><span class="ddw"><button class="btn danger" id="pm_delMenu" title="삭제·정리·새로고침" onclick="ddT(this,event)">🗑 정리 ▾</button><div class="ddm"><button class="ddi dng" id="pm_bulkdel" disabled style="opacity:.5" onclick="bulkDelProd()">🗑 선택 삭제 (0)<small>체크한 제품을 한 번에 삭제(재조회 불가)</small></button><button class="ddi dng" onclick="delUnusedProd()">🗑 미사용 정리<small>미사용(사용여부 0) 제품을 한 번에 삭제</small></button><hr><button class="ddi" onclick="renderProdMaster()">🔄 새로고침<small>이름순 재정렬·다시 조회</small></button></div></span>
+      <span class="ddw"><button class="btn primary" title="새 품목을 등록합니다" onclick="ddT(this,event)">＋ 등록 ▾</button><div class="ddm"><button class="ddi" onclick="addProd()">＋ 제품 한 줄 추가<small>마스터에만 빈 행을 추가합니다</small></button><button class="ddi" onclick="ncOpen()">⚡ 신규 품목(원스텝)<small>품명·자재코드·규격·단중·단가를 한 번 입력 → 원단위+마스터+연동+자재코드 동시 생성</small></button></div></span><span class="ddw"><button class="btn primary" title="점검·연결·누락 조회를 모았습니다" onclick="ddT(this,event)">📋 점검·연결 ▾</button><div class="ddm"><div class="ddh">기준 점검 (자재코드 기준)</div><button class="ddi" onclick="lxOpen()">🔗 연동 센터 (마스터 기준 · 한 페이지)<small>원단위·판매계획·사업계획 연동 / 누락 / 단가 확인 + 1차 자동 매칭 + 직접 연결</small></button><button class="ddi" onclick="psOpen('sync')">🔗 사업계획 ↔ 마스터 연결 센터<small>연결된 계획 품명·규격을 마스터와 동일하게 표시 · 미연결 계획 품목/마스터 전체 연결</small></button><button class="ddi" onclick="ccAuditXls()">📋 자재코드 3자 대조 (엑셀)<small>마스터·원단위·사업계획 누락 확인 + 마스터 미입력 품명 목록</small></button><button class="ddi" onclick="ccMisOpen()">🛠 원단위 자재코드 맞추기<small>원단위 코드가 마스터와 다른 품목을 한 번에 마스터 코드로 변경</small></button><button class="ddi" onclick="scOpen('0')">📋 내화물 기준 점검<small>마스터 → 원단위 → 물량표 → 사업계획 연결·단가를 한 화면에서 점검</small></button><button class="ddi" onclick="scOpen('7')">🔗 자재코드 체인(동국제강)<small>코드별로 계획·마스터·원단위가 모두 있는지 확인·연결</small></button><button class="ddi" onclick="scOpen('6')">💲 Q코드 단가 변경<small>같은 자재코드의 모든 규격 단가를 한 번에 변경</small></button><div class="ddh">누락·빈칸 채우기</div><button class="ddi" onclick="mmOpen()">🔎 마스터 누락품목 조회<small>사업계획·물량표·원단위에는 있는데 마스터에 없는 품목 조회·추가</small></button><button class="ddi" onclick="invImportMissingToMaster()">⬇ 원단위 누락품목 일괄 가져오기<small>원단위에만 있는 품목을 단가와 함께 마스터로 한 번에 가져와 연동</small></button><button class="ddi" onclick="bulkFillQcodeFromInv()">🔄 자재코드 일괄채우기<small>제품명은 있고 자재코드가 빈 품목을 원단위 코드로 채움</small></button><div class="ddh">분류</div><button class="ddi" onclick="supOpen()">🏷 납품업체 구분<small>동국R&amp;S 납품 / 타사 납품(업체별)을 품명 단위로 지정</small></button></div></span><span class="ddw"><button class="btn" title="단가 파일·엑셀" onclick="ddT(this,event)">📤 단가·엑셀 ▾</button><div class="ddm"><button class="ddi" onclick="exportPriceCSV()">📤 단가양식 내보내기<small>단가 수정용 CSV 양식(엑셀에서 편집)</small></button><button class="ddi" onclick="document.getElementById('priceFile').click()">📥 엑셀로 단가 일괄 변경 (Q코드 자동 매칭)<small>동국제강 단가조정 세부내역 엑셀(.xlsx: 자재코드=Q코드 열 기준) 또는 단가양식 CSV를 읽어 품목마스터에 일괄 반영 · 선택한 분기 시점에 저장</small></button><button class="ddi" onclick="downloadProd()">📥 전체 엑셀<small>품목마스터 전체를 엑셀로 내려받기</small></button></div></span><span class="ddw"><button class="btn danger" id="pm_delMenu" title="삭제·정리·새로고침" onclick="ddT(this,event)">🗑 정리 ▾</button><div class="ddm"><button class="ddi dng" id="pm_bulkdel" disabled style="opacity:.5" onclick="bulkDelProd()">🗑 선택 삭제 (0)<small>체크한 제품을 한 번에 삭제(재조회 불가)</small></button><button class="ddi dng" onclick="delUnusedProd()">🗑 미사용 정리<small>미사용(사용여부 0) 제품을 한 번에 삭제</small></button><hr><button class="ddi" onclick="renderProdMaster()">🔄 새로고침<small>이름순 재정렬·다시 조회</small></button></div></span>
       <input type="file" id="priceFile" accept=".csv,.xlsx,text/csv" style="display:none" onchange="importPriceAny(this)">
       <span class="spacer"></span>
       <span id="pm_hint" style="font-size:11.5px;color:var(--muted)"></span>
@@ -3354,7 +3354,7 @@ service cloud.firestore {
     <div class="subpanel" id="isp-stock">
       <div class="toolrow">
         <label style="font-size:12px;color:var(--muted)">대상월</label>
-        <input type="month" class="selbox" id="stk_ym" onchange="stkRender()">
+        <input type="month" class="selbox" id="stk_ym" onchange="stkRender()" title="모든 원단위 탭 공통 기준월">
         <label style="font-size:12px"><input type="checkbox" id="stk_edit" onchange="stkRender()"> ✏️ 양식 수정(품명·단중·소계 수식)</label>
         <button class="btn" id="stk_mgbtn" onclick="stkMgToggle()" title="품명 칸을 엑셀처럼 병합">🧩 병합 편집</button>
         <button class="btn" id="stk_rowbtn" onclick="stkRowToggle()" title="품명·규격·단중 줄을 새로 추가하거나 지우고 열 정렬(가운데 맞춤)을 바꿉니다 — 아래 줄의 수식·병합·연동 칸이 자동으로 이동">📐 품목 추가·삭제 · 정렬</button>
@@ -3376,7 +3376,8 @@ service cloud.firestore {
     <div class="subpanel" id="isp-month">
       <div class="toolrow">
         <label style="font-size:12px;color:var(--muted)">기준월</label>
-        <input type="month" class="selbox" id="inv_ym" onchange="renderInvMonth()">
+        <input type="month" class="selbox" id="inv_ym" onchange="renderInvMonth()" title="한 번 고르면 월별·재고량·전체원단위·내부 공유용 탭에 공통 적용(이 PC에 기억)">
+        <button class="btn" onclick="invYmReset()" title="기준월 고정을 풀고 이번 달로">📅 이번 달</button>
         <label style="font-size:12px;color:var(--muted)">제강 생산량(TON)</label>
         <input type="number" class="selbox inp-yel" id="inv_prod" style="width:96px" onchange="setInvProd()">
         <input class="search" id="inv_search" placeholder="품명·규격·설비 검색" oninput="renderInvMonth()">
@@ -3398,7 +3399,7 @@ service cloud.firestore {
     <div class="subpanel" id="isp-tot">
       <div class="toolrow">
         <label style="font-size:12px;color:var(--muted)">기준월</label>
-        <input type="month" class="selbox" id="invt_ym" onchange="renderInvTot()">
+        <input type="month" class="selbox" id="invt_ym" onchange="renderInvTot()" title="모든 원단위 탭 공통 기준월">
         <button class="btn" onclick="invConfOpen(document.getElementById('invt_ym').value)">✅ 확인 → 저장(확정)</button>
         <button class="btn" onclick="invTotCopyFx()" title="수기 입력 항목을 전월 값으로 채우기">↩ 수기 입력값 전월 복사</button>
         <button class="btn" onclick="invXlOpen()">📂 엑셀과 비교</button>
@@ -3414,7 +3415,7 @@ service cloud.firestore {
     <div class="subpanel" id="isp-det">
       <div class="toolrow">
         <label style="font-size:12px;color:var(--muted)">기준월</label>
-        <input type="month" class="selbox" id="invdet_ym" onchange="renderInvDet()">
+        <input type="month" class="selbox" id="invdet_ym" onchange="renderInvDet()" title="모든 원단위 탭 공통 기준월">
         <button class="btn" onclick="invDetExcel()">📥 엑셀</button>
         <button class="btn" onclick="invDetPrint()">🖨 인쇄</button>
         <button class="btn" onclick="invDetCopy()">📋 표 복사</button>
@@ -4889,16 +4890,27 @@ function withCum(list){
   // list: 같은 no 기준. 날짜 asc 정렬 후 campCum/shellCum 부여
   const s=list.slice().sort((a,b)=>a.date.localeCompare(b.date)||(a.seq||0)-(b.seq||0));
   let camp=0, shell=0, campStart=null, campSL=false, needStart=true;
+  /* 2026-11-06: 래들은 '사용'(일일) 기록을 영구장 누적에 더하지 않는다 — 영구장 누적 = 해체 총수명 + 진행 중 캠페인의 보수 확정분(콘·SL 보수 시점 수명, 동일 날짜·수명 쌍은 1회).
+     '사용' 기록은 현재수명(진행 중 구간) 표시에만 쓰인다. 해체 시 그 캠페인 보수 확정분을 빼고 해체 총수명으로 바꿔 이중 합산이 없다. */
+  const LD=s.length&&/^NO\./.test(String(s[0].no));
+  let campShell=0; const seenRp=new Set();
   for(const r of s){
     // 새 캠페인 시작: 이전 해체 다음 첫 기록, 또는 신축/대수리/철피신규 → 그 일자를 시작일로
-    if(needStart||RESET_CAMP.includes(r.type)){ camp=0; campSL=false; campStart=r.date; needStart=false; }
-    if(r.type==='철피신규'||r.type==='대수리(영구장)') shell=0;
+    if(needStart||RESET_CAMP.includes(r.type)){ camp=0; campSL=false; campStart=r.date; needStart=false; campShell=0; seenRp.clear(); }
+    if(r.type==='철피신규'||r.type==='대수리(영구장)'){ shell=0; campShell=0; }
     if(NON_ACCUM.includes(r.type)){ // SL보수·콘보수 = 별도 수명(비누적)
       if(r.type==='SL보수') campSL=true;
-      r._camp=null; r._shell=null; r._campStart=campStart; r._campSL=campSL;
+      if(LD){const k=r.date+'|'+(r.daily||0);if(!seenRp.has(k)){seenRp.add(k);campShell+=(r.daily||0);shell+=(r.daily||0);}
+        r._shell=shell;}
+      else r._shell=null;
+      r._camp=null; r._campStart=campStart; r._campSL=campSL;
       r._campRun=camp; r._shellRun=shell; continue; // 현황판용 러닝 누적(불변)
     }
-    camp+=(r.daily||0); shell+=(r.daily||0);
+    if(LD&&END_EVT.includes(r.type))camp=(r.daily||0);   // 해체 수명 = 그 캠페인 총수명(앞선 '사용' 행과 이중 합산하지 않음)
+    else camp+=(r.daily||0);
+    if(LD&&r.type==='사용'){ /* 영구장 누적 제외 */ }
+    else if(LD&&END_EVT.includes(r.type)){ shell=shell-campShell+(r.daily||0); campShell=0; }
+    else shell+=(r.daily||0);
     r._camp=camp; r._shell=shell; r._campStart=campStart; r._campSL=campSL;
     r._campRun=camp; r._shellRun=shell;
     if(END_EVT.includes(r.type)) needStart=true;
@@ -5661,7 +5673,7 @@ function renderLadleSummary(){
     // 현재수명: 사용중이면 현재 캠페인 누적, 해체상태면 마지막 캠페인 수명
     const curLife=last._camp??(teardown?teardown.daily:null);
     // 영구장 누적수명: 최근 누적반영기록의 _shell(항상 값)
-    const shell=[...listR].reverse().find(r=>r._shell!=null);
+    const shell=[...list].reverse().find(r=>r._shell!=null);
     // 신축횟수(영구장 교체 이후): 수리일 이후 해체(캠페인) 수 + 진행중 1
     const rd=lastRepair?lastRepair.date:'';
     const newCnt=list.filter(r=>END_EVT.includes(r.type)&&(!rd||r.date>=rd)).length+(done?0:1);
@@ -11774,7 +11786,7 @@ async function dlxAutoNew(no,bid){
   return n;
 }
 /* 현재 사용수명 — 일일수명 최신 숫자(누적)가 수명관리 현재수명보다 크면 그 차이를 '사용' 기록으로 추가(작거나 같으면 건드리지 않음) */
-async function dlxAutoUse(no,bid){
+async function dlxAutoUse(no,bid,rmOut){
   const today=todayStr();
   const list=withCum(ladleData.filter(r=>r.no===no&&r.date<=today));
   const last=list[list.length-1];if(!last||END_EVT.includes(last.type))return 0;
@@ -11791,12 +11803,46 @@ async function dlxAutoUse(no,bid){
     if(c.v==='신축'||c.v==='신규래들 입고'||/축조$/.test(c.v)||DLX_END_TXT.includes(c.v)||/해체$/.test(c.v)){maxPrev=0;continue;}
     const q=dlxNums(c.v);if(q&&q[0]>maxPrev)maxPrev=q[0];}
   const N=nm[0];if(N<maxPrev)return 0;
-  const diff=N-L;if(!diff)return 0;
-  const same=list.find(r=>r.type==='사용'&&r.src==='daylog'&&r.date===latest.date);
-  if(same){const nd=(same.daily||0)+diff;if(nd<0)return 0;same.dlPrev={daily:same.daily||0,date:same.date};same.dlBatch=bid;same.daily=nd;await putRec('ladle',same);return 1;}
-  if(diff<0)return 0;
-  const rec={id:uid(),date:latest.date,no,vendor:'',type:'사용',slPat:'',daily:diff,note:'',seq:Date.now(),src:'daylog',dlBatch:bid};
+  /* 2026-11-06: '사용'은 매일 새 행을 쌓지 않고 진행 중 캠페인당 1건만 둔다 — 최신 일일수명(N)으로 덮어쓰고 나머지 '사용' 행은 합쳐 정리(되돌리기 가능) */
+  const ups=list.filter(r=>r.type==='사용'&&r._campStart===last._campStart);
+  const sumUps=ups.reduce((a,r)=>a+(r.daily||0),0);
+  const nd=N-(L-sumUps);
+  if(nd<0)return 0;
+  const tg=ups.length?ups[ups.length-1]:null;
+  if(tg){
+    if(ups.length===1&&(tg.daily||0)===nd&&tg.date>=latest.date)return 0;
+    if(ups.length===1&&nd<(tg.daily||0)&&nd===0)return 0;
+    tg.dlPrev={daily:tg.daily||0,date:tg.date};tg.dlBatch=bid;tg.daily=nd;if(latest.date>tg.date)tg.date=latest.date;
+    await putRec('ladle',tg);
+    for(const q of ups){if(q===tg)continue;if(rmOut)rmOut.push(JSON.parse(JSON.stringify(q)));await delRec('ladle',q.id);const ix=ladleData.findIndex(x=>x.id===q.id);if(ix>=0)ladleData.splice(ix,1);}
+    return 1;
+  }
+  if(nd<=0)return 0;
+  const rec={id:uid(),date:latest.date,no,vendor:'',type:'사용',slPat:'',daily:nd,note:'',seq:Date.now(),src:'daylog',dlBatch:bid};
   await putRec('ladle',rec);ladleData.push(rec);return 1;
+}
+/* 2026-11-06: 래들 '사용'(일일) 기록 정리 — 같은 래들·같은 캠페인의 '사용' 행을 최신 1건(합계 수명)으로 합친다(현재수명 불변).
+   원본은 localStorage 'dgrns_ladleUseMergeBk'에 백업하고, 🔄 일일수명 반영의 '되돌리기'로도 복원된다. 장치당 1회. */
+async function ladleUseMergeOnce(){
+  if(getMeta('ladleUseMerge1'))return 0;
+  const g={};ladleData.forEach(r=>{(g[r.no]=g[r.no]||[]).push(r);});
+  const bid='b'+Date.now()+'um',removed=[],kept=[];
+  for(const no of Object.keys(g)){
+    if(!/^NO\./.test(String(no)))continue;
+    const list=withCum(g[no].slice()),by={};
+    list.filter(r=>r.type==='사용').forEach(r=>{const k=r._campStart||'';(by[k]=by[k]||[]).push(r);});
+    for(const k in by){const a=by[k];if(a.length<2)continue;
+      const tg=a[a.length-1],sum=a.reduce((x,r)=>x+(r.daily||0),0);
+      tg.dlPrev={daily:tg.daily||0,date:tg.date};tg.dlBatch=bid;tg.daily=sum;
+      await putRec('ladle',tg);kept.push(tg.id);
+      for(const q of a){if(q===tg)continue;removed.push(JSON.parse(JSON.stringify(q)));await delRec('ladle',q.id);const ix=ladleData.findIndex(x=>x.id===q.id);if(ix>=0)ladleData.splice(ix,1);}
+    }}
+  setMeta('ladleUseMerge1','1');
+  if(removed.length){
+    try{localStorage.setItem('dgrns_ladleUseMergeBk',JSON.stringify({at:new Date().toISOString(),removed,kept}));}catch(e){}
+    try{const bt=dlxBatches();bt.push({id:bid,at:new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),n:removed.length+kept.length,tab:'ladle',auto:true,removed});dlxSaveBatches(bt);}catch(e){}
+  }
+  return removed.length;
 }
 async function dlxAutoSync(ym,no,quiet){
   if(dlxAutoBusy||!DLX_ON)return;
@@ -11817,7 +11863,7 @@ async function dlxAutoSync(ym,no,quiet){
       if(bad.length)msg='⚠ 수명관리 자동 반영 보류 — 해체 구성이 틀어질 수 있음: '+bad.slice(0,4).join(', ')+' (🔄 수명관리 반영에서 확인)';
       else{const R=await dlxApplyLadleRows(apply,bid);st.add=R.cnt.add;st.fix=R.cnt.fix;st.rm=R.removed||[];}
     }else if(hold.length)msg='일일수명 '+hold.length+'건은 수명관리의 비슷한 기록과 겹쳐 자동 반영하지 않았습니다 (🔄 수명관리 반영에서 확인)';
-    st.use=await dlxAutoUse(no,bid);
+    st.use=await dlxAutoUse(no,bid,st.rm);
     const n=st.nw+st.add+st.fix+st.use;
     if(n){
       const bt=dlxBatches();bt.push({id:bid,at,n,tab:'ladle',auto:true,removed:st.rm});dlxSaveBatches(bt);
@@ -16749,7 +16795,7 @@ function stkEndAttr(code,ym){
   return ` readonly style="background:#e0f2fe" title="재고량 시트(${esc(stkMapAll()[code])})에서 가져온 값 — 오른쪽 '시트연동' 칸에서 연결을 바꿀 수 있습니다"`;
 }
 function stkGo(ym,code){
-  const x=document.getElementById('stk_ym');if(x)x.value=ym;
+  invYmSet(ym,false);
   invTab('stock');
   const ex=stkMapAll()[code]||'';const m=/[A-Z]{1,2}\d+/.exec(ex);
   setTimeout(()=>{if(!m)return;const el=document.querySelector('#stk_wrap [data-ref="'+m[0]+'"]');if(el){try{el.scrollIntoView({block:'center',inline:'center'});}catch(e){}if(el.tagName==='INPUT')el.focus();else{el.style.outline='3px solid #f59e0b';}}},60);
@@ -16781,7 +16827,7 @@ function stkVzOpen(blk){
   if(stkVz.blk)setTimeout(()=>stkVzScroll(stkVz.blk),80);
 }
 function stkVzOpenItem(code,ym){   // 월별 원단위 화면에서: 이 품목을 고른 상태로 연동 작업대 열기
-  const x=document.getElementById('stk_ym');if(x&&ym)x.value=ym;
+  if(ym)invYmSet(ym,false);
   stkVzOpen('');stkVz.f='all';stkVzPick(code);
   setTimeout(()=>{const el=document.querySelector('#stkVzList .vz-it.on');if(el)el.scrollIntoView({block:'center'});},80);
 }
@@ -19467,7 +19513,29 @@ async function invDetCopy(){
   const r=document.createRange();r.selectNode(document.getElementById('invDetTbl'));const s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');toast('표를 복사했습니다');}catch(e){toast('복사하지 못했습니다');}s.removeAllRanges();
 }
 
+/* 2026-11-06: 기준월 공통 선택 — 한 탭에서 고르면 월별·재고량·전체원단위·내부 공유용 탭이 모두 같은 달로 보이고, 이 PC에 기억(키는 팀 동기화 대상 아님) */
+const INV_SEL_KEY='pohang_inv_sel_ym',INV_YM_IDS=['inv_ym','stk_ym','invt_ym','invdet_ym'];
+let INV_SEL_YM=(()=>{try{const v=localStorage.getItem(INV_SEL_KEY);return /^\d{4}-\d{2}$/.test(v||'')?v:'';}catch(e){return '';}})();
+function invYmSet(ym,persist){
+  if(!/^\d{4}-\d{2}$/.test(ym||''))return;
+  INV_SEL_YM=ym;
+  if(persist!==false){try{localStorage.setItem(INV_SEL_KEY,ym);}catch(e){}}
+  INV_YM_IDS.forEach(id=>{const e=document.getElementById(id);if(e&&e.value!==ym)e.value=ym;});
+}
+function invYmReset(){
+  INV_SEL_YM='';try{localStorage.removeItem(INV_SEL_KEY);}catch(e){}
+  const ym=curYm();INV_YM_IDS.forEach(id=>{const e=document.getElementById(id);if(e)e.value=ym;});
+  try{invTab(invSub||'month');}catch(e){}
+  toast('기준월을 이번 달('+ym+')로 되돌렸습니다');
+}
+document.addEventListener('change',function(ev){
+  const t=ev.target;if(!t||INV_YM_IDS.indexOf(t.id)<0||!t.value)return;
+  invYmSet(t.value,true);
+  const di=document.getElementById('ii_date');   // 입고량 날짜도 같은 달로(명시적으로 기준월을 바꿀 때만)
+  if(di&&(di.value||'').slice(0,7)!==t.value){const y=+t.value.slice(0,4),m=+t.value.slice(5,7),last=new Date(y,m,0).getDate();di.value=(todayStr().slice(0,7)===t.value)?todayStr():t.value+'-'+String(last).padStart(2,'0');}
+},true);
 function invTab(sp){invSub=sp;
+  invYmSet(INV_SEL_YM||(document.getElementById('inv_ym')||{}).value||'',false);
   document.querySelectorAll('#invSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sp===sp));
   document.querySelectorAll('#v-inv .subpanel').forEach(p=>p.classList.remove('active'));
   document.getElementById('isp-'+sp).classList.add('active');
@@ -19475,7 +19543,7 @@ function invTab(sp){invSub=sp;
 }
 function initInv(){
   try{invAutoCatAll(false);}catch(e){}
-  const yi=document.getElementById('inv_ym');if(!yi.value)yi.value=curYm();
+  const yi=document.getElementById('inv_ym');if(!yi.value)yi.value=INV_SEL_YM||curYm();if(INV_SEL_YM)invYmSet(INV_SEL_YM,false);
   const di=document.getElementById('ii_date');if(!di.value)di.value=todayStr();
   ['inv_grp','ii_grp'].forEach(id=>{const gsel=document.getElementById(id);if(gsel.options.length<=1)gsel.innerHTML='<option value="">전체 설비</option>'+INV_GRP_ORDER.map(g=>`<option>${esc(g)}</option>`).join('');});
   renderInflow();
@@ -30470,6 +30538,7 @@ function tbInit(){
 function tbFilter(){const el=id=>document.getElementById(id);tbUi.q=el('tb_q').value;tbUi.ow=el('tb_ow').value;tbUi.mine=el('tb_mine').checked;tbSaveUi();tbRender();}
 function tbWhoSet(){tbUi.who=document.getElementById('tb_who').value;tbSaveUi();toast('작성자: '+(tbUi.who||'미선택'));}
 function tbKpiSet(k){tbUi.kpi=(tbUi.kpi===k?'':k);tbSaveUi();tbRender();}
+function tbLaneAll(){tbUi.lane='';tbSaveUi();tbRender();}
 function tbLaneSet(k){tbUi.lane=(tbUi.lane===k?'':k);tbSaveUi();tbRender();}
 function tbTab(sp){tbUi.tab=sp;tbSaveUi();tbRender();}
 let tbQa=null;
@@ -30479,7 +30548,7 @@ function tbRender(){
     ['done','✅ 이번 달 완료',all.filter(c=>c.st==='done'&&(c.dn||'').slice(0,7)===t.slice(0,7)).length,'ok']];
   document.getElementById('tbKpis').innerHTML=kp.map(([k,n,v,cl])=>`<button class="tb-kpi ${cl} ${tbUi.kpi===k?'on':''}" onclick="tbKpiSet('${k}')"><small>${n}</small><b>${v}</b></button>`).join('');
   const lc={};all.forEach(c=>{if(c.st!=='done')lc[c.ln]=(lc[c.ln]||0)+1;});
-  document.getElementById('tbLanes').innerHTML='<span style="font-size:12px;color:var(--muted);font-weight:700;align-self:center">분류 보기</span>'+tbLanes().map(l=>`<button class="tb-lchip ${tbUi.lane===l.k?'on':''}" style="${tbUi.lane===l.k?'background:'+l.c:''}" onclick="tbLaneSet('${l.k}')">${l.ic} ${l.g?esc(l.g)+' · ':''}${esc(l.n)}<i>${lc[l.k]||0}</i></button>`).join('')+'<button class="tb-lchip" onclick="tbLaneAdd()">＋ 분류 추가</button>';
+  document.getElementById('tbLanes').innerHTML='<span style="font-size:12px;color:var(--muted);font-weight:700;align-self:center">분류 보기</span><button class="tb-lchip '+(!tbUi.lane?'on':'')+'" style="'+(!tbUi.lane?'background:#1f3a5f':'')+'" title="모든 분류의 업무를 한 화면에 표시" onclick="tbLaneAll()">📋 전체 보기<i>'+all.filter(c=>c.st!=='done').length+'</i></button>'+tbLanes().map(l=>`<button class="tb-lchip ${tbUi.lane===l.k?'on':''}" style="${tbUi.lane===l.k?'background:'+l.c:''}" onclick="tbLaneSet('${l.k}')">${l.ic} ${l.g?esc(l.g)+' · ':''}${esc(l.n)}<i>${lc[l.k]||0}</i></button>`).join('')+'<button class="tb-lchip" onclick="tbLaneAdd()">＋ 분류 추가</button>';
   let sp=tbUi.tab||'board';if(sp==='report')sp='board';
   document.querySelectorAll('#tbSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sp===sp));
   const body=document.getElementById('tbBody');
@@ -32741,9 +32810,9 @@ function sxOpen(ym){
 }
 function sxClose(){const e=document.getElementById('sxDlg');if(e)e.remove();}
 function sxSet(k,v){SX[k]=v;sxRender();}
-function sxGoSheet(){const ym=sxYm();sxClose();try{nav('inv');}catch(e){}try{const x=document.getElementById('stk_ym');if(x)x.value=ym;invTab('stock');}catch(e){}}
+function sxGoSheet(){const ym=sxYm();sxClose();try{nav('inv');}catch(e){}try{invYmSet(ym,false);invTab('stock');}catch(e){}}
 function sxGoRow(code){const ym=sxYm();sxClose();try{nav('inv');}catch(e){}try{stkGo(ym,code);}catch(e){}}
-function sxGoMonth(){const ym=sxYm();sxClose();try{nav('inv');}catch(e){}try{const x=document.getElementById('inv_ym');if(x)x.value=ym;invTab('month');}catch(e){}}
+function sxGoMonth(){const ym=sxYm();sxClose();try{nav('inv');}catch(e){}try{invYmSet(ym,false);invTab('month');}catch(e){}}
 const SX_ST={ok:['#047857','#ecfdf5','🔗 연결·일치'],mis:['#b45309','#fffbeb','⚠ 반영 필요(시트값≠월말재고)'],off:['#b91c1c','#fef2f2','⏸ 시트 미시작/꺼짐'],err:['#b91c1c','#fef2f2','❌ 수식 오류'],add:['#1d4ed8','#eff6ff','➕ 엑셀 기준 연결 가능'],man:['#64748b','#f1f5f9','✍ 직접 입력']};
 function sxRender(){
   const el=document.getElementById('sxDlg');if(!el)return;
@@ -40803,6 +40872,7 @@ function permPreview(){
     if(ladleData.length===0&&tundishData.length===0){await loadSeedInto();setMeta('seedVersion',SEED_VERSION);}
     else if(getMeta('seedVersion')!==SEED_VERSION){await refreshSeedData();setMeta('seedVersion',SEED_VERSION);}
     try{await ensureLadle2026Import();}catch(e){}
+    try{await ladleUseMergeOnce();}catch(e){console.warn('ladleUseMergeOnce',e);}
     try{clearAllDiaOnce();}catch(e){}
     try{await autoCleanBareLadleNos();}catch(e){}
     await migrateVendor();try{await migrateBoardAbs();}catch(e){console.warn('migrateBoardAbs',e);}await loadSchedule();await loadBom();await bomSpecReconcile();try{plRestore();plUpdateSoon();}catch(e){}await loadEaf();await loadInv();
