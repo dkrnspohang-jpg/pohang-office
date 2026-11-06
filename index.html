@@ -15534,6 +15534,18 @@ const INV_GRP_ORDER=['EAF','LF','CC','형강가열로','공통'];
    입고량·월별 원단위 화면에서는 별도 구역으로 따로 표시, 매출(판매실적 자동집계·매출합계)에는 포함한다. */
 const INV_RHF='형강가열로';
 function invRhf(m){return !!m&&m.g===INV_RHF;}
+/* 2026-11-06: '원단위 제외' — 재고·입고는 그대로 조사하되 원단위(월별·전체·내부 공유용) 계산에서만 뺄 품목. 기본: TD커버홀블록(N12130066) */
+const INV_XCL_KEY='dgrns_invxcl',INV_XCL_DEF=['N12130066'];
+function invXclStore(){try{const o=JSON.parse(localStorage.getItem(INV_XCL_KEY)||'{}');return(o&&typeof o==='object')?o:{};}catch(e){return {};}}
+function invXcl(code){const o=invXclStore();return o[code]!==undefined?!!o[code]:INV_XCL_DEF.indexOf(code)>=0;}
+function invNoCost(m){return !!m&&(invRhf(m)||invXcl(m.c));}
+function invXclToggle(code){
+  const o=invXclStore(),now=invXcl(code);o[code]=now?0:1;
+  try{localStorage.setItem(INV_XCL_KEY,JSON.stringify(o));}catch(e){}
+  try{flashSave();}catch(e){}
+  toast(now?'원단위에 다시 포함했습니다(모든 달 적용)':'원단위에서 제외했습니다 — 재고·입고는 그대로 기록됩니다(모든 달 적용)');
+  try{renderInvMonth();}catch(e){}try{renderInvTot();}catch(e){}try{renderInvDet();}catch(e){}
+}
 function invMasterOv(){try{return JSON.parse(localStorage.getItem('dgrns_invmaster')||'{}');}catch(e){return{};}}
 let invMOv=invMasterOv();
 function saveInvMOv(){try{localStorage.setItem('dgrns_invmaster',JSON.stringify(invMOv));}catch(e){}}
@@ -15954,7 +15966,7 @@ function invTotFxSet(ym,k,val){
 }
 function invTotCalcLive(ym){
   const prod=getProd(ym)||0,uM={},pM={};
-  const ivU=(c,y)=>invRhf(invM.get(c))?0:invUse(c,y);   // 형강가열로 품목은 제강 원가 계산에서 제외
+  const ivU=(c,y)=>invNoCost(invM.get(c))?0:invUse(c,y);   // 형강가열로 품목은 제강 원가 계산에서 제외
   const l13xl=invTotL13Mode()==='xl';
   const price=x=>{if(pM[x.k]!=null)return pM[x.k];const p=x.pr||{};let v=0;
     if(p.v!=null)v=p.v;else if(p.pc)v=invPriceAt(p.pc,ym);else if(p.pr)v=price(INV_TOT_BYK[p.pr]);
@@ -15973,7 +15985,7 @@ function invTotCalcLive(ym){
     qSum+=q0;if(x.k==='r19')r19=q0;
     eq[x.eq].ab+=ab;return {k:x.k,eq:x.eq,pt:x.pt,cd:x.cd||'',u,p:pp,ab,q:prod?u/prod:0,a:prod?ab/prod:0,bug:x.xl?1:0};});
   const extra=[];let etc=0;
-  INV_MASTER.forEach(m=>{if(INV_TOT_MAPPED.has(m.c)||invRhf(m))return;const u=ivU(m.c,ym);if(!u)return;const ab=u*invPriceAt(m.c,ym);
+  INV_MASTER.forEach(m=>{if(INV_TOT_MAPPED.has(m.c)||invNoCost(m))return;const u=ivU(m.c,ym);if(!u)return;const ab=u*invPriceAt(m.c,ym);
     if(eq[m.g]){eq[m.g].ab+=ab;}else etc+=ab;extra.push({c:m.c,n:m.n,g:m.g,u,ab});});
   const tot=eq.EAF.ab+eq.LF.ab+eq.CC.ab+etc;
   ['EAF','LF','CC'].forEach(g=>{eq[g].a=prod?eq[g].ab/prod:0;});
@@ -19155,9 +19167,11 @@ async function invUseClear(code,ym){
   toast('사용량을 계산식(전월+입고−월말)으로 되돌렸습니다');
   try{renderInvTot();}catch(e){}try{renderInvMonth();}catch(e){}
 }
+const INV_XL10_OK=['U12110020','U12110002','U12110043'];   // SMC-95·AMC-BS·MAC-W: 재고량 시트 합계 범위 — 프로그램 기준 확정(2026-11-06)
 function invXl10Rows(ym){
   const out=[];let nPrice=0;
   Object.keys(INV_XL10_ITEMS).forEach(code=>{
+    if(invXcl(code)||INV_XL10_OK.indexOf(code)>=0)return;   // 원단위 제외 품목·확인된 차이(프로그램 기준 확정)는 목록에서 뺌
     const x=INV_XL10_ITEMS[code];
     const xr=[invR(x[1]),invR(x[2]),invR(x[3]),invR(x[4])];   // 엑셀 값도 반올림 정수로 비교(소수점 차이는 제외)
     const P=[invPrev(code,ym),invIn(code,ym),invEnd(code,ym),invUse(code,ym),invPriceAt(code,ym)];
@@ -19170,7 +19184,7 @@ function invXl10Rows(ym){
   });
   out.nPrice=nPrice;
   // 프로그램에만 있는 품목(엑셀 사용량 시트에 없음)
-  INV_MASTER.forEach(m=>{if(INV_XL10_ITEMS[m.c])return;const u=invUse(m.c,ym),e=invEnd(m.c,ym);if(!u&&!e)return;
+  INV_MASTER.forEach(m=>{if(INV_XL10_ITEMS[m.c]||invXcl(m.c))return;const u=invUse(m.c,ym),e=invEnd(m.c,ym);if(!u&&!e)return;
     out.push({code:m.c,nm:m.n,x:[m.n,0,0,0,0,0],P:[invPrev(m.c,ym),invIn(m.c,ym),e,u,invPriceAt(m.c,ym)],dPrev:0,dIn:0,dEnd:e,dUse:u,dPr:0,only:true,ud:null});});
   return out;
 }
@@ -19194,10 +19208,9 @@ function invXl10Panel(ym){
   return `<details style="margin:6px 0" ${nSig?'open':''}><summary style="cursor:pointer;font-weight:800;font-size:13px">📑 엑셀(2610월 원단위) 대조 — ${nSig?`<span style="color:#c81e1e">차이 ${nSig}품목</span>`:'<span style="color:#15803d">품목별 전월·입고·월말·사용·단가 전부 일치</span>'}</summary>
     <div class="tablewrap">${sumTbl}</div>
     <div style="font-size:11.5px;margin:2px 2px 4px;color:#475569">엑셀 '세부원단위' 시트 값(참고): 전기로 ${f2(T.det.eaf)} · 래들 ${f2(T.det.ld)} · 턴디쉬 ${f2(T.det.td)} · 합계 ${f2(T.det.all)} — 엑셀 안에서도 '전체원단위' 시트와 '세부원단위' 시트 값이 서로 다릅니다(합계 ${f2(T.tot)} ↔ ${f2(T.det.all)}). 프로그램은 두 시트가 항상 같은 계산으로 연결됩니다.</div>
-    <div style="font-size:12px;margin:6px 2px;padding:7px 10px;border-radius:7px;background:#f8fafc;border:1px solid #cbd5e1;line-height:1.6">
-      <b>재고량 시트 합계 범위(엑셀과 다른 3칸)</b> — MAC-W(21K 600kg)·AMC-BS(9, 9-5 764kg)·SMC-95(S2 202kg)는 프로그램이 해당 줄까지 합계에 넣고, 엑셀 2610월은 제외합니다. 현재: <b>${sumOn?'엑셀과 동일하게 적용 중':'프로그램 기준(해당 줄 포함)'}</b>
-      <button class="btn" style="margin-left:8px" onclick="invXl10SumMatch(true)"${sumOn?' disabled':''}>엑셀과 동일하게 맞추기</button>
-      <button class="btn" onclick="invXl10SumMatch(false)"${sumOn?'':' disabled'}>프로그램 기준으로 되돌리기</button></div>
+    <div style="font-size:12px;margin:6px 2px;padding:7px 10px;border-radius:7px;background:#f0fdf4;border:1px solid #86efac;line-height:1.6;color:#14532d">
+      ✔ <b>확인된 차이(프로그램 기준 확정)</b> — MAC-W(21K 600kg)·AMC-BS(9, 9-5 764kg)·SMC-95(S2 202kg)는 프로그램이 해당 줄까지 합계에 넣고 엑셀 2610월은 제외합니다. 다음 달부터 수식이 적용되므로 프로그램 기준으로 확정했고 차이 목록에서 뺐습니다.${sumOn?'':''}<br>
+      ✔ <b>원단위 제외</b> — TD커버홀블록은 재고·입고는 기록하고 원단위(월별·전체·내부 공유용)에서만 뺍니다(월별 원단위 표의 '🚫 원단위 제외 · 해제'로 변경).</div>
     ${nSig?`<div class="tablewrap"><table class="bomtbl" style="min-width:0;font-size:11.5px"><thead><tr><th>품목</th><th class="n">전월재고<br><small>엑셀/프로그램</small></th><th class="n">입고<br><small>엑셀/프로그램</small></th><th class="n">월말재고<br><small>엑셀/프로그램</small></th><th class="n">사용량<br><small>엑셀/프로그램</small></th><th class="n">단가<br><small>엑셀/프로그램</small></th><th>추정 원인</th></tr></thead><tbody>${body}</tbody></table></div>`:''}
     <div style="font-size:11px;color:#64748b;margin:3px 2px">※ 9월 월말재고는 엑셀 2609월 '사용량' 현재고를 10월 전월재고로 사용합니다(직접 입력한 전월재고가 있으면 그 값이 우선). 모든 수량은 반올림 정수로 비교하며 ±1은 소수점 차이로 보고 제외합니다. 붉은 칸이 엑셀과 다른 값입니다.${nPr?`<br>단가는 엑셀과 ${nPr}품목이 다르나 프로그램(기본정보) 단가를 기준으로 하므로 차이로 세지 않습니다(기본정보에서 확인).`:''}</div></details>`;
 }
@@ -19299,19 +19312,20 @@ function invDetAuto(ym){
     const it=E.items.EAF,cat={};
     it.forEach(x=>{const o=cat[x.cat]=cat[x.cat]||{use:0,pri:0};o.use+=x.useE;o.pri+=x.priE;});
     const ue=invDetSum(it,'useE'),pe=invDetSum(it,'prodE'),ce=invDetSum(it,'priE');
+    const ELC='로저전극(Bottom electrode)';
     const names=Object.keys(cat);
-    const best=(sign)=>{let b=null;names.forEach(n=>{const v=cat[n].use*sign;if(v>0&&(b==null||v>cat[b].use*sign))b=n;});return b;};
+    // 2026-11-06: 평소 쓰는 문구 — 하락은 '생산량 증가' 위주(로저전극은 언급하지 않음), 상승은 가장 큰 사용량 증가 항목
+    const best=(sign,skipEl)=>{let b=null;names.forEach(n=>{if(skipEl&&n===ELC)return;const v=cat[n].use*sign;if(v>0&&(b==null||v>cat[b].use*sign))b=n;});return b;};
     let t;
     if(Math.abs(dE)<1)t='전기로 원단위 변동 미미';
     else if(dE>0){
-      const top=best(1);
+      const top=best(1,false);
       if(top&&ue>=ce)t=`전기로 ${(mc.roj>mp.roj&&/로상재|전극/.test(top))?'로저전극 교체로 인한 ':''}${top} 사용량 증가로 원단위 상승`;
+      else if(prodUp<=-0.005)t='전기로 생산량 감소로 원단위 상승';
       else t='전기로 내화물 단가 인상으로 원단위 상승';
     }else{
-      const neg=best(-1),pos=best(1);
-      if(ue<0&&neg)t=`전기로 ${neg} 사용량 감소${pe<-3?' 및 생산량 증가':''}로 원단위 하락`;
-      else if(pos&&pe<0)t=`전기로 ${pos} 사용량 증가되었으나 생산량 증가로 원단위 하락`;
-      else t='전기로 내화물 단가 인하로 원단위 하락';
+      if(prodUp>=0.005)t='전기로 생산량 증가로 원단위 하락';
+      else{const neg=best(-1,true);t=neg?`전기로 ${neg} 사용량 감소로 원단위 하락`:'전기로 내화물 사용량 감소로 원단위 하락';}
     }
     R.eaf=t;
   }
@@ -19846,13 +19860,14 @@ function renderInvMonthCore(){
       else if(vm){body+=`<tr><td colspan="${NC}" style="background:${K==='동국R&S'?'#dbeafe':'#e5e7eb'};font-weight:800;padding:6px 10px;color:#1e293b">▣ ${esc(K)} <span style="font-weight:500;font-size:11.5px">${cntK[K]}품목 · ${K==='동국R&S'?'일반 + 직매출 (동국R&S 매출 포함)':'타사 공급 (동국R&S 매출 미포함)'}</span></td></tr>`;}}}
     const prev=invPrev(code,ym),inq=invIn(code,ym),end=invEnd(code,ym),use=invUse(code,ym);
     const aP=prev*pr,aI=inq*pr,aU=use*pr,aE=end*pr;if(use<0)negs.push(it.n);
-    [gSum,...(invRhf(m)?[]:[tot])].forEach(S=>{S.ps+=aP;S.is+=aI;S.us+=aU;S.es+=aE;});
-    const qOv=invRhf(m)?0:use/(prod||1),aOv=invRhf(m)?0:aU/(prod||1);
+    const xc=!invRhf(m)&&invXcl(code);   // 원단위 제외 품목: 재고·입고 금액은 합산, 사용금액·원단위만 제외
+    [gSum,...(invRhf(m)?[]:[tot])].forEach(S=>{S.ps+=aP;S.is+=aI;S.us+=(xc?0:aU);S.es+=aE;});
+    const qOv=(invRhf(m)||xc)?0:use/(prod||1),aOv=(invRhf(m)||xc)?0:aU/(prod||1);
     const ec=EQC[m.g]||['#e5e7eb','#334155'];
     body+=`<tr>
       <td class="xl-eq" style="background:${ec[0]};color:${ec[1]}">${esc(m.g)}</td>
       <td class="xl-cd">${esc(code||'')}</td>
-      <td class="xl-nm" title="${esc(it.n)}"><b>${esc(it.n)}</b></td>
+      <td class="xl-nm" title="${esc(it.n)}"><b>${esc(it.n)}</b>${invRhf(m)?'':(xc?` <a href="#" class="xclTag" onclick="invXclToggle('${code}');return false" title="재고·입고는 기록되고 원단위 계산에서만 빠집니다 — 누르면 다시 포함" style="font-size:10.5px;font-weight:700;color:#b91c1c;background:#fee2e2;border-radius:8px;padding:0 6px;text-decoration:none;white-space:nowrap">🚫 원단위 제외 · 해제</a>`:` <a href="#" onclick="invXclToggle('${code}');return false" title="이 품목을 원단위 계산에서 제외(재고·입고는 계속 기록)" style="font-size:10px;color:#cbd5e1;text-decoration:none">⊘</a>`)}</td>
       <td style="text-align:center">${esc(it.u)}</td>
       <td class="n">${iN(pr)}</td>
       <td class="n"><input type="number" class="iinp"${invPrevAttr(code,ym)}${invLockAttr(ym)} value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
@@ -19862,7 +19877,7 @@ function renderInvMonthCore(){
       ${invLkCell(code,ym,it.u,end,LKC)}
       <td class="n">${Z(prev+inq)}</td>
       <td class="n">${Z(aP)}</td><td class="n">${Z(aI)}</td><td class="n xl-use2">${Z(aU)}</td><td class="n">${Z(aE)}</td>
-      <td class="n">${prod&&!invRhf(m)?iU(qOv):'-'}</td><td class="n"><b>${prod&&!invRhf(m)?iU(aOv):'-'}</b></td></tr>`;});
+      <td class="n">${prod&&!invRhf(m)&&!xc?iU(qOv):(xc?'<span style="color:#b91c1c;font-size:10.5px">제외</span>':'-')}</td><td class="n"><b>${prod&&!invRhf(m)&&!xc?iU(aOv):(xc?'<span style="color:#b91c1c;font-size:10.5px">제외</span>':'-')}</b></td></tr>`;});
   flushG();
   if(!totDone)totRow();
   const hd=t=>`<th>${t}</th>`;
@@ -19912,7 +19927,7 @@ function renderInvMonthCore(){
 }
 // 월별/연도별 비교
 function invMonths(){const s=new Set(invData.map(r=>r.ym));s.add('2026-09');return [...s].sort();}
-function invTotAmtRaw(ym){let a=0;INV_MASTER.forEach(m=>{if(invRhf(m))return;a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
+function invTotAmtRaw(ym){let a=0;INV_MASTER.forEach(m=>{if(invNoCost(m))return;a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
 function invGrpAmtRaw(ym,g){let a=0;INV_MASTER.filter(m=>m.g===g).forEach(m=>{a+=invUse(m.c,ym)*invPriceAt(m.c,ym);});return a;}
 /* 2026-09-27: "두 기간 직접 비교" — 실제 사용 데이터가 없는 과거 달(예: 2025년 9월)은
    [내화물 실적자료] PPT 원본의 월별 원단위·생산량 참고값(REPORT_SEED)으로 보완해서 비교 가능하게 함.
@@ -20015,7 +20030,7 @@ function downloadInv(){
   let t=`<table><tr><td colspan="17" style="font-size:16pt;font-weight:bold">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 (생산량 ${Math.round(prod)}TON)</td></tr><tr>${H.map(h=>`<th style="background:#c9eef5">${h}</th>`).join('')}</tr>`;
   const S={ps:0,is:0,us:0,es:0};
   items.forEach(m=>{const it=invItem(m.c);const pr=invPriceAt(m.c,ym);const prev=invPrev(m.c,ym),inq=invIn(m.c,ym),end=invEnd(m.c,ym),use=invUse(m.c,ym);
-    if(!invRhf(m)){S.ps+=prev*pr;S.is+=inq*pr;S.us+=use*pr;S.es+=end*pr;}
+    if(!invRhf(m)){S.ps+=prev*pr;S.is+=inq*pr;S.us+=(invXcl(m.c)?0:use*pr);S.es+=end*pr;}
     t+=`<tr><td>${esc(m.g)}</td><td>${esc(m.c||'')}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${Math.round(pr)}</td><td>${prev}</td><td>${inq}</td><td style="background:#fff59d">${use}</td><td>${end}</td><td>${esc(stkMapAll()[m.c]||'')}</td><td>${prev+inq}</td><td>${Math.round(prev*pr)}</td><td>${Math.round(inq*pr)}</td><td>${Math.round(use*pr)}</td><td>${Math.round(end*pr)}</td><td>${prod&&!invRhf(m)?(use/prod).toFixed(3):''}</td><td>${prod&&!invRhf(m)?(use*pr/prod).toFixed(2):''}</td></tr>`;});
   t+=`<tr style="font-weight:bold"><td colspan="11">합계 (형강가열로 제외)</td><td>${Math.round(S.ps)}</td><td>${Math.round(S.is)}</td><td>${Math.round(S.us)}</td><td>${Math.round(S.es)}</td><td></td><td>${prod?(S.us/prod).toFixed(2):''}</td></tr></table>`;
   downloadXls('내화물_재고현황및사용량_'+ym,t);
@@ -20070,7 +20085,7 @@ function invWeightKg(code,ym){
   if(uu==='ea'||invIsSetUnit(uu)){const w=invUnitKg(it);return w?use*w:0;}
   return 0;
 }
-function invTotWeightTon(ym){let w=0;INV_MASTER.forEach(m=>{if(invRhf(m))return;w+=invWeightKg(m.c,ym);});return w/1000;}
+function invTotWeightTon(ym){let w=0;INV_MASTER.forEach(m=>{if(invNoCost(m))return;w+=invWeightKg(m.c,ym);});return w/1000;}
 function pctStr(actual,plan){if(!plan)return '-';return (actual/plan*100).toFixed(1)+'%';}
 function eafActualCount(ro,part,ym){return eafData.filter(r=>!r.base&&r.ro===ro&&r[part]&&String(r.date||'').slice(0,7)===ym).length;}
 function ladleActualCount(type,ym){return ladleData.filter(r=>r.type===type&&String(r.date||'').slice(0,7)===ym).length;}
@@ -20686,7 +20701,7 @@ function perfAggr(key,mode){ // returns {equip:{amt,cnt}}, prod
   const ms=mode==='year'?invMonths().filter(m=>m.startsWith(key)):[key];
   const prod=ms.reduce((s,m)=>s+getProd(m),0);
   const eq={};
-  INV_MASTER.forEach(m=>{if(invRhf(m))return;const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invPriceAt(m.c,ym),0);
+  INV_MASTER.forEach(m=>{if(invNoCost(m))return;const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invPriceAt(m.c,ym),0);
     if(!eq[e])eq[e]={amt:0,cnt:0};eq[e].amt+=amt;if(amt>0)eq[e].cnt++;});
   return {eq,prod};
 }
@@ -20694,7 +20709,7 @@ function perfAggrRange(fromM,toM){ // 기간 조회: 시작월~종료월 범위�
   const ms=invMonths().filter(m=>m>=fromM&&m<=toM);
   const prod=ms.reduce((s,m)=>s+getProd(m),0);
   const eq={};
-  INV_MASTER.forEach(m=>{if(invRhf(m))return;const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invPriceAt(m.c,ym),0);
+  INV_MASTER.forEach(m=>{if(invNoCost(m))return;const e=perfEquip(m.g);const amt=ms.reduce((s,ym)=>s+invUse(m.c,ym)*invPriceAt(m.c,ym),0);
     if(!eq[e])eq[e]={amt:0,cnt:0};eq[e].amt+=amt;if(amt>0)eq[e].cnt++;});
   return {eq,prod,ms};
 }
@@ -38494,7 +38509,7 @@ function mpEafData(y){
   return out;}
 function invUnitOf(ym){
   try{const prod=getProd(ym)||0;if(!prod)return null;
-    let amt=0;INV_MASTER.forEach(m=>{if(invRhf(m))return;amt+=invUse(m.c,ym)*invPriceAt(m.c,ym);});
+    let amt=0;INV_MASTER.forEach(m=>{if(invNoCost(m))return;amt+=invUse(m.c,ym)*invPriceAt(m.c,ym);});
     return amt?Math.round(amt/prod):null;}catch(e){return null;}}
 function mpSeedM(y,m){return (MPERF_SEED.m||{})[y+'-'+String(m).padStart(2,'0')]||{};}
 function mpCell(prog,seed){           // 프로그램 값 우선, 없으면 엑셀 실적값(회색)
