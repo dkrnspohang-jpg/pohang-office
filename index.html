@@ -16707,7 +16707,7 @@ function stkKey(e,el){
 /* 월별 원단위 화면 → 연동 표시 / 시트로 이동 */
 function stkEndAttr(code,ym){
   if(!stkLinked(code,ym))return '';
-  return ` readonly style="background:#e0f2fe;cursor:pointer" title="재고량 시트(${esc(stkMapAll()[code])})와 연동 — 누르면 시트로 이동합니다" onclick="stkGo('${ym}','${code}')"`;
+  return ` readonly style="background:#e0f2fe" title="재고량 시트(${esc(stkMapAll()[code])})에서 가져온 값 — 오른쪽 '시트연동' 칸에서 연결을 바꿀 수 있습니다"`;
 }
 function stkGo(ym,code){
   const x=document.getElementById('stk_ym');if(x)x.value=ym;
@@ -19358,7 +19358,81 @@ function invMsortMode(){try{return localStorage.getItem('dgrns_inv_msort')==='gr
 function invMsortSet(v){try{localStorage.setItem('dgrns_inv_msort',v==='grp'?'grp':'vend');}catch(e){}renderInvMonth();}
 function invMonthVend(m){const l=invVendLabel(m.c);return l==='직매출'?'동국R&S':l;}
 function invVendIdx(v){const i=INV_VORD.indexOf(v);return i<0?5:i;}
+/* 2026-11-06: 월별 원단위 표도 입력 → 저장 → 다시 그리기 때 입력 중이던 칸(포커스·미확정 입력값)·스크롤을 그대로 복원 */
 function renderInvMonth(){
+  const w=document.getElementById('invWrap'),sy=window.scrollY,sl=w?w.scrollLeft:0,st=w?w.scrollTop:0;
+  const ae=document.activeElement;let keep=null;
+  if(w&&ae&&ae.tagName==='INPUT'&&w.contains(ae)){const td=ae.closest('td'),tr=ae.closest('tr');
+    if(td&&tr){keep={ri:[...tr.parentNode.children].indexOf(tr),ci:[...tr.children].indexOf(td),ii:[...td.querySelectorAll('input')].indexOf(ae),v:ae.value,dirty:ae.value!==ae.defaultValue};try{keep.s=ae.selectionStart;keep.e=ae.selectionEnd;}catch(e){}}}
+  renderInvMonthCore();
+  try{
+    if(w){w.scrollLeft=sl;w.scrollTop=st;}if(window.scrollY!==sy)window.scrollTo(window.scrollX,sy);
+    if(keep){const tb=w.querySelector('tbody'),tr=tb&&tb.children[keep.ri],td=tr&&tr.children[keep.ci],el=td&&td.querySelectorAll('input')[keep.ii];
+      if(el&&!el.disabled&&!el.readOnly&&document.activeElement!==el){if(keep.dirty)el.value=keep.v;el.focus({preventScroll:true});try{if(keep.s!=null)el.setSelectionRange(keep.s,keep.e);}catch(e){}}}
+  }catch(e){}
+}
+/* 2026-11-06: 월별 원단위의 [시트연동] 칸 — 월말재고가 재고량 시트의 어느 칸에서 오는지를 따로 보여주고 이 칸에서 바로 수정.
+   칸(예: J65) 또는 합산식(예: F64+F63)을 입력하면 즉시 연결·월말재고 반영, 비우면 연결 해제. 연동은 모든 달에 공통 적용됩니다. */
+const INV_MCOLW=[44,84,232,42,74,88,100,92,98,172,66,96,96,104,96,70,80],INV_MCOLT=INV_MCOLW.reduce((a,b)=>a+b,0);
+function invLkCtx(ym){const rec=stkRec(ym);return {map:stkMapAll(),M:stkCtx(ym),on:!!(rec&&rec.on!==0),lkr:stkLkRefMap(ym)};}
+function invLkCell(code,ym,u,end,C){
+  const ex=C.map[code]||'',lock=invConfLocked(ym),refs=ex.match(/[A-Z]{1,2}\d+/g)||[];
+  let st='',bg='',tip='';
+  const fmt=v=>stkFmt(v);
+  if(ex){
+    if(!C.on){st='<span class="lk-s" style="color:#94a3b8" title="이 달은 재고량 시트가 없거나 월말재고 연동이 꺼져 있습니다">시트없음</span>';}
+    else{
+      const v=C.M.ev(ex);
+      if(!isFinite(v)){st='<span class="lk-s" style="color:#b91c1c;font-weight:800" title="연동 수식 오류">✖오류</span>';bg='#fecaca';}
+      else{
+        const sv=invR(v),tp=[...new Set(refs.map(stkVzType).filter(Boolean))],uu=String(u||'').toUpperCase();
+        const um=(uu==='EA'&&tp.length===1&&tp[0]==='중량')||(uu==='KG'&&tp.length===1&&tp[0]==='수량');
+        const dup=refs.filter(r=>(C.lkr[r]||[]).length>1);
+        const diff=Math.abs((+end||0)-sv)>0.5;
+        const fl=[];
+        if(um)fl.push(['단위',`품목 단위(${uu})와 연결한 시트 칸의 성격(${tp[0]})이 맞지 않을 수 있습니다 — 수량 칸/중량 칸을 확인하세요`]);
+        if(dup.length)fl.push(['중복',dup.join(', ')+' 칸이 다른 품목(' +dup.map(r=>(C.lkr[r]||[]).filter(x=>x.code!==code).map(x=>x.n).join('/')).join(' · ')+')과도 연결되어 있습니다']);
+        if(sv<0)fl.push(['음수','시트 값이 음수입니다']);
+        if(diff)fl.push(['달라요','월말재고('+fmt(end)+')가 시트 값('+fmt(sv)+')과 다릅니다 — 눌러서 시트 값으로 반영']);
+        if(fl.length){bg=um||dup.length?'#fecaca':'#fef3c7';
+          st=`<span class="lk-s" style="color:${um||dup.length||sv<0?'#b91c1c':'#b45309'};font-weight:800;cursor:${diff?'pointer':'help'}" title="${esc(fl.map(x=>x[1]).join('\n'))}"${diff&&!lock?` onclick="invLkPull('${ym}')"`:''}>⚠${esc(fl[0][0]==='달라요'?'시트 '+fmt(sv):fl.map(x=>x[0]).join('·'))}</span>`;}
+        else st=`<span class="lk-s" style="color:#15803d;font-weight:700" title="시트 값 ${esc(fmt(sv))} — 월말재고와 일치">✔${esc(fmt(sv))}</span>`;
+      }
+    }
+  }
+  const dis=lock?' disabled':'';
+  return `<td class="lk"${bg?` style="background:${bg}"`:''}><div class="lk-w"><input class="lkx" value="${esc(ex)}" placeholder="셀 연결" title="${ex?'재고량 시트 연동 칸/식 — 바꾸면 모든 달에 적용됩니다. 비우면 연결 해제':'재고량 시트의 칸(예: J65) 또는 합산식(예: F64+F63)을 입력하면 월말재고가 자동으로 들어옵니다'}" autocomplete="off"${dis} onfocus="this.select()" onchange="invLkSet('${code}','${ym}',this.value)" onkeydown="if(event.key==='Enter'){this.blur();}else if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">${ex?`<span class="lk-b" title="재고량 시트의 해당 칸으로 이동" onclick="stkGo('${ym}','${code}')">↗</span>`:''}<span class="lk-b" title="재고량 시트에서 칸을 눌러 고르는 연동 작업대 열기" onclick="stkVzOpenItem('${code}','${ym}')">⚙</span>${st}</div></td>`;
+}
+async function invLkPull(ym){const n=await stkSync(ym,true);toast(n?'월말재고 '+n+'품목을 시트 값으로 반영했습니다':'이미 일치합니다');renderInvMonth();}
+async function invLkSet(code,ym,val){
+  val=String(val||'').trim().toUpperCase().replace(/\s+/g,'');
+  const m=INV_MASTER.find(x=>x.c===code);if(!m)return;
+  const old=stkMapAll()[code]||'';
+  if(invConfLocked(ym)){toast('확정된 달입니다 — 확정 해제 후 수정하세요');renderInvMonth();return;}
+  if(val===old){renderInvMonth();return;}
+  if(val){
+    const C=stkCtx(ym),x=C.ev(val);
+    if(isNaN(x)){toast('연동식을 확인하세요 (예: J65 또는 F64+F63)');renderInvMonth();return;}
+    const refs=val.match(/[A-Z]{1,2}\d+/g)||[];
+    const known=r=>INV_STK.cells[r]||STK_SLOTS.has(r)||STK_EXTRA.has(+/\d+/.exec(r)[0]);
+    const bad=refs.filter(r=>!known(r));
+    if(bad.length&&!confirm(bad.join(', ')+' 칸은 재고량 시트에 없는 칸입니다. 그래도 연결할까요?')){renderInvMonth();return;}
+    const tp=[...new Set(refs.map(stkVzType).filter(Boolean))];
+    if(((m.u==='EA')&&tp.length===1&&tp[0]==='중량')||((m.u==='KG')&&tp.length===1&&tp[0]==='수량')){
+      if(!confirm('품목 단위('+m.u+')와 선택한 시트 값('+tp[0]+')이 맞지 않을 수 있습니다. 그대로 연결할까요?')){renderInvMonth();return;}}
+    const lk=stkLkRefMap(ym),dup=[];refs.forEach(r=>(lk[r]||[]).forEach(y=>{if(y.code!==code&&dup.indexOf(y.n)<0)dup.push(y.n);}));
+    if(dup.length&&!confirm(val+' 칸은 이미 "'+dup.join(', ')+'" 에 연결되어 있습니다. 같은 칸을 이 품목에도 연결할까요?')){renderInvMonth();return;}
+  }
+  const o=stkMapOv();if(val===(INV_STK.map[code]||''))delete o[code];else o[code]=val;
+  try{localStorage.setItem(STK_MAP_KEY,JSON.stringify(o));}catch(e){}
+  try{flashSave();}catch(e){}
+  await stkSync(ym,true);
+  try{toast(val?('"'+m.n+'" ← 시트 '+val+' 연결 (모든 달 공통)'):('"'+m.n+'" 시트 연동을 해제했습니다 — 월말재고는 직접 입력'));}catch(e){}
+  renderInvMonth();
+  try{if(document.getElementById('isp-stock').classList.contains('active'))stkRender();else stkBanner(stkYm());}catch(e){}
+  try{stkVzRefresh();}catch(e){}
+}
+function renderInvMonthCore(){
   const ym=document.getElementById('inv_ym').value||'2026-09';
   const PI=getProdInfo(ym);
   document.getElementById('inv_prod').value=PI.src==='actual'?PI.v:'';
@@ -19378,10 +19452,10 @@ function renderInvMonth(){
   if(vm)items.sort((a,b)=>invVendIdx(invMonthVend(a))-invVendIdx(invMonthVend(b)));   // 업체별 우선(업체 안에서는 위의 설비 순 유지 — 정렬은 안정 정렬)
   else items.sort((a,b)=>(invRhf(a)?1:0)-(invRhf(b)?1:0));   // 형강가열로는 맨 아래 별도 구역
   const keyOf=m=>vm?invMonthVend(m):m.g,cntK={};items.forEach(m=>{const k=keyOf(m);cntK[k]=(cntK[k]||0)+1;});
-  const NC=16,Z=v=>v?iN(v):'<span style="color:#94a3b8">-</span>';
+  const NC=17,LKC=invLkCtx(ym),Z=v=>v?iN(v):'<span style="color:#94a3b8">-</span>';
   const mk0=()=>({ps:0,is:0,us:0,es:0});
   let body='',lastG=null,gSum=mk0(),tot=mk0(),totDone=false;const negs=[];
-  const sumCells=(S,showUnit,rhf)=>`<td></td><td></td><td></td><td></td><td></td><td class="n">${Z(S.ps)}</td><td class="n">${Z(S.is)}</td><td class="n">${Z(S.us)}</td><td class="n">${Z(S.es)}</td><td></td><td class="n">${showUnit&&prod?iU(S.us/prod):'-'}</td>`;
+  const sumCells=(S,showUnit,rhf)=>`<td></td><td></td><td></td><td></td><td></td><td></td><td class="n">${Z(S.ps)}</td><td class="n">${Z(S.is)}</td><td class="n">${Z(S.us)}</td><td class="n">${Z(S.es)}</td><td></td><td class="n">${showUnit&&prod?iU(S.us/prod):'-'}</td>`;
   const totRow=()=>{body+=`<tr class="xl-tot"><td colspan="5">합계 (형강가열로 제외)</td>${sumCells(tot,true)}</tr>`;totDone=true;};
   const flushG=()=>{if(lastG!=null)body+=`<tr class="xl-sub"><td colspan="5">${esc(lastG)} 소계${lastG===INV_RHF?' (매출 기록용 · 원단위 제외)':''}</td>${sumCells(gSum,lastG!==INV_RHF)}</tr>`;};
   const EQC={EAF:['#fde0c2','#9a4a0a'],LF:['#d3e5fa','#1d5fb4'],CC:['#d6efd5','#1f7a3a']};
@@ -19403,7 +19477,8 @@ function renderInvMonth(){
       <td class="n"><input type="number" class="iinp"${invPrevAttr(code,ym)}${invLockAttr(ym)} value="${prev}" onchange="setInvField('${code}','${ym}','prev',this.value)"></td>
       <td class="n">${invInDaily(code,ym)!=null?`<a href="#" onclick="invInEdit('${code}','${ym}');return false" title="일별 입고 내역 보기·수정 (입고량 탭의 일별 합계: ${esc(invInData.filter(r=>r.code===code&&(r.ymd||'').slice(0,7)===ym&&(+r.qty||0)>0).map(r=>r.ymd.slice(5)+' '+r.qty).join(', '))})" style="color:#1d4ed8;font-weight:700;text-decoration:underline dotted">${iN(inq)}</a> <span style="font-size:9px;color:#1d4ed8;cursor:pointer" onclick="invInEdit('${code}','${ym}')">일별✎</span>`:`<input type="number" class="iinp inp-yel"${invLockAttr(ym)} value="${inq}" onchange="setInvField('${code}','${ym}','in',this.value)">`}</td>
       <td class="n xl-use"${use<0?' style="background:#fecaca"':''}><input type="number" class="iinp" style="font-weight:800;color:${use<0?'#b91c1c':'#b45309'}${use<0?';background:#fee2e2;border-color:#f87171':''}"${invLockAttr(ym)} value="${use}" onchange="setInvField('${code}','${ym}','use',this.value)"></td>
-      <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)">${stkLinked(code,ym)?'<span title="재고량 시트 '+esc(stkMapAll()[code])+' 에서 가져옴 — 눌러서 시트 위치로 이동" style="font-size:10px;cursor:pointer;color:#15803d;font-weight:700" onclick="stkGo(\''+ym+'\',\''+code+'\')">🔗'+esc(stkMapAll()[code])+'</span>':(invConfLocked(ym)?'':'<span title="이 품목의 월말재고를 재고량 시트의 칸과 연결합니다 — 연결하면 시트에서 입력한 값이 자동으로 들어옵니다" style="display:inline-block;margin-left:3px;padding:0 6px;border:1px dashed #94a3b8;border-radius:10px;font-size:10.5px;color:#475569;background:#fff;cursor:pointer;white-space:nowrap" onclick="stkVzOpenItem(\''+code+'\',\''+ym+'\')">＋시트 연동</span>')}</td>
+      <td class="n"><input type="number" class="iinp inp-yel"${invLockAttr(ym)}${stkEndAttr(code,ym)} value="${end}" onchange="setInvField('${code}','${ym}','end',this.value)"></td>
+      ${invLkCell(code,ym,it.u,end,LKC)}
       <td class="n">${Z(prev+inq)}</td>
       <td class="n">${Z(aP)}</td><td class="n">${Z(aI)}</td><td class="n xl-use2">${Z(aU)}</td><td class="n">${Z(aE)}</td>
       <td class="n">${prod&&!invRhf(m)?iU(qOv):'-'}</td><td class="n"><b>${prod&&!invRhf(m)?iU(aOv):'-'}</b></td></tr>`;});
@@ -19412,20 +19487,27 @@ function renderInvMonth(){
   const hd=t=>`<th>${t}</th>`;
   document.getElementById('invTitle').innerHTML=`<div style="font-size:17px;font-weight:900;margin:4px 2px 6px;color:#1e293b">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 <span style="font-size:12px;font-weight:600;color:var(--muted)">${esc(ym)} · 생산량 ${prod?Math.round(prod).toLocaleString()+' TON':'없음'}</span></div>${negs.length?`<div style="font-size:12px;margin:0 2px 8px;padding:6px 10px;border-radius:7px;background:#fef2f2;border:1px solid #fca5a5;color:#991b1b">⚠ <b>사용량이 음수인 품목 ${negs.length}건</b> — 전월재고+입고보다 월말재고가 큽니다. 입고 누락 또는 전월·월말재고 오입력을 확인하세요(빨간 칸): ${negs.slice(0,6).map(esc).join(' · ')}${negs.length>6?' 외 '+(negs.length-6)+'건':''}</div>`:''}`;
   document.getElementById('invWrap').innerHTML=`<style>
-    #invWrap .xlm{border-collapse:collapse;font-size:12.5px;min-width:1560px;width:100%}
-    #invWrap .xlm th{background:#c9eef5;color:#1e293b;border:1px solid #6b7b8c;padding:6px 8px;font-weight:800;text-align:center;white-space:nowrap}
-    #invWrap .xlm td{border:1px solid #c3cad3;padding:2px 7px;white-space:nowrap;background:#fff;height:28px}
+    #invWrap .xlm{border-collapse:collapse;font-size:12.5px;min-width:1560px;width:100%;table-layout:fixed}
+    #invWrap .xlm td.lk{padding:2px 4px}
+    #invWrap .xlm .lk-w{display:flex;align-items:center;gap:3px}
+    #invWrap .xlm .lkx{flex:1 1 auto;min-width:0;width:64px;height:22px;box-sizing:border-box;padding:1px 5px;border:1px solid #cbd5e1;border-radius:5px;font-family:monospace;font-size:11.5px;text-align:left;background:#fff}
+    #invWrap .xlm .lkx:focus{border-color:#2563eb;outline:none;background:#eff6ff}
+    #invWrap .xlm .lk-b{cursor:pointer;font-size:11.5px;color:#475569;padding:0 2px;border-radius:4px;flex:none}
+    #invWrap .xlm .lk-b:hover{background:#e2e8f0}
+    #invWrap .xlm .lk-s{font-size:11px;white-space:nowrap;flex:none}
+    #invWrap .xlm th{background:#c9eef5;color:#1e293b;border:1px solid #6b7b8c;padding:5px 4px;font-weight:800;text-align:center;white-space:normal;line-height:1.2}
+    #invWrap .xlm td{border:1px solid #c3cad3;padding:2px 6px;white-space:nowrap;background:#fff;height:28px;overflow:hidden}
     #invWrap .xlm td.n{text-align:right;font-variant-numeric:tabular-nums}
     #invWrap .xlm tr:hover td{filter:brightness(.97)}
     #invWrap .xlm .xl-eq{text-align:center;font-weight:800;width:44px}
-    #invWrap .xlm .xl-cd{font-family:monospace;font-size:11px;color:#475569}
-    #invWrap .xlm .xl-nm{max-width:340px;overflow:hidden;text-overflow:ellipsis}
+    #invWrap .xlm .xl-cd{font-family:monospace;font-size:10.5px;color:#475569}
+    #invWrap .xlm .xl-nm{white-space:normal;overflow-wrap:anywhere;line-height:1.25;font-size:12px}
     #invWrap .xlm td.xl-use,#invWrap .xlm td.xl-use2{background:#fff59d}
-    #invWrap .xlm .iinp{width:84px;text-align:right}
+    #invWrap .xlm .iinp{width:100%;max-width:92px;box-sizing:border-box;text-align:right}
     #invWrap .xlm td.xl-use .iinp{background:#fff59d;border-color:#d9c64a}
     #invWrap .xlm tr.xl-sub td{background:#eef2f7;font-weight:800;border-top:1.5px solid #64748b}
     #invWrap .xlm tr.xl-tot td{background:#334155;color:#fff;font-weight:900;font-size:13px}
-  </style><table class="xlm"><thead><tr>${['구분','신규코드','신규품명','단위','단가','전월재고','입고량','전체사용량','현재고(월말실재고)','합계','재고금액','입고금액','전체사용량금액','현재고금액','수량 원단위','금액 원단위'].map(hd).join('')}</tr></thead><tbody>${body||`<tr><td colspan="${NC}"><div class="empty">품목이 없습니다.</div></td></tr>`}</tbody></table>`;
+  </style><table class="xlm"><colgroup>${INV_MCOLW.map(w=>`<col style="width:${(w/INV_MCOLT*100).toFixed(2)}%">`).join('')}</colgroup><thead><tr>${['구분','신규코드','신규품명','단위','단가','전월재고','입고량','전체사용량','현재고(월말실재고)','시트연동','합계','재고금액','입고금액','전체사용량금액','현재고금액','수량 원단위','금액 원단위'].map((t,i)=>i===9?'<th title="월말재고가 재고량 시트의 어느 칸에서 오는지 — 칸(J65)·합산식(F64+F63)을 바로 고칠 수 있습니다(모든 달 공통)">시트연동 ✎</th>':hd(t)).join('')}</tr></thead><tbody>${body||`<tr><td colspan="${NC}"><div class="empty">품목이 없습니다.</div></td></tr>`}</tbody></table>`;
   try{stkhSoon();}catch(e){}
   document.getElementById('inv_count').textContent=items.length+' 품목';
   (function(){let bx=document.getElementById('invCatBox');
@@ -19548,13 +19630,13 @@ function renderInvMaster(){
 function downloadInv(){
   const ym=document.getElementById('inv_ym').value;const prod=getProd(ym)||0;
   const items=INV_MASTER.slice().sort((a,b)=>{const ia=INV_GRP_ORDER.indexOf(a.g),ib=INV_GRP_ORDER.indexOf(b.g);return (ia<0?9:ia)-(ib<0?9:ib);}).sort((a,b)=>(invRhf(a)?1:0)-(invRhf(b)?1:0));
-  const H=['구분','신규코드','신규품명','단위','단가','전월재고','입고량','전체사용량','현재고','합계','재고금액','입고금액','전체사용량금액','현재고금액','수량원단위','금액원단위'];
-  let t=`<table><tr><td colspan="16" style="font-size:16pt;font-weight:bold">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 (생산량 ${Math.round(prod)}TON)</td></tr><tr>${H.map(h=>`<th style="background:#c9eef5">${h}</th>`).join('')}</tr>`;
+  const H=['구분','신규코드','신규품명','단위','단가','전월재고','입고량','전체사용량','현재고','시트연동','합계','재고금액','입고금액','전체사용량금액','현재고금액','수량원단위','금액원단위'];
+  let t=`<table><tr><td colspan="17" style="font-size:16pt;font-weight:bold">${+ym.slice(5,7)}월 내화물 재고현황 및 사용량 (생산량 ${Math.round(prod)}TON)</td></tr><tr>${H.map(h=>`<th style="background:#c9eef5">${h}</th>`).join('')}</tr>`;
   const S={ps:0,is:0,us:0,es:0};
   items.forEach(m=>{const it=invItem(m.c);const pr=invPriceAt(m.c,ym);const prev=invPrev(m.c,ym),inq=invIn(m.c,ym),end=invEnd(m.c,ym),use=invUse(m.c,ym);
     if(!invRhf(m)){S.ps+=prev*pr;S.is+=inq*pr;S.us+=use*pr;S.es+=end*pr;}
-    t+=`<tr><td>${esc(m.g)}</td><td>${esc(m.c||'')}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${Math.round(pr)}</td><td>${prev}</td><td>${inq}</td><td style="background:#fff59d">${use}</td><td>${end}</td><td>${prev+inq}</td><td>${Math.round(prev*pr)}</td><td>${Math.round(inq*pr)}</td><td>${Math.round(use*pr)}</td><td>${Math.round(end*pr)}</td><td>${prod&&!invRhf(m)?(use/prod).toFixed(3):''}</td><td>${prod&&!invRhf(m)?(use*pr/prod).toFixed(2):''}</td></tr>`;});
-  t+=`<tr style="font-weight:bold"><td colspan="10">합계 (형강가열로 제외)</td><td>${Math.round(S.ps)}</td><td>${Math.round(S.is)}</td><td>${Math.round(S.us)}</td><td>${Math.round(S.es)}</td><td></td><td>${prod?(S.us/prod).toFixed(2):''}</td></tr></table>`;
+    t+=`<tr><td>${esc(m.g)}</td><td>${esc(m.c||'')}</td><td>${esc(it.n)}</td><td>${esc(it.u)}</td><td>${Math.round(pr)}</td><td>${prev}</td><td>${inq}</td><td style="background:#fff59d">${use}</td><td>${end}</td><td>${esc(stkMapAll()[m.c]||'')}</td><td>${prev+inq}</td><td>${Math.round(prev*pr)}</td><td>${Math.round(inq*pr)}</td><td>${Math.round(use*pr)}</td><td>${Math.round(end*pr)}</td><td>${prod&&!invRhf(m)?(use/prod).toFixed(3):''}</td><td>${prod&&!invRhf(m)?(use*pr/prod).toFixed(2):''}</td></tr>`;});
+  t+=`<tr style="font-weight:bold"><td colspan="11">합계 (형강가열로 제외)</td><td>${Math.round(S.ps)}</td><td>${Math.round(S.is)}</td><td>${Math.round(S.us)}</td><td>${Math.round(S.es)}</td><td></td><td>${prod?(S.us/prod).toFixed(2):''}</td></tr></table>`;
   downloadXls('내화물_재고현황및사용량_'+ym,t);
 }
 function downloadInvCompare(){
