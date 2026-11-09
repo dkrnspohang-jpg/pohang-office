@@ -23824,7 +23824,7 @@ const pidbBidIsB=()=>pidbTab==='bid'&&(pidbUI.grp||'')==='B';
 const pidbPN=n=>(n==null||n===''||isNaN(n))?'-':Math.round(n).toLocaleString();
 const pidbBKey=r=>r.item+'|'+r.year;
 const pidbRn=v=>{const n=parseInt(v);return n>0?n:99;};
-function pidbBidRowsB(){
+function pidbBidRowsB(flat){
   const U=pidbUI,q=(U.q||'').trim().toLowerCase(),f=U.dk||'',y=U.byear||'',sf=U.bsite||'',rv=U.rival||'';
   return poscoEffAll()
     .filter(r=>!q||(r.item||'').toLowerCase().includes(q)||(poscoField(r,'baseVendor')||'').toLowerCase().includes(q))
@@ -23833,7 +23833,13 @@ function pidbBidRowsB(){
     .filter(r=>!sf||poscoSite(r.item)===sf)
     .filter(r=>!rv||((r.vmap||{})[rv]&&(r.vmap||{})['동국']))
     .filter(r=>!pidbPinOn||pidbPin[pidbNk(r.item)])
-    .sort((a,b)=>(b.amount||0)-(a.amount||0));
+    .sort((a,b)=>(flat?0:String(a.year||'').localeCompare(String(b.year||'')))||(b.amount||0)-(a.amount||0)); /* 2026-11-09: 25년 먼저 · 26년은 아래 (연도별 금액순) */
+}
+/* 연도 구분 머리줄 — 25년 위, 26년 아래 (26년은 입찰 가능 여부 미확정) */
+const pidbYrSet=rows=>[...new Set(rows.map(r=>String(r.year||'')))].sort();
+function pidbYrHead(y,g,nc){
+  const a=g.reduce((s,r)=>s+(r.amount||0),0),dk=g.reduce((s,r)=>s+(r.dkWin||0),0),c=y==='26'?['#dcfce7','#166534']:['#e0e7ff','#3730a3'];
+  return `<tr class="yh"><td colspan="${nc}" style="text-align:left;font-weight:800;background:${c[0]};color:${c[1]};padding:6px 10px">📅 ${esc(y)}년 입찰 결과 <span style="font-weight:600">${g.length}건 · 금액 ${(a/1e8).toFixed(1)}억 · 동국 낙찰 ${(dk/1e8).toFixed(1)}억</span>${y==='26'?' <span style="font-weight:600;opacity:.85">· 당사 입찰 가능 여부는 추후 확인</span>':''}</td></tr>`;
 }
 /* ---- 기존 범용B 입찰현황 셀 (기존 화면과 같은 동작) ---- */
 function pidbBEdit(r,key,w){const v=poscoField(r,key),ch=poscoFieldChanged(r,key);
@@ -23920,7 +23926,6 @@ function pidbBidPageB(mode){
   const dl=document.getElementById('pvDL');if(dl&&!dl.children.length)dl.innerHTML=PVEND.filter(v=>v!=='동국').concat(['조선/퓨처엠']).map(v=>`<option value="${esc(v)}">`).join('');
   const V=['동국'].concat(PVEND.filter(v=>v!=='동국'));
   const vl=v=>v==='동국'?'동국':v;
-  const {canBid,cannotBid}=poscoSplit(rows),all=canBid.concat(cannotBid);
   const mm=a=>a>0?(a<1e6?(a/1e6).toFixed(1):Math.round(a/1e6).toLocaleString()):'';
   const vs={},ck=0,ys={};V.forEach(v=>vs[v]=0);let sQ=0,sA=0,sT=0;
   const NC=(xls?0:1)+8+(V.length+1)+(V.length+1)+2;
@@ -23958,13 +23963,15 @@ function pidbBidPageB(mode){
     if(open)h+=pidbBSpecRow(r,NC,L,ed);
     return h;
   };
-  let b=all.map(rowH).join('');
-  if(!rows.length)b=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 입찰 품목이 없습니다.</div></td></tr>`;
+  let b='';
   const base=(xls?0:1)+6;
   const yrRow=(lab,o,sub)=>`<tr class="xf${sub?' xy':''}"><td colspan="${base}" style="text-align:center;font-weight:800">${lab}</td><td class="n" style="font-weight:800">${pN(o.q)}</td><td class="n" style="font-weight:800">${pN(o.a)}</td>${V.map(()=>'<td></td>').join('')}<td></td>`
     +V.map(v=>`<td class="n" style="color:#c00000;font-weight:800">${(o.v[v]||0)>0?Math.round(o.v[v]/1e6).toLocaleString():''}</td>`).join('')+`<td class="n" style="color:#c00000;font-weight:800">${Math.round(o.t/1e6).toLocaleString()}</td><td></td><td></td></tr>`;
+  {const yl=pidbYrSet(rows);
+    yl.forEach(y=>{const g=rows.filter(r=>String(r.year||'')===y);b+=pidbYrHead(y,g,NC)+poscoSplit(g).all.map(rowH).join('')+(yl.length>1?yrRow(`${esc(y)}년 소계 <span class="s">(${g.length}건)</span>`,ys[y],true):'');});
+    if(!rows.length)b=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 입찰 품목이 없습니다.</div></td></tr>`;}
   const yks=Object.keys(ys).sort();
-  const ft1=(yks.length>1?yks.map(y=>yrRow(`${esc(y)}년 소계 <span class="s">(${ys[y].n}건)</span>`,ys[y],true)).join(''):'')+yrRow(`${yks.length>1?'25+26년 ':''}합계 <span class="s">(${rows.length}건)</span>`,{q:sQ,a:sA,t:sT,v:vs},false);
+  const ft1=yrRow(`${yks.length>1?'25+26년 ':''}합계 <span class="s">(${rows.length}건)</span>`,{q:sQ,a:sA,t:sT,v:vs},false);
   const ft2=`<tr class="xf"><td colspan="${base+2}" style="text-align:center">비고(비율%)</td>${V.map(()=>'<td></td>').join('')}<td></td>`
     +V.map(v=>`<td class="n" style="color:#c00000;font-weight:700">${sT>0&&vs[v]>0?Math.round(vs[v]/sT*100)+'%':''}</td>`).join('')+`<td class="n" style="color:#c00000;font-weight:700">${sT>0?'100%':''}</td><td></td><td></td></tr>`;
   pidbVisK=rows.map(r=>pidbNk(r.item));
@@ -24289,13 +24296,17 @@ function pidbBidPageCard(){
     return h;
   };
   let b='';
-  if(canBid.length)b+=`<tr class="grp"><td colspan="${NC}">🏷️ 동국R&amp;S 입찰가능 품목 <b>(${canBid.length}건)</b></td></tr>`+canBid.map(rowH).join('');
-  if(cannotBid.length)b+=`<tr class="grp g2"><td colspan="${NC}">기타 품목 (${cannotBid.length}건)</td></tr>`+cannotBid.map(rowH).join('');
-  if(!rows.length)b=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 입찰 품목이 없습니다.</div></td></tr>`;
   const sQ=rows.reduce((a,r)=>a+(+poscoField(r,'qty')||0),0),sA=rows.reduce((a,r)=>a+(r.amount||0),0),dk=rows.reduce((a,r)=>a+(r.dkWin||0),0);
   const yrs=pidbYrSum(rows),ykc=Object.keys(yrs).sort();
   const cft=(lab,o,sub)=>`<tr class="xf${sub?' xy':''}"><td colspan="6" style="text-align:center;font-weight:800">${lab}</td><td class="n" style="font-weight:800">${pN(o.q)}</td><td></td><td></td><td></td><td class="n" style="font-weight:800">${pN(o.a)}</td><td></td><td class="l" style="font-weight:800;color:#1d4ed8">동국 낙찰 ${pN(o.dk)}</td></tr>`;
-  const ft=rows.length?(ykc.length>1?ykc.map(y=>cft(`${y}년 소계 <span class="s">(${yrs[y].n}건)</span>`,yrs[y],true)).join(''):'')+cft(`합계 <span class="s">(${rows.length}건)</span>`,{q:sQ,a:sA,dk:dk},false):'';
+  {const yl=pidbYrSet(rows);
+    yl.forEach(y=>{const g=rows.filter(r=>String(r.year||'')===y),sp=poscoSplit(g);
+      b+=pidbYrHead(y,g,NC);
+      if(sp.canBid.length)b+=`<tr class="grp"><td colspan="${NC}">🏷️ ${esc(y)}년 · 동국R&amp;S 입찰가능 품목 <b>(${sp.canBid.length}건)</b></td></tr>`+sp.canBid.map(rowH).join('');
+      if(sp.cannotBid.length)b+=`<tr class="grp g2"><td colspan="${NC}">${esc(y)}년 · 기타 품목 (${sp.cannotBid.length}건)</td></tr>`+sp.cannotBid.map(rowH).join('');
+      if(yl.length>1&&yrs[y])b+=cft(`${y}년 소계 <span class="s">(${yrs[y].n}건)</span>`,yrs[y],true);});
+    if(!rows.length)b=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 입찰 품목이 없습니다.</div></td></tr>`;}
+  const ft=rows.length?cft(`${ykc.length>1?'25+26년 ':''}합계 <span class="s">(${rows.length}건)</span>`,{q:sQ,a:sA,dk:dk},false):'';
   pidbVisK=rows.map(r=>pidbNk(r.item));
   const nq=rows.reduce((a,r)=>{const p=pidbP(pidbNk(r.item));return a+(p?p.qs.length:0);},0);
   const top=`<div class="xlp-top"><span class="tt">▣ 포스코 26년 범용B 내화물 입찰 결과</span><span class="lg">25·26년 통합 · 금액 = 낙찰단가 × 물량 · * 낙찰가 미확정(기존단가 기준)</span>${pidbYrBar(rows)}</div>`;
@@ -24327,7 +24338,7 @@ function p27QClear(item){const p=pidbP(pidbNk(item));if(!p)return;if(!confirm('"
   (p.qs||[]).forEach(q=>{if(pidbOv.q27&&pidbOv.q27[q]){delete pidbOv.q27[q].qty;if(!Object.keys(pidbOv.q27[q]).length)delete pidbOv.q27[q];}});pidbOvSave();pidbKeepRender();}
 function pidbBidPage27(mode){
   const xls=mode==='xls';
-  const rows=pidbBidRowsB(),L=pidbLive(),ed=pidbCanEdit();
+  const rows=pidbBidRowsB(true),L=pidbLive(),ed=pidbCanEdit();
   const dl=document.getElementById('pvDL');if(dl&&!dl.children.length)dl.innerHTML=PVEND.filter(v=>v!=='동국').concat(['조선/퓨처엠']).map(v=>`<option value="${esc(v)}">`).join('');
   const NC=(xls?0:1)+13;
   let sQ=0,sB=0,sI=0;
@@ -24402,7 +24413,7 @@ function p27Reset(){
   pidbOv.b27={};pidbOv.q27={};pidbOvSave();pidbRender();toast('27년 입력을 초기화했습니다 (기존단가=26년 낙찰가)');
 }
 function p27Xls(){
-  const rows=pidbBidRowsB(),th=t=>`<th>${t}</th>`,td=v=>`<td>${esc(v==null?'':v)}</td>`;
+  const rows=pidbBidRowsB(true),th=t=>`<th>${t}</th>`,td=v=>`<td>${esc(v==null?'':v)}</td>`;
   let h='<table border="1"><thead><tr>'+['품명','제철소','Q코드','규격','단중(kg)','Q코드 제철소','기존단가(원/kg)','기존단가 출처','27년 물량(kg)','물량 출처','당사 입찰가(원/kg)','27년 낙찰가(원/kg)','금액(기존단가 기준)','금액(입찰가 기준)'].map(th).join('')+'</tr></thead><tbody>';
   rows.forEach(r=>{const c=p27Calc(r);
     const pre=td(r.item)+td(poscoSite(r.item));
