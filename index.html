@@ -15811,6 +15811,23 @@ let invPriceForce=(()=>{try{return JSON.parse(localStorage.getItem('dgrns_invfor
 function saveInvPriceForce(){try{localStorage.setItem('dgrns_invforce',JSON.stringify(invPriceForce));}catch(e){}}
 function invPriceForced(code,ym){const f=invPriceForce[code]&&invPriceForce[code][ym];if(f==null)return null;if(Math.abs(+f-invPriceBase(code,ym))<0.5)return null;return +f;} // 강제수정 값이 연동·기본 단가와 같아지면(예: SET 합산 후) 강제수정으로 보지 않음
 function invPriceAt(code,ym){const f=invPriceForced(code,ym);return f!=null?f:invPriceBase(code,ym);}
+/* 2026-11-09: IMPACT PAD 사용품(U12100004)·테스트품(U12120257)은 각각 품목마스터 단가(305,903 / 586,320)로 계산.
+   두 품목에 똑같이 남아 있던 10월 '시점 단가'(313,914)·강제수정 잔여값은 마스터 연동 품목에서는 쓰이지 않으므로 정리 */
+const INV_IMP_CODES=['U12100004','U12120257'];
+function invImpPadClean(){
+  let ch=false;
+  try{
+    INV_IMP_CODES.forEach(c=>{
+      const it=invItem(c);if(!it||!it.linkedProdId)return;   // 마스터 연동된 경우만
+      if(invPriceHist[c]){delete invPriceHist[c];ch=true;}
+      const f=invPriceForce[c];
+      if(f){Object.keys(f).forEach(y=>{if(Math.abs(+f[y]-invPriceBase(c,y))<0.5){delete f[y];ch=true;}});if(!Object.keys(f).length){delete invPriceForce[c];ch=true;}}
+    });
+    if(ch){saveInvPriceHist();saveInvPriceForce();try{for(const q in _invPinCache)delete _invPinCache[q];}catch(e){}}
+  }catch(e){}
+  return ch;
+}
+try{invImpPadClean();}catch(e){}
 function invPriceSrc(code,ym){
   if(invPriceForced(code,ym)!=null)return '강제수정(이 달만)';
   const it=invItem(code);
@@ -36454,6 +36471,7 @@ function fbApplyKv(kv,remoteTimes,force){fbApplying=true;
     try{invProd=invProdMap();}catch(e){}
     try{invPriceHist=loadInvPriceHist();}catch(e){}
     try{invPriceForce=JSON.parse(localStorage.getItem('dgrns_invforce')||'{}');}catch(e){}
+    try{invImpPadClean();}catch(e){}
     try{poscoMaster=loadPoscoMaster();}catch(e){}
     window.__kvFirstApplied=true;
     syncLog('↓ 설정/마스터');
