@@ -16016,7 +16016,7 @@ function invTotRtSet(ym,k,pct){
   saveInvTotRt();flashSave();renderInvTot();try{renderInvMonth();}catch(e){}
 }
 /* 엑셀 L13(EBT충진재) 수식 오류 처리: 'xl'(기본)=엑셀 수식 그대로 · 'fix'=올리빈 사용량×단가로 보정 */
-function invTotL13Mode(){try{return localStorage.getItem('dgrns_invtot_l13')||'xl';}catch(e){return 'xl';}}
+function invTotL13Mode(){try{return localStorage.getItem('dgrns_invtot_l13')||'fix';}catch(e){return 'fix';}}
 function invTotL13Set(fix){
   try{localStorage.setItem('dgrns_invtot_l13',fix?'fix':'xl');}catch(e){}
   flashSave();renderInvTot();try{renderInvMonth();}catch(e){}
@@ -16024,22 +16024,24 @@ function invTotL13Set(fix){
 /* 2026-11-09: 엑셀 구조 기준(기본) — 아래 두 가지도 나중에 '실제 단가'로 바꿀 수 있도록 설정 분리
    KR: 엑셀은 KR·원진 벽돌 행이 위 행 단가를 따라감('xl'=엑셀 동일) / 'fix'=각 품목 자기 단가
    IMP: 엑셀은 IMPACT PAD 두 품목 합계에 첫 품목 단가 적용('xl'=엑셀 동일) / 'fix'=품목별 단가×사용량 */
-function invTotKrMode(){try{return localStorage.getItem('dgrns_invtot_kr')||'xl';}catch(e){return 'xl';}}
-function invTotImpMode(){try{return localStorage.getItem('dgrns_invtot_imp')||'xl';}catch(e){return 'xl';}}
+function invTotKrMode(){try{return localStorage.getItem('dgrns_invtot_kr')||'fix';}catch(e){return 'fix';}}
+function invTotImpMode(){try{return localStorage.getItem('dgrns_invtot_imp')||'fix';}catch(e){return 'fix';}}
+/* 2026-11-09: 기본값을 '프로그램 정확 계산'으로 변경 — 기존에 저장된 엑셀 방식 설정은 1회 새 기본값으로 교체 */
+(function(){try{if(localStorage.getItem('dgrns_invtot_def1109')!=='1'){['l13','kr','imp'].forEach(k=>localStorage.setItem('dgrns_invtot_'+k,'fix'));localStorage.setItem('dgrns_invtot_def1109','1');}}catch(e){}})();
 function invTotModeSet(k,fix){
   try{localStorage.setItem(k==='kr'?'dgrns_invtot_kr':k==='imp'?'dgrns_invtot_imp':'dgrns_invtot_l13',fix?'fix':'xl');}catch(e){}
   try{for(const q in _invPinCache)delete _invPinCache[q];}catch(e){}
   flashSave();try{renderInvTot();}catch(e){}try{renderInvMonth();}catch(e){}try{renderInvDet();}catch(e){}
 }
 function invTotModeBar(ym){
-  const l=invTotL13Mode()==='fix',k=invTotKrMode()==='fix',m=invTotImpMode()==='fix';
-  const cb=(key,on,t,d)=>`<label style="display:block;cursor:pointer;margin:3px 0"><input type="checkbox" ${on?'checked':''} onchange="invTotModeSet('${key}',this.checked)"> <b>${t}</b> <span style="color:#64748b">— ${d}</span></label>`;
+  const l=invTotL13Mode()==='xl',k=invTotKrMode()==='xl',m=invTotImpMode()==='xl';
+  const cb=(key,on,t,d)=>`<label style="display:block;cursor:pointer;margin:3px 0"><input type="checkbox" ${on?'checked':''} onchange="invTotModeSet('${key}',!this.checked)"> <b>${t}</b> <span style="color:#64748b">— ${d}</span></label>`;
   const n=(l?1:0)+(k?1:0)+(m?1:0);
-  return `<details style="margin:6px 0"><summary style="cursor:pointer;font-weight:800;font-size:12.5px">⚙ 엑셀 구조 기준 설정 — ${n?`<span style="color:#b45309">실제 단가로 보정 ${n}건 적용 중</span>`:'<span style="color:#15803d">엑셀과 동일(기본)</span>'}</summary>
-    <div style="font-size:11.5px;line-height:1.55;margin:4px 2px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fafbfc">기본은 엑셀 '전체원단위' 구조 그대로입니다. 체크하면 해당 항목만 실제 단가로 바꿔 계산합니다(월별 원단위 합계와의 차이가 줄어듭니다).
-    ${cb('l13',l,'EBT충진재 L13 보정','엑셀 수식이 올리빈 단가를 적용 → 올바른 단가로 계산(원/톤 증가)')}
-    ${cb('kr',k,'KR·원진 벽돌 단가 연결 해제','MgO-C·MAC·AMC의 KR/원진 행이 위 행 단가를 따르던 것을 각 품목 자기 단가로')}
-    ${cb('imp',m,'IMPACT PAD 품목별 단가','두 품목 합계에 첫 단가를 일괄 적용하던 것을 품목별 단가×사용량으로')}</div></details>`;
+  return `<details style="margin:6px 0"><summary style="cursor:pointer;font-weight:800;font-size:12.5px">⚙ 계산 기준 설정 — ${n?`<span style="color:#b45309">엑셀 방식 ${n}건 적용 중</span>`:'<span style="color:#15803d">프로그램 정확 계산(기본) — 엑셀 구조 오류 3종 보정</span>'}</summary>
+    <div style="font-size:11.5px;line-height:1.55;margin:4px 2px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fafbfc">기본은 품목별 실제 단가×사용량으로 계산합니다(월별 원단위 합계와 동일). 아래를 체크하면 해당 항목만 엑셀 '전체원단위' 구조 그대로 계산합니다(엑셀 값과 대조할 때 사용).
+    ${cb('l13',l,'EBT충진재 L13 — 엑셀 방식','엑셀 수식이 올리빈 단가를 적용(원/톤 −29.76 낮게 계산)')}
+    ${cb('kr',k,'KR·원진 벽돌 — 엑셀 방식','KR/원진 행이 위 행 단가를 따라감(MgO-C·MAC·AMC, 합 +5.33)')}
+    ${cb('imp',m,'IMPACT PAD — 엑셀 방식','두 품목 합계에 첫 단가를 일괄 적용(−2.34)')}</div></details>`;
 }
 /* 수기 고정량(엑셀에서 매달 직접 입력하던 칸). 우선순위: ① 이번 달 입력 ② Bottom electrode는 DC-15 사용량÷3 자동 ③ 이전 달 입력값 승계 ④ 2026-09 엑셀값 ⑤ 0 */
 function invTotFxSrc(ym,k){
@@ -18989,7 +18991,7 @@ function renderInvTot(){
     +cb('총 금액 원단위',c.prod?iN(c.tot.a):'-','원/톤',true)+cb('전월('+pv+')',p.prod?iN(p.tot.a):'-','원/톤');
   // ── 엑셀 대조 ──
   const xl=INV_TOT_XL[ym];let note='';const fixMode=invTotL13Mode()==='fix';
-  if(xl&&c.prod){
+  if(false&&xl&&c.prod){   /* 엑셀 대조 숨김(2026-11-09) */
     const gap=c.l13gap; // 보정 시 늘어나는 값
     const exp=fixMode?gap:0;
     const row=(n,pr,ex,fx)=>{const d=pr-ex;const ok=Math.abs(d-fx)<0.02;return `<tr><td>${n}</td><td class="n">${pr.toFixed(2)}</td><td class="n">${ex.toFixed(2)}</td><td class="n" style="color:${ok?'#15803d':'#c81e1e'}">${(d>=0?'+':'')+(Math.abs(d)<0.005?'0.00':d.toFixed(2))}</td></tr>`;};
@@ -18999,7 +19001,7 @@ function renderInvTot(){
       ${row('전기로',c.eq.EAF.a,xl.EAF,exp)}${row('래들',c.eq.LF.a,xl.LF,0)}${row('턴디쉬',c.eq.CC.a,xl.CC,0)}${row('총 합계',c.tot.a,xl.tot,exp)}</tbody></table></div>
       <div style="font-size:11.5px;margin:4px 2px;line-height:1.55">
       <label style="cursor:pointer"><input type="checkbox" ${fixMode?'checked':''} onchange="invTotL13Set(this.checked)"> <b>엑셀 L13(EBT충진재) 수식 오류 보정</b></label>
-      <span style="color:#b45309"> — 엑셀 L13은 =(사용량!I52*E13)/J2+(사용량!I53*사용량!E53)/J2 로 <b>앙카허스 사용량×올리빈 단가</b>를 계산해 ${xl.r13.toFixed(2)}원/톤으로 과소계상됩니다(올바른 값 ${(xl.r13+gap).toFixed(2)}, 차이 +${gap.toFixed(2)}). 기본은 <b>엑셀과 동일(체크 해제)</b>이며, 체크하면 올리빈 사용량×단가로 보정해 총합이 ${iN(xl.tot+gap)}원/톤이 됩니다.</span><br>
+      <span style="color:#b45309"> — 엑셀 L13은 =(사용량!I52*E13)/J2+(사용량!I53*사용량!E53)/J2 로 <b>앙카허스 사용량×올리빈 단가</b>를 계산해 ${xl.r13.toFixed(2)}원/톤으로 과소계상됩니다(올바른 값 ${(xl.r13+gap).toFixed(2)}, 차이 +${gap.toFixed(2)}). 현재 기본은 <b>보정 적용(체크)</b>이며, 해제하면 엑셀과 동일하게 계산합니다(체크 시 총합 ${iN(xl.tot+gap)}원/톤).</span><br>
       <span style="color:#475569"><b>Q105 교차검증</b> — 엑셀 Q105(수량×단가 합계÷생산량) ${xl.q105.toFixed(2)} ↔ 프로그램 ${c.q.q105.toFixed(2)}(마그-크롬 스탐프재 ${c.q.r19.toFixed(2)} 제외). 엑셀 Q열에는 Q19 수식이 없어 이 값이 L101보다 ${xl.r19.toFixed(2)} 적게 잡혀 있었으며, 포함하면 ${c.q.all.toFixed(2)}입니다(수정본 엑셀에서 Q19 보완).</span></div></details>`;
   }
   const st=[];
@@ -19007,8 +19009,8 @@ function renderInvTot(){
   st.push(lock?'<span style="color:#15803d">🔒 확정됨</span>':'<span style="color:#b45309">✏ 미확정</span>');
   if(c.extra.length)st.push(`<span style="color:#c2410c">미연결 품목 ${c.extra.length}건 가산: ${c.extra.map(e=>esc(e.n)).join(', ')}</span>`);
   const pinBar=pin?`<div style="font-size:12.5px;margin:6px 0;padding:7px 10px;border-radius:7px;background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46">📌 <b>엑셀 '2609월 원단위' 확정값(고정)</b> — 당월(${ym})${invTotPinned(pv)?'·전월('+pv+')':''} 칸은 엑셀 파일 값 그대로입니다(재고·단가 입력과 무관). <a href="#" onclick="invTotPinSet(false);return false" style="color:#047857;font-weight:700">프로그램 계산값으로 보기</a></div>`
-    :(INV_XL_PIN[ym]||INV_XL_PIN[pv])?`<div style="font-size:12px;margin:6px 0;color:#92400e">⚠ 프로그램 계산값으로 표시 중입니다(9월·8월은 엑셀 값과 다를 수 있음). <a href="#" onclick="invTotPinSet(true);return false" style="font-weight:700">엑셀 확정값(고정)으로 보기</a></div>`:'';
-  document.getElementById('invtNote').innerHTML=`<div style="font-size:12px;margin:4px 2px">${st.join(' · ')}</div>${pinBar}${invTotModeBar(ym)}${note}${(typeof invXl10Panel==='function'?invXl10Panel(ym):'')}`;
+    :(INV_XL_PIN[ym])?`<div style="font-size:12px;margin:6px 0;color:#92400e">⚠ 프로그램 계산값으로 표시 중입니다(9월·8월은 엑셀 값과 다를 수 있음). <a href="#" onclick="invTotPinSet(true);return false" style="font-weight:700">엑셀 확정값(고정)으로 보기</a></div>`:'';
+  document.getElementById('invtNote').innerHTML=`<div style="font-size:12px;margin:4px 2px">${st.join(' · ')}</div>${pinBar}<div style="font-size:11.5px;margin:4px 2px;color:#475569">계산 기준: <b>프로그램</b> — 품목 마스터 단가 × 월별 사용량(입고·월말재고 기준). 월별·전체·내부 공유용 합계가 같은 값입니다.</div>${note}${(typeof invXl10Panel==='function'?invXl10Panel(ym):'')}`;
   // ── 수기 입력 박스(노란색): 분할 비율 + 영구장 수량 ──
   const srcTag=(s,k)=>s.src==='set'?'<span style="color:#15803d">이번 달 입력</span>':s.src==='inh'?`<span style="color:#b45309">${esc(s.from)} 값 승계 — 확인 필요</span>`:s.src==='auto'?'<span style="color:#15803d">자동(DC-15÷3)</span>':s.src==='seed'?'<span style="color:#15803d">엑셀 9월 값</span>':s.src==='def'?'<span style="color:#64748b">엑셀 기본값</span>':'<span style="color:#c81e1e;font-weight:700">미입력</span>'+(s.ref&&!dis?` <span style="color:#64748b">· 직전(${esc(s.ref.from)}) ${iN(s.ref.v)}</span> <a href="#" onclick="invTotFxCopyPrev('${ym}','${k||''}');return false" style="font-weight:700">직전값 적용</a>`:'');
   const yc=(s)=>s.src==='set'?'inp-yel':'inp-yel inp-yel-soft';
@@ -19294,6 +19296,7 @@ function invXl10Rows(ym){
   return out;
 }
 function invXl10Panel(ym){
+  return '';   /* 2026-11-09: 엑셀 대조 패널 숨김(프로그램 기준으로 통일) */
   if(ym!=='2026-10')return '';
   let c;try{c=invTotCalc(ym);}catch(e){return '';}if(!c.prod)return '';
   const rows=invXl10Rows(ym);const T=INV_XL10_TOT;
