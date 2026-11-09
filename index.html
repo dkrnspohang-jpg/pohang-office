@@ -39267,6 +39267,28 @@ function invUnitOf(ym){
     let amt=0;INV_MASTER.forEach(m=>{if(invNoCost(m))return;amt+=invUse(m.c,ym)*invPriceAt(m.c,ym);});
     return amt?Math.round(amt/prod):null;}catch(e){return null;}}
 function mpSeedM(y,m){return (MPERF_SEED.m||{})[y+'-'+String(m).padStart(2,'0')]||{};}
+/* 2026-11-09: 엑셀 실적값이 없는 달(9월~)은 원단위 화면의 값(확정 원단위·생산량·수불 사용량)을 전기로 사용실적으로 가져옴 */
+function mpSeeded(y,m){return Object.keys(mpSeedM(y,m)).length>0;}
+function mpYm(y,m){return y+'-'+String(m).padStart(2,'0');}
+function mpProdIn(y,m,tonRound){   // 확정 생산량: 원단위의 실적 생산량 > 전기로 일일 조업 집계
+  if(mpSeeded(y,m))return tonRound;
+  try{const pi=getProdInfo(mpYm(y,m));if(pi&&pi.src==='actual'&&+pi.v>0)return Math.round(+pi.v);}catch(e){}
+  return tonRound;}
+function mpStockReady(ym){   // 월말재고가 대부분 입력된 달인지(미입력 5품목 이상이면 사용량이 과대 계산되므로 제외)
+  try{if(invTotPinned(ym)||invConfLocked(ym))return true;
+    let n=0;INV_MASTER.forEach(m=>{const r=invRec(m.c,ym),pv=invPrev(m.c,ym);if((pv>0||invIn(m.c,ym)>0)&&(!r||r.end==null)&&(!r||r.use==null))n++;});
+    return n<5;}catch(e){return false;}}
+function mpUnitProg(ym){   // 확정 원단위: 원단위 총합(원/톤) — 확정·엑셀고정 달이면 conf, 아니면 프로그램 계산(prog)
+  try{if(!mpStockReady(ym))return null;
+    const c=invTotCalc(ym);if(!c||!c.prod||!c.tot||!(c.tot.a>0))return null;
+    return {v:Math.round(c.tot.a),conf:!!(invTotPinned(ym)||invConfLocked(ym))};}catch(e){return null;}}
+const MP_SB_CODES={hotSb:['U12120107','U12120188','U12120190','U12120256'],ancSb:['U12120112','U12120173']};
+function mpSbProg(ym,k){   // 열간보수재(Spray, 톤)·앙카허스(DC-25, kg) 수불 사용량
+  try{const cs=MP_SB_CODES[k];if(!cs)return null;let kg=0;
+    if(ym==='2026-09'&&typeof INV_M09!=='undefined'){cs.forEach(c=>{const t=INV_M09[c];if(t)kg+=(+t[0]||0)+(+t[1]||0)-(+t[2]||0);});}   // 9월은 엑셀 기록 그대로
+    else{if(!mpStockReady(ym))return null;cs.forEach(c=>{kg+=invUse(c,ym);});}
+    if(!(kg>0))return null;
+    return {v:k==='hotSb'?Math.round(kg)/1000:Math.round(kg),conf:!!(invTotPinned(ym)||invConfLocked(ym))};}catch(e){return null;}}
 function mpCell(prog,seed){           // 프로그램 값 우선, 없으면 엑셀 실적값(회색)
   if(prog)return mpN(prog);
   if(seed!=null&&seed!=='')return `<span style="color:#7b8794">${typeof seed==='number'?mpN(seed):esc(String(seed))}</span>`;
@@ -39291,8 +39313,8 @@ function mpEff(y,m,k,prog){
   const sd=mpSeedM(y,m)[k];if(sd!=null&&sd!=='')return {v:sd,src:'seed'};
   return {v:'',src:''};
 }
-const MP_SRC_NM={ov:'직접 입력값',prog:'프로그램 집계(전기로 일일 조업 입력)',seed:'엑셀 기준 실적(2026 내화물 사용현황)','':'아직 입력 없음'};
-const MP_SRC_CL={ov:'#1d4ed8',prog:'#111827',seed:'#7b8794','':'#111827'};
+const MP_SRC_NM={ov:'직접 입력값',conf:'원단위 확정값(원단위 화면과 동일)',prog:'프로그램 집계(원단위·전기로 일일 조업 입력, 미확정)',seed:'엑셀 기준 실적(2026 내화물 사용현황)','':'아직 입력 없음'};
+const MP_SRC_CL={ov:'#1d4ed8',conf:'#111827',prog:'#111827',seed:'#7b8794','':'#111827'};
 function mpInp(y,m,k,e,unit){
   const ym=y+'-'+String(m).padStart(2,'0');
   const val=e.v===''?'':(typeof e.v==='number'?(Math.round(e.v*100)/100):e.v);
@@ -39318,6 +39340,11 @@ function mpXlNum(v){if(typeof v==='number')return isNaN(v)?NaN:v;const s=String(
 function mpXlFirst(v){if(typeof v==='number')return v;const m=String(v==null?'':v).match(/^\s*([\d,]+(?:\.\d+)?)\s*\//);return m?+m[1].replace(/,/g,''):NaN;}
 function mpXlFmt(v,dec){if(typeof v!=='number'||isNaN(v))return v==null?'':String(v);
   return dec?v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}):Math.round(v).toLocaleString('en-US');}
+function mpHotSbEff(cc){const ym=mpYm(cc.y,cc.m),ov=(mpOv[ym]||{}).hotSb;
+  if(ov!=null&&ov!=='')return ov;
+  if(mpSeeded(cc.y,cc.m))return E_seedHot(cc);
+  const u=mpSbProg(ym,'hotSb');return u?u.v:'';}
+function E_seedHot(cc){const v=mpSeedM(cc.y,cc.m).hotSb;return v==null?'':v;}
 function mpEafSpec(y){
   y=+y;const yy=n=>String(n).slice(2);
   const cols=[];
@@ -39330,7 +39357,7 @@ function mpEafSpec(y){
   const num=e=>{const n=mpXlNum(e.v);return isNaN(n)?0:n;};
   // 월별 유효값 미리 계산 (생산량·CH)
   cols.forEach(cc=>{if(cc.t!=='m')return;const d=D[cc.y][cc.m];
-    cc.prod=E(cc,'prod',Math.round(d.ton)||0);cc.chA=E(cc,'chA',d.chA);cc.chB=E(cc,'chB',d.chB);
+    cc.prod=E(cc,'prod',mpProdIn(cc.y,cc.m,Math.round(d.ton)||0));cc.chA=E(cc,'chA',d.chA);cc.chB=E(cc,'chB',d.chB);
     cc.ch=num(cc.chA)+num(cc.chB);cc.pv=num(cc.prod);});
   const rows=[];let blk=0;
   const header=()=>{blk++;rows.push({k:'hdr',blk,cells:[{c:0,cs:2,v:'구분',h:1}].concat(cols.map((cc,j)=>({c:2+j,v:cc.lab,h:1,b:cc.t==='avg'})))});};
@@ -39353,9 +39380,12 @@ function mpEafSpec(y){
         else if(o.calc==='tpc'){if(cc.ch&&cc.pv)e={v:cc.pv/cc.ch,src:unconf?'prog':'calc'};else{const t=mpSeedM(cc.y,cc.m).tpc;if(t!=null)e={v:t,src:'seed'};}}
         else{edit=true;
           if(k==='prod')e=cc.prod;else if(k==='chA')e=cc.chA;else if(k==='chB')e=cc.chB;
+          else if((k==='unit'||k==='hotSb'||k==='ancSb')&&!mpSeeded(cc.y,cc.m)){const ov=(mpOv[ym]||{})[k];
+            if(ov!=null&&ov!=='')e={v:ov,src:'ov'};
+            else{const u=k==='unit'?mpUnitProg(ym):mpSbProg(ym,k);e=u?{v:u.v,src:u.conf?'conf':'prog'}:{v:'',src:''};}}
           else if(k==='rojChg'||k==='balChg'){const lst=k==='rojChg'?d.roj:d.bal;const ov=(mpOv[ym]||{})[k];
             e=(lst.length&&(ov==null||ov===''))?{v:lst.map(mpXlChg).join(' '),src:'prog'}:E(cc,k,null);}
-          else if(k==='hotKgCh'){const ov=(mpOv[ym]||{})[k];const sb=mpXlNum(E(cc,'hotSb',null).v);
+          else if(k==='hotKgCh'){const ov=(mpOv[ym]||{})[k];const sb=mpXlNum(mpHotSbEff(cc));
             e=(ov!=null&&ov!=='')?{v:ov,src:'ov'}:((sb&&cc.ch)?{v:sb*1000/cc.ch,src:'prog'}:E(cc,k,null));}
           else e=E(cc,k,null);}
         cc['_'+(o.id||o.key)]=e;mv.push({cc,e});}
@@ -39598,14 +39628,15 @@ function renderMperf(){
   const y=mpYear();
   // 상단 카드
   const eafY=eafData.filter(r=>String(r.date||'').slice(0,4)===String(y));
-  let ch=0,ton=0;{const dd=mpEafData(y);MP_MON.forEach(m=>{const n=e=>{const v=typeof e.v==='number'?e.v:+String(e.v||'').replace(/,/g,'');return isNaN(v)?0:v;};
-    ch+=n(mpEff(y,m,'chA',dd[m].chA))+n(mpEff(y,m,'chB',dd[m].chB));ton+=n(mpEff(y,m,'prod',Math.round(dd[m].ton)||0));});}
+  let ch=0,ton=0,tonC=0;{const dd=mpEafData(y);MP_MON.forEach(m=>{const n=e=>{const v=typeof e.v==='number'?e.v:+String(e.v||'').replace(/,/g,'');return isNaN(v)?0:v;};
+    const cm=n(mpEff(y,m,'chA',dd[m].chA))+n(mpEff(y,m,'chB',dd[m].chB)),pm=n(mpEff(y,m,'prod',mpProdIn(y,m,Math.round(dd[m].ton)||0)));
+    ch+=cm;ton+=pm;if(cm>0)tonC+=pm;});}   // Ton/CH는 조업 CH가 있는 달만으로 계산(CH 없는 달의 생산량이 섞이면 과대)
   const lt=ladleData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,4)===String(y)&&r.daily);
   const td=tundishData.filter(r=>END_EVT.includes(r.type)&&String(r.date||'').slice(0,4)===String(y)&&r.daily);
   const cd=(l,v,u,hl)=>`<div class="card"${hl?' style="background:#eff6ff;border-color:#bfdbfe"':''}><div style="font-size:11.5px;color:var(--muted)">${l}</div><div style="font-size:19px;font-weight:800;margin-top:3px">${v}<small style="font-size:11.5px;font-weight:600;color:var(--muted)"> ${u}</small></div></div>`;
   const box=document.getElementById('mperfCards');
   if(box)box.innerHTML=cd(y+' 조업 CH',mpN(ch),'CH',true)+cd('생산량',mpN(ton),'톤')
-    +cd('Ton/CH',ch?mpN(ton/ch):'-','')
+    +cd('Ton/CH',ch?mpN(tonC/ch):'-','')
     +cd('래들 해체',lt.length,'대')+cd('래들 평균수명',lt.length?mpN(lt.reduce((s,r)=>s+(+r.daily||0),0)/lt.length):'-','CH')
     +cd('턴디쉬 사용',td.length,'대');
   if(mperfSub==='eaf')renderMpEaf();
