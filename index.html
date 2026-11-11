@@ -1625,6 +1625,13 @@
   .tbx-ib{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:5px 0 0 22px}
   .tbx-oth{font-size:11px;color:#1d4ed8;background:#e8f1ff;border-radius:5px;padding:1px 7px;cursor:pointer}
   .tbx-sub{margin-top:6px}.tbx-sub>summary{cursor:pointer;font-size:12px;color:var(--muted)}
+  .tb-lk{font-size:11px;color:#0f766e;background:#e6f6f3;border-radius:5px;padding:1px 6px;margin-bottom:3px;display:inline-block}
+  .tbx-gh{font-size:11.5px;font-weight:800;color:#0f766e;margin:8px 0 2px}.tbx-gh.sg{color:#b45309}
+  .tbx-sg{background:#fef3c7;color:#92400e;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700}
+  .tbx-r.lk{background:#f3fbf9;border-radius:6px;padding-left:6px;padding-right:6px}
+  .tbx-tl{display:flex;gap:7px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line2);font-size:12px}.tbx-tl time{color:var(--muted);font-size:11px;min-width:64px}.tbx-tl .k{font-size:10.5px;font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
+  .tbp-t{width:100%;border-collapse:collapse;font-size:12.5px}.tbp-t th{background:var(--line2);padding:6px 8px;text-align:left;font-size:11.5px;white-space:nowrap}.tbp-t td{border-bottom:1px solid var(--line2);padding:7px 8px;vertical-align:top}.tbp-t tr.pr{cursor:pointer}.tbp-t tr.pr:hover{background:#f3fbf9}
+  .tbp-t .nm{font-weight:800;font-size:13px}.tbp-t .sx{color:var(--muted);font-size:11px}.tbp-t .dn{opacity:.55}
   .tb-issb{font-size:10.5px;font-weight:700;color:#1d4ed8;background:#e8f1ff;border-radius:5px;padding:1px 7px;cursor:pointer;margin-left:6px}
   @media(max-width:900px){.tb-kpis{grid-template-columns:repeat(3,1fr)}.tb-g{grid-template-columns:1fr}}
   /* 2026-10-22 (rpt125): 도구 줄 그룹 메뉴(드롭다운) — 비슷한 조회·점검·등록 버튼을 한 칸으로 묶음 */
@@ -3256,6 +3263,7 @@ service cloud.firestore {
     <div class="tb-lanes" id="tbLanes"></div>
     <div class="subtabs" id="tbSubtabs">
       <button class="subtab active" data-sp="board" onclick="tbTab('board')">🗂️ 업무 보드</button>
+      <button class="subtab" data-sp="proj" onclick="tbTab('proj')">📂 프로젝트 현황</button>
       <button class="subtab" data-sp="people" onclick="tbTab('people')">👤 담당자별</button>
       <button class="subtab" data-sp="list" onclick="tbTab('list')">📋 전체 목록</button>
       <button class="subtab" data-sp="feed" onclick="tbTab('feed')">🕘 활동 기록</button>
@@ -20895,7 +20903,7 @@ function fieldCardHtml(r){const c=fieldTargetColor(r.t);
         <span class="fc-cust">${esc(r.mn||r.cu||'')}</span>${bd}
         <span class="fc-toggle">▾</span>
       </div>
-      <div class="fc-sum">${r.sm?`💬 ${esc(r.sm)}`:''}</div>
+      <div class="fc-sum">${r.sm?`💬 ${esc(r.sm)}`:''}${tbxProjChips('fr',r.d)}</div>
       <div class="fc-body">
         ${r.iv?`<div class="fc-row"><b>면담자</b> ${esc(r.iv)}</div>`:''}
         ${r.tv?`<div class="fc-row"><b>출장자</b> ${esc(r.tv)}</div>`:''}
@@ -30163,7 +30171,7 @@ function wpRenderList(){
     return `<tr${over?' style="background:#fff7f7"':''}>
       <td style="font-size:11px;color:var(--muted)">${it.year}·${it.no}</td>
       <td style="font-size:11.5px">${esc(it.customer)}${it.category?`<div style="color:var(--muted);font-size:10.5px">${esc(it.category)}</div>`:''}</td>
-      <td style="min-width:210px"><b style="cursor:pointer" onclick="wpOpenDetail('${it.id}')">${esc(it.title)}</b>${(it.seed&&!it.confirmed)?` <span title="상태·기간은 원본 문구로 추정한 값입니다 — 상태를 한 번 저장하면 '추정' 표시가 사라집니다${it.reason?'\n근거: '+esc(it.reason):''}" style="font-size:9.5px;color:#b45309;background:#fef3c7;border-radius:3px;padding:0 4px">추정</span>`:''}</td>
+      <td style="min-width:210px"><b style="cursor:pointer" onclick="wpOpenDetail('${it.id}')">${esc(it.title)}</b>${tbxProjChips('wl',it.id)}${(it.seed&&!it.confirmed)?` <span title="상태·기간은 원본 문구로 추정한 값입니다 — 상태를 한 번 저장하면 '추정' 표시가 사라집니다${it.reason?'\n근거: '+esc(it.reason):''}" style="font-size:9.5px;color:#b45309;background:#fef3c7;border-radius:3px;padding:0 4px">추정</span>`:''}</td>
       <td><input class="iinp" style="width:72px;text-align:left" value="${esc(it.owner||'')}" placeholder="담당" onchange="wpEdit('${it.id}','owner',this.value)"></td>
       <td><input type="month" class="iinp" style="width:118px" value="${esc(it.start||'')}" onchange="wpEdit('${it.id}','start',this.value)"></td>
       <td><input type="month" class="iinp" style="width:118px;${over?'border-color:#dc2626':''}" value="${esc(it.due||'')}" onchange="wpEdit('${it.id}','due',this.value)"></td>
@@ -30212,6 +30220,7 @@ function wpOpenDetail(id){
       <label>기간·상태</label><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input type="month" class="iinp" style="width:130px" value="${esc(it.start||'')}" onchange="wpEdit('${id}','start',this.value)"><span>~</span><input type="month" class="iinp" style="width:130px" value="${esc(it.due||'')}" onchange="wpEdit('${id}','due',this.value)"><select class="selbox" onchange="wpEdit('${id}','status',this.value)">${Object.keys(WP_ST).map(x=>`<option${x===it.status?' selected':''}>${x}</option>`).join('')}</select></div>
       <label style="align-self:start">진행 내용</label><textarea class="iinp" style="width:100%;height:230px;text-align:left;font-size:12px;line-height:1.5" onchange="wpEdit('${id}','detail',this.value)" placeholder="[2026-10] - 내용  (월별로 한 줄씩)">${esc(it.detail||'')}</textarea>
     </div>
+    <div style="margin-top:8px;font-size:11.5px">${tbxProjChips('wl',id)?'📂 연결된 프로젝트: '+tbxProjChips('wl',id):'<span style="color:var(--muted)">📂 연결된 프로젝트 없음 — 팀 업무 보드의 프로젝트 카드에서 연결합니다</span>'}</div>
     ${it.reason?`<div style="font-size:11px;color:#b45309;margin-top:8px">상태 추정 근거: ${esc(it.reason)}</div>`:''}
     <div style="font-size:11px;color:var(--muted);margin-top:6px">진행 내용은 "[YYYY-MM] - 내용" 형식으로 한 줄씩 적으면 월별 타임테이블에 표시됩니다. 변경은 입력 즉시 저장됩니다.</div>`;
   ov.classList.add('show');
@@ -31020,7 +31029,7 @@ function tbMigLane(c){
   return 'etc';
 }
 const TB_PROJ_LANE={k:'xproj',n:'프로젝트 업무',ic:'📂',c:'#0f766e'};
-const TB_PROJ_SEED=[{"id":"projposcoset","t":"포스코 설비별 SET 계약 (8개 설비)","ln":"xproj","st":"doing","pr":1,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-07-01","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2026-07-01 00:00","w":"업무진행현황","x":"포스코가 설비별 계약방식으로 전환(관리 효율·구매 표준화) → 설비별 SET 신규 견적 요청 접수, 정보 파악·내부 검토","s":0},{"d":"2026-08-14 00:00","w":"업무진행현황","x":"SET 물량 검토(8/11) → 입찰 가능 여부·예상금액(V1): 8개 설비(포항 6·광양 2) 약 9.99억원 / 전 설비 공급 실적 無로 단독 참가 不","s":0},{"d":"2026-08-15 00:00","w":"업무진행현황","x":"설비별 1SET 예상금액: 포항 2제강 티밍 1.35억 · 3제강 티밍 1.78억 · STS 4제강 티밍 1.17억 · 2제강 장입 0.62억 · 3제강 장입 0.75억 · 혼선차 2.18억 / 광양 2제강 장입 1.00억 · 혼선차 1.13억","s":0},{"d":"2026-09-04 00:00","w":"업무진행현황","x":"방향 수정: 중국 제강사 실사용 Reference(허베이 안평제강 등)로 제안 → 기술제안서 작성, 9/4 제안서 제출","s":0},{"d":"2026-09-30 00:00","w":"업무진행현황","x":"제안설명회: 제안 배경·Reference 설명 / 질의(유입재·수명, 공차·재고 3개월·흑연 순도 94%), 광양 노재 화상 참석","s":0},{"d":"2026-11-03 00:00","w":"업무진행현황","x":"최종 투찰","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"11/3 최종 투찰 완료 → 우선협상 대상업체 실사(구매 11월 1~2주) 중, 결과 11월 확인 예정. 래들 필러재·PP-CONE 업무가 SET 협상 종료에 연동되어 대기","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:05:00.000Z"},{"id":"projposcob25","t":"포스코 범용B (25년·기존)","ln":"xproj","st":"doing","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2025-01-24","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2024-10-01 00:00","w":"업무진행현황","x":"범용A 16종(24.7)·범용B 53종(24.10) 제안: 광양 CA-18·CA-CPR 합격·낙찰로 정식 공급, 나머지는 노재 반대·TEST 보류","s":0},{"d":"2025-03-27 00:00","w":"업무진행현황","x":"기존 단가 조사 → 1/24 단순견적 → 입찰 설명회·입찰 → 3/27 6품목 낙찰 (1순위 3: J-16·SGN-2·SMC-85C-R / 2순위 3: A-19·CA-18·CA-CPR)","s":0},{"d":"2025-07-01 00:00","w":"업무진행현황","x":"재고 소진 협의(TD-165, 댐블럭 29톤) → 6/30 기존품 재고 소진, 7/1 A-19 초도품(3STS 40%)·J-16 초도품 공급","s":0},{"d":"2025-10-01 00:00","w":"업무진행현황","x":"납품 특이사항 없음 → 25년 건 업무 종료","s":0},{"d":"2026-02-01 00:00","w":"업무진행현황","x":"방향 수정: J-16 W44P-1 치수 불량(1P 432EA 중 100EA) → 납품 전 당사 샘플링 검수·원진 품질관리 요청으로 관리 방식 변경","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"6품목 낙찰 → 단가연동제 운영 중 (낙찰 대상금액 64.6억 / 당사 배분 26.4억, 25년 입찰 57건 518.8억 중)","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:02:00.000Z"},{"id":"projposcoa26","t":"포스코 범용A→범용B 전환 (26년)","ln":"xproj","st":"doing","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-04-03","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2025-09-18 00:00","w":"업무진행현황","x":"범용A 25.4월 13종 제안 → 11종 기술미팅·TEST 확정까지 진행했으나 업무 지연·담당자 변경, 9/18 신규 개방 8종 기술미팅","s":0},{"d":"2025-12-01 00:00","w":"업무진행현황","x":"방향 수정: DBH-4-1은 내부 정책 변경으로 기존 공급사 유지, 구매 담당자 변경·노재 지연으로 추가 진행 미확정","s":0},{"d":"2026-04-03 00:00","w":"업무진행현황","x":"방향 수정: 구매팀이 범용B 전환 입찰로 직접 진행 — 4/3~15 개방 품목 검토(390규격, 대응 33종), 4/21~22 사양설명회·제안서, 5/1 입찰 가능 111규격(14재질) 확정","s":0},{"d":"2026-05-22 00:00","w":"업무진행현황","x":"5/13 입찰 → 5/22 결과: 14품목 참여, RHCT-AM·SE-MC 1위 100% 낙찰 / 5/28 계약 미팅(26.6.1~27.3.31)","s":0},{"d":"2026-07-30 00:00","w":"업무진행현황","x":"7/8 RHCT-AM 초도품 시공 2,250kg → 7/30 1차 해체: 2제강 61호 55CH 정상, 3제강 53호 64CH 지금(地金) 침투","s":0},{"d":"2026-09-01 00:00","w":"업무진행현황","x":"방향 수정: 지금 침투 원인 분석 제출 후 상승관 적용 조건으로 증량 TEST → 2차(9월) 3제강 Slag 탈락·지금 침투","s":0},{"d":"2026-11-02 00:00","w":"업무진행현황","x":"3차 TEST 특이사항 없음 → 11/2 2제강 41호 65CH 기존품(CR社) 동등, 증량 20톤(18대분) 확정","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"RHCT-AM·SE-MC 낙찰 → 3차 TEST 통과, 증량 20톤 확정·정식 공급 추진 (단가 RHCT-AM 1,752→1,455원 -17.0% · SE-MC 1,963→1,710원 -12.9%, 대상 14.1억 / 당사 5.0억)","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:04:00.000Z"},{"id":"projposcofill","t":"포스코 래들 필러재","ln":"xproj","st":"doing","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-10-01","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2026-10-01 00:00","w":"업무진행현황","x":"구매팀 실무자 유선으로 당사 래들 필러재 공급 가능 여부 문의 접수","s":0},{"d":"2026-11-03 00:00","w":"업무진행현황","x":"래들 필러재 제안서 제출","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"11/3 제안서 제출 완료 — 구매 SET 단가 협상(11월 1~2주차)으로 지연 중, SET 종료 후 회신 대기","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:03:00.000Z"},{"id":"projposcocone","t":"포스코 PP-CONE","ln":"xproj","st":"wait","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-08-01","due":"2026-11-30","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2026-08-01 00:00","w":"업무진행현황","x":"구매팀 제안 의향 확인 → 연간 포항/광양 사용량·타입 확인 → 포항 Slit Type 단가 조사 → 노재 담당자에게 제안 검토 내용 공유","s":0},{"d":"2026-08-02 00:00","w":"업무진행현황","x":"연 사용량(25년 입고 기준) 11,030EA: 포항 2·3제강 2,900(Slit 450, 매년 1년 계약 10/1) · 2·3STS 300(Porous 410·430, 짝수년 2년 계약) · 4STS 930(Slit 410·430, 짝수년 2년 계약) / 광양 전체 6,900(Segment 450, 매년 1년 계약 10/1)","s":0},{"d":"2026-09-04 00:00","w":"업무진행현황","x":"구매 실무자와 제안 협의 중: 제안서 10월 1주차 회신 요청 (제안은 SET 업무 완료 시점, 10월 2주차 예상)","s":0},{"d":"2026-09-30 00:00","w":"업무진행현황","x":"방향 수정: 제안 시점을 'SET 제안 종료 후 구매팀 경유 소개'로 조정, 노재 담당자는 제강 파트와 함께 검토 필요 언급","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"11월 말경 구매팀 소개자료 제출 예정 → 양/소 노재·조업 부서 검토 → 미팅·TEST 물량 확정 (일정 미확정)","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:01:00.000Z"}];
+const TB_PROJ_SEED=[{"id":"projposcoset","t":"포스코 설비별 SET 계약 (8개 설비)","ln":"xproj","st":"doing","pr":1,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-07-01","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2026-07-01 00:00","w":"업무진행현황","x":"포스코가 설비별 계약방식으로 전환(관리 효율·구매 표준화) → 설비별 SET 신규 견적 요청 접수, 정보 파악·내부 검토","s":0},{"d":"2026-08-14 00:00","w":"업무진행현황","x":"SET 물량 검토(8/11) → 입찰 가능 여부·예상금액(V1): 8개 설비(포항 6·광양 2) 약 9.99억원 / 전 설비 공급 실적 無로 단독 참가 不","s":0},{"d":"2026-08-15 00:00","w":"업무진행현황","x":"설비별 1SET 예상금액: 포항 2제강 티밍 1.35억 · 3제강 티밍 1.78억 · STS 4제강 티밍 1.17억 · 2제강 장입 0.62억 · 3제강 장입 0.75억 · 혼선차 2.18억 / 광양 2제강 장입 1.00억 · 혼선차 1.13억","s":0},{"d":"2026-09-04 00:00","w":"업무진행현황","x":"방향 수정: 중국 제강사 실사용 Reference(허베이 안평제강 등)로 제안 → 기술제안서 작성, 9/4 제안서 제출","s":0},{"d":"2026-09-30 00:00","w":"업무진행현황","x":"제안설명회: 제안 배경·Reference 설명 / 질의(유입재·수명, 공차·재고 3개월·흑연 순도 94%), 광양 노재 화상 참석","s":0},{"d":"2026-11-03 00:00","w":"업무진행현황","x":"최종 투찰","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"11/3 최종 투찰 완료 → 우선협상 대상업체 실사(구매 11월 1~2주) 중, 결과 11월 확인 예정. 래들 필러재·PP-CONE 업무가 SET 협상 종료에 연동되어 대기","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:05:00.000Z","kw":"설비SET,설비별,SET 제안,티밍","fr":["2026-09-30"],"wl":["wp2026-10"]},{"id":"projposcob25","t":"포스코 범용B (25년·기존)","ln":"xproj","st":"doing","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2025-01-24","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2024-10-01 00:00","w":"업무진행현황","x":"범용A 16종(24.7)·범용B 53종(24.10) 제안: 광양 CA-18·CA-CPR 합격·낙찰로 정식 공급, 나머지는 노재 반대·TEST 보류","s":0},{"d":"2025-03-27 00:00","w":"업무진행현황","x":"기존 단가 조사 → 1/24 단순견적 → 입찰 설명회·입찰 → 3/27 6품목 낙찰 (1순위 3: J-16·SGN-2·SMC-85C-R / 2순위 3: A-19·CA-18·CA-CPR)","s":0},{"d":"2025-07-01 00:00","w":"업무진행현황","x":"재고 소진 협의(TD-165, 댐블럭 29톤) → 6/30 기존품 재고 소진, 7/1 A-19 초도품(3STS 40%)·J-16 초도품 공급","s":0},{"d":"2025-10-01 00:00","w":"업무진행현황","x":"납품 특이사항 없음 → 25년 건 업무 종료","s":0},{"d":"2026-02-01 00:00","w":"업무진행현황","x":"방향 수정: J-16 W44P-1 치수 불량(1P 432EA 중 100EA) → 납품 전 당사 샘플링 검수·원진 품질관리 요청으로 관리 방식 변경","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"6품목 낙찰 → 단가연동제 운영 중 (낙찰 대상금액 64.6억 / 당사 배분 26.4억, 25년 입찰 57건 518.8억 중)","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:02:00.000Z","kw":"범용B,A-19,J-16,TD-165,댐블럭","fr":["2025-04-02","2025-06-23","2025-07-18","2026-02-05"],"wl":["wp2025-11","wp2025-17","wp2024-12"]},{"id":"projposcoa26","t":"포스코 범용A→범용B 전환 (26년)","ln":"xproj","st":"doing","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-04-03","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2025-09-18 00:00","w":"업무진행현황","x":"범용A 25.4월 13종 제안 → 11종 기술미팅·TEST 확정까지 진행했으나 업무 지연·담당자 변경, 9/18 신규 개방 8종 기술미팅","s":0},{"d":"2025-12-01 00:00","w":"업무진행현황","x":"방향 수정: DBH-4-1은 내부 정책 변경으로 기존 공급사 유지, 구매 담당자 변경·노재 지연으로 추가 진행 미확정","s":0},{"d":"2026-04-03 00:00","w":"업무진행현황","x":"방향 수정: 구매팀이 범용B 전환 입찰로 직접 진행 — 4/3~15 개방 품목 검토(390규격, 대응 33종), 4/21~22 사양설명회·제안서, 5/1 입찰 가능 111규격(14재질) 확정","s":0},{"d":"2026-05-22 00:00","w":"업무진행현황","x":"5/13 입찰 → 5/22 결과: 14품목 참여, RHCT-AM·SE-MC 1위 100% 낙찰 / 5/28 계약 미팅(26.6.1~27.3.31)","s":0},{"d":"2026-07-30 00:00","w":"업무진행현황","x":"7/8 RHCT-AM 초도품 시공 2,250kg → 7/30 1차 해체: 2제강 61호 55CH 정상, 3제강 53호 64CH 지금(地金) 침투","s":0},{"d":"2026-09-01 00:00","w":"업무진행현황","x":"방향 수정: 지금 침투 원인 분석 제출 후 상승관 적용 조건으로 증량 TEST → 2차(9월) 3제강 Slag 탈락·지금 침투","s":0},{"d":"2026-11-02 00:00","w":"업무진행현황","x":"3차 TEST 특이사항 없음 → 11/2 2제강 41호 65CH 기존품(CR社) 동등, 증량 20톤(18대분) 확정","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"RHCT-AM·SE-MC 낙찰 → 3차 TEST 통과, 증량 20톤 확정·정식 공급 추진 (단가 RHCT-AM 1,752→1,455원 -17.0% · SE-MC 1,963→1,710원 -12.9%, 대상 14.1억 / 당사 5.0억)","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:04:00.000Z","kw":"RHCT-AM,SE-MC,범용A,핵심내화물,경쟁전환","fr":["2025-09-11","2025-09-18","2025-12-10","2026-02-10","2026-05-28","2026-07-08","2026-07-13","2026-07-15","2026-07-22","2026-07-30","2026-11-02"],"wl":["wp2025-14","wp2024-10","wp2026-09"]},{"id":"projposcofill","t":"포스코 래들 필러재","ln":"xproj","st":"doing","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-10-01","due":"","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2026-10-01 00:00","w":"업무진행현황","x":"구매팀 실무자 유선으로 당사 래들 필러재 공급 가능 여부 문의 접수","s":0},{"d":"2026-11-03 00:00","w":"업무진행현황","x":"래들 필러재 제안서 제출","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"11/3 제안서 제출 완료 — 구매 SET 단가 협상(11월 1~2주차)으로 지연 중, SET 종료 후 회신 대기","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:03:00.000Z","kw":"필러재","fr":[],"wl":["wpu-mvzw8dtmsve0w"]},{"id":"projposcocone","t":"포스코 PP-CONE","ln":"xproj","st":"wait","pr":0,"cu":"포스코","cc":"","fi":[],"eq":"","ow":"","co":"","s":"2026-08-01","due":"2026-11-30","rp":[],"rs":{},"hold":0,"hr":"","lg":[{"d":"2026-11-09 00:00","w":"시스템","x":"'포스코 업무 진행현황 261109' 엑셀 내용을 요약해 등록 (이후 외근보고·메일 내용을 이 카드에 이어서 기록)","s":1},{"d":"2026-08-01 00:00","w":"업무진행현황","x":"구매팀 제안 의향 확인 → 연간 포항/광양 사용량·타입 확인 → 포항 Slit Type 단가 조사 → 노재 담당자에게 제안 검토 내용 공유","s":0},{"d":"2026-08-02 00:00","w":"업무진행현황","x":"연 사용량(25년 입고 기준) 11,030EA: 포항 2·3제강 2,900(Slit 450, 매년 1년 계약 10/1) · 2·3STS 300(Porous 410·430, 짝수년 2년 계약) · 4STS 930(Slit 410·430, 짝수년 2년 계약) / 광양 전체 6,900(Segment 450, 매년 1년 계약 10/1)","s":0},{"d":"2026-09-04 00:00","w":"업무진행현황","x":"구매 실무자와 제안 협의 중: 제안서 10월 1주차 회신 요청 (제안은 SET 업무 완료 시점, 10월 2주차 예상)","s":0},{"d":"2026-09-30 00:00","w":"업무진행현황","x":"방향 수정: 제안 시점을 'SET 제안 종료 후 구매팀 경유 소개'로 조정, 노재 담당자는 제강 파트와 함께 검토 필요 언급","s":0},{"d":"2026-11-09 00:00","w":"업무진행현황","x":"11월 말경 구매팀 소개자료 제출 예정 → 양/소 노재·조업 부서 검토 → 미팅·TEST 물량 확정 (일정 미확정)","s":0}],"cr":"2026-11-09T00:00:00.000Z","dn":"","up":"2026-11-09T09:01:00.000Z","kw":"PP-CONE,PP CONE","fr":["2026-09-30"],"wl":["wp2026-11"]}];
 /* 2026-11-09: '프로젝트 업무' 분류(폴더) — 프로젝트별 진행사항을 한눈에 보는 칸. 분류는 항상 맨 앞에 두고, 포스코 진행현황 5건은 처음 한 번만 등록(삭제·수정 후 다시 만들지 않음) */
 function tbEnsureProj(){
   try{
@@ -31034,6 +31043,15 @@ function tbEnsureProj(){
     localStorage.setItem('dgrns_tb_seed_proj','1');
   }catch(e){}
 }
+/* 이미 등록된 프로젝트 카드에 연결 항목(kw·fr·wl)이 없으면 한 번 채워 준다 — 사용자가 이미 고친 값은 건드리지 않음 */
+function tbEnsureProjLinks(){
+  try{
+    TB_PROJ_SEED.forEach(s=>{const k=TB_PRE+s.id,raw=localStorage.getItem(k);if(raw==null)return;
+      const c=JSON.parse(raw);if(!c||c.del)return;let ch=false;
+      ['kw','fr','wl'].forEach(f=>{if(c[f]===undefined){c[f]=JSON.parse(JSON.stringify(s[f]));ch=true;}});
+      if(ch)localStorage.setItem(k,JSON.stringify(c));});
+  }catch(e){}
+}
 function tbLoad(){
   tbCards=[];
   tbCfg=null;try{tbCfg=JSON.parse(localStorage.getItem('dgrns_tb_cfg')||'null');}catch(e){}
@@ -31042,7 +31060,7 @@ function tbLoad(){
     tbCfg={v:2,lanes:TB_LANE_DEF.map(x=>Object.assign({},x)).concat(old)};
     try{localStorage.setItem('dgrns_tb_cfg',JSON.stringify(tbCfg));}catch(e){}
   }
-  tbEnsureProj();
+  tbEnsureProj();tbEnsureProjLinks();
   for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
     if(k&&k.indexOf(TB_PRE)===0){try{const c=JSON.parse(localStorage.getItem(k));if(c&&c.id&&!c.del){
       let ch=false;
@@ -31128,7 +31146,7 @@ function tbRender(){
   let sp=tbUi.tab||'board';if(sp==='report')sp='board';
   document.querySelectorAll('#tbSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sp===sp));
   const body=document.getElementById('tbBody');
-  body.innerHTML=sp==='people'?tbRenderPeople():sp==='list'?tbRenderList():sp==='feed'?tbRenderFeed():tbRenderBoard();
+  body.innerHTML=sp==='proj'?tbRenderProj():sp==='people'?tbRenderPeople():sp==='list'?tbRenderList():sp==='feed'?tbRenderFeed():tbRenderBoard();
   if(!all.length){body.insertAdjacentHTML('afterbegin','<div class="warnbar" style="margin-bottom:8px">아직 등록된 업무가 없습니다. 각 줄의 <b>접수</b> 칸에서 <b>＋ 업무 추가</b>를 누르고 내용만 입력해 Enter를 치면 등록됩니다.</div>');}
   if(tbQa){const f=document.getElementById('tbqa_t');if(f)f.focus();}
 }
@@ -31152,6 +31170,7 @@ function tbCard(c){
     <div class="tb-t">${esc(c.t)}</div>
     <div class="tb-dts">${tbDates(c)}${bd.join('')}</div>
     <div class="tb-r">${tbAvatars(c)}${(c.cu||c.cc||c.eq)?`<span class="tb-m" style="margin:0">${esc([c.cu,c.cc,c.eq].filter(Boolean).join(' · '))}${(c.fi&&c.fi.length)?' 🔗'+c.fi.length:''}</span>`:''}</div>
+    ${tbLkLine(c)}
     ${last?`<div class="tb-last" title="${esc(last.x)}">${esc(last.d.slice(5,10).replace('-','/'))} ${esc(last.w)}: ${esc(last.x)}</div>`:''}
   </div>`;
 }
@@ -31328,7 +31347,7 @@ function tbDlg(){
 /* ============ 팀 업무 보드 ↔ 외근보고 · 업무진행현황 · 이슈 연동 (2026-11-06) ============
    카드의 고객사(cu)·고객 담당자(cc)를 기준으로 같은 고객사의 외근보고 / 업무진행현황 / 이슈·후속사항을
    카드 상세 창 안에서 접어서 볼 수 있고, 이슈는 업무로 만들거나(fi 연결) 이 업무에 붙일 수 있다. */
-let tbxOpen={fw:false,wp:false,is:false,done:false};
+let tbxOpen={fw:false,wp:false,is:false,done:false,tl:true,rfw:false,rwp:false,ris:false};
 const TBX_ALIAS={'동국포항':'동국제강','동국제강포항':'동국제강','동국제강포항사업소':'동국제강'};
 function tbxKey(s){let t=String(s||'').replace(/\(.*?\)/g,'').replace(/[㈜\s·,.\-]/g,'').replace(/주식회사|\(주\)/g,'').toLowerCase();return TBX_ALIAS[t]||t;}
 function tbxSame(a,b){const x=tbxKey(a),y=tbxKey(b);return !!x&&x===y;}
@@ -31366,64 +31385,167 @@ function tbxRefresh(withCc){
 function tbxFields(c){
   const cl=tbxCustomers(),ct=tbxContacts(c.cu);
   return `<label>고객사</label><input id="tbx_cu" list="tbx_cu_dl" value="${esc(c.cu||'')}" placeholder="목록에서 고르거나 직접 입력" onchange="tbxOnCu(this.value.trim())"><datalist id="tbx_cu_dl">${cl.map(n=>`<option value="${esc(n)}"></option>`).join('')}</datalist>
-    <label>고객 담당자</label><input id="tbx_cc" list="tbx_cc_dl" value="${esc(c.cc||'')}" placeholder="${ct.length?'목록에서 고르거나 직접 입력':'고객사를 고르면 담당자 목록이 나옵니다'}" onchange="tbxOnCc(this.value.trim())"><datalist id="tbx_cc_dl">${ct.map(p=>`<option value="${esc(p.name+(p.rank?' '+p.rank:''))}">${esc(p.label)}</option>`).join('')}</datalist>`;
+    <label>고객 담당자</label><input id="tbx_cc" list="tbx_cc_dl" value="${esc(c.cc||'')}" placeholder="${ct.length?'목록에서 고르거나 직접 입력':'고객사를 고르면 담당자 목록이 나옵니다'}" onchange="tbxOnCc(this.value.trim())"><datalist id="tbx_cc_dl">${ct.map(p=>`<option value="${esc(p.name+(p.rank?' '+p.rank:''))}">${esc(p.label)}</option>`).join('')}</datalist>
+    <label>프로젝트 키워드</label><input id="tbx_kw" value="${esc(c.kw||'')}" placeholder="쉼표로 구분 — 예: SET, 설비별 (같은 말이 든 외근보고·진행현황·이슈를 추천)" onchange="tbxOnKw(this.value)">`;
 }
 function tbxSec(key,ic,title,cnt,body,hint){
   return `<details class="tbx-d" ${tbxOpen[key]?'open':''} ontoggle="tbxOpen['${key}']=this.open"><summary><span>${ic} ${title}</span><em>${cnt}</em>${hint?`<small>${hint}</small>`:''}</summary><div class="tbx-b">${body}</div></details>`;
 }
+/* ---- 프로젝트 단위 연결 (2026-11-09) ----
+   프로젝트 카드(분류 '프로젝트 업무')에 외근보고(fr: 보고일)·업무진행현황(wl: 항목 id)·이슈(fi)를 직접 묶는다.
+   프로젝트 키워드(kw)가 들어 있는 항목은 '연결 추천'으로 올라오고, 연결하면 보드 카드·프로젝트 현황·통합 타임라인에 모두 나온다. */
+function tbxKws(c){return String((c&&c.kw)||'').split(/[,，;\n]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);}
+function tbxHit(t,kws){t=String(t||'').toLowerCase();return kws.length>0&&kws.some(k=>t.indexOf(k)>=0);}
+function tbxRepOf(d){try{return FIELD_SEED.find(r=>r.d===d)||null;}catch(e){return null;}}
+function tbxRepHit(r,kws){return tbxHit((r.pu||'')+' '+(r.sm||'')+' '+(r.mn||''),kws);}
+function tbxWpHit(i,kws){return tbxHit((i.title||'')+' '+(i.note||''),kws);}
+function tbxIssHit(i,kws){return tbxHit(i.text,kws);}
+function tbxPool(c){
+  const cu=(c.cu||'').trim(),kws=tbxKws(c),fr=c.fr||[],wl=c.wl||[],fi=c.fi||[];
+  let rp=[],wp=[],is=[];
+  try{rp=FIELD_SEED.filter(r=>fr.indexOf(r.d)>=0||tbxSame(fieldCompanyName(r.cu),cu)||tbxRepHit(r,kws)).sort((a,b)=>b.d.localeCompare(a.d));}catch(e){}
+  try{wp=wpItems().filter(i=>wl.indexOf(i.id)>=0||tbxSame(i.customer,cu)||tbxWpHit(i,kws)).sort((a,b)=>{const ao=WP_OPEN.indexOf(a.status)>=0?0:1,bo=WP_OPEN.indexOf(b.status)>=0?0:1;if(ao!==bo)return ao-bo;return String(b.due||'').localeCompare(String(a.due||''));});}catch(e){}
+  try{is=fieldAllIssues().filter(i=>fi.indexOf(i.id)>=0||tbxSame(fieldCompanyName(i.cust),cu)||tbxIssHit(i,kws));}catch(e){}
+  return {rp,wp,is};
+}
+function tbxIssSt(i){try{return fieldIssueStatus(i);}catch(e){return i.defStatus;}}
 function tbxHtml(){
   const c=tbW;if(!c)return '';
-  const cu=(c.cu||'').trim();
-  if(!tbxKey(cu))return `<div class="tbx-empty">🔗 위 <b>고객사</b>를 고르면 같은 고객사의 <b>외근보고 · 업무진행현황 · 이슈/후속사항</b>이 여기에 접어서 표시됩니다.</div>`;
+  const cu=(c.cu||'').trim(),kws=tbxKws(c);
+  const hasLink=(c.fr||[]).length||(c.wl||[]).length||(c.fi||[]).length;
+  if(!tbxKey(cu)&&!kws.length&&!hasLink)return `<div class="tbx-empty">🔗 위 <b>고객사</b>를 고르거나 <b>프로젝트 키워드</b>를 입력하면 <b>외근보고 · 업무진행현황 · 이슈/후속사항</b>이 여기에 모여 표시되고, 프로젝트에 직접 연결할 수 있습니다.</div>`;
   const nm=(c.cc||'').split(/\s+/)[0];
-  const rp=tbxReports(cu),wp=tbxWps(cu),is=tbxIssues(cu);
+  const P=tbxPool(c);
   const q=s=>String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const fr=c.fr||[],wl=c.wl||[],fi=c.fi||[];
+  /* 묶음: 연결됨 / 키워드 추천 / 나머지 */
+  const grp=(items,isL,isS,rowF,rk,cap)=>{
+    const L=items.filter(isL),S=items.filter(x=>!isL(x)&&isS(x)),R=items.filter(x=>!isL(x)&&!isS(x));
+    let h='';
+    if(L.length)h+=`<div class="tbx-gh">✅ 이 프로젝트에 연결됨 · ${L.length}건</div>`+L.map(x=>rowF(x,'L')).join('');
+    if(S.length)h+=`<div class="tbx-gh sg">💡 키워드와 일치 — 연결 추천 · ${S.length}건 <button class="btn sm" onclick="tbxLinkAll('${rk}')">추천 모두 연결</button></div>`+S.map(x=>rowF(x,'S')).join('');
+    if(R.length){
+      const shown=cap?R.slice(0,cap):R;
+      const body=shown.map(x=>rowF(x,'R')).join('')+(cap&&R.length>cap?`<div class="tbx-more">최근 ${cap}건만 표시 (전체 ${R.length}건) · <a href="#" onclick="event.preventDefault();tbDlgClose();nav('fieldwork');try{fieldTab('company');}catch(e){}">외근 업체 폴더에서 전체 보기</a></div>`:'');
+      if(L.length||S.length)h+=`<details class="tbx-sub" ${tbxOpen['r'+rk]?'open':''} ontoggle="tbxOpen['r${rk}']=this.open"><summary>같은 고객사의 나머지 ${R.length}건 보기</summary>${body}</details>`;
+      else h+=body;
+    }
+    return h;
+  };
   /* 외근보고 */
-  const fwB=rp.length?rp.slice(0,8).map((r,i)=>{const hit=nm&&((r.iv||'')+(r.mn||'')).indexOf(nm)>=0;
-    return `<div class="tbx-r"><div class="tbx-rh"><b>${esc(r.d)}</b><span>${esc(r.pu||r.t||'')}</span>${hit?`<span class="tbx-hit">★ ${esc(nm)} 면담</span>`:''}</div>
+  const repRow=(r,st)=>{const hit=nm&&((r.iv||'')+(r.mn||'')).indexOf(nm)>=0;
+    const btn=st==='L'?`<button class="btn sm" onclick="tbxFrUn('${r.d}')">✕ 연결 해제</button>`:`<button class="btn sm ${st==='S'?'primary':''}" onclick="tbxFrLink('${r.d}')">＋ 프로젝트에 연결</button>`;
+    return `<div class="tbx-r ${st==='L'?'lk':''}"><div class="tbx-rh"><b>${esc(r.d)}</b><span>${esc(r.pu||r.t||'')}</span>${st==='S'?'<span class="tbx-sg">💡 키워드 일치</span>':''}${hit?`<span class="tbx-hit">★ ${esc(nm)} 면담</span>`:''}</div>
       <div class="tbx-rs">${esc(r.sm||'').split(/;\s*/).map(x=>`<div>· ${esc(x)}</div>`).join('')}</div>
-      <div class="tbx-rb"><span>면담 ${esc(r.iv||'-')}</span><button class="btn sm" onclick="tbxQuote(${i})">📝 진행사항에 인용</button><button class="btn sm" onclick="tbxFullFw(${i})">전문 보기</button></div>
-      <div class="tbx-full" id="tbxfw${i}" style="display:none"></div></div>`;}).join('')+(rp.length>8?`<div class="tbx-more">최근 8건만 표시 (전체 ${rp.length}건) · <a href="#" onclick="event.preventDefault();tbDlgClose();nav('fieldwork');try{fieldTab('company');}catch(e){}">외근 업체 폴더에서 전체 보기</a></div>`:'')
-    :'<div class="tbx-none">이 고객사의 외근보고가 없습니다.</div>';
+      <div class="tbx-rb"><span>면담 ${esc(r.iv||'-')}</span>${btn}<button class="btn sm" onclick="tbxQuote('${r.d}')">📝 진행사항에 인용</button><button class="btn sm" onclick="tbxFullFw('${r.d}')">전문 보기</button></div>
+      <div class="tbx-full" id="tbxfw${r.d}" style="display:none"></div></div>`;};
+  const fwB=P.rp.length?grp(P.rp,r=>fr.indexOf(r.d)>=0,r=>tbxRepHit(r,kws),repRow,'fw',8):'<div class="tbx-none">연결된 외근보고가 없습니다.</div>';
   /* 업무진행현황 */
   const haveWp=id=>!!tbGet('wp'+id);
-  const wpB=wp.length?wp.map(i=>{const st=WP_ST[i.status]||WP_ST['예정'];
-    return `<div class="tbx-w"><span class="tbx-chip" style="color:${st.c};background:${st.bg}">${esc(i.status)}</span>
+  const wpRow=(i,st)=>{const s=WP_ST[i.status]||WP_ST['예정'];
+    const btn=st==='L'?`<button class="btn sm" onclick="tbxWlUn('${q(i.id)}')">✕ 연결 해제</button>`:`<button class="btn sm ${st==='S'?'primary':''}" onclick="tbxWlLink('${q(i.id)}')">＋ 프로젝트에 연결</button>`;
+    return `<div class="tbx-w"><span class="tbx-chip" style="color:${s.c};background:${s.bg}">${esc(i.status)}</span>
       <span class="tbx-wt" onclick="tbxWpOpen('${q(i.id)}')" title="업무진행현황 상세 열기">${esc(i.title)}</span>
-      <span class="tbx-wm">${i.due?'기한 '+esc(i.due):''}${i.owner?' · '+esc(i.owner):''}${i.progress!=null?' · '+i.progress+'%':''}</span>
-      ${haveWp(i.id)?'<span class="tbx-ok">보드 등록됨</span>':(WP_OPEN.indexOf(i.status)>=0?`<button class="btn sm" onclick="tbxWpToBoard('${q(i.id)}')">＋ 보드 업무로</button>`:'')}</div>`;}).join('')
-    :'<div class="tbx-none">이 고객사의 업무진행현황 항목이 없습니다.</div>';
+      <span class="tbx-wm">${esc(i.customer||'')} ${i.year}${i.due?' · 기한 '+esc(i.due):''}${i.owner?' · '+esc(i.owner):''}${i.progress!=null?' · '+i.progress+'%':''}</span>
+      ${st==='S'?'<span class="tbx-sg">💡 키워드 일치</span>':''}${btn}
+      ${haveWp(i.id)?'<span class="tbx-ok">보드 등록됨</span>':(WP_OPEN.indexOf(i.status)>=0?`<button class="btn sm" onclick="tbxWpToBoard('${q(i.id)}')">＋ 보드 업무로</button>`:'')}</div>`;};
+  const wpB=P.wp.length?grp(P.wp,i=>wl.indexOf(i.id)>=0,i=>tbxWpHit(i,kws),wpRow,'wp',0):'<div class="tbx-none">연결된 업무진행현황 항목이 없습니다.</div>';
   /* 이슈 */
-  const stOf=i=>{try{return fieldIssueStatus(i);}catch(e){return i.defStatus;}};
-  const open=is.filter(i=>stOf(i)!=='done'),done=is.filter(i=>stOf(i)==='done');
-  const row=i=>{const mine=(c.fi||[]).indexOf(i.id)>=0;const oth=tbxCardsOfIssue(i.id).filter(x=>x.id!==c.id);const sd=stOf(i)==='done';const memo=(fieldIssueSt[i.id]||{}).memo||'';
+  const open=P.is.filter(i=>tbxIssSt(i)!=='done'),done=P.is.filter(i=>tbxIssSt(i)==='done');
+  const issRow=(i,st)=>{const mine=fi.indexOf(i.id)>=0;const oth=tbxCardsOfIssue(i.id).filter(x=>x.id!==c.id);const sd=tbxIssSt(i)==='done';const memo=(fieldIssueSt[i.id]||{}).memo||'';
     return `<div class="tbx-i ${sd?'dn':''}"><div class="tbx-it"><input type="checkbox" ${sd?'checked':''} title="해결 처리(외근 이슈 화면에도 반영)" onchange="tbxIssueDone('${q(i.id)}',this.checked)"><div style="flex:1;min-width:0"><div>${esc(i.text)}</div><div class="tbx-im">${esc(i.date)} · ${esc(i.target||'')}</div>
       <input class="binp" style="width:100%;margin-top:3px;font-size:11.5px" placeholder="후속조치·메모 (외근 이슈 화면과 동일)" value="${esc(memo)}" onchange="setFieldIssue('${q(i.id)}','memo',this.value)"></div></div>
-      <div class="tbx-ib">${mine?`<span class="tbx-ok">🔗 이 업무에 연결됨</span><button class="btn sm" onclick="tbxUnlink('${q(i.id)}')">연결 해제</button>`:`<button class="btn sm" onclick="tbxLink('${q(i.id)}')">🔗 이 업무에 연결</button>`}
+      <div class="tbx-ib">${st==='S'?'<span class="tbx-sg">💡 키워드 일치</span>':''}${mine?`<span class="tbx-ok">🔗 이 업무에 연결됨</span><button class="btn sm" onclick="tbxUnlink('${q(i.id)}')">연결 해제</button>`:`<button class="btn sm" onclick="tbxLink('${q(i.id)}')">🔗 이 업무에 연결</button>`}
       ${oth.map(o=>`<span class="tbx-oth" title="연결된 다른 업무" onclick="tbxOpenCard('${o.id}')">→ ${esc(o.t.slice(0,18))}</span>`).join('')}
       ${(!mine&&!oth.length&&!sd)?`<button class="btn sm primary" onclick="tbxMake('${q(i.id)}')">＋ 새 업무로 만들기</button>`:''}</div></div>`;};
-  const isB=(open.length?open.map(row).join(''):'<div class="tbx-none">진행 중인 이슈가 없습니다.</div>')+
-    (done.length?`<details class="tbx-sub" ${tbxOpen.done?'open':''} ontoggle="tbxOpen.done=this.open"><summary>해결된 이슈 ${done.length}건 보기</summary>${done.map(row).join('')}</details>`:'');
-  const lk=(c.fi||[]).length;
-  return `<div class="tbx-top">🔗 <b>${esc(cu)}</b>${c.cc?' · '+esc(c.cc):''} — 연동 정보 <span>(보기용 · 원본은 외근·업무진행 화면에서 수정)</span></div>
-    ${tbxSec('fw','📞','외근보고',rp.length+'건',fwB,'최근 순')}
-    ${tbxSec('wp','🧭','업무진행현황',wp.length+'건 (진행 '+wp.filter(i=>WP_OPEN.indexOf(i.status)>=0).length+')',wpB,'')}
+  const isB=(open.length?grp(open,i=>fi.indexOf(i.id)>=0,i=>tbxIssHit(i,kws),issRow,'is',0):'<div class="tbx-none">진행 중인 이슈가 없습니다.</div>')+
+    (done.length?`<details class="tbx-sub" ${tbxOpen.done?'open':''} ontoggle="tbxOpen.done=this.open"><summary>해결된 이슈 ${done.length}건 보기</summary>${done.map(i=>issRow(i,'R')).join('')}</details>`:'');
+  /* 통합 타임라인 */
+  const ev=[];
+  (c.lg||[]).filter(l=>!l.s).forEach(l=>ev.push({d:String(l.d||'').slice(0,10),k:'📝 업무',c:'#475569',bg:'#e2e8f0',x:l.x}));
+  P.rp.filter(r=>fr.indexOf(r.d)>=0).forEach(r=>ev.push({d:r.d,k:'📞 외근',c:'#1d4ed8',bg:'#dbeafe',x:(r.pu?r.pu+' — ':'')+String(r.sm||'').split(/;\s*/).slice(0,2).join(' / ')}));
+  P.wp.filter(i=>wl.indexOf(i.id)>=0).forEach(i=>String(i.detail||'').split('\n').forEach(ln=>{const m=ln.match(/^\s*\[(\d{4}-\d{2})\]\s*[-:]?\s*(.+)$/);if(m)ev.push({d:m[1],k:'🧭 진행현황',c:'#7c3aed',bg:'#ede9fe',x:i.title+' — '+m[2]});}));
+  P.is.filter(i=>fi.indexOf(i.id)>=0).forEach(i=>ev.push({d:i.date,k:'⚠ 이슈',c:'#b45309',bg:'#fef3c7',x:i.text.replace(/^[-→▸·.\s]+/,'')}));
+  ev.sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+  const tlB=ev.length?ev.slice(0,40).map(e=>`<div class="tbx-tl"><time>${esc(e.d.length===7?e.d.slice(2).replace('-','/'):e.d.slice(2).replace(/-/g,'/'))}</time><span class="k" style="color:${e.c};background:${e.bg}">${e.k}</span><span style="flex:1;min-width:0">${esc(String(e.x||'').slice(0,140))}</span></div>`).join('')+(ev.length>40?`<div class="tbx-more">최근 40건만 표시 (전체 ${ev.length}건)</div>`:''):'<div class="tbx-none">연결된 항목이 아직 없습니다. 아래에서 외근보고·업무진행현황·이슈를 연결하면 시간순으로 모입니다.</div>';
+  const lk=fi.length,sugN=P.rp.filter(r=>fr.indexOf(r.d)<0&&tbxRepHit(r,kws)).length+P.wp.filter(i=>wl.indexOf(i.id)<0&&tbxWpHit(i,kws)).length+open.filter(i=>fi.indexOf(i.id)<0&&tbxIssHit(i,kws)).length;
+  return `<div class="tbx-top">🔗 <b>${esc(cu||'(고객사 미선택)')}</b>${c.cc?' · '+esc(c.cc):''} — 연동 정보 <span>(연결: 외근 ${fr.length} · 진행현황 ${wl.length} · 이슈 ${lk}${sugN?' · 💡 추천 '+sugN:''} · 연결/해제 후 [저장])</span></div>
+    ${tbxSec('tl','🕘','통합 타임라인',ev.length+'건',tlB,'업무·외근·진행현황·이슈를 시간순으로')}
+    ${tbxSec('fw','📞','외근보고',fr.length+'건 연결 · 전체 '+P.rp.length+'건',fwB,'최근 순')}
+    ${tbxSec('wp','🧭','업무진행현황',wl.length+'건 연결 · 진행 '+P.wp.filter(i=>WP_OPEN.indexOf(i.status)>=0).length+' / 전체 '+P.wp.length,wpB,'')}
     ${tbxSec('is','⚠️','이슈 · 후속사항',open.length+'건 진행'+(lk?' · 이 업무 연결 '+lk:''),isB,'체크하면 해결 처리')}`;
+}
+function tbxProjChips(kind,id){
+  try{if(!tbCfg)tbLoad();
+    return tbCards.filter(c=>(c[kind]||[]).indexOf(id)>=0||(kind==='wl'&&c.id==='wp'+id)).map(c=>`<span class="tb-issb" title="팀 업무 보드의 프로젝트 카드 열기" onclick="event.stopPropagation();nav('tboard');setTimeout(()=>tbOpen('${c.id}'),50)">📂 ${esc(c.t.slice(0,22))}</span>`).join('');}catch(e){return '';}
+}
+function tbLkLine(c){
+  const a=(c.fr||[]).length,b=(c.wl||[]).length,f=(c.fi||[]);
+  if(!a&&!b&&!f.length)return '';
+  let op=0;try{if(f.length){const all=fieldAllIssues();op=f.filter(id=>{const i=all.find(x=>x.id===id);return i&&tbxIssSt(i)!=='done';}).length;}}catch(e){}
+  return `<div class="tb-lk" title="연결된 외근보고 · 업무진행현황 · 이슈">📞 ${a} · 🧭 ${b}${f.length?' · ⚠ '+op+'/'+f.length:''}</div>`;
+}
+function tbOpenSec(id,sec){tbxOpen[sec]=true;tbOpen(id);}
+function tbNewProj(){tbNew('xproj','doing');}
+function tbRenderProj(){
+  const P=tbCards.filter(c=>c.ln==='xproj');
+  const ord={doing:0,wait:1,done:2};
+  P.sort((a,b)=>(ord[a.st]-ord[b.st])||((b.pr||0)-(a.pr||0))||((a.due||'9999')<(b.due||'9999')?-1:1));
+  const head=`<div style="display:flex;gap:8px;align-items:center;margin:4px 0 8px"><b style="font-size:13.5px">📂 프로젝트 현황</b><span style="font-size:11.5px;color:var(--muted)">프로젝트마다 외근보고 · 업무진행현황 · 이슈를 한눈에 — 행을 누르면 프로젝트 카드가 열립니다</span><span style="flex:1"></span>${tbRo()?'':'<button class="btn sm primary" onclick="tbNewProj()">＋ 새 프로젝트</button>'}</div>`;
+  if(!P.length)return head+'<div class="tbx-empty">아직 프로젝트가 없습니다. [＋ 새 프로젝트]로 만들고 키워드를 넣으면 관련 외근보고·진행현황이 추천됩니다.</div>';
+  const ev=[];
+  const rows=P.map(c=>{
+    const kws=tbxKws(c),pool=tbxPool(c),fr=c.fr||[],wl=c.wl||[],fi=c.fi||[];
+    const reps=fr.map(tbxRepOf).filter(Boolean).sort((a,b)=>b.d.localeCompare(a.d));
+    const wps=wl.map(id=>{try{return wpGet(id);}catch(e){return null;}}).filter(Boolean);
+    const iss=pool.is.filter(i=>fi.indexOf(i.id)>=0),iop=iss.filter(i=>tbxIssSt(i)!=='done');
+    const sR=pool.rp.filter(r=>fr.indexOf(r.d)<0&&tbxRepHit(r,kws)).length,sW=pool.wp.filter(i=>wl.indexOf(i.id)<0&&tbxWpHit(i,kws)).length,sI=pool.is.filter(i=>fi.indexOf(i.id)<0&&tbxIssSt(i)!=='done'&&tbxIssHit(i,kws)).length;
+    const last=(c.lg||[]).filter(l=>!l.s).slice(-1)[0];
+    (c.lg||[]).filter(l=>!l.s).forEach(l=>ev.push({d:String(l.d||'').slice(0,10),p:c.t,k:'📝 업무',c:'#475569',bg:'#e2e8f0',x:l.x,id:c.id}));
+    reps.forEach(r=>ev.push({d:r.d,p:c.t,k:'📞 외근',c:'#1d4ed8',bg:'#dbeafe',x:(r.pu?r.pu+' — ':'')+String(r.sm||'').split(/;\s*/).slice(0,2).join(' / '),id:c.id}));
+    const st=tbStOf(c.st),ws=wps.filter(i=>WP_OPEN.indexOf(i.status)>=0).length;
+    const sug=sR+sW+sI;
+    return `<tr class="pr ${c.st==='done'?'dn':''}" onclick="tbOpen('${c.id}')">
+      <td style="min-width:170px"><div class="nm">${esc(c.t)}</div><div class="sx">${esc([c.cu,c.cc].filter(Boolean).join(' · '))}${c.ow?' · 담당 '+esc(c.ow):''}</div>${kws.length?`<div class="sx">🏷 ${esc(c.kw)}</div>`:''}</td>
+      <td style="white-space:nowrap"><span class="tb-b" style="background:${st.bg};color:${st.c}">${st.ic} ${st.n}</span><div style="margin-top:3px">${tbDueBadge(c)||'<span class="sx">기한 미정</span>'}</div></td>
+      <td style="min-width:220px;max-width:330px;font-size:12px">${last?`<span class="sx">${esc(String(last.d).slice(5,10).replace('-','/'))}</span> ${esc(String(last.x).slice(0,110))}${String(last.x).length>110?'…':''}`:'<span class="sx">기록 없음</span>'}</td>
+      <td style="min-width:150px"><b>${reps.length}건</b>${reps.length?`<span class="sx"> · 최근 ${esc(reps[0].d.slice(5).replace('-','/'))}</span><div class="sx">${esc((reps[0].pu||reps[0].t||'').slice(0,26))}</div>`:''}</td>
+      <td style="min-width:150px"><b>${wps.length}건</b>${wps.length?`<span class="sx"> · 진행 ${ws}</span><div class="sx">${esc(wps.slice(0,2).map(i=>i.title.slice(0,14)).join(' · '))}${wps.length>2?' 외 '+(wps.length-2):''}</div>`:''}</td>
+      <td style="white-space:nowrap"><b style="color:${iop.length?'#b45309':'inherit'}">${iop.length}</b><span class="sx"> / ${iss.length}건</span></td>
+      <td style="white-space:nowrap">${sug?`<button class="btn sm primary" onclick="event.stopPropagation();tbOpenSec('${c.id}','${sR?'fw':sW?'wp':'is'}')">💡 ${sug}건</button>`:'<span class="sx">-</span>'}</td></tr>`;}).join('');
+  ev.sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+  const feed=ev.slice(0,25).map(e=>`<div class="tbx-tl" style="cursor:pointer" onclick="tbOpen('${e.id}')"><time>${esc(e.d.slice(2).replace(/-/g,'/'))}</time><span class="k" style="color:${e.c};background:${e.bg}">${e.k}</span><b style="font-size:11.5px;white-space:nowrap">${esc(e.p.replace(/^포스코\s*/,'').slice(0,16))}</b><span style="flex:1;min-width:0">${esc(String(e.x||'').slice(0,120))}</span></div>`).join('');
+  return head+`<div class="tb-wrap" style="overflow:auto"><table class="tbp-t"><thead><tr><th>프로젝트</th><th>상태 · 기한</th><th>최근 진행사항</th><th>📞 외근보고</th><th>🧭 업무진행현황</th><th>⚠ 이슈 (미해결/연결)</th><th>💡 연결 추천</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:14px;font-weight:800;font-size:13px">🕘 프로젝트 최근 움직임 <span style="font-weight:500;color:var(--muted);font-size:11.5px">— 전체 프로젝트의 업무 기록 · 연결된 외근보고 (최근 25건)</span></div>
+    <div style="margin-top:4px">${feed||'<div class="tbx-none">기록이 없습니다.</div>'}</div>
+    <div class="tb-note">프로젝트 카드를 열어 <b>외근보고 · 업무진행현황 · 이슈</b>를 연결하면 이 화면과 보드 카드(📞🧭⚠), 외근업무·업무진행현황 화면(📂 프로젝트 표시)에 함께 나타납니다. 새 외근보고·업무진행현황 항목이 생기면 <b>키워드가 일치하는 것을 💡 추천</b>합니다.</div>`;
 }
 function tbxIssBadge(id){
   try{return tbxCardsOfIssue(id).map(c=>`<span class="tb-issb" title="팀 업무 보드에 연결된 업무 열기" onclick="nav('tboard');setTimeout(()=>tbOpen('${c.id}'),50)">🔗 팀업무 · ${esc(c.t.slice(0,20))} (${esc(tbStOf(c.st).n)})</span>`).join('');}catch(e){return '';}
 }
-function tbxFullFw(i){
-  const rp=tbxReports(tbW.cu)[i];const el=document.getElementById('tbxfw'+i);if(!rp||!el)return;
+function tbxFullFw(d){
+  const rp=tbxRepOf(d);const el=document.getElementById('tbxfw'+d);if(!rp||!el)return;
   if(el.style.display!=='none'){el.style.display='none';return;}
   el.textContent=rp.co||'(내용 없음)';el.style.display='block';
 }
-function tbxQuote(i){
-  const r=tbxReports(tbW.cu)[i];if(!r)return;
+function tbxQuote(d){
+  const r=tbxRepOf(d);if(!r)return;
   if(tbRo()){toast('열람 전용 화면입니다');return;}
   if(!(tbW.t||'').trim()){toast('업무 제목을 먼저 입력해 주세요');return;}
   const x='[외근보고 '+r.d.slice(5).replace('-','/')+'] '+String(r.sm||r.pu||'').split(/;\s*/).slice(0,3).join(' / ');
   tbLog(tbW,x,0);if(tbCommit(tbW)){tbIsNew=false;toast('진행사항에 인용했습니다');}tbDlg();tbRender();
+}
+function tbxFrLink(d){tbW.fr=tbW.fr||[];if(tbW.fr.indexOf(d)<0)tbW.fr.push(d);tbxRefresh(false);toast('연결했습니다 — [저장]을 누르면 반영됩니다');}
+function tbxFrUn(d){tbW.fr=(tbW.fr||[]).filter(x=>x!==d);tbxRefresh(false);}
+function tbxWlLink(id){tbW.wl=tbW.wl||[];if(tbW.wl.indexOf(id)<0)tbW.wl.push(id);tbxRefresh(false);toast('연결했습니다 — [저장]을 누르면 반영됩니다');}
+function tbxWlUn(id){tbW.wl=(tbW.wl||[]).filter(x=>x!==id);tbxRefresh(false);}
+function tbxOnKw(v){tbW.kw=String(v||'').trim();tbxRefresh(false);}
+function tbxLinkAll(k){
+  const c=tbW,kws=tbxKws(c),P=tbxPool(c);let n=0;
+  if(k==='fw'){c.fr=c.fr||[];P.rp.forEach(r=>{if(c.fr.indexOf(r.d)<0&&tbxRepHit(r,kws)){c.fr.push(r.d);n++;}});}
+  else if(k==='wp'){c.wl=c.wl||[];P.wp.forEach(i=>{if(c.wl.indexOf(i.id)<0&&tbxWpHit(i,kws)){c.wl.push(i.id);n++;}});}
+  else if(k==='is'){c.fi=c.fi||[];P.is.forEach(i=>{if(c.fi.indexOf(i.id)<0&&tbxIssSt(i)!=='done'&&tbxIssHit(i,kws)){c.fi.push(i.id);n++;}});}
+  tbxRefresh(false);toast(n+'건을 연결했습니다 — [저장]을 누르면 반영됩니다');
 }
 function tbxWpOpen(id){
   try{wpOpenDetail(id);const ov=document.getElementById('wpOverlay');if(ov){ov.classList.add('show');ov.style.zIndex=160;}}catch(e){toast('업무진행현황을 열 수 없습니다');}
@@ -31433,7 +31555,7 @@ function tbxWpToBoard(id){
   const i=wpGet(id);if(!i)return;if(tbGet('wp'+i.id)){toast('이미 보드에 있습니다');return;}
   const last=(i.detail||'').split('\n').filter(Boolean).slice(-1)[0]||'';
   const due=i.due?(i.due.length===7?i.due+'-'+String(new Date(+i.due.slice(0,4),+i.due.slice(5,7),0).getDate()).padStart(2,'0'):i.due):'';
-  const c={id:'wp'+i.id,t:i.title,ln:tbGuessLane(i),st:i.status==='예정'?'wait':'doing',pr:0,cu:i.customer||tbW.cu||'',cc:tbW.cc||'',eq:'',ow:i.owner||tbWho(),co:'',s:(i.start||'').length===7?i.start+'-01':(i.start||todayStr()),due:due,rp:[],rs:{},hold:i.status==='보류'?1:0,hr:i.status==='보류'?'업무진행현황 보류':'',
+  const c={id:'wp'+i.id,wl:[i.id],t:i.title,ln:tbGuessLane(i),st:i.status==='예정'?'wait':'doing',pr:0,cu:i.customer||tbW.cu||'',cc:tbW.cc||'',eq:'',ow:i.owner||tbWho(),co:'',s:(i.start||'').length===7?i.start+'-01':(i.start||todayStr()),due:due,rp:[],rs:{},hold:i.status==='보류'?1:0,hr:i.status==='보류'?'업무진행현황 보류':'',
     lg:[{d:tbNow(),w:tbWho()||'-',x:'업무진행현황에서 가져옴',s:1}].concat(last?[{d:tbNow(),w:'(업무진행현황)',x:last.replace(/^\[[^\]]*\]\s*-?\s*/,'').slice(0,120),s:0}]:[]),cr:new Date().toISOString(),dn:''};
   if(tbCommit(c)){tbRender();tbxRefresh(false);toast('보드 업무로 등록했습니다');}
 }
@@ -31450,7 +31572,7 @@ function tbxMakeFrom(id,cu0,cc0){
   const raw=i.text.replace(/^[-→▸·.\s]+/,'').replace(/^\d+[.)]\s*(?=\D)/,'').trim();
   const memo=(fieldIssueSt[id]||{}).memo||'';
   const cu=cu0||fieldCompanyName(i.cust);
-  const c={id:'t'+uid(),t:'[이슈] '+raw.slice(0,50)+(raw.length>50?'…':''),ln:'',st:'wait',pr:0,cu:cu,cc:cc0||'',eq:'',ow:tbWho(),co:'',s:todayStr(),due:'',rp:[],rs:{},hold:0,hr:'',fi:[id],
+  const c={id:'t'+uid(),t:'[이슈] '+raw.slice(0,50)+(raw.length>50?'…':''),ln:'',st:'wait',pr:0,cu:cu,cc:cc0||'',eq:'',ow:tbWho(),co:'',s:todayStr(),due:'',rp:[],rs:{},hold:0,hr:'',fi:[id],fr:[i.date],
     lg:[],cr:new Date().toISOString(),dn:''};
   c.ln=tbMigLane({ln:'',t:raw+' '+(i.target||''),cu:cu,eq:'',ow:''});
   tbLog(c,'외근 이슈에서 업무로 생성 ('+i.date+' '+(i.target||'')+')',1);
@@ -31479,7 +31601,7 @@ function tbImportWp(){
   add.forEach(i=>{
     const last=(i.detail||'').split('\n').filter(Boolean).slice(-1)[0]||'';
     const due=i.due?(i.due.length===7?i.due+'-'+String(new Date(+i.due.slice(0,4),+i.due.slice(5,7),0).getDate()).padStart(2,'0'):i.due):'';
-    const c={id:'wp'+i.id,t:i.title,ln:tbGuessLane(i),st:i.status==='예정'?'wait':'doing',pr:0,cu:i.customer||'',eq:'',ow:i.owner||'',co:'',s:(i.start||'').length===7?i.start+'-01':(i.start||''),due:due,rp:[],rs:{},hold:i.status==='보류'?1:0,hr:i.status==='보류'?'업무진행현황 보류':'',
+    const c={id:'wp'+i.id,wl:[i.id],t:i.title,ln:tbGuessLane(i),st:i.status==='예정'?'wait':'doing',pr:0,cu:i.customer||'',eq:'',ow:i.owner||'',co:'',s:(i.start||'').length===7?i.start+'-01':(i.start||''),due:due,rp:[],rs:{},hold:i.status==='보류'?1:0,hr:i.status==='보류'?'업무진행현황 보류':'',
       lg:[{d:tbNow(),w:w,x:'업무진행현황에서 가져옴',s:1}].concat(last?[{d:tbNow(),w:'(업무진행현황)',x:last.replace(/^\[[^\]]*\]\s*-?\s*/,'').slice(0,120),s:0}]:[]),cr:new Date().toISOString(),dn:''};
     tbCommit(c);
   });
