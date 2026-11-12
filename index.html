@@ -555,7 +555,10 @@
   table.pidb.qa td.gc{min-width:0;width:64px;white-space:nowrap}
   table.pidb.qa td.tc{min-width:0;width:52px}
   table.pidb.qa td.ft{width:170px;min-width:170px;max-width:170px;white-space:normal}
-  table.pidb.qa td.sw{min-width:0}
+  table.pidb.qa td.sw{min-width:0;max-width:76px}
+  table.pidb.qa td.sc{min-width:58px;max-width:110px;font-size:11px;text-align:center;white-space:normal}
+  table.pidb.qa th.sc{font-size:11px;min-width:58px;white-space:nowrap}
+  table.pidb.qa th.sc small{font-weight:400;color:#64748b}
   table.pidb.qa td.uc{min-width:0;max-width:130px}
   table.pidb.qa td.ptc{width:110px;max-width:130px}
   table.pidb.qa td.vd{min-width:0;max-width:150px}
@@ -1816,7 +1819,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
     <div class="gh">포스코 (Q코드 기준 통합)</div>
     <div class="side-item" data-view="poscoidb" onclick="nav('poscoidb')"><span class="ic">📦</span>품목</div>
     <div class="side-item" data-view="pidbbid" onclick="nav('pidbbid')"><span class="ic">🏷️</span>입찰</div>
-    <div class="side-item" data-view="pidbspec" onclick="nav('pidbspec')"><span class="ic">🧪</span>스펙</div>
+    
     <div class="side-item" data-view="pidbdw" onclick="nav('pidbdw')"><span class="ic">📐</span>도면</div>
     <div class="side-item" data-view="pidbqa" onclick="nav('pidbqa')"><span class="ic">🔢</span>Q코드 전체</div>
   </div>
@@ -12134,7 +12137,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   pidbbid:['포스코 입찰','품목에서 불러온 입찰 대상 — 범용B / SET 구분 조회 · 입찰가능업체 · 입찰순위 · 입찰단가 · 범용B 입찰현황'],
   pidbspec:['포스코 스펙','품목에서 연동 — 물성 · 성분 항목별 스펙 (규격서 MJ·PJ·KJ, 직접 입력값 우선)'],
   pidbdw:['포스코 도면','품목에서 연동 — Q코드별 도면 · 규격 불일치 조회·수정 · 도면 PDF 저장'],
-  pidbqa:['포스코 Q코드 전체','Q코드 1줄 1행 — 제품 특성 · 사용처 · 사용부위 · 납품실적 · 입찰 가능 여부 · 스펙 · 도면 · 미입찰 사유·이력 관리 · 엑셀 전체 출력'],
+  pidbqa:['포스코 Q코드 전체 (스펙 포함)','Q코드 1줄 1행 + 스펙 전체 — 제품 특성 · 사용처 · 사용부위 · 납품실적 · 입찰 가능 여부 · 스펙 · 도면 · 미입찰 사유·이력 관리 · 엑셀 전체 출력'],
   poscononsup:['신규 입찰 정보','개방(범용B 전환) 품목 · 개방 진행사항 · 설비별 SET 단가 · 미납품 품목 — 앞으로의 입찰에 쓸 정보를 한곳에 누적'],
   safetygear:['안전보호구 발주 관리','품목단가·거래처 변경(조은산업→대명공구백화점) 원가절감 · 발주물량 검토(연도별·월별) · 개인별 보호구 사이즈(예시)'],
   bizplan:['사업계획','연도·버전별 동국제강 보수·구매계획 · 포스코·시중 · 월판매계획 · 25년 실적 대비 요약'],
@@ -12279,7 +12282,7 @@ const TOPNAV=[
  {ic:'💰',lb:'포스코/시중 매출',it:['poscoin']},
  {ic:'💼',lb:'영업',it:['salesfw','qitems','quote','salesq','saleshist']},
  {ic:'📈',lb:'계획·보고',it:['bizplan','salesperf','nextfc','dtkrpt']},
- {ic:'🧪',lb:'포스코(Q코드 통합)',it:['poscoidb','pidbbid','pidbspec','pidbdw','pidbqa']},
+ {ic:'🧪',lb:'포스코(Q코드 통합)',it:['poscoidb','pidbbid','pidbdw','pidbqa']},
  {ic:'👥',lb:'근태·결재',it:['attend','approve','emp','shift4','mypay']},
  {ic:'🦺',lb:'안전',it:['safetygear','msds','edudoc']},
  {ic:'🛡',lb:'관리자',it:['permadm']},
@@ -23086,7 +23089,7 @@ function pidbSel(cls,opts,cur,call,empty){
    같은 제품·Q코드를 세 화면에서 이어서 봅니다(제품명·Q코드·규격은 공통). 입찰·스펙·도면은 ① 품목에서 파생됩니다. */
 let pidbTab='item';
 /* 사이드바 4개 메뉴 = 같은 화면(v-poscoidb)의 4개 탭. 화면 id ↔ 탭 */
-const PIDB_VMAP={poscoidb:'item',pidbbid:'bid',pidbspec:'spec',pidbdw:'dw',pidbqa:'qa'};
+const PIDB_VMAP={poscoidb:'item',pidbbid:'bid',pidbspec:'qa',pidbdw:'dw',pidbqa:'qa'};
 const PIDB_T2V={item:'poscoidb',bid:'pidbbid',spec:'pidbspec',dw:'pidbdw',qa:'pidbqa'};
 const PIDB_TABS={
   item:{label:'① 품목',desc:'포스코 모든 품목의 기초 — 구분 · 형태 · Q코드 · 규격 · 단중 · 사용처. 제품명을 누르면 Q코드와 함께 스펙·도면·입찰이 연동되어 펼쳐집니다',
@@ -23095,9 +23098,9 @@ const PIDB_TABS={
     segs:[{ids:['chk']},{ids:['name']},{ids:['grp']},{ids:['qc']},{ids:['spec']},{g:'입찰 정보',gc:'g3',ids:['bid','vend','pkg','pea','eff','rank']},{ids:['del']}]},
   spec:{label:'③ 스펙',desc:'엑셀 자재규격표와 같은 한 장 — 정형품 · 부정형품 · 사용설비 + 구분·Q코드·도면·입찰 연동 (규격서 MJ·PJ·KJ, 직접 입력값 우선)',
     segs:[{ids:['chk']},{ids:['name']},{ids:['type']},{ids:['qc']},{ids:['spec']},{ids:['uw']},{ids:['SPEC']}]},
-  dw:{label:'④ 도면',desc:'품목에서 연동 — Q코드별 도면(규격 일치 연결) · 불일치 조회·수정 · 도면 PDF 저장',
+  dw:{label:'③ 도면',desc:'품목에서 연동 — Q코드별 도면(규격 일치 연결) · 불일치 조회·수정 · 도면 PDF 저장',
     segs:[{ids:['chk']},{ids:['name']},{ids:['type']},{ids:['qc']},{ids:['spec']},{ids:['uw']},{ids:['dw']}]},
-  qa:{label:'⑤ Q코드 전체',desc:'Q코드 1줄 1행으로 전부 출력 — 제품 특성 · 사용처 · 사용부위 · 납품실적 · 입찰 가능 여부 · 스펙 · 도면 · 27년 물량 + 미입찰 사유·이력 관리. 위 조건으로 걸러 엑셀(전체)로 내려받습니다',
+  qa:{label:'④ Q코드 전체 (스펙 포함)',desc:'Q코드 1줄 1행 + 스펙(물성·성분) 전체 — 제품명 기준, 규격서에만 있어 Q코드가 없는 스펙은 아래쪽에 Q코드 빈 칸으로 모아 둡니다(Q코드를 입력하면 위로 합쳐짐). 제철소·상세사용·사용부위·입찰·미입찰 사유·이력을 한 화면에서 입력합니다',
     segs:[]}
 };
 /* ---- 체크(고정) : 필요한 품목만 체크해 두고 [체크한 것만 보기]로 모아 보기 — 이 PC 브라우저에만 저장, 4개 화면 공통 ---- */
@@ -23327,11 +23330,32 @@ function pidbFeatSet(pk){
   pidbOvSave();pidbRender();
 }
 function pidbQaRows(){
-  const L=pidbLive(),idx=pidbIndex(),out=[];
+  const L=pidbLive(),idx=pidbIndex(),out=[],blank=[];
+  const mkBlank=(p,sp)=>{
+    const has=sp&&(sp.src||Object.keys(sp.p||{}).length||Object.keys(sp.c||{}).length||Object.keys(sp.o||{}).length),sp2=has?sp:null,ft=(pidbOv.ft||{})[p.k],auto=pidbFeatAuto(p,sp2);
+    let gs=[];try{gs=pidbGroups(p,L);}catch(e){}
+    return {p,c:'',sp:sp2,L,le:null,eff:[],gs,ty:pidbTypeOf(p),feat:ft!=null?ft:((p.cat?p.cat+(auto?' · ':''):'')+auto),featEd:ft!=null,it:[],us:[],pr:null,b:'',dq:null,o:{},dw:{m:[],p:[]},q27:0,blank:true};
+  };
   pidbRows().forEach(({p,qs,sp})=>{
+    if(!qs.length){blank.push(mkBlank(p,sp));return;}
     const eff=L.eff[p.k]||[],le=pidbEffSort(eff)[0],gs=pidbGroups(p,L),ty=pidbTypeOf(p),auto=pidbFeatAuto(p,sp),ft=(pidbOv.ft||{})[p.k];
     qs.forEach(c=>{out.push({p,c,sp,L,le,eff,gs,ty,feat:ft!=null?ft:auto,featEd:ft!=null,it:PIDB.I[c],us:pidbUsesOf(c),pr:pidbPriceOf(c,L),b:pidbBid(c,L),dq:L.dq[c],o:pidbOv.q[c]||{},dw:idx.itemDw[c]||{m:[],p:[]},q27:(typeof p27Q==='function'?(+p27Q(c).qty||0):0)});});});
-  return out;
+  try{pidbXRows().forEach(({p,sp})=>blank.push(mkBlank(p,sp)));}catch(e){}
+  blank.sort((a,b)=>String(a.p.cat||'').localeCompare(String(b.p.cat||''),'ko')||String(a.p.n).localeCompare(String(b.p.n),'ko',{numeric:true}));
+  return out.concat(blank);
+}
+/* 스펙만 있고 Q코드가 없는 줄에서 Q코드를 입력하면 그 제품에 Q코드가 붙어 위쪽 목록으로 합쳐진다 (dgrns_pidb_ov.cp — 팀 동기화) */
+function pidbQaAddQ(pk,raw){
+  if(!pidbCanEdit()){toast('입력은 사업소장·관리직·안전관리담당자만 가능합니다');pidbRender();return;}
+  const q=String(raw||'').trim().toUpperCase();if(!q)return;
+  if(!/^Q\d+$/.test(q)){toast('Q코드 형식(Q+숫자)을 확인하세요');pidbRender();return;}
+  if(PIDB.I[q]){toast('이미 등록된 Q코드입니다 ('+(pidbP(PIDB.I[q][0])||{n:PIDB.I[q][0]}).n+')');pidbRender();return;}
+  const p=pidbP(pk)||(PIDB.X||[]).find(z=>z.k===pk);if(!p)return;
+  const cp=pidbOv.cp=pidbOv.cp||[];let e=cp.find(c=>c.k===pk);
+  if(!e){e={k:pk,n:p.n,t:p.t||'',qs:[]};cp.push(e);}
+  e.qs=e.qs||[];e.qs.push([q,'',null]);
+  const o=pidbOv.q[q]=pidbOv.q[q]||{};o.bid='무';
+  pidbOvSave();pidbCpApply();pidbRender();toast(p.n+' 에 Q코드 '+q+' 를 추가했습니다 — 위쪽 목록으로 이동했습니다. 규격·단중·사용처를 이어서 입력하세요');
 }
 function pidbQaPage(mode){
   const rows=pidbQaRows(),xls=mode!=='view',ed=pidbCanEdit();
@@ -23349,32 +23373,47 @@ function pidbQaPage(mode){
         +cell(lr.d||'')+cell(dq?lr.n:'')+cell(dq?Math.round(lr.a||0):'')+cell(dq?dq.n:'')+cell(dq?Math.round(dq.a):'')+cell(o.memo||'')+cell(hs.length||'')+cell(last?last.d+' '+last.t:'')+pidbSpecCells(x.sp,p,false,'xls')+'</tr>';});
     return {html:h+'</tbody></table>',np:new Set(rows.map(r=>r.p.k)).size,nq:rows.length};
   }
-  const H=['제품명','Q코드','규격','단중<br>(kg)','구분','형태','제품 특성','제철소','상세사용','사용부위','입찰<br>유/무','미입찰 사유','입찰가능<br>업체','단가<br>(원/kg)','입찰결과(최신)','공급<br>순위','27년<br>물량(kg)','최근 납품<br>(누계)','스펙','도면','이력','메모'];
-  let h='<table class="pidb qa"><thead><tr>'+H.map((t,i)=>`<th${i===0?' class="c1"':''}>${t}</th>`).join('')+'</tr></thead><tbody>';
-  let prev='';
-  rows.forEach(x=>{const {p,c,it,us,pr,dq,le,o,b}=x,hs=pidbHistOf(c),last=hs.length?hs[hs.length-1]:null,first=prev!==p.k;prev=p.k;
-    const sites=[...new Set(us.map(u=>u.site))].filter(s=>s!==undefined).sort(),dets=[...new Set(us.map(u=>u.detail).filter(Boolean))],parts=[...new Set(us.map(u=>u.part).filter(Boolean))];
+  const nSp=PIDB_PH.length+PIDB_CH.length+3;
+  const H=['제품명','Q코드','규격','단중<br>(kg)','구분','형태','제품 특성','제철소','상세사용','사용부위','입찰<br>유/무','미입찰 사유','입찰가능<br>업체','단가<br>(원/kg)','입찰결과(최신)','공급<br>순위','27년<br>물량(kg)','최근 납품<br>(누계)'];
+  const HS=PIDB_PH.map(x=>`<th class="sc">${x[0]}<br><small>${x[2]}</small></th>`).join('')+PIDB_CH.map(k=>`<th class="sc ch">${k}<br><small>%</small></th>`).join('')+'<th class="sc">기타 성분</th><th class="sc">기타 스펙</th><th class="sc">출처 규격서</th>';
+  const HT=['도면','이력','메모'];
+  const nCol=H.length+nSp+HT.length;
+  let h='<table class="pidb qa"><thead><tr>'+H.map((t,i)=>`<th${i===0?' class="c1"':''}>${t}</th>`).join('')+HS+HT.map(t=>`<th>${t}</th>`).join('')+'</tr></thead><tbody>';
+  let prev='',nb=0,sepDone=false;
+  rows.forEach(x=>{const {p,c,it,us,pr,dq,le,o,b}=x,first=prev!==p.k;prev=p.k;
+    if(x.blank&&!sepDone){sepDone=true;h+=`<tr class="grp"><td colspan="${nCol}" style="background:#fffbeb;text-align:left;font-weight:700;padding:6px 10px;position:sticky;left:0">▣ 스펙은 있으나 Q코드가 없는 품목 <span class="s">(규격서 전용 · Q코드 칸을 채우면 위 목록으로 합쳐집니다)</span></td></tr>`;}
+    let spCells;
+    if(first)spCells=pidbSpecCells(x.sp,p,true,'view');else spCells='<td class="sc"></td>'.repeat(nSp);
+    const fts=`<td class="s ft">${first?`${esc(x.feat)||'<span class="pidb-none">—</span>'}${ed?` <a href="#" class="pidb-ed" title="제품 특성 직접 입력" onclick="pidbFeatSet('${esc(p.k)}');return false">✎</a>`:''}`:''}</td>`;
+    const pn=`<td class="pn c1">${first?`<b>${esc(p.n)}</b>${pidbCmChip(p.k,ed,false)}`:`<span style="color:#94a3b8">${esc(p.n)}</span>`}</td>`;
+    const gc=`<td class="gc">${x.gs.length?x.gs.map(g=>`<span class="pidb-g g${g}" title="${PIDB_GN[g]}" style="padding:0 5px">${g}</span>`).join(''):'<span class="pidb-none">—</span>'}</td><td class="tc">${x.ty?(first?`<b>${x.ty}</b>`:x.ty):'<span class="pidb-none">미지정</span>'}</td>`;
+    if(x.blank){nb++;
+      const qin=ed?`<input class="pidb-in" style="width:92px;border-color:#f59e0b;background:#fffbeb" placeholder="Q코드 입력" onchange="pidbQaAddQ('${esc(p.k)}',this.value)" title="Q코드(Q+숫자)를 입력하면 이 스펙에 Q코드가 연결됩니다">`:'<span class="pidb-none">없음</span>';
+      h+=`<tr class="qr qa-first" style="border-top:2px solid #cbd5e1">${pn}<td class="qc">${qin}</td><td class="sw"></td><td class="sw n"></td>${gc}${fts}<td class="uc s" colspan="3" style="color:#94a3b8">Q코드 입력 후 제철소·상세사용·사용부위 입력</td><td class="bc"></td><td class="s"></td><td class="vd"></td><td class="n"></td><td class="ef s"></td><td class="rkc"></td><td class="n"></td><td class="dl s"></td>${spCells}<td class="dwc"></td><td class="s"></td><td class="mc"></td></tr>`;
+      return;}
+    const hs=pidbHistOf(c),last=hs.length?hs[hs.length-1]:null;
     const bsel=ed?`<select class="pidb-b b${b==='유'?'y':'n'}" onchange="pidbSet('${c}','bid',this.value)"><option ${b==='유'?'selected':''}>유</option><option ${b==='무'?'selected':''}>무</option></select>`:`<span class="pidb-bt b${b==='유'?'y':'n'}">${b}</span>`;
     const nbr=b==='무'?(ed?`<select class="pidb-sl" onchange="pidbNbrSet('${c}',this.value)"${o.nbr?'':' style="border-color:#f59e0b;background:#fffbeb"'}><option value="">사유 선택</option>${PIDB_NBR.map(r=>`<option${r===o.nbr?' selected':''}>${esc(r)}</option>`).join('')}</select>`:(o.nbr?esc(o.nbr):'<span class="pidb-none">미입력</span>')):'<span class="pidb-none">—</span>';
-    h+=`<tr class="qr${first?' qa-first':''}" style="${first?'border-top:2px solid #cbd5e1':''}">`
-      +`<td class="pn c1">${first?`<b>${esc(p.n)}</b>${pidbCmChip(p.k,ed,false)}`:`<span style="color:#94a3b8">${esc(p.n)}</span>`}</td>`
-      +`<td class="qc"><code>${esc(c)}</code>${pidbCmQChip(c,ed)}</td>`
-      +`<td class="sw">${esc(it[1]||'')}</td><td class="sw n">${it[2]!=null?it[2]:''}</td>`
-      +`<td class="gc">${x.gs.length?x.gs.map(g=>`<span class="pidb-g g${g}" title="${PIDB_GN[g]}" style="padding:0 5px">${g}</span>`).join(''):'<span class="pidb-none">—</span>'}</td><td class="tc">${x.ty?(first?`<b>${x.ty}</b>`:x.ty):'<span class="pidb-none">미지정</span>'}</td>`
-      +`<td class="s ft">${first?`${esc(x.feat)||'<span class="pidb-none">—</span>'}${ed?` <a href="#" class="pidb-ed" title="제품 특성 직접 입력" onclick="pidbFeatSet('${esc(p.k)}');return false">✎</a>`:''}`:''}</td>`
-      +`<td class="uc">${sites.map(s=>pidbSiteChip(s)).join('')}</td><td class="uc s">${esc(dets.join(' / '))}</td><td class="ptc s">${esc(parts.join(' / '))}</td>`
+    const ox=pidbOv.q[c]||{};
+    const specTd=`<td class="sw">${ed?`<input class="pidb-in" style="width:64px" value="${esc(it[1]||'')}" onchange="pidbQSet('${c}','spec',this.value)" title="규격 직접 수정">`:esc(it[1]||'')}${ox.spec!==undefined?` <a href="#" class="pidb-ed" title="원래 규격으로 되돌리기" onclick="pidbQReset('${c}');return false">↺</a>`:''}</td>`;
+    const uwTd=`<td class="sw n">${ed?`<input class="pidb-in" style="width:50px;text-align:right" value="${it[2]!=null?it[2]:''}" onchange="pidbQSet('${c}','uw',this.value)" title="단중(kg) 직접 수정">`:(it[2]!=null?it[2]:'')}</td>`;
+    const xo={ed};
+    h+=`<tr class="qr${first?' qa-first':''}" style="${first?'border-top:2px solid #cbd5e1':''}">${pn}`
+      +`<td class="qc"><code>${esc(c)}</code>${pidbCmQChip(c,ed)}</td>${specTd}${uwTd}${gc}${fts}`
+      +PIDB_COLS.site.qr(xo,c)+PIDB_COLS.det.qr(xo,c)+PIDB_COLS.part.qr(xo,c)
       +`<td class="bc">${bsel}</td><td class="s" style="min-width:90px;max-width:120px">${nbr}</td>`
       +`<td class="vd">${pidbVendHtml(le)}</td>`
       +`<td class="n" title="${pr?esc(pr.src):''}">${pr&&pr.kg?pidbN(pr.kg):''}</td>`
       +`<td class="ef s">${le?esc(pidbEffTxt([le])):'<span class="pidb-none">—</span>'}</td><td class="rkc">${pidbRankChip(le)}</td>`
       +`<td class="n">${x.q27?pidbN(x.q27):''}</td>`
       +`<td class="dl s">${dq?pidbDelHtml(dq):'<span class="pidb-none">—</span>'}</td>`
-      +`<td class="sc">${x.sp?`<a href="#" class="pidb-lk" onclick="pidbSpecModal('${esc(p.k)}');return false">✔ 확인</a>`:`<span class="pidb-none">미확인</span>`}</td>`
+      +spCells
       +`<td class="dwc">${pidbDwChips(c,'view')}</td>`
       +`<td class="s" style="min-width:90px"><a href="#" class="pidb-lk" onclick="pidbHistOpen('${c}');return false">📝 ${hs.length?hs.length+'건':'기록'}</a>${last?`<div class="s" style="max-width:130px;white-space:normal">${esc(last.d)} ${esc(last.t)}</div>`:''}</td>`
       +`<td class="mc">${ed?`<input class="pidb-in" style="width:90px" value="${esc(o.memo||'')}" placeholder="메모" onchange="pidbQSet('${c}','memo',this.value)">`:esc(o.memo||'')}</td></tr>`;});
-  if(!rows.length)h+=`<tr><td colspan="${H.length}"><div class="empty">조건에 맞는 Q코드가 없습니다.</div></td></tr>`;
-  return {html:h+'</tbody></table>',np:new Set(rows.map(r=>r.p.k)).size,nq:rows.length};
+  if(!rows.length)h+=`<tr><td colspan="${nCol}"><div class="empty">조건에 맞는 Q코드가 없습니다.</div></td></tr>`;
+  const nq=rows.filter(r=>!r.blank).length;
+  return {html:h+'</tbody></table>',np:new Set(rows.map(r=>r.p.k)).size,nq,txt:`제품 ${new Set(rows.map(r=>r.p.k)).size}종 · Q코드 없는 스펙 ${nb}종`};
 }
 /* ① 품목에서 제품을 눌렀을 때 — 스펙·도면·입찰이 한 줄 요약으로 연동되어 보임 */
 function pidbLinkRow(x,sp,nc){
@@ -23456,7 +23495,7 @@ function pidbChipsUi(){
 }
 function pidbTabUi(){
   const bar=document.getElementById('pidb_tabs');
-  if(bar)bar.innerHTML=Object.keys(PIDB_TABS).map(k=>`<button class="pidb-tab${k===pidbTab?' on':''}" onclick="pidbTabSet('${k}')">${PIDB_TABS[k].label}</button>`).join('<span class="pidb-arw">▶</span>')+`<span class="pidb-tdesc">${esc(PIDB_TABS[pidbTab].desc)}</span>`;
+  if(bar)bar.innerHTML=Object.keys(PIDB_TABS).filter(k=>k!=='spec').map(k=>`<button class="pidb-tab${k===pidbTab?' on':''}" onclick="pidbTabSet('${k}')">${PIDB_TABS[k].label}</button>`).join('<span class="pidb-arw">▶</span>')+`<span class="pidb-tdesc">${esc(PIDB_TABS[pidbTab].desc)}</span>`;
   const isB=pidbBidIsB();
   {const bn=document.getElementById('pidb_banner'),cd=document.getElementById('pidb_cards');if(bn)bn.style.display=(pidbTab==='bid'||pidbTab==='spec'||pidbTab==='qa')?'none':'';if(cd)cd.style.display=(pidbTab==='spec')?'none':'';}
   document.querySelectorAll('#v-poscoidb [data-t]').forEach(e=>{let on=e.dataset.t.split(' ').includes(pidbTab);if(on&&e.dataset.m)on=(e.dataset.m==='B')?isB:!isB;e.style.display=on?'':'none';});
@@ -23473,7 +23512,7 @@ function pidbCards(){
   const us=PIDB.P.reduce((a,p)=>a+p.qs.filter(c=>pidbUsesOf(c).some(u=>u.site)).length,0);
   const card=(l,v,u,sub)=>`<div class="card"><div class="l">${l}</div><div class="v">${v}<small> ${u}</small></div>${sub?`<div style="font-size:11px;color:var(--muted)">${sub}</div>`:''}</div>`;
   if(pidbTab==='qa'){let nb=0,nbr=0,nh=0,nsp=0;PIDB.P.forEach(p=>{const has=!!pidbSpecOf(p);p.qs.forEach(c=>{const o=pidbOv.q[c]||{};if(pidbBid(c,L)==='무'){nb++;if(o.nbr)nbr++;}if((o.hist||[]).length)nh++;if(has)nsp++;});});
-    return card('Q코드 전체',nq,'개','입찰 유 '+y+' · 무 '+n)+card('미입찰(무) 사유 입력',nbr,'/'+nb,'사유가 없는 미입찰 '+(nb-nbr)+'개')+card('이력 기록',nh,'개 Q코드','입찰·미입찰 이력(날짜·내용)')+card('스펙 확인',nsp,'/'+nq,'미확인 '+(nq-nsp))+card('도면 연동',dw,'/'+nq,'규격 일치 기준');}
+    return card('Q코드 전체',nq,'개','입찰 유 '+y+' · 무 '+n)+card('미입찰(무) 사유 입력',nbr,'/'+nb,'사유가 없는 미입찰 '+(nb-nbr)+'개')+card('이력 기록',nh,'개 Q코드','입찰·미입찰 이력(날짜·내용)')+card('스펙 있는 제품',PIDB.P.filter(p=>pidbSpecOf(p)).length+(PIDB.X||[]).filter(x=>!pidbP(x.k)).length,'종','Q코드 없는 스펙 '+(PIDB.X||[]).filter(x=>!pidbP(x.k)).length+'종 — 빈 칸에 Q코드를 채우면 연결')+card('도면 연동',dw,'/'+nq,'규격 일치 기준');}
   if(pidbTab==='bid'&&pidbBidIsB())return pidbBidCardsB();
   if(pidbTab==='bid')return card('입찰 참여(범용B) 유',y,'개 Q코드','무 '+n)+card('범용B 입찰결과',effN,'종','25·26년 입찰결과가 있는 제품')+card('우리 공급 순위',rk['1순위']||0,'종 1순위','2순위 '+(rk['2순위']||0)+' · 참여 '+(rk['참여(순위 외)']||0)+' · 미참여 '+(rk['미참여']||0))+card('납품 실적',delN,'종','최신 납품실적이 있는 제품')+card('SET 내화물',g.S,'종','범용B '+g.B+' · 범용A '+g.A+' · 핵심 '+g.K);
   if(pidbTab==='spec'){const noSp=PIDB.P.length-sp;return card('스펙 확인',sp,'/'+PIDB.P.length+'종','미확인 '+noSp+'종 — 직접 입력 가능')+card('규격서 출처',PIDB.P.filter(p=>(p.sp||[]).length).length,'종','MJ·PJ·KJ 규격서 · 수기 입력 '+Object.keys(pidbOv.sp||{}).length+'종')+card('형태',ty['정형']+ty['부정형']+ty['기능성'],'종 지정','정형 '+ty['정형']+' · 부정형 '+ty['부정형']+' · 기능성 '+ty['기능성']+(ty['']?' · 미지정 '+ty['']:''));}
@@ -23521,7 +23560,7 @@ function pidbCpApply(){
   pidbCpUndo();
   (pidbOv.cp||[]).forEach(e=>{
     let p=PIDB.P.find(x=>x.k===e.k);
-    if(!p){p={k:e.k,n:e.n,raw:[e.n],t:e.t||'',t0:'',sp:[],fb:null,qs:[],cust:1};PIDB.P.push(p);pidbCpInj.np.push(e.k);}
+    if(!p){const xs=(PIDB.X||[]).find(z=>z.k===e.k);p={k:e.k,n:e.n,raw:xs?xs.raw:[e.n],t:(xs&&xs.t)||e.t||'',t0:(xs&&xs.t0)||'',sp:xs?xs.sp:[],fb:null,qs:[],cust:1,cat:xs?xs.cat:undefined,fromX:xs?1:0};PIDB.P.push(p);pidbCpInj.np.push(e.k);}
     (e.qs||[]).forEach(r=>{const q=String(r[0]||'').toUpperCase();if(!q||PIDB.I[q])return;
       PIDB.I[q]=[e.k,r[1]||'',r[2]!=null&&r[2]!==''?+r[2]:null,'','Y',[],'',null,null,'N'];p.qs.push(q);pidbCpInj.qs.push([e.k,q]);});
   });
@@ -24476,9 +24515,8 @@ function buildIndex(){
     const cc=AF.cmt();Object.keys(cc).forEach(k=>{I.push({g:'코멘트',t:'💬 '+(cc[k].l||k),s:String(cc[k].t||'').replace(/\s+/g,' '),k:N((cc[k].l||k)+' '+cc[k].t),go:()=>{if(k.indexOf('pm:')===0){const p=prodData.find(x=>x.id===k.slice(3));goProdm(p?p.name:'');}}});});}catch(e){}
   try{scheduleData.forEach(s=>{I.push({g:'일정',t:(s.date||'')+' '+(s.title||''),s:(s.type||'')+' '+(s.memo||''),k:N([s.date,s.title,s.type,s.memo].join(' ')),go:()=>{nav('home');setTimeout(()=>{try{selectDay(s.date);}catch(e){}},150);}});});}catch(e){}
   try{(JSON.parse(localStorage.getItem('dgrns_chglog')||'[]')).slice(-150).forEach(r=>{I.push({g:'변경 이력',t:r.o+' · '+r.f,s:r.t+' '+r.u+' · '+r.a+' → '+r.b,k:N([r.o,r.f,r.a,r.b,r.u,r.t].join(' ')),go:()=>afChgOpen()});});}catch(e){}
-  I.push({g:'메뉴',t:'🕘 변경 이력 보기',s:'단가·계획·코멘트를 누가 언제 바꿨는지',k:N('변경 이력 보기 변경이력 히스토리'),go:()=>afChgOpen()});
-  I.push({g:'메뉴',t:'📊 외부 엑셀 대조',s:'엑셀의 단가·단중을 대시보드와 자동 비교',k:N('외부 엑셀 대조 엑셀대조 비교 전산'),go:()=>AF.xlOpen()});
-  I.push({g:'메뉴',t:'📑 월말 요약 생성',s:'COMMENT·이슈·점검·변경 현황을 한 번에 정리',k:N('월말 요약 생성 월말보고 보고자료 요약'),go:()=>AF.monthlyOpen()});
+  I.push({g:'메뉴',t:'📝 옵시디언 전체 내보내기',s:'포스코 품목·동국제강·팀 업무·외근·진행현황·일정을 노트로 한 번에 저장',k:N('옵시디언 내보내기 노트 전체 obsidian'),go:()=>obsAllRun()});
+  I.push({g:'메뉴',t:'📑 요약 보고 (주간·월말·분기·반기·년간)',s:'COMMENT·팀 업무·외근·일정을 기간별로 한 번에 정리',k:N('요약 보고 주간 월말 분기 반기 년간 월말요약 월말보고 보고자료'),go:()=>AF.monthlyOpen()});
   I.push({g:'메뉴',t:'🔍 자동 이상 점검 다시 실행',s:'단가 미입력·중복·물량표 오류·연동 불일치',k:N('이상 점검 자동 점검 오류'),go:()=>{nav('home');setTimeout(()=>afRenderBanner(true),200);}});
   return I;
 }
@@ -24719,18 +24757,109 @@ AF.monthlyBuild=function(ym,mask){
   const txt=S.map(s=>s.h+'\n'+s.l.join('\n')).join('\n\n');
   return {title:'26'.slice(0,0)+y+'. '+m+'월 포항사업소 월말 업무 요약',S,txt,hasData:!!(cur.prod||cur.inc||cur.dec)};
 };
-AF.monthlyOpen=function(ym,mask){
-  ym=ym||AF.monthDefault();mask=!!mask;AF.mm={ym,mask};
-  const B=AF.monthlyBuild(ym,mask),mons=(planActualData||[]).map(r=>r.id).sort();
-  const html=`<div id="afMPage" style="background:#fff;color:#111;padding:18px 24px;font-size:13px;line-height:1.7"><h3 style="margin:0 0 10px;font-size:17px">${E(B.title)}</h3>${B.S.map(s=>`<div style="margin-top:10px"><b style="font-size:13.5px">■ ${E(s.h)}</b><div style="margin-top:3px">${s.l.map(l=>`<div>${E(l)}</div>`).join('')}</div></div>`).join('')}${mask?'<div style="margin-top:10px;color:#64748b;font-size:11.5px">※ 고객사 제출용: 수치를 ○○로 마스킹하고 내부 점검·변경 현황은 제외했습니다.</div>':''}${B.hasData?'':'<div style="margin-top:10px;color:#b45309">※ 해당 월의 판매실적 COMMENT가 비어 있습니다. 판매실적분석에서 작성하면 자동 반영됩니다.</div>'}</div>`;
-  ov(`<div class="afHd"><b>📑 월말 요약</b><label style="font-size:12.5px">월 <select id="afMM" onchange="afMonthlyOpen(this.value,document.getElementById('afMMask').checked)">${mons.map(x=>`<option value="${x}"${x===ym?' selected':''}>${x}</option>`).join('')}</select></label><label style="font-size:12.5px"><input type="checkbox" id="afMMask"${mask?' checked':''} onchange="afMonthlyOpen(document.getElementById('afMM').value,this.checked)"> 고객사 제출용 (수치 마스킹)</label><span style="margin-left:auto"></span><button class="btn sm" onclick="afMonthlyCopy()">복사</button><button class="btn sm" onclick="afMonthlyPrint()">🖨 인쇄/PDF</button><button class="btn sm" onclick="afClose()">닫기</button></div><div class="afBd">${html}</div><div class="afFt">${AF.styleHtml(B.S.filter(s=>s.h!=='점검·변경 현황').map(s=>s.l.join('\n')).join('\n'))}</div>`,true);
+/* ---------- ⑦-2 기간별 요약 (주간·월말·분기·반기·년간) ---------- */
+const pad2=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+const addDays=(ds,n)=>{const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d);};
+const mondayOf=ds=>{const d=new Date(ds+'T00:00:00');const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return ymd(d);};
+const KIND_N={week:'주간',month:'월말',quarter:'분기',half:'반기',year:'년간'};
+AF.periodRange=function(kind,key){
+  if(kind==='week')return {from:key,to:addDays(key,6),months:[key.slice(0,7)].concat(addDays(key,6).slice(0,7)!==key.slice(0,7)?[addDays(key,6).slice(0,7)]:[]),label:'26. '.slice(0,0)+key.slice(2,4)+'. '+(+key.slice(5,7))+'/'+(+key.slice(8,10))+' ~ '+(+addDays(key,6).slice(5,7))+'/'+(+addDays(key,6).slice(8,10))+' 주간'};
+  if(kind==='month')return {from:key+'-01',to:key+'-31',months:[key],label:key.slice(2,4)+'. '+(+key.slice(5,7))+'월'};
+  const y=key.slice(0,4),yy=y.slice(2,4);let a=1,b=12,lab=yy+'년 연간';
+  if(kind==='quarter'){const q=+key.slice(-1);a=(q-1)*3+1;b=q*3;lab=yy+'년 '+q+'분기';}
+  if(kind==='half'){const h=+key.slice(-1);a=h===1?1:7;b=h===1?6:12;lab=yy+'년 '+(h===1?'상반기':'하반기');}
+  const ms=[];for(let m=a;m<=b;m++)ms.push(y+'-'+pad2(m));
+  return {from:y+'-'+pad2(a)+'-01',to:y+'-'+pad2(b)+'-31',months:ms,label:lab};
 };
-window.afMonthlyOpen=AF.monthlyOpen;
-window.afMonthlyCopy=function(){const B=AF.monthlyBuild(AF.mm.ym,AF.mm.mask);try{navigator.clipboard.writeText(B.title+'\n\n'+B.txt);toast('요약을 복사했습니다');}catch(e){toast('복사하지 못했습니다');}};
+AF.periodKeys=function(kind){
+  const today=todayStr(),ys=new Set([today.slice(0,4)]);(planActualData||[]).forEach(r=>ys.add(String(r.id).slice(0,4)));
+  const Y=Array.from(ys).sort();const out=[];
+  if(kind==='week'){let m=mondayOf(today);for(let i=0;i<20;i++){const r=AF.periodRange('week',m);out.push([m,r.label]);m=addDays(m,-7);}return out;}
+  if(kind==='month'){(planActualData||[]).map(r=>r.id).sort().reverse().forEach(x=>out.push([x,x]));return out;}
+  Y.slice().reverse().forEach(y=>{
+    if(kind==='quarter')[4,3,2,1].forEach(q=>out.push([y+'-Q'+q,AF.periodRange('quarter',y+'-Q'+q).label]));
+    else if(kind==='half')[2,1].forEach(h=>out.push([y+'-H'+h,AF.periodRange('half',y+'-H'+h).label]));
+    else out.push([y,AF.periodRange('year',y).label]);});
+  return out;
+};
+AF.periodDefault=function(kind){
+  const today=todayStr();
+  if(kind==='week')return mondayOf(today);
+  if(kind==='month')return AF.monthDefault();
+  const y=today.slice(0,4),m=+today.slice(5,7);
+  if(kind==='quarter')return y+'-Q'+Math.ceil(m/3);
+  if(kind==='half')return y+'-H'+(m<=6?1:2);
+  return y;
+};
+AF.activityLines=function(R,mask,full){
+  const S=[],inR=d=>{d=String(d||'').slice(0,10);return d>=R.from&&d<=R.to;};
+  let cards=[];try{tbLoad();cards=(tbCards||[]).filter(c=>c&&!c.del);}catch(e){}
+  const cr=cards.filter(c=>inR(c.s)),dn=cards.filter(c=>c.st==='done'&&inR(c.dn)),op=cards.filter(c=>c.st!=='done');
+  let lgN=0;cards.forEach(c=>(c.lg||[]).forEach(x=>{if(inR(x.d)&&x.w!=='시스템')lgN++;}));
+  const L=[];
+  L.push('- 팀 업무 접수 '+cr.length+'건 · 완료 '+dn.length+'건 · 진행 기록 '+lgN+'건 (현재 진행·접수 중 '+op.length+'건)');
+  if(dn.length)L.push('- 완료 업무: '+dn.slice(0,8).map(c=>c.t).join(' / ')+(dn.length>8?' 외 '+(dn.length-8)+'건':''));
+  if(cr.length&&!dn.length)L.push('- 접수 업무: '+cr.slice(0,6).map(c=>c.t).join(' / ')+(cr.length>6?' 외 '+(cr.length-6)+'건':''));
+  S.push({h:'팀 업무 현황',l:L});
+  let fs=[];try{fs=FIELD_SEED.filter(r=>inR(r.d)).sort((a,b)=>String(b.d).localeCompare(String(a.d)));}catch(e){}
+  if(fs.length){
+    const cu=new Set(fs.map(r=>String(r.cu||'').split('(')[0].trim()));
+    const l=['- 외근 보고 '+fs.length+'건 (업체 '+cu.size+'곳)'];
+    fs.slice(0,full?8:6).forEach(r=>{const t=toLines(r.sm||r.pu||'',mask).join(' ').replace(/^-\s*/,'');l.push('- '+r.d.slice(5).replace('-','/')+' '+r.t+' — '+(t.length>80?t.slice(0,80)+'…':t));});
+    if(fs.length>(full?8:6))l.push('- 외 '+(fs.length-(full?8:6))+'건');
+    S.push({h:'외근 업무',l});
+  }
+  let sch=[];try{sch=(scheduleData||[]).filter(s=>inR(s.date)||(s.end&&s.end>=R.from&&s.date<=R.to&&s.date<R.from)).filter(s=>!/대보수/.test(s.title||'')||true);}catch(e){}
+  if(sch.length){const by={};sch.forEach(s=>by[s.type||'기타']=(by[s.type||'기타']||0)+1);
+    S.push({h:'일정',l:['- 등록 일정 '+sch.length+'건 ('+Object.keys(by).sort((a,b)=>by[b]-by[a]).map(k=>k+' '+by[k]+'건').join(' · ')+')'].concat(R.kind==='week'?sch.sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,10).map(s=>'- '+s.date.slice(5).replace('-','/')+' ['+(s.type||'')+'] '+(s.who?s.who+' ':'')+(s.title||'')):[])});}
+  let wh=[];try{wh=JSON.parse(localStorage.getItem('dgrns_workprog_hist')||'[]').filter(x=>inR(x.t));}catch(e){}
+  if(wh.length)S.push({h:'업무진행현황',l:['- 업무진행현황 항목 변경·갱신 '+wh.length+'건']});
+  return S;
+};
+AF.periodBuild=function(kind,key,mask){
+  const R=AF.periodRange(kind,key);R.kind=kind;
+  const S=[],add=(h,l)=>{if(l&&l.length)S.push({h,l});};
+  let hasData=false;
+  if(kind!=='week'){
+    const recs=R.months.map(m=>(planActualData||[]).find(r=>r.id===m)).filter(r=>r&&r.cm&&r.cm.cur&&Object.values(r.cm.cur).some(v=>String(v||'').trim().length>3));
+    hasData=recs.length>0;
+    if(kind==='month'){
+      const B=AF.monthlyBuild(key,mask);B.S.forEach(s=>{if(s.h!=='점검·변경 현황')S.push(s);});
+    }else{
+      const one=(f)=>{const o=[];recs.forEach(r=>{const mm=+r.id.slice(5,7);const ls=toLines(r.cm.cur[f],mask);const take=f==='prod'?ls.slice(0,1):ls.slice(0,f==='inc'?3:2);take.forEach(l=>o.push(l.replace(/^- /,'- ['+mm+'월] ')));});return o;};
+      add('월별 실적 요약',one('prod'));add('증가 요인',one('inc'));add('감소 요인',one('dec'));
+      const iss=[];recs.forEach(r=>{const mm=+r.id.slice(5,7);(r.issues||[]).forEach(x=>{const t=String(x.t||'').replace(/\s*\(.*\)\s*$/,'');toLines(x.x,false).slice(0,2).forEach(l=>iss.push(l.replace(/^- /,'- ['+mm+'월] ')+' ['+t+']'));});});
+      add('주요 이슈',iss.slice(0,14));
+      if(recs.length&&recs.length<R.months.filter(m=>m<=todayStr().slice(0,7)).length)add('작성 현황',['- 판매실적 COMMENT 작성: '+recs.map(r=>(+r.id.slice(5,7))+'월').join('·')+' (미작성 월은 제외)']);
+    }
+  }
+  AF.activityLines(R,mask,kind!=='week').forEach(s=>S.push(s));
+  if(!mask){
+    let log=[];try{log=JSON.parse(localStorage.getItem('dgrns_chglog')||'[]');}catch(e){}
+    const ml=log.filter(x=>String(x.t).slice(0,10)>=R.from&&String(x.t).slice(0,10)<=R.to),by={};ml.forEach(x=>by[x.k]=(by[x.k]||0)+1);
+    const C=AF.runChecks(),bad=C.filter(c=>c.n>0),tot=C.reduce((s,c)=>s+c.n,0);
+    add('점검·변경 현황',['- 자동 점검 확인 필요 '+tot+'건(현재 기준)'+(bad.length?' ('+bad.map(c=>c.label+' '+c.n+'건').join(' · ')+')':' · 이상 없음'),'- 단가·계획·품목정보 변경 '+ml.length+'건'+(ml.length?' ('+Object.keys(by).map(k=>k+' '+by[k]+'건').join(' · ')+')':'')]);
+  }
+  const title=(kind==='month'?R.label+' 포항사업소 월말 업무 요약':'포항사업소 '+R.label+' 업무 요약');
+  return {title,S,txt:S.map(s=>s.h+'\n'+s.l.join('\n')).join('\n\n'),hasData,R};
+};
+AF.monthlyOpen=function(kind,key,mask){
+  if(kind&&/^\d{4}-\d{2}$/.test(String(kind))){mask=key;key=kind;kind='month';}
+  kind=kind||'month';if(!KIND_N[kind])kind='month';
+  key=key||AF.periodDefault(kind);mask=!!mask;AF.mm={kind,key,mask};
+  const B=AF.periodBuild(kind,key,mask),keys=AF.periodKeys(kind);
+  if(!keys.some(k=>k[0]===key))keys.unshift([key,key]);
+  const html=`<div id="afMPage" style="background:#fff;color:#111;padding:18px 24px;font-size:13px;line-height:1.7"><h3 style="margin:0 0 10px;font-size:17px">${E(B.title)}</h3>${B.S.map(s=>`<div style="margin-top:10px"><b style="font-size:13.5px">■ ${E(s.h)}</b><div style="margin-top:3px">${s.l.map(l=>`<div>${E(l)}</div>`).join('')}</div></div>`).join('')}${mask?'<div style="margin-top:10px;color:#64748b;font-size:11.5px">※ 고객사 제출용: 수치를 ○○로 마스킹하고 내부 점검·변경 현황은 제외했습니다.</div>':''}${(kind!=='week'&&!B.hasData)?'<div style="margin-top:10px;color:#b45309">※ 해당 기간의 판매실적 COMMENT가 비어 있습니다. 판매실적분석에서 작성하면 자동 반영됩니다. (팀 업무·외근·일정 요약은 입력된 내용으로 작성)</div>':''}</div>`;
+  const kb=Object.keys(KIND_N).map(k=>`<button class="btn sm${k===kind?' primary':''}" style="${k===kind?'background:#1e3a8a;color:#fff':''}" onclick="afMonthlyOpen('${k}',null,document.getElementById('afMMask').checked)">${KIND_N[k]}</button>`).join(' ');
+  ov(`<div class="afHd"><b>📑 요약 보고</b><span>${kb}</span><label style="font-size:12.5px"><select id="afMM" onchange="afMonthlyOpen('${kind}',this.value,document.getElementById('afMMask').checked)">${keys.map(x=>`<option value="${x[0]}"${x[0]===key?' selected':''}>${E(x[1])}</option>`).join('')}</select></label><label style="font-size:12.5px"><input type="checkbox" id="afMMask"${mask?' checked':''} onchange="afMonthlyOpen('${kind}',document.getElementById('afMM').value,this.checked)"> 고객사 제출용 (수치 마스킹)</label><span style="margin-left:auto"></span><button class="btn sm" onclick="afMonthlyCopy()">복사</button><button class="btn sm" onclick="afMonthlyPrint()">🖨 인쇄/PDF</button><button class="btn sm" onclick="afClose()">닫기</button></div><div class="afBd">${html}</div><div class="afFt">${AF.styleHtml(B.S.filter(s=>s.h!=='점검·변경 현황').map(s=>s.l.join('\n')).join('\n'))}</div>`,true);
+};
+window.afMonthlyOpen=function(kind,key,mask){AF.monthlyOpen(kind,key,mask);};
+window.afMonthlyCopy=function(){const m=AF.mm;const B=AF.periodBuild(m.kind,m.key,m.mask);try{navigator.clipboard.writeText(B.title+'\n\n'+B.txt);toast('요약을 복사했습니다');}catch(e){toast('복사하지 못했습니다');}};
 window.afMonthlyPrint=function(){
   const p=document.getElementById('afMPage');if(!p)return;
   const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
-  const d=f.contentWindow.document;d.open();d.write('<html><head><meta charset="utf-8"><title>월말 요약</title><style>@page{size:A4;margin:16mm}body{font-family:"Malgun Gothic",sans-serif;background:#fff;color:#111}</style></head><body>'+p.outerHTML+'</body></html>');d.close();
+  const d=f.contentWindow.document;d.open();d.write('<html><head><meta charset="utf-8"><title>요약 보고</title><style>@page{size:A4;margin:16mm}body{font-family:"Malgun Gothic",sans-serif;background:#fff;color:#111}</style></head><body>'+p.outerHTML+'</body></html>');d.close();
   setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print();}catch(e){}setTimeout(()=>f.remove(),2000);},300);
 };
 
@@ -24738,13 +24867,202 @@ window.afMonthlyPrint=function(){
 function addButtons(){
   const bk=document.getElementById('navBackBtn');if(!bk||document.getElementById('afBtnSearch'))return;
   const b1=document.createElement('button');b1.className='btn';b1.id='afBtnSearch';b1.type='button';b1.textContent='🔎 검색';b1.title='품목·Q코드·코멘트·일정·화면 통합 검색 (Ctrl+K)';b1.onclick=()=>afSearchOpen();
-  const b2=document.createElement('button');b2.className='btn';b2.id='afBtnChg';b2.type='button';b2.textContent='🕘 변경이력';b2.title='단가·계획·코멘트 변경 이력';b2.onclick=()=>afChgOpen();
-  const b3=document.createElement('button');b3.className='btn';b3.id='afBtnXl';b3.type='button';b3.textContent='📊 엑셀대조';b3.title='엑셀의 단가·단중을 대시보드와 자동 대조';b3.onclick=()=>AF.xlOpen();
-  const b4=document.createElement('button');b4.className='btn';b4.id='afBtnMon';b4.type='button';b4.textContent='📑 월말요약';b4.title='월말 COMMENT·이슈·점검·변경 현황 요약 (회사정보 문체)';b4.onclick=()=>AF.monthlyOpen();
-  bk.parentNode.insertBefore(b1,bk.nextSibling);bk.parentNode.insertBefore(b2,b1.nextSibling);bk.parentNode.insertBefore(b3,b2.nextSibling);bk.parentNode.insertBefore(b4,b3.nextSibling);
+  const b4=document.createElement('button');b4.className='btn';b4.id='afBtnMon';b4.type='button';b4.textContent='📑 요약보고';b4.title='주간·월말·분기·반기·년간 업무 요약 (회사정보 문체)';b4.onclick=()=>AF.monthlyOpen();
+  const b5=document.createElement('button');b5.className='btn';b5.id='afBtnObs';b5.type='button';b5.textContent='📝 옵시디언 전체';b5.title='포스코 품목·동국제강·팀 업무·외근업무·업무진행현황·일정을 옵시디언 노트로 한 번에 저장 (보관함 폴더는 처음 한 번만 선택 · Shift+클릭: 폴더 다시 선택 · Ctrl+클릭: zip 내려받기)';b5.onclick=(ev)=>obsAllRun(ev.ctrlKey||ev.metaKey,ev.shiftKey);
+  bk.parentNode.insertBefore(b1,bk.nextSibling);bk.parentNode.insertBefore(b4,b1.nextSibling);bk.parentNode.insertBefore(b5,b4.nextSibling);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addButtons);else addButtons();
 })();
+
+/* ============ 옵시디언 전체 내보내기 (2026-11-11) ============
+   상단 버튼 1개로 '포스코 품목 · 동국제강 설비 · 팀 업무 보드 · 외근업무 · 업무진행현황 · 일정 · 코멘트·변경이력'을
+   한 번에 옵시디언 노트(마크다운)로 만들어 보관함 폴더에 저장한다.
+   · 보관함 폴더는 처음 한 번만 고르면 브라우저가 기억한다(이후에는 클릭 한 번, 브라우저 권한 확인 1회).
+   · 내보낼 때 04~10번 폴더는 새로 만들어진다 → 이 폴더 안 노트는 직접 고치지 말고 별도 폴더(예: 01_개인메모)에 작성한다.
+   · 폴더 선택이 안 되는 브라우저는 zip 파일로 내려받는다. */
+function obsBuildOps(){
+  const files={};const W=(p,t)=>{files[p]=t;};
+  const A=window.AF||{};const prevMute=A.mute;A.mute=true;
+  const today=(typeof todayStr==='function')?todayStr():new Date().toISOString().slice(0,10);
+  const fn=s=>String(s==null?'':s).replace(/[\\/:*?"<>|#^~\[\]]/g,'-').replace(/\s+/g,' ').trim().replace(/\.+$/,'').slice(0,70);
+  const esc=s=>String(s==null?'':s).replace(/\|/g,'/').replace(/\r?\n/g,' ');
+  const yq=s=>'"'+String(s==null?'':s).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\r?\n/g,' ')+'"';
+  const J=(k,d)=>{try{const v=localStorage.getItem(k);return v==null||v===''?d:(JSON.parse(v)||d);}catch(e){return d;}};
+  const used=new Set();
+  const uname=(base)=>{let n=base,i=2;while(used.has(n)){n=base+'_'+i++;}used.add(n);return n;};
+  const tbl=(head,rows)=>rows.length?('| '+head.join(' | ')+' |\n|'+head.map(()=>'---').join('|')+'|\n'+rows.map(r=>'| '+r.map(esc).join(' | ')+' |').join('\n')+'\n'):'(없음)\n';
+  const R6='06_팀업무/',R7='07_외근업무/',R8='08_업무진행현황/',R9='09_일정/',R10='10_코멘트·이력/';
+  const HEADNOTE='프로그램 입력값으로 자동 생성된 노트입니다. 수정은 프로그램에서 하고 다시 내보내기 하세요(이 폴더 안에서 직접 고친 내용은 다음 내보내기 때 사라집니다).';
+
+  /* ---------- 팀 업무 보드 ---------- */
+  let cards=[],lanes=[];
+  try{tbLoad();cards=(tbCards||[]).filter(c=>c&&!c.del);lanes=(tbCfg&&tbCfg.lanes)||[];}catch(e){}
+  const STN={wait:'접수',doing:'진행',done:'완료'},PRN=['보통','중요','긴급'];
+  const laneName=k=>{const l=lanes.find(x=>x.k===k);return l?l.n:(k||'기타');};
+  const laneGrp=k=>{const l=lanes.find(x=>x.k===k);return l&&l.g?l.g:'';};
+  const cardN=new Map(),wpN=new Map(),fiN=new Map();
+  cards.forEach(c=>cardN.set(c.id,uname('업무_'+fn(c.t)+'_'+String(c.id).replace(/[^A-Za-z0-9]/g,'').slice(-4))));
+  /* ---------- 업무진행현황 ---------- */
+  let wps=[];try{wps=wpItems();}catch(e){}
+  wps.forEach(w=>wpN.set(w.id,uname('진행_'+w.year+'_'+String(w.no||'').toString().padStart(2,'0')+'_'+fn(w.title))));
+  /* ---------- 외근 보고·이슈 ---------- */
+  let fseed=[];try{fseed=FIELD_SEED.slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)));}catch(e){}
+  const fiSt=J('dgrns_fieldissue',{});
+  let issues=[];try{issues=fieldAllIssues();}catch(e){}
+  const issBy={};issues.forEach(i=>{(issBy[i.date]=issBy[i.date]||[]).push(i);});
+  const repN=new Map();
+  fseed.forEach(r=>repN.set(r.d+'|'+r.t,uname('외근_'+r.d+'_'+fn(r.t))));
+  const repOf=d=>fseed.filter(r=>r.d===d);
+  const compNm=cu=>{try{return fieldCompanyName(cu);}catch(e){return String(cu||'기타').split('(')[0].trim()||'기타';}};
+  const compN=new Map();
+  const contacts=J('dgrns_field_contacts',{}),clog=J('dgrns_field_companylog',{});
+  const compSet=new Set();fseed.forEach(r=>compSet.add(compNm(r.cu)));Object.keys(contacts).forEach(k=>{if((contacts[k]||[]).length)compSet.add(k);});
+  compSet.forEach(n=>compN.set(n,uname('외근업체_'+fn(n))));
+
+  /* 06 팀 업무 */
+  const laneCards={};cards.forEach(c=>{(laneCards[c.ln]=laneCards[c.ln]||[]).push(c);});
+  cards.forEach(c=>{
+    const nm=cardN.get(c.id);const own=(typeof tbOwners==='function'?tbOwners(c):String(c.ow||'').split(/[,/·]/)).filter(Boolean);
+    const lg=(c.lg||[]).slice().sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+    let t='---\ntags: [팀업무, '+yq(laneName(c.ln))+']\n분류: '+yq(laneName(c.ln))+'\n상태: '+yq(STN[c.st]||c.st)+'\n우선순위: '+yq(PRN[c.pr]||'보통')+'\n업체: '+yq(c.cu)+'\n설비: '+yq(c.eq)+'\n담당: '+yq(own.join(', '))+'\n접수일: '+yq(c.s)+'\n기한: '+yq(c.due)+'\n완료일: '+yq((c.dn||'').slice(0,10))+'\n---\n\n# '+c.t+'\n\n';
+    t+='- 분류: [['+laneHub(c.ln)+']] · 상태: '+(STN[c.st]||c.st)+(c.hold?' (보류: '+(c.hr||'')+')':'')+'\n';
+    if(c.cu)t+='- 업체: '+c.cu+(c.cc?' / '+c.cc:'')+'\n';
+    if(c.eq)t+='- 설비: '+c.eq+'\n';
+    if(own.length)t+='- 담당: '+own.join(', ')+'\n';
+    t+='- 접수 '+(c.s||'')+(c.due?' · 기한 '+c.due:'')+((c.dn||'')?' · 완료 '+(c.dn||'').slice(0,10):'')+'\n';
+    if(c.co)t+='\n## 내용\n\n'+c.co+'\n';
+    const rel=[];
+    (c.wl||[]).forEach(id=>{if(wpN.has(id))rel.push('- 업무진행현황: [['+wpN.get(id)+']]');});
+    (c.fr||[]).forEach(d=>repOf(d).forEach(r=>rel.push('- 외근보고: [['+repN.get(r.d+'|'+r.t)+']]')));
+    (c.fi||[]).forEach(id=>{const d=String(id).split('#')[0];repOf(d).forEach(r=>{const l='- 외근 이슈('+d+'): [['+repN.get(r.d+'|'+r.t)+']]';if(rel.indexOf(l)<0)rel.push(l);});});
+    if(rel.length)t+='\n## 연결\n\n'+rel.join('\n')+'\n';
+    if(lg.length)t+='\n## 진행 기록 (최신순)\n\n'+lg.map(x=>'- '+String(x.d||'').slice(0,16)+' · '+(x.w||'')+' — '+String(x.x||'').replace(/\r?\n/g,' / ')).join('\n')+'\n';
+    W(R6+'카드/'+nm+'.md',t);
+  });
+  function laneHub(k){return '팀업무분류_'+fn(laneName(k));}
+  const laneKeys=Object.keys(laneCards);
+  laneKeys.forEach(k=>{
+    const arr=laneCards[k].slice().sort((a,b)=>String(a.st==='done').localeCompare(String(b.st==='done'))||String(b.s||'').localeCompare(String(a.s||'')));
+    let t='---\ntags: [팀업무, 분류]\n---\n\n# 팀업무 분류 — '+laneName(k)+'\n\n'+(laneGrp(k)?'그룹: '+laneGrp(k)+'\n\n':'')+HEADNOTE+'\n\n'+tbl(['업무','상태','업체','담당','접수일','기한'],arr.map(c=>['[['+cardN.get(c.id)+']]',STN[c.st]||c.st,c.cu||'',String(c.ow||''),c.s||'',c.due||'']));
+    W(R6+'분류/'+laneHub(k)+'.md',t);
+  });
+  {
+    const open=cards.filter(c=>c.st!=='done'),late=open.filter(c=>c.due&&c.due<today);
+    let t='---\ntags: [팀업무, 홈]\n---\n\n# 팀 업무 보드 홈\n\n'+HEADNOTE+'\n\n- 전체 '+cards.length+'건 · 진행 '+cards.filter(c=>c.st==='doing').length+'건 · 접수 '+cards.filter(c=>c.st==='wait').length+'건 · 완료 '+cards.filter(c=>c.st==='done').length+'건 · 기한 지연 '+late.length+'건\n\n## 분류\n\n'+laneKeys.map(k=>'- [['+laneHub(k)+']] ('+laneCards[k].length+'건)').join('\n')+'\n\n## 진행 중·접수 업무\n\n'+tbl(['업무','분류','상태','담당','기한'],open.map(c=>['[['+cardN.get(c.id)+']]',laneName(c.ln),STN[c.st]||c.st,String(c.ow||''),c.due||'']))+'\n## 기한 지난 업무\n\n'+tbl(['업무','기한','담당'],late.map(c=>['[['+cardN.get(c.id)+']]',c.due,String(c.ow||'')]));
+    W(R6+'00_팀업무_홈.md',t);
+  }
+
+  /* 07 외근업무 */
+  fseed.forEach(r=>{
+    const nm=repN.get(r.d+'|'+r.t),is=issBy[r.d]||[];
+    let t='---\ntags: [외근업무, 외근보고]\n일자: '+yq(r.d)+'\n대상: '+yq(r.t)+'\n업체: '+yq(r.cu)+'\n---\n\n# 외근 보고 — '+r.d+' '+r.t+'\n\n';
+    t+='- 업체: [['+compN.get(compNm(r.cu))+']]\n- 면담자(고객사): '+(r.iv||'')+'\n- 당사 참석: '+(r.tv||'')+'\n- 방문 목적: '+(r.pu||'')+'\n';
+    if(r.sm)t+='\n## 요약\n\n'+r.sm+'\n';
+    if(r.co)t+='\n## 면담 내용\n\n'+r.co+'\n';
+    const mine=is.filter(i=>i.target===r.t);
+    if(mine.length)t+='\n## 이슈·후속사항\n\n'+tbl(['내용','상태','메모'],mine.map(i=>{const st=fiSt[i.id]||{};const s=st.status||i.defStatus;return [i.text,s==='done'?'해결':'확인 필요',st.memo||''];}));
+    const cs=cards.filter(c=>(c.fr||[]).indexOf(r.d)>=0||(c.fi||[]).some(x=>String(x).split('#')[0]===r.d));
+    if(cs.length)t+='\n## 연결된 팀 업무\n\n'+cs.map(c=>'- [['+cardN.get(c.id)+']]').join('\n')+'\n';
+    W(R7+'보고/'+nm+'.md',t);
+  });
+  compSet.forEach(n=>{
+    const nm=compN.get(n);const rows=fseed.filter(r=>compNm(r.cu)===n);const ps=contacts[n]||[];const lg=clog[n]||[];
+    let t='---\ntags: [외근업무, 업체]\n---\n\n# '+n+'\n\n'+HEADNOTE+'\n\n## 담당자\n\n'+tbl(['이름','부서','직급','역할','메모'],ps.map(p=>[p.name,p.dept||'',p.rank||'',p.role||'',p.note||'']))+'\n## 외근 보고\n\n'+(rows.length?rows.map(r=>'- '+r.d+' · [['+repN.get(r.d+'|'+r.t)+']]').join('\n'):'(없음)')+'\n';
+    if(lg.length)t+='\n## 변경 이력\n\n'+lg.slice().reverse().map(h=>'- '+h.date+' · '+h.text).join('\n')+'\n';
+    W(R7+'업체/'+nm+'.md',t);
+  });
+  {
+    const open=issues.filter(i=>((fiSt[i.id]||{}).status||i.defStatus)!=='done');
+    let t='---\ntags: [외근업무, 홈]\n---\n\n# 외근업무 홈\n\n'+HEADNOTE+'\n\n- 외근 보고 '+fseed.length+'건 · 업체 '+compSet.size+'곳 · 이슈 '+issues.length+'건(확인 필요 '+open.length+'건)\n\n## 최근 외근 보고\n\n'+fseed.slice(0,15).map(r=>'- '+r.d+' · [['+repN.get(r.d+'|'+r.t)+']] — '+(r.cu||'')).join('\n')+'\n\n## 업체\n\n'+Array.from(compSet).map(n=>'- [['+compN.get(n)+']]').join('\n')+'\n\n## 확인 필요 이슈\n\n'+tbl(['일자','대상','내용'],open.map(i=>[i.date,'[['+(repN.get(i.date+'|'+i.target)||i.target)+']]',i.text]));
+    W(R7+'00_외근업무_홈.md',t);
+  }
+
+  /* 08 업무진행현황 */
+  wps.forEach(w=>{
+    const nm=wpN.get(w.id);
+    let t='---\ntags: [업무진행현황]\n연도: '+yq(w.year)+'\n업체: '+yq(w.customer)+'\n상태: '+yq(w.status)+'\n시작: '+yq(w.start)+'\n종료: '+yq(w.due)+'\n---\n\n# '+w.title+'\n\n- 연도: '+w.year+' · 번호 '+(w.no||'')+'\n- 업체: '+(w.customer||'')+(w.category?' / '+w.category:'')+'\n- 상태: '+(w.status||'')+(w.confirmed?'':' (추정)')+'\n- 기간: '+(w.start||'')+' ~ '+(w.due||'')+'\n'+(w.owner?'- 담당: '+w.owner+'\n':'')+(w.progress!=null&&w.progress!==''?'- 진척: '+w.progress+'%\n':'');
+    if(w.detail)t+='\n## 내용\n\n'+w.detail+'\n';
+    if(w.reason)t+='\n## 상태 판단 근거\n\n'+w.reason+'\n';
+    if(w.note)t+='\n## 메모\n\n'+w.note+'\n';
+    const cs=cards.filter(c=>(c.wl||[]).indexOf(w.id)>=0);
+    if(cs.length)t+='\n## 연결된 팀 업무\n\n'+cs.map(c=>'- [['+cardN.get(c.id)+']]').join('\n')+'\n';
+    W(R8+'항목/'+nm+'.md',t);
+  });
+  {
+    const yrs=Array.from(new Set(wps.map(w=>w.year))).sort().reverse();
+    let t='---\ntags: [업무진행현황, 홈]\n---\n\n# 업무진행현황 홈\n\n'+HEADNOTE+'\n\n- 전체 '+wps.length+'건 · '+['진행중','예정','보류','완료','중단'].map(s=>s+' '+wps.filter(w=>w.status===s).length).join(' · ')+'\n\n';
+    yrs.forEach(y=>{t+='## '+y+'년\n\n'+tbl(['업무','업체','상태','기간'],wps.filter(w=>w.year===y).map(w=>['[['+wpN.get(w.id)+']]',w.customer||'',w.status||'',(w.start||'')+' ~ '+(w.due||'')]))+'\n';});
+    W(R8+'00_업무진행현황_홈.md',t);
+  }
+
+  /* 09 일정 */
+  const sch=(typeof scheduleData!=='undefined'?scheduleData:[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const byM={};sch.forEach(s=>{const m=String(s.date).slice(0,7);(byM[m]=byM[m]||[]).push(s);});
+  Object.keys(byM).sort().forEach(m=>{
+    W(R9+'일정_'+m+'.md','---\ntags: [일정]\n---\n\n# '+m+' 일정\n\n'+HEADNOTE+'\n\n'+tbl(['일자','종료','유형','담당','제목','메모'],byM[m].map(s=>[s.date,s.end||'',s.type||'',s.who||'',s.title||'',s.memo||''])));
+  });
+  W(R9+'00_일정_홈.md','---\ntags: [일정, 홈]\n---\n\n# 일정 홈\n\n'+HEADNOTE+'\n\n- 등록 일정 '+sch.length+'건\n\n'+Object.keys(byM).sort().reverse().map(m=>'- [[일정_'+m+']] ('+byM[m].length+'건)').join('\n')+'\n');
+
+  /* 10 코멘트·이력 */
+  const cm=J('dgrns_cmt',{}),ck=Object.keys(cm);
+  W(R10+'코멘트_전체.md','---\ntags: [코멘트]\n---\n\n# 코멘트 전체\n\n프로그램의 코멘트 버튼으로 입력한 내용입니다.\n\n'+tbl(['대상','코멘트'],ck.map(k=>[(cm[k]&&cm[k].l)||k,(cm[k]&&cm[k].t)||''])));
+  const cl=J('dgrns_chglog',[]);
+  W(R10+'변경이력_최근.md','---\ntags: [변경이력]\n---\n\n# 변경 이력 (최근)\n\n단가·계획·품목정보·코멘트가 저장될 때 자동 기록된 내용입니다.\n\n'+tbl(['일시','작성자','구분','대상','항목','이전','이후'],cl.slice().reverse().map(x=>[x.t,x.u||'',x.k||'',x.o||'',x.f||'',x.a||'',x.b||''])));
+  let wh=[];try{wh=J('dgrns_workprog_hist',[]);}catch(e){}
+  W(R10+'업무진행_변경이력.md','---\ntags: [변경이력]\n---\n\n# 업무진행현황 변경 이력\n\n'+tbl(['일시','작성자','항목','필드','이전','이후','사유'],wh.slice().reverse().map(x=>[x.t,x.w||'',(wpN.get(x.id)?'[['+wpN.get(x.id)+']]':x.id),x.f||'',x.a||'',x.b||'',x.r||''])));
+
+  /* 루트 홈 */
+  W('00_대시보드_홈.md','---\ntags: [홈]\n---\n\n# 포항사업소 대시보드 — 옵시디언 홈\n\n프로그램에서 [📝 옵시디언 전체 내보내기] 를 누르면 아래 폴더가 모두 새로 만들어집니다 ('+today+' 기준).\n\n## 업무\n\n- [[00_팀업무_홈]] — 팀 업무 보드 ('+cards.length+'건)\n- [[00_외근업무_홈]] — 외근 보고 '+fseed.length+'건 · 업체 '+compSet.size+'곳\n- [[00_업무진행현황_홈]] — '+wps.length+'건\n- [[00_일정_홈]] — 일정 '+sch.length+'건\n- [[코멘트_전체]] · [[변경이력_최근]] · [[업무진행_변경이력]]\n\n## 품목·설비\n\n- [[00_포스코_품목_홈]] — 포스코 품목·규격서·사용처\n- [[00_동국제강_홈]] — 동국제강 래들·턴디시·전기로·보수기준\n\n## 직접 작성하는 곳\n\n- 개인 메모는 `01_개인메모` 같은 별도 폴더에 쓰세요. (04~10번 폴더는 내보낼 때마다 새로 만들어집니다)\n- 03_업무기록 은 프로젝트 업무기록 원문 보관 폴더입니다.\n');
+  A.mute=prevMute;
+  return files;
+}
+
+/* 보관함 폴더 핸들 기억(IndexedDB 별도 저장소 — 업무 데이터와 분리) */
+function obsDirDb(){return new Promise((res,rej)=>{const r=indexedDB.open('dgrns_obs',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function obsDirGet(){try{const d=await obsDirDb();return await new Promise(res=>{const q=d.transaction('h').objectStore('h').get('vault');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);});}catch(e){return null;}}
+async function obsDirSet(h){try{const d=await obsDirDb();await new Promise(res=>{const t=d.transaction('h','readwrite');t.objectStore('h').put(h,'vault');t.oncomplete=res;t.onerror=res;});}catch(e){}}
+async function obsDirClear(){try{const d=await obsDirDb();await new Promise(res=>{const t=d.transaction('h','readwrite');t.objectStore('h').delete('vault');t.oncomplete=res;t.onerror=res;});}catch(e){}}
+
+const OBS_GEN_DIRS=['04_포스코품목','05_동국제강','06_팀업무','07_외근업무','08_업무진행현황','09_일정','10_코멘트·이력'];
+async function obsWriteAll(dir,files,onProg){
+  for(const top of OBS_GEN_DIRS){try{await dir.removeEntry(top,{recursive:true});}catch(e){}}
+  const cache=new Map();cache.set('',dir);let n=0;const keys=Object.keys(files),total=keys.length;
+  const getDir=async(parts)=>{let key='',h=dir;for(const p of parts){const nk=key?key+'/'+p:p;let c=cache.get(nk);if(!c){c=await h.getDirectoryHandle(p,{create:true});cache.set(nk,c);}h=c;key=nk;}return h;};
+  for(const path of keys){
+    const parts=path.split('/'),name=parts.pop();
+    try{const dh=await getDir(parts);const fh=await dh.getFileHandle(name,{create:true});const w=await fh.createWritable();await w.write(files[path]);await w.close();}
+    catch(e){throw new Error(path+' 저장 실패: '+(e&&e.message?e.message:e));}
+    n++;if(onProg&&n%25===0)onProg(n,total);
+  }
+  return n;
+}
+async function obsAllRun(forceZip,forcePick){
+  const say=t=>{try{toast(t);}catch(e){}const m=document.getElementById('obsAllMsg');if(m)m.textContent=t;};
+  try{
+    say('옵시디언 노트를 만드는 중입니다…');
+    const base=await obsCollect();           // 04 포스코 품목 · 05 동국제강
+    const ops=obsBuildOps();                 // 06~10 업무 현황 + 00 홈
+    const files=Object.assign({},base,ops);
+    const cnt=Object.keys(files).length;
+    if(!forceZip&&window.showDirectoryPicker){
+      let dir=forcePick?null:await obsDirGet();
+      if(dir){
+        let p='denied';try{p=await dir.queryPermission({mode:'readwrite'});if(p!=='granted')p=await dir.requestPermission({mode:'readwrite'});}catch(e){}
+        if(p!=='granted')dir=null;
+      }
+      if(!dir){
+        alert('옵시디언 보관함 폴더를 한 번만 선택해 주세요 (예: OneDrive의 Claude 폴더).\n\n선택한 폴더는 기억되어 다음부터는 버튼 한 번으로 갱신됩니다.\n내보낼 때 04~10번 폴더가 새로 만들어지며, 다른 폴더(01_개인메모·03_업무기록 등)는 그대로 둡니다.');
+        try{dir=await window.showDirectoryPicker({mode:'readwrite'});}catch(e){say('폴더 선택이 취소되었습니다');return;}
+        await obsDirSet(dir);
+      }
+      const w=await obsWriteAll(dir,files,(a,b)=>say('노트 저장 중… '+a+'/'+b));
+      say('옵시디언 전체 내보내기 완료: 노트 '+w+'개를 "'+dir.name+'" 폴더에 저장했습니다');
+    }else{
+      const blob=obsZip(files);const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='옵시디언노트_전체_'+todayStr()+'.zip';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);
+      say('zip 파일로 저장했습니다(노트 '+cnt+'개). 압축을 풀어 보관함 폴더에 덮어 넣으세요');
+    }
+  }catch(e){say('내보내기 실패: '+(e&&e.message?e.message:e));console.error(e);}
+}
 
 function pidbXls(){const t=pidbTable('xls');downloadXls(pidbTab==='qa'?'포스코_Q코드_전체':pidbTab==='spec'?'포스코_자재규격':(pidbBidIsB()?'포스코_범용B_입찰결과':'포스코_정보목록'),t.html);}
 
@@ -25008,6 +25326,7 @@ function pidbXRows(){
   const U=pidbUI,q=(U.q||'').trim().toUpperCase(),qk=pidbNk(U.q||'');
   if(U.sp==='무'||U.grp||U.perf||U.dk||U.bid||U.dw||U.site||U.eq||pidbPinOn)return [];
   return (PIDB.X||[]).filter(x=>{
+    if(pidbP(x.k))return false;
     if(U.ty&&U.ty!=='미지정'&&x.t!==U.ty)return false;
     if(U.ty==='미지정')return false;
     if(pidbXCat&&x.cat!==pidbXCat)return false;
