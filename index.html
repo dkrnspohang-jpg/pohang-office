@@ -3691,8 +3691,8 @@ service cloud.firestore {
       <select class="selbox" id="pidb_ty" data-t="item spec dw qa" onchange="pidbUiSet()"><option value="">형태 전체</option><option>정형</option><option>부정형</option><option>기능성</option><option value="미지정">미지정</option></select>
       <select class="selbox" id="pidb_site" data-t="item qa" onchange="pidbUiSet()"><option value="">제철소 전체</option><option value="포항제철소">포항제철소</option><option value="광양제철소">광양제철소</option><option value="미정">미정(미입력)</option></select>
       <select class="selbox" id="pidb_eq" data-t="item qa" onchange="pidbUiSet()"><option value="">상세사용 전체</option></select>
-      <select class="selbox" id="pidb_bid" data-t="bid qa" data-m="G" onchange="pidbUiSet()"><option value="">입찰(범용B) 전체</option><option value="유">입찰 참여 유</option><option value="무">입찰 참여 무</option></select>
-      <select class="selbox" id="pidb_perf" data-t="bid qa" data-m="G" onchange="pidbUiSet()"><option value="">실적·순위 전체</option><option value="입찰결과">입찰결과 있음</option><option value="납품실적">납품 실적 있음</option><option value="1순위">공급 1순위</option><option value="2순위">공급 2순위</option><option value="참여">참여(순위 외)</option><option value="미참여">미참여</option></select>
+      <select class="selbox" id="pidb_bid" data-t="bid" data-m="G" onchange="pidbUiSet()"><option value="">입찰(범용B) 전체</option><option value="유">입찰 참여 유</option><option value="무">입찰 참여 무</option></select>
+      <select class="selbox" id="pidb_perf" data-t="bid" data-m="G" onchange="pidbUiSet()"><option value="">실적·순위 전체</option><option value="입찰결과">입찰결과 있음</option><option value="납품실적">납품 실적 있음</option><option value="1순위">공급 1순위</option><option value="2순위">공급 2순위</option><option value="참여">참여(순위 외)</option><option value="미참여">미참여</option></select>
       <select class="selbox" id="pidb_dk" data-t="bid" data-m="B" onchange="pidbUiSet()"><option value="">범용B 전체</option><option value="bid">동국 입찰가능</option></select>
       <select class="selbox" id="pidb_bsite" data-t="bid" data-m="B" onchange="pidbUiSet()"><option value="">제철소 전체</option><option value="포항제철소">포항제철소</option><option value="광양제철소">광양제철소</option><option value="공통">공통</option></select>
       <select class="selbox" id="pidb_rival" data-t="bid" data-m="B" onchange="pidbUiSet()"><option value="">경쟁사 전체</option></select>
@@ -12137,7 +12137,7 @@ const VIEWS={home:['포항사업소 일정','일정·스케줄 관리 (향후 �
   pidbbid:['포스코 입찰','품목에서 불러온 입찰 대상 — 범용B / SET 구분 조회 · 입찰가능업체 · 입찰순위 · 입찰단가 · 범용B 입찰현황'],
   pidbspec:['포스코 스펙','품목에서 연동 — 물성 · 성분 항목별 스펙 (규격서 MJ·PJ·KJ, 직접 입력값 우선)'],
   pidbdw:['포스코 도면','품목에서 연동 — Q코드별 도면 · 규격 불일치 조회·수정 · 도면 PDF 저장'],
-  pidbqa:['포스코 Q코드 전체 (스펙 포함)','Q코드 1줄 1행 + 스펙 전체 — 제품 특성 · 사용처 · 사용부위 · 납품실적 · 입찰 가능 여부 · 스펙 · 도면 · 미입찰 사유·이력 관리 · 엑셀 전체 출력'],
+  pidbqa:['포스코 Q코드 전체 (스펙 포함)','품명 · Q코드 · 규격 · 단중 · 스펙(제품 특성 포함) · 도면 · 제철소 · 사용설비 · 사용부위 조회 (입찰 정보는 ② 입찰) · 엑셀 전체 출력'],
   poscononsup:['신규 입찰 정보','개방(범용B 전환) 품목 · 개방 진행사항 · 설비별 SET 단가 · 미납품 품목 — 앞으로의 입찰에 쓸 정보를 한곳에 누적'],
   safetygear:['안전보호구 발주 관리','품목단가·거래처 변경(조은산업→대명공구백화점) 원가절감 · 발주물량 검토(연도별·월별) · 개인별 보호구 사이즈(예시)'],
   bizplan:['사업계획','연도·버전별 동국제강 보수·구매계획 · 포스코·시중 · 월판매계획 · 25년 실적 대비 요약'],
@@ -23095,12 +23095,12 @@ const PIDB_TABS={
   item:{label:'① 품목',desc:'포스코 모든 품목의 기초 — 구분 · 형태 · Q코드 · 규격 · 단중 · 사용처. 제품명을 누르면 Q코드와 함께 스펙·도면·입찰이 연동되어 펼쳐집니다',
     segs:[{ids:['chk']},{ids:['name']},{ids:['grp']},{ids:['type']},{ids:['qc']},{ids:['spec']},{ids:['uw']},{g:'사용처',gc:'g2',ids:['site','det','part']},{ids:['memo']}]},
   bid:{label:'② 입찰',desc:'범용B = 엑셀 입찰결과표와 같은 한 장(업체별 입찰 대상 ○ · 낙찰금액 · 합계) + 우리(동국) 경쟁현황 + 품명을 누르면 스펙·사용처·규격별 단가(kg×단중). SET 등은 품목 기준 표',
-    segs:[{ids:['chk']},{ids:['name']},{ids:['grp']},{ids:['qc']},{ids:['spec']},{g:'입찰 정보',gc:'g3',ids:['bid','vend','pkg','pea','eff','rank']},{ids:['del']}]},
+    segs:[{ids:['chk']},{ids:['name']},{ids:['grp']},{ids:['qc']},{ids:['spec']},{g:'입찰 정보',gc:'g3',ids:['bid','nbr','vend','pkg','pea','eff','rank','q27']},{ids:['del']}]},
   spec:{label:'③ 스펙',desc:'엑셀 자재규격표와 같은 한 장 — 정형품 · 부정형품 · 사용설비 + 구분·Q코드·도면·입찰 연동 (규격서 MJ·PJ·KJ, 직접 입력값 우선)',
     segs:[{ids:['chk']},{ids:['name']},{ids:['type']},{ids:['qc']},{ids:['spec']},{ids:['uw']},{ids:['SPEC']}]},
   dw:{label:'③ 도면',desc:'품목에서 연동 — Q코드별 도면(규격 일치 연결) · 불일치 조회·수정 · 도면 PDF 저장',
     segs:[{ids:['chk']},{ids:['name']},{ids:['type']},{ids:['qc']},{ids:['spec']},{ids:['uw']},{ids:['dw']}]},
-  qa:{label:'④ Q코드 전체 (스펙 포함)',desc:'Q코드 1줄 1행 + 스펙(물성·성분) 전체 — 제품명 기준, 규격서에만 있어 Q코드가 없는 스펙은 아래쪽에 Q코드 빈 칸으로 모아 둡니다(Q코드를 입력하면 위로 합쳐짐). 제철소·상세사용·사용부위·입찰·미입찰 사유·이력을 한 화면에서 입력합니다',
+  qa:{label:'④ Q코드 전체 (스펙 포함)',desc:'Q코드 1줄 1행 + 스펙(물성·성분) 전체 — 제품명 기준, 규격서에만 있어 Q코드가 없는 스펙은 아래쪽에 Q코드 빈 칸으로 모아 둡니다(Q코드를 입력하면 위로 합쳐짐). 제철소·상세사용(설비)·사용부위를 한 화면에서 조회·입력합니다. 입찰 관련 정보는 ② 입찰에서 봅니다',
     segs:[]}
 };
 /* ---- 체크(고정) : 필요한 품목만 체크해 두고 [체크한 것만 보기]로 모아 보기 — 이 PC 브라우저에만 저장, 4개 화면 공통 ---- */
@@ -23183,6 +23183,9 @@ const PIDB_COLS={
   bid:{h:'입찰 참여<br>유/무',gc:'g3',
     pr:x=>`<td class="bc" ${PIDB_STOP}>${x.by?`<span class="pidb-bt by">유 ${x.by}</span>`:''}${x.bn?` <span class="pidb-bt bn">무 ${x.bn}</span>`:''}${x.ed?`<div><select class="pidb-sl" onchange="pidbBidAll('${esc(x.p.k)}',this.value);this.value=''"><option value="">일괄 변경…</option><option value="유">전체 유</option><option value="무">전체 무</option><option value="auto">자동값으로</option></select></div>`:''}</td>`,
     qr:(x,c)=>{const b=pidbBid(c,x.L);return `<td class="bc">${x.ed?`<select class="pidb-b b${b==='유'?'y':'n'}" onchange="pidbSet('${c}','bid',this.value)"><option ${b==='유'?'selected':''}>유</option><option ${b==='무'?'selected':''}>무</option></select>${pidbOv.q[c]&&pidbOv.q[c].bid?'<div class="s">수정됨</div>':''}`:`<span class="pidb-bt b${b==='유'?'y':'n'}">${b}</span>`}</td>`;}},
+  nbr:{h:'미입찰 사유',gc:'g3',pr:()=>'<td class="s"></td>',
+    qr:(x,c)=>{const b=pidbBid(c,x.L),o=pidbOv.q[c]||{};return `<td class="s" style="min-width:90px">${b==='무'?(x.ed?`<select class="pidb-sl" onchange="pidbNbrSet('${c}',this.value)"${o.nbr?'':' style="border-color:#f59e0b;background:#fffbeb"'}><option value="">사유 선택</option>${PIDB_NBR.map(r=>`<option${r===o.nbr?' selected':''}>${esc(r)}</option>`).join('')}</select>`:(o.nbr?esc(o.nbr):'<span class="pidb-none">미입력</span>')):'<span class="pidb-none">—</span>'}</td>`;}},
+  q27:{h:'27년 물량<br>(kg)',gc:'g3',pr:()=>'<td class="n s"></td>',qr:(x,c)=>{const q=(typeof p27Q==='function'?+p27Q(c).qty||0:0);return `<td class="n">${q?pidbN(q):''}</td>`;}},
   vend:{h:'입찰가능<br>업체',gc:'g3',
     pr:x=>`<td class="vd">${pidbVendHtml(x.le)}${x.le?`<div class="s">${esc(x.le.year)}년 입찰</div>`:''}</td>`,qr:()=>'<td></td>'},
   pkg:{h:'단가<br>(원/kg)',gc:'g3',
@@ -23329,14 +23332,30 @@ function pidbFeatSet(pk){
   if(String(v).trim())pidbOv.ft[pk]=String(v).trim();else delete pidbOv.ft[pk];
   pidbOvSave();pidbRender();
 }
-function pidbSpecCompact(sp,p){
-  if(!sp)return `<td class="sc nos" style="text-align:left">스펙 미확인${pidbCanEdit()?` · <a href="#" class="pidb-lk" onclick="pidbSpecEdit('${esc(p.k)}');return false">직접 입력</a>`:''}</td>`;
+const PIDB_LZ=[],PIDB_LZM=new Map();
+function pidbLazySel(h){
+  return h.replace(/<select([^>]*)>([\s\S]*?)<\/select>/g,(m,at,inner)=>{
+    const opts=inner.match(/<option[\s\S]*?<\/option>/g)||[];if(opts.length<6)return m;
+    const keep=[opts[0]].concat(opts.slice(1).filter(o=>/\sselected/.test(o)));
+    const full=inner.replace(/\sselected(="[^"]*")?/g,'');
+    let id=PIDB_LZM.get(full);if(id==null){id=PIDB_LZ.length;PIDB_LZ.push(full);PIDB_LZM.set(full,id);}
+    return '<select'+at+' data-lz="'+id+'">'+keep.join('')+'</select>';});
+}
+function pidbLazyFill(el){
+  if(!el||el.tagName!=='SELECT'||!el.hasAttribute('data-lz'))return;
+  const cur=el.value,html=PIDB_LZ[+el.getAttribute('data-lz')];el.removeAttribute('data-lz');
+  if(html==null)return;el.innerHTML=html;el.value=cur;
+}
+['pointerover','focusin','pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,e=>pidbLazyFill(e.target),true));
+function pidbSpecCompact(sp,p,feat,fk,fed){
+  const fl=(feat||fk)?`<div style="color:#0f172a;font-weight:600">${esc(feat||'')}${fk?` <a href="#" class="pidb-ed" title="제품 특성 직접 입력" onclick="pidbFeatSet('${fk}');return false">✎</a>`:''}</div>`:'';
+  if(!sp)return `<td class="sc nos" style="text-align:left;white-space:normal;min-width:300px;max-width:360px;font-size:11px;line-height:1.45">${fl}<span style="color:#94a3b8">스펙 미확인</span>${pidbCanEdit()?` · <a href="#" class="pidb-lk" onclick="pidbSpecEdit('${esc(p.k)}');return false">직접 입력</a>`:''}</td>`;
   const sh={'부피비중':'비중','압축강도':'압축','기공율':'기공','하중연화점':'연화','곡강도':'곡강','선변화율':'선변','수분첨가량':'수분','최고사용온도':'최고온도','내화도':'내화도'};
   const f=v=>esc(String(v==null?'':v).replace(/\s*\n\s*/g,' / '));
   const ph=PIDB_PH.filter(x=>sp.p[x[0]]!=null&&sp.p[x[0]]!=='').map(x=>`<span class="spk">${sh[x[0]]||x[0]}</span> ${f(sp.p[x[0]])}`);
   const ch=PIDB_CH.filter(k=>sp.c[k]!=null&&sp.c[k]!=='').map(k=>`<span class="spk">${k}</span> ${f(sp.c[k])}`);
   const ot=[pidbChemOther(sp),pidbOther(sp)].filter(Boolean).map(esc).join(' · ');
-  return `<td class="sc spc" style="text-align:left;white-space:normal;min-width:290px;max-width:330px;font-size:11px;line-height:1.45">${ph.length?`<div>${ph.join(' · ')}</div>`:''}${ch.length?`<div style="color:#1d4ed8">${ch.join(' · ')}</div>`:''}${ot?`<div style="color:#64748b">${ot}</div>`:''}<div class="s">${esc(sp.src)} · <a href="#" class="pidb-lk" onclick="pidbSpecModal('${esc(p.k)}');return false">${sp.more?'다른 규격서 '+sp.more+'건':'상세'}</a></div></td>`;
+  return `<td class="sc spc" style="text-align:left;white-space:normal;min-width:300px;max-width:360px;font-size:11px;line-height:1.45">${fl}${ph.length?`<div>${ph.join(' · ')}</div>`:''}${ch.length?`<div style="color:#1d4ed8">${ch.join(' · ')}</div>`:''}${ot?`<div style="color:#64748b">${ot}</div>`:''}<div class="s">${esc(sp.src)} · <a href="#" class="pidb-lk" onclick="pidbSpecModal('${esc(p.k)}');return false">${sp.more?'다른 규격서 '+sp.more+'건':'상세'}</a></div></td>`;
 }
 function pidbQaRows(){
   const L=pidbLive(),idx=pidbIndex(),out=[],blank=[];
@@ -23382,47 +23401,32 @@ function pidbQaPage(mode){
         +cell(lr.d||'')+cell(dq?lr.n:'')+cell(dq?Math.round(lr.a||0):'')+cell(dq?dq.n:'')+cell(dq?Math.round(dq.a):'')+cell(o.memo||'')+cell(hs.length||'')+cell(last?last.d+' '+last.t:'')+pidbSpecCells(x.sp,p,false,'xls')+'</tr>';});
     return {html:h+'</tbody></table>',np:new Set(rows.map(r=>r.p.k)).size,nq:rows.length};
   }
-  const nSp=1;
-  const H=['제품명','Q코드','규격','단중<br>(kg)','구분','형태','제품 특성','제철소','상세사용','사용부위','입찰<br>유/무','미입찰 사유','입찰가능<br>업체','단가<br>(원/kg)','입찰결과(최신)','공급<br>순위','27년<br>물량(kg)','최근 납품<br>(누계)'];
-  const HS='<th class="sc" style="min-width:290px">스펙 (물성·성분)<br><small>출처 규격서</small></th>';
-  const HT=['도면','이력','메모'];
-  const nCol=H.length+nSp+HT.length;
-  let h='<style>table.pidb.qa th,table.pidb.qa td{padding-left:4px!important;padding-right:4px!important}table.pidb.qa td.s{font-size:11px}table.pidb.qa .pidb-in{max-width:100%}</style><table class="pidb qa"><thead><tr>'+H.map((t,i)=>`<th${i===0?' class="c1"':''}>${t}</th>`).join('')+HS+HT.map(t=>`<th>${t}</th>`).join('')+'</tr></thead><tbody>';
-  let prev='',nb=0,sepDone=false;
-  rows.forEach(x=>{const {p,c,it,us,pr,dq,le,o,b}=x,first=prev!==p.k;prev=p.k;
+  const H=['제품명','Q코드','규격','단중<br>(kg)'];
+  const HS='<th class="sc" style="min-width:320px">스펙 (제품 특성 · 물성 · 성분)<br><small>출처 규격서</small></th>';
+  const HT=['도면','제철소','상세사용<br>(설비)','사용부위'];
+  const nCol=H.length+1+HT.length;
+  let h='<style>table.pidb.qa th,table.pidb.qa td{padding-left:5px!important;padding-right:5px!important}table.pidb.qa td.s{font-size:11px}table.pidb.qa td.dwc{min-width:240px;max-width:280px;white-space:normal}table.pidb.qa td.dwc>*{max-width:260px}table.pidb.qa .pidb-in{max-width:100%}</style><table class="pidb qa"><thead><tr>'+H.map((t,i)=>`<th${i===0?' class="c1"':''}>${t}</th>`).join('')+HS+HT.map(t=>`<th>${t}</th>`).join('')+'</tr></thead><tbody>';
+  const BL=window.__qaBl||150;let prev='',nb=0,nbHid=0,sepDone=false;
+  rows.forEach(x=>{const {p,c,it}=x,first=prev!==p.k;prev=p.k;
     if(x.blank&&!sepDone){sepDone=true;h+=`<tr class="grp"><td colspan="${nCol}" style="background:#fffbeb;text-align:left;font-weight:700;padding:6px 10px;position:sticky;left:0">▣ 스펙은 있으나 Q코드가 없는 품목 <span class="s">(규격서 전용 · Q코드 칸을 채우면 위 목록으로 합쳐집니다)</span></td></tr>`;}
-    let spCells;
-    if(first)spCells=pidbSpecCompact(x.sp,p);else spCells='<td class="sc"></td>';
-    const fts=`<td class="s ft">${first?`${esc(x.feat)||'<span class="pidb-none">—</span>'}${ed?` <a href="#" class="pidb-ed" title="제품 특성 직접 입력" onclick="pidbFeatSet('${esc(p.k)}');return false">✎</a>`:''}`:''}</td>`;
+    const spCells=first?pidbSpecCompact(x.sp,p,[x.ty,x.feat].filter(Boolean).join(' · '),ed?p.k:'',x.featEd):'<td class="sc"></td>';
     const pn=`<td class="pn c1">${first?`<b>${esc(p.n)}</b>${pidbCmChip(p.k,ed,false)}`:`<span style="color:#94a3b8">${esc(p.n)}</span>`}</td>`;
-    const gc=`<td class="gc">${x.gs.length?x.gs.map(g=>`<span class="pidb-g g${g}" title="${PIDB_GN[g]}" style="padding:0 5px">${g}</span>`).join(''):'<span class="pidb-none">—</span>'}</td><td class="tc">${x.ty?(first?`<b>${x.ty}</b>`:x.ty):'<span class="pidb-none">미지정</span>'}</td>`;
-    if(x.blank){nb++;
+    if(x.blank){if(nb>=BL){nbHid++;return;}nb++;
       const qin=ed?`<input class="pidb-in" style="width:92px;border-color:#f59e0b;background:#fffbeb" placeholder="Q코드 입력" onchange="pidbQaAddQ('${esc(p.k)}',this.value)" title="Q코드(Q+숫자)를 입력하면 이 스펙에 Q코드가 연결됩니다">`:'<span class="pidb-none">없음</span>';
-      h+=`<tr class="qr qa-first" style="border-top:2px solid #cbd5e1">${pn}<td class="qc">${qin}</td><td class="sw"></td><td class="sw n"></td>${gc}${fts}<td class="uc s" colspan="3" style="color:#94a3b8">Q코드 입력 후 제철소·상세사용·사용부위 입력</td><td class="bc"></td><td class="s"></td><td class="vd"></td><td class="n"></td><td class="ef s"></td><td class="rkc"></td><td class="n"></td><td class="dl s"></td>${spCells}<td class="dwc"></td><td class="s"></td><td class="mc"></td></tr>`;
+      h+=`<tr class="qr qa-first" style="border-top:2px solid #cbd5e1">${pn}<td class="qc">${qin}</td><td class="sw"></td><td class="sw n"></td>${spCells}<td class="dwc"></td><td class="uc s" colspan="3" style="color:#94a3b8">Q코드 입력 후 제철소·상세사용·사용부위 입력</td></tr>`;
       return;}
-    const hs=pidbHistOf(c),last=hs.length?hs[hs.length-1]:null;
-    const bsel=ed?`<select class="pidb-b b${b==='유'?'y':'n'}" onchange="pidbSet('${c}','bid',this.value)"><option ${b==='유'?'selected':''}>유</option><option ${b==='무'?'selected':''}>무</option></select>`:`<span class="pidb-bt b${b==='유'?'y':'n'}">${b}</span>`;
-    const nbr=b==='무'?(ed?`<select class="pidb-sl" onchange="pidbNbrSet('${c}',this.value)"${o.nbr?'':' style="border-color:#f59e0b;background:#fffbeb"'}><option value="">사유 선택</option>${PIDB_NBR.map(r=>`<option${r===o.nbr?' selected':''}>${esc(r)}</option>`).join('')}</select>`:(o.nbr?esc(o.nbr):'<span class="pidb-none">미입력</span>')):'<span class="pidb-none">—</span>';
     const ox=pidbOv.q[c]||{};
     const specTd=`<td class="sw">${ed?`<input class="pidb-in" style="width:64px" value="${esc(it[1]||'')}" onchange="pidbQSet('${c}','spec',this.value)" title="규격 직접 수정">`:esc(it[1]||'')}${ox.spec!==undefined?` <a href="#" class="pidb-ed" title="원래 규격으로 되돌리기" onclick="pidbQReset('${c}');return false">↺</a>`:''}</td>`;
     const uwTd=`<td class="sw n">${ed?`<input class="pidb-in" style="width:50px;text-align:right" value="${it[2]!=null?it[2]:''}" onchange="pidbQSet('${c}','uw',this.value)" title="단중(kg) 직접 수정">`:(it[2]!=null?it[2]:'')}</td>`;
     const xo={ed};
     h+=`<tr class="qr${first?' qa-first':''}" style="${first?'border-top:2px solid #cbd5e1':''}">${pn}`
-      +`<td class="qc"><code>${esc(c)}</code>${pidbCmQChip(c,ed)}</td>${specTd}${uwTd}${gc}${fts}`
-      +PIDB_COLS.site.qr(xo,c)+PIDB_COLS.det.qr(xo,c)+PIDB_COLS.part.qr(xo,c)
-      +`<td class="bc">${bsel}</td><td class="s" style="min-width:90px;max-width:120px">${nbr}</td>`
-      +`<td class="vd">${pidbVendHtml(le)}</td>`
-      +`<td class="n" title="${pr?esc(pr.src):''}">${pr&&pr.kg?pidbN(pr.kg):''}</td>`
-      +`<td class="ef s">${le?esc(pidbEffTxt([le])):'<span class="pidb-none">—</span>'}</td><td class="rkc">${pidbRankChip(le)}</td>`
-      +`<td class="n">${x.q27?pidbN(x.q27):''}</td>`
-      +`<td class="dl s">${dq?pidbDelHtml(dq):'<span class="pidb-none">—</span>'}</td>`
-      +spCells
+      +`<td class="qc"><code>${esc(c)}</code>${pidbCmQChip(c,ed)}</td>${specTd}${uwTd}${spCells}`
       +`<td class="dwc">${pidbDwChips(c,'view')}</td>`
-      +`<td class="s" style="min-width:90px"><a href="#" class="pidb-lk" onclick="pidbHistOpen('${c}');return false">📝 ${hs.length?hs.length+'건':'기록'}</a>${last?`<div class="s" style="max-width:130px;white-space:normal">${esc(last.d)} ${esc(last.t)}</div>`:''}</td>`
-      +`<td class="mc">${ed?`<input class="pidb-in" style="width:90px" value="${esc(o.memo||'')}" placeholder="메모" onchange="pidbQSet('${c}','memo',this.value)">`:esc(o.memo||'')}</td></tr>`;});
+      +PIDB_COLS.site.qr(xo,c)+PIDB_COLS.det.qr(xo,c)+PIDB_COLS.part.qr(xo,c)+'</tr>';});
+  if(nbHid)h+=`<tr class="grp"><td colspan="${nCol}" style="text-align:left;padding:8px 12px;position:sticky;left:0;background:#fffbeb"><a href="#" class="pidb-lk" onclick="window.__qaBl=(window.__qaBl||150)+300;pidbRender();return false">▼ Q코드 없는 스펙 ${nbHid}종 더 보기 (300종씩)</a> &nbsp;·&nbsp; <a href="#" class="pidb-lk" onclick="window.__qaBl=99999;pidbRender();return false">전체 보기</a> <span class="s">(화면이 느려지지 않도록 일부만 표시 · 검색·필터로 찾으면 바로 표시됩니다)</span></td></tr>`;
   if(!rows.length)h+=`<tr><td colspan="${nCol}"><div class="empty">조건에 맞는 Q코드가 없습니다.</div></td></tr>`;
   const nq=rows.filter(r=>!r.blank).length;
-  return {html:h+'</tbody></table>',np:new Set(rows.map(r=>r.p.k)).size,nq,txt:`제품 ${new Set(rows.map(r=>r.p.k)).size}종 · Q코드 없는 스펙 ${nb}종`};
+  return {html:pidbLazySel(h+'</tbody></table>'),np:new Set(rows.map(r=>r.p.k)).size,nq,txt:`제품 ${new Set(rows.map(r=>r.p.k)).size}종 · Q코드 없는 스펙 ${nb+nbHid}종`};
 }
 /* ① 품목에서 제품을 눌렀을 때 — 스펙·도면·입찰이 한 줄 요약으로 연동되어 보임 */
 function pidbLinkRow(x,sp,nc){
@@ -23521,7 +23525,7 @@ function pidbCards(){
   const us=PIDB.P.reduce((a,p)=>a+p.qs.filter(c=>pidbUsesOf(c).some(u=>u.site)).length,0);
   const card=(l,v,u,sub)=>`<div class="card"><div class="l">${l}</div><div class="v">${v}<small> ${u}</small></div>${sub?`<div style="font-size:11px;color:var(--muted)">${sub}</div>`:''}</div>`;
   if(pidbTab==='qa'){let nb=0,nbr=0,nh=0,nsp=0;PIDB.P.forEach(p=>{const has=!!pidbSpecOf(p);p.qs.forEach(c=>{const o=pidbOv.q[c]||{};if(pidbBid(c,L)==='무'){nb++;if(o.nbr)nbr++;}if((o.hist||[]).length)nh++;if(has)nsp++;});});
-    return card('Q코드 전체',nq,'개','입찰 유 '+y+' · 무 '+n)+card('미입찰(무) 사유 입력',nbr,'/'+nb,'사유가 없는 미입찰 '+(nb-nbr)+'개')+card('이력 기록',nh,'개 Q코드','입찰·미입찰 이력(날짜·내용)')+card('스펙 있는 제품',PIDB.P.filter(p=>pidbSpecOf(p)).length+(PIDB.X||[]).filter(x=>!pidbP(x.k)).length,'종','Q코드 없는 스펙 '+(PIDB.X||[]).filter(x=>!pidbP(x.k)).length+'종 — 빈 칸에 Q코드를 채우면 연결')+card('도면 연동',dw,'/'+nq,'규격 일치 기준');}
+    return card('Q코드 전체',nq,'개','입찰 유 '+y+' · 무 '+n)+card('스펙 있는 제품',PIDB.P.filter(p=>pidbSpecOf(p)).length+(PIDB.X||[]).filter(x=>!pidbP(x.k)).length,'종','Q코드 없는 스펙 '+(PIDB.X||[]).filter(x=>!pidbP(x.k)).length+'종 — 빈 칸에 Q코드를 채우면 연결')+card('도면 연동',dw,'/'+nq,'규격 일치 기준');}
   if(pidbTab==='bid'&&pidbBidIsB())return pidbBidCardsB();
   if(pidbTab==='bid')return card('입찰 참여(범용B) 유',y,'개 Q코드','무 '+n)+card('범용B 입찰결과',effN,'종','25·26년 입찰결과가 있는 제품')+card('우리 공급 순위',rk['1순위']||0,'종 1순위','2순위 '+(rk['2순위']||0)+' · 참여 '+(rk['참여(순위 외)']||0)+' · 미참여 '+(rk['미참여']||0))+card('납품 실적',delN,'종','최신 납품실적이 있는 제품')+card('SET 내화물',g.S,'종','범용B '+g.B+' · 범용A '+g.A+' · 핵심 '+g.K);
   if(pidbTab==='spec'){const noSp=PIDB.P.length-sp;return card('스펙 확인',sp,'/'+PIDB.P.length+'종','미확인 '+noSp+'종 — 직접 입력 가능')+card('규격서 출처',PIDB.P.filter(p=>(p.sp||[]).length).length,'종','MJ·PJ·KJ 규격서 · 수기 입력 '+Object.keys(pidbOv.sp||{}).length+'종')+card('형태',ty['정형']+ty['부정형']+ty['기능성'],'종 지정','정형 '+ty['정형']+' · 부정형 '+ty['부정형']+' · 기능성 '+ty['기능성']+(ty['']?' · 미지정 '+ty['']:''));}
@@ -35133,7 +35137,7 @@ async function bpErpFixApply(){
    화면 폭에 맞춰 자동 축소(CSS zoom)해 잘림 없이 한 번에 보이게 한다. 최소 50%까지(그 이하는 가로 스크롤 유지).
    상단 [↔ 한 화면 맞춤] 버튼으로 켬/끔(기본 켬, 저장 키 dgrns_fitw). 화면이 다시 그려지거나 창 크기가 바뀌면 자동 재계산. */
 const FITW_KEY='dgrns_fitw',FITW_MIN=0.5;
-let __fitwT=0,__fitwBusy=false;
+let __fitwT=0,__fitwBusy=false,__fitwSig='',__fitwLast=0;
 function fitwOn(){try{return localStorage.getItem(FITW_KEY)!=='0';}catch(e){return true;}}
 function fitwBtnMark(){const b=document.getElementById('fitBtn');if(!b)return;const on=fitwOn();b.textContent='↔ 한 화면 맞춤: '+(on?'켬':'끔');b.style.background=on?'#e0f2fe':'';b.style.borderColor=on?'#7dd3fc':'';}
 function fitwToggle(){try{localStorage.setItem(FITW_KEY,fitwOn()?'0':'1');}catch(e){}fitwBtnMark();fitwRun();}
@@ -35142,13 +35146,15 @@ let __fitwQ=0;
 function fitwNow(){if(__fitwQ)return;clearTimeout(__fitwT);__fitwQ=requestAnimationFrame(()=>{__fitwQ=0;fitwRun();});}
 function fitwRun(){
   if(__fitwBusy)return;const c=document.querySelector('.content');if(!c)return;
+  const __sig=((document.querySelector('.view.active')||{}).id||'')+'|'+c.getElementsByTagName('*').length+'|'+window.innerWidth+'|'+c.clientWidth+'|'+(fitwOn()?1:0);
+  if(__sig===__fitwSig&&performance.now()-__fitwLast<20000)return;
   __fitwBusy=true;const mn=document.querySelector('.main'),st=mn?mn.scrollTop:0,sl=mn?mn.scrollLeft:0,wsl=window.scrollX;
   try{
     try{stkhUndo();}catch(e){}
     c.querySelectorAll('[data-fitw]').forEach(el=>{el.style.zoom='';el.removeAttribute('data-fitw');});
     if(!fitwOn()||document.body.classList.contains('mv')||window.innerWidth<900)return;
     const cand=[];
-    c.querySelectorAll('*').forEach(e=>{
+    c.querySelectorAll('div,section,article,form,main,table,ul,ol,aside,details').forEach(e=>{
       if(!e.offsetWidth||e.clientWidth<200||e.scrollWidth<=e.clientWidth+3)return;
       if(e.firstElementChild&&/scale\(/.test(e.firstElementChild.style.transform||''))return;   /* rpt169: transform으로 이미 축소한 미리보기(해체 목록 등)는 이중 축소 금지 */
       const cs=getComputedStyle(e),ox=cs.overflowX;
@@ -35161,7 +35167,7 @@ function fitwRun(){
         for(const ch of e.children){if(ch.tagName==='SCRIPT'||ch.tagName==='STYLE')continue;ch.style.zoom=z;ch.setAttribute('data-fitw','1');}
       }});
   }catch(err){}
-  finally{if(mn){mn.scrollTop=st;mn.scrollLeft=sl;}if(wsl&&window.scrollX!==wsl)window.scrollTo(wsl,window.scrollY);__fitwBusy=false;try{stkhRun();}catch(e){}}
+  finally{__fitwSig=((document.querySelector('.view.active')||{}).id||'')+'|'+c.getElementsByTagName('*').length+'|'+window.innerWidth+'|'+c.clientWidth+'|'+(fitwOn()?1:0);__fitwLast=performance.now();if(mn){mn.scrollTop=st;mn.scrollLeft=sl;}if(wsl&&window.scrollX!==wsl)window.scrollTo(wsl,window.scrollY);__fitwBusy=false;try{stkhRun();}catch(e){}}
 }
 (function(){const init=()=>{const c=document.querySelector('.content');if(!c||!window.MutationObserver)return;
   new MutationObserver(ms=>{if(__fitwBusy)return;let big=false;
