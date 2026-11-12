@@ -21355,7 +21355,9 @@ function setPoscoField(item,key,val){
   const before=poscoField({item,[key]:poscoOrig(item,key)},key);
   let after;
   if(key==='alloc'||key==='baseVendor'){
-    const s=(val||'').trim();
+    let s=(val||'').trim();
+    if(key==='alloc'&&s){s=s.replace(/[%\s]+/g,'').replace(/[\/\-·,;~]+/g,':');
+      if(!/^\d+(\.\d+)?(:\d+(\.\d+)?)*$/.test(s)){toast('배분율은 80:20 · 60:40 · 100 같은 형식으로 입력하세요');renderPosco();return;}}
     if(!s||s===(poscoOrig(item,key)||''))delete ov[key];else ov[key]=s;
     after=ov[key]!=null?ov[key]:poscoOrig(item,key);
   }else{
@@ -21375,6 +21377,11 @@ function setPoscoField(item,key,val){
     savePoscoFieldLog();
   }
   renderPosco();
+  if(key==='alloc'){try{
+    const e=poscoEff(POSCO_SEED.find(x=>x.item===item)),ws=e.winners.filter(x=>x.pct>0),sum=e.winners.reduce((a,b)=>a+b.pct,0);
+    let t=item+' 배분율 '+(poscoField(e,'alloc')||'-')+' → '+(ws.length?ws.map(x=>(x.v==='동국'?'동국':x.v)+' '+Math.round(x.pct*100)+'%').join(' · '):'배분받는 업체 없음');
+    if(e.amount&&sum<0.995)t+=' ※ 2순위 이하 업체가 지정되지 않아 '+Math.round((1-sum)*100)+'%는 어느 업체에도 배분되지 않았습니다(업체 칸에서 순위 지정)';
+    toast(t);}catch(e){}}
 }
 function poscoTab(sp){poscoSub=sp;
   document.querySelectorAll('#poscoSubtabs .subtab').forEach(b=>b.classList.toggle('active',b.dataset.sp===sp));
@@ -21393,6 +21400,7 @@ function poscoAllocParts(a){
   a=String(a==null?'':a).trim();
   if(a.indexOf(':')>=0){const p=a.split(':').map(x=>parseFloat(x)).filter(x=>x>0);return p.length?p:[100];}
   const n=parseFloat(a);if(!(n>0)||n>=100||n<=1)return [100];
+  if(n>=10)return [n,100-n];   // 2026-11-12: '50'·'70' 처럼 두 자리 숫자 = 1순위 비율(50→50:50, 70→70:30). 예전에는 50등분으로 해석되어 금액이 2%만 남았음
   return Array.from({length:Math.round(n)},()=>1);
 }
 function poscoEff(r){
@@ -24967,7 +24975,11 @@ function pidbYrHead(y,g,nc){
 /* ---- 기존 범용B 입찰현황 셀 (기존 화면과 같은 동작) ---- */
 function pidbBEdit(r,key,w){const v=poscoField(r,key),ch=poscoFieldChanged(r,key);
   return `<input type="text" class="dnum" style="width:${w||70}px;text-align:right${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${v==null?'':Math.round(v).toLocaleString()}" title="${ch?'원본 '+pN(r[key])+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','${key}',this.value)">`;}
-function pidbBAlloc(r){const v=poscoField(r,'alloc')||'',ch=poscoFieldChanged(r,'alloc');
+function pidbBAlloc(r){let h=pidbBAlloc0(r);
+  const W=r.winners||[],_sum=W.reduce((a,b)=>a+b.pct,0),v=String(poscoField(r,'alloc')||'');
+  if(r.amount&&(W.length?_sum<0.995:v.indexOf(':')>=0)){h=h.replace('title="','title="※ 2순위 이하 업체가 지정되지 않아 일부 금액이 배분되지 않았습니다(업체 칸에서 순위 지정) · ').replace('border-color:#f59e0b','border-color:#dc2626').replace('style="width:60px;text-align:center','style="width:60px;text-align:center;border-color:#dc2626;box-shadow:0 0 0 1px #dc2626 inset');}
+  return h;}
+function pidbBAlloc0(r){const v=poscoField(r,'alloc')||'',ch=poscoFieldChanged(r,'alloc');
   return `<input type="text" class="dtxt" style="width:60px;text-align:center${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="80:20" title="${ch?'원본 '+esc(r.alloc||'-')+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','alloc',this.value)">`;}
 function pidbBVend(r){const v=poscoField(r,'baseVendor')||'',ch=poscoFieldChanged(r,'baseVendor');
   return `<input type="text" list="pvDL" class="dtxt" style="width:118px${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="현재 납품업체" title="${ch?'원본 '+esc(r.baseVendor||'-')+' · 비우면 원본값으로 복귀':'클릭해서 현재 납품업체 수정 (예: 조선/퓨처엠)'}" onchange="setPoscoField('${esc(r.item)}','baseVendor',this.value)">`;}
