@@ -23329,6 +23329,15 @@ function pidbFeatSet(pk){
   if(String(v).trim())pidbOv.ft[pk]=String(v).trim();else delete pidbOv.ft[pk];
   pidbOvSave();pidbRender();
 }
+function pidbSpecCompact(sp,p){
+  if(!sp)return `<td class="sc nos" style="text-align:left">스펙 미확인${pidbCanEdit()?` · <a href="#" class="pidb-lk" onclick="pidbSpecEdit('${esc(p.k)}');return false">직접 입력</a>`:''}</td>`;
+  const sh={'부피비중':'비중','압축강도':'압축','기공율':'기공','하중연화점':'연화','곡강도':'곡강','선변화율':'선변','수분첨가량':'수분','최고사용온도':'최고온도','내화도':'내화도'};
+  const f=v=>esc(String(v==null?'':v).replace(/\s*\n\s*/g,' / '));
+  const ph=PIDB_PH.filter(x=>sp.p[x[0]]!=null&&sp.p[x[0]]!=='').map(x=>`<span class="spk">${sh[x[0]]||x[0]}</span> ${f(sp.p[x[0]])}`);
+  const ch=PIDB_CH.filter(k=>sp.c[k]!=null&&sp.c[k]!=='').map(k=>`<span class="spk">${k}</span> ${f(sp.c[k])}`);
+  const ot=[pidbChemOther(sp),pidbOther(sp)].filter(Boolean).map(esc).join(' · ');
+  return `<td class="sc spc" style="text-align:left;white-space:normal;min-width:290px;max-width:330px;font-size:11px;line-height:1.45">${ph.length?`<div>${ph.join(' · ')}</div>`:''}${ch.length?`<div style="color:#1d4ed8">${ch.join(' · ')}</div>`:''}${ot?`<div style="color:#64748b">${ot}</div>`:''}<div class="s">${esc(sp.src)} · <a href="#" class="pidb-lk" onclick="pidbSpecModal('${esc(p.k)}');return false">${sp.more?'다른 규격서 '+sp.more+'건':'상세'}</a></div></td>`;
+}
 function pidbQaRows(){
   const L=pidbLive(),idx=pidbIndex(),out=[],blank=[];
   const mkBlank=(p,sp)=>{
@@ -23373,17 +23382,17 @@ function pidbQaPage(mode){
         +cell(lr.d||'')+cell(dq?lr.n:'')+cell(dq?Math.round(lr.a||0):'')+cell(dq?dq.n:'')+cell(dq?Math.round(dq.a):'')+cell(o.memo||'')+cell(hs.length||'')+cell(last?last.d+' '+last.t:'')+pidbSpecCells(x.sp,p,false,'xls')+'</tr>';});
     return {html:h+'</tbody></table>',np:new Set(rows.map(r=>r.p.k)).size,nq:rows.length};
   }
-  const nSp=PIDB_PH.length+PIDB_CH.length+3;
+  const nSp=1;
   const H=['제품명','Q코드','규격','단중<br>(kg)','구분','형태','제품 특성','제철소','상세사용','사용부위','입찰<br>유/무','미입찰 사유','입찰가능<br>업체','단가<br>(원/kg)','입찰결과(최신)','공급<br>순위','27년<br>물량(kg)','최근 납품<br>(누계)'];
-  const HS=PIDB_PH.map(x=>`<th class="sc">${x[0]}<br><small>${x[2]}</small></th>`).join('')+PIDB_CH.map(k=>`<th class="sc ch">${k}<br><small>%</small></th>`).join('')+'<th class="sc">기타 성분</th><th class="sc">기타 스펙</th><th class="sc">출처 규격서</th>';
+  const HS='<th class="sc" style="min-width:290px">스펙 (물성·성분)<br><small>출처 규격서</small></th>';
   const HT=['도면','이력','메모'];
   const nCol=H.length+nSp+HT.length;
-  let h='<table class="pidb qa"><thead><tr>'+H.map((t,i)=>`<th${i===0?' class="c1"':''}>${t}</th>`).join('')+HS+HT.map(t=>`<th>${t}</th>`).join('')+'</tr></thead><tbody>';
+  let h='<style>table.pidb.qa th,table.pidb.qa td{padding-left:4px!important;padding-right:4px!important}table.pidb.qa td.s{font-size:11px}table.pidb.qa .pidb-in{max-width:100%}</style><table class="pidb qa"><thead><tr>'+H.map((t,i)=>`<th${i===0?' class="c1"':''}>${t}</th>`).join('')+HS+HT.map(t=>`<th>${t}</th>`).join('')+'</tr></thead><tbody>';
   let prev='',nb=0,sepDone=false;
   rows.forEach(x=>{const {p,c,it,us,pr,dq,le,o,b}=x,first=prev!==p.k;prev=p.k;
     if(x.blank&&!sepDone){sepDone=true;h+=`<tr class="grp"><td colspan="${nCol}" style="background:#fffbeb;text-align:left;font-weight:700;padding:6px 10px;position:sticky;left:0">▣ 스펙은 있으나 Q코드가 없는 품목 <span class="s">(규격서 전용 · Q코드 칸을 채우면 위 목록으로 합쳐집니다)</span></td></tr>`;}
     let spCells;
-    if(first)spCells=pidbSpecCells(x.sp,p,true,'view');else spCells='<td class="sc"></td>'.repeat(nSp);
+    if(first)spCells=pidbSpecCompact(x.sp,p);else spCells='<td class="sc"></td>';
     const fts=`<td class="s ft">${first?`${esc(x.feat)||'<span class="pidb-none">—</span>'}${ed?` <a href="#" class="pidb-ed" title="제품 특성 직접 입력" onclick="pidbFeatSet('${esc(p.k)}');return false">✎</a>`:''}`:''}</td>`;
     const pn=`<td class="pn c1">${first?`<b>${esc(p.n)}</b>${pidbCmChip(p.k,ed,false)}`:`<span style="color:#94a3b8">${esc(p.n)}</span>`}</td>`;
     const gc=`<td class="gc">${x.gs.length?x.gs.map(g=>`<span class="pidb-g g${g}" title="${PIDB_GN[g]}" style="padding:0 5px">${g}</span>`).join(''):'<span class="pidb-none">—</span>'}</td><td class="tc">${x.ty?(first?`<b>${x.ty}</b>`:x.ty):'<span class="pidb-none">미지정</span>'}</td>`;
@@ -35129,9 +35138,11 @@ function fitwOn(){try{return localStorage.getItem(FITW_KEY)!=='0';}catch(e){retu
 function fitwBtnMark(){const b=document.getElementById('fitBtn');if(!b)return;const on=fitwOn();b.textContent='↔ 한 화면 맞춤: '+(on?'켬':'끔');b.style.background=on?'#e0f2fe':'';b.style.borderColor=on?'#7dd3fc':'';}
 function fitwToggle(){try{localStorage.setItem(FITW_KEY,fitwOn()?'0':'1');}catch(e){}fitwBtnMark();fitwRun();}
 function fitwSoon(){clearTimeout(__fitwT);__fitwT=setTimeout(fitwRun,250);}
+let __fitwQ=0;
+function fitwNow(){if(__fitwQ)return;clearTimeout(__fitwT);__fitwQ=requestAnimationFrame(()=>{__fitwQ=0;fitwRun();});}
 function fitwRun(){
   if(__fitwBusy)return;const c=document.querySelector('.content');if(!c)return;
-  __fitwBusy=true;const mn=document.querySelector('.main'),st=mn?mn.scrollTop:0;
+  __fitwBusy=true;const mn=document.querySelector('.main'),st=mn?mn.scrollTop:0,sl=mn?mn.scrollLeft:0,wsl=window.scrollX;
   try{
     try{stkhUndo();}catch(e){}
     c.querySelectorAll('[data-fitw]').forEach(el=>{el.style.zoom='';el.removeAttribute('data-fitw');});
@@ -35150,10 +35161,12 @@ function fitwRun(){
         for(const ch of e.children){if(ch.tagName==='SCRIPT'||ch.tagName==='STYLE')continue;ch.style.zoom=z;ch.setAttribute('data-fitw','1');}
       }});
   }catch(err){}
-  finally{if(mn)mn.scrollTop=st;__fitwBusy=false;try{stkhRun();}catch(e){}}
+  finally{if(mn){mn.scrollTop=st;mn.scrollLeft=sl;}if(wsl&&window.scrollX!==wsl)window.scrollTo(wsl,window.scrollY);__fitwBusy=false;try{stkhRun();}catch(e){}}
 }
 (function(){const init=()=>{const c=document.querySelector('.content');if(!c||!window.MutationObserver)return;
-  new MutationObserver(()=>{if(!__fitwBusy)fitwSoon();}).observe(c,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden']});
+  new MutationObserver(ms=>{if(__fitwBusy)return;let big=false;
+    for(const m of ms){for(const n of m.addedNodes){if(n.nodeType===1&&(n.tagName==='TABLE'||(n.querySelector&&n.querySelector('table')))){big=true;break;}}if(big)break;}
+    if(big)fitwNow();else fitwSoon();}).observe(c,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden']});
   new MutationObserver(()=>fitwSoon()).observe(document.body,{attributes:true,attributeFilter:['class']});
   window.addEventListener('resize',fitwSoon);fitwBtnMark();fitwSoon();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();})();
