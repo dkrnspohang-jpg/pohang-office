@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="app-build" content="2026.11.13-0743">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -7188,7 +7189,7 @@ function renderProdMaster(){
   const gubunSel=(i,v)=>`<select onchange="editProd(${i},'gubun',this.value);renderProdMaster()" style="font-size:11px">${PROD_GUBUN.map(g=>`<option${g===(v||'제품')?' selected':''}>${g}</option>`).join('')}</select>`;
   const supSel=(i,p)=>{const cur=prodSup(p),au=prodSupAuto(p),v=String(p.sup||'').trim();
     return `<select onchange="editProd(${i},'sup',this.value);bizplanSchedClear();renderProdMaster()" style="font-size:11px;${cur.own?'':'background:#e5e7eb;font-weight:700'}" title="${cur.own?'동국R&S 납품':'타사 납품 — 사업계획 연결 제외 · 물량표는 원가용'}${v?'':' (자동 판정)'}"><option value=""${v?'':' selected'}>${au.cat==='당사'?'동국R&S':'자동·'+esc(au.cat)}</option><option value="당사"${v==='당사'?' selected':''}>동국R&S${au.cat==='당사'?' (확정)':''}</option>${PROD_SUP_OTHERS.map(o=>`<option value="${o}"${v===o?' selected':''}>${o}</option>`).join('')}</select>`;};
-  document.getElementById('prodBody').innerHTML=rows.map(({p,i})=>{const off=prodUse(p)===0;const sel=prodSel.has(p.id);
+  document.getElementById('prodBody').innerHTML=pidbLazySel(rows.map(({p,i})=>{const off=prodUse(p)===0;const sel=prodSel.has(p.id);
     const shown=priceAt(p.id,pricePeriod);
     // 2026-09-26: "신규 시점" 편집을 지원하기 위해 시점 조회중에도 단가를 직접 수정할 수 있게 함
     // (라이브가 아닌 시점 수정은 그 시점의 확정단가에만 반영되고 현재 라이브 단가는 바뀌지 않음).
@@ -7223,7 +7224,7 @@ function renderProdMaster(){
      <td style="text-align:center"><input type="checkbox" ${prodUse(p)?'checked':''} title="사용여부" onchange="editProd(${i},'use',this.checked?1:0);renderProdMaster()"></td>
      <td class="n">${prodUseCount(p.id)}</td>
      <td><button class="btn sm danger del-rec" onclick="delProd('${p.id}')">×</button></td></tr>`;}).join('')
-    ||`<tr><td colspan="18"><div class="empty">제품이 없습니다.</div></td></tr>`;
+    ||`<tr><td colspan="18"><div class="empty">제품이 없습니다.</div></td></tr>`);
   const allEl=document.getElementById('pm_all');
   if(allEl)allEl.checked=rows.length>0&&rows.every(({p})=>prodSel.has(p.id));
   updateBulkBtn();
@@ -12292,19 +12293,25 @@ let topnavMap=new Map(),topnavGroups=[],tnSel=-1,tnSubOpen=false;
 function topnavKey(el){return el.dataset.view||(el.dataset.act?'act:'+el.dataset.act:'');}
 function topnavLabel(el){const c=el.cloneNode(true);c.querySelectorAll('.ic,.apbadge,#bkAge').forEach(x=>x.remove());return c.textContent.replace(/\s+/g,' ').trim();}
 function topnavGroupOf(v){return topnavGroups.findIndex(x=>x.keys.indexOf(v)>=0);}
+/* 2026-11-12(속도): 사이드바 항목은 .sidebar 안에만 있다 — 문서 전체를 훑지 않는다 */
+function sbQ(sel){const sb=window.__sbEl||(window.__sbEl=document.querySelector('.sidebar'));return (sb||document).querySelectorAll(sel);}
+/* 지금 보이는 화면(섹션). 없으면 .content */
+function curRoot(){try{const r=vsRoot(curView);if(r&&!r.classList.contains('hidden'))return r;}catch(e){}return document.querySelector('.content');}
 function topnavBuild(){
   const nav=document.getElementById('topnav');if(!nav)return;
   topnavMap=new Map();
-  document.querySelectorAll('.sidebar .side-item').forEach(el=>{const k=topnavKey(el);if(k)topnavMap.set(k,el);});
+  sbQ('.side-item').forEach(el=>{const k=topnavKey(el);if(k)topnavMap.set(k,el);});
   const used=new Set();
-  const vis=el=>el&&!el.hidden&&getComputedStyle(el).display!=='none';
+  const __bo=document.body.classList.contains('board-off');
+  const vis=el=>el&&!el.hidden&&el.style.display!=='none'&&!(__bo&&el.dataset.view==='board');
   const gs=TOPNAV.map(g=>({g,keys:g.it.filter(k=>{used.add(k);return vis(topnavMap.get(k));})}));
   const rest=[...topnavMap.keys()].filter(k=>!used.has(k)&&vis(topnavMap.get(k)));
   if(rest.length){const dg=gs.find(x=>x.g.right);if(dg)dg.keys=dg.keys.concat(rest);}
   topnavGroups=gs.filter(x=>x.keys.length);
-  nav.innerHTML=`<div class="tn-brand" onclick="topnavGo('home')" title="일정·스케줄로 이동"><span class="co">동국R&amp;S</span><span class="ti">포항사업소</span></div>`
+  const __tnH=`<div class="tn-brand" onclick="topnavGo('home')" title="일정·스케줄로 이동"><span class="co">동국R&amp;S</span><span class="ti">포항사업소</span></div>`
    +topnavGroups.map((x,i)=>{const g=x.g,multi=x.keys.length>1;
      return `<div class="tn-grp${g.right?' right':''}" data-gi="${i}"><button type="button" class="tn-tab" data-gi="${i}"><span>${g.ic}</span>${g.lb}${multi?'<span class="tn-car">▸</span>':''}<span class="apbadge tn-gbd" hidden></span></button></div>`;}).join('');
+  if(nav.__h!==__tnH||!nav.firstElementChild){nav.innerHTML=__tnH;nav.__h=__tnH;}
   try{
     const cv=typeof curView!=='undefined'?curView:'home';
     topnavMark(cv);
@@ -12395,7 +12402,8 @@ function sidenavBuild(){
       const btn=`<button type="button" class="sn-it" data-k="${k}"><span class="ic">${ic}</span><span>${esc(topnavLabel(el))}</span>${k==='approve'?'<span class="apbadge sn-bd" id="snApprBadge" hidden>0</span>':''}${k==='act:export'?'<span id="snBkAge" style="font-size:10.5px;margin-left:6px"></span>':''}${hasSub?`<span class="sn-c2" data-p="${k}" title="소분류 펼치기/접기">▸</span>`:''}</button>`;
       sub+=hasSub?`<div class="sn-w${snOpenSet.has('sub:'+k)?' open':''}" data-p="${k}">${btn}<div class="sn-ss">${ss.map(z=>`<button type="button" class="sn-si" data-p="${k}" data-s="${z.k}">${esc(z.lb)}</button>`).join('')}</div></div>`:btn;});}
     body+=`<div class="sn-g${g.right?' bottom':''}${multi&&snOpenSet.has(g.lb)?' open':''}${i===gi0?' on':''}" data-gi="${i}"><button type="button" class="sn-gh" data-gi="${i}"><span class="ic">${g.ic}</span><span>${g.lb}</span>${multi?'<span class="car">▶</span>':''}<span class="apbadge sn-gbd" hidden></span></button>${multi?`<div class="sn-sub">${sub}</div>`:''}</div>`;});
-  box.innerHTML=`<div class="sn-brand" data-k="home" title="일정·스케줄로 이동"><span class="co">동국R&amp;S</span><span class="ti">포항사업소</span></div><div class="sn-body">${body}</div><div class="sn-foot"><button type="button" data-snact="hide">◀ 메뉴 숨기기</button><button type="button" data-snact="top">⬆ 상단 메뉴로</button></div>`;
+  const __snH=`<div class="sn-brand" data-k="home" title="일정·스케줄로 이동"><span class="co">동국R&amp;S</span><span class="ti">포항사업소</span></div><div class="sn-body">${body}</div><div class="sn-foot"><button type="button" data-snact="hide">◀ 메뉴 숨기기</button><button type="button" data-snact="top">⬆ 상단 메뉴로</button></div>`;
+  {const __k=__snH.replace(/ (open|on)(?=[" ])/g,'');if(box.__h!==__k||!box.firstElementChild){box.innerHTML=__snH;box.__h=__k;}}
   sidenavMirror();sidenavMarkItems();
 }
 function sidenavMarkItems(){
@@ -12469,7 +12477,7 @@ function nav(v){
   document.querySelector('.content').classList.toggle('wide',['dtkrpt','eafrpt','salesfw','salesq','saleshist','quote','qitems','board','home','ladle','daylog','tundish','eaf','mperf','planperf','handover','vac','prodm','attend','emp','shift4','posco','poscoinfo','poscoprep','poscoidb','pidbbid','pidbspec','pidbdw','pidbqa','stocksd','stockvs','poscononsup','bom','safetygear','bizplan','salesperf','nextfc','workprog','tboard','poscoset','permadm'].includes(v));
   {const vs=x=>(typeof PIDB_VMAP!=='undefined'&&PIDB_VMAP[x])?'poscoidb':x;   // 포스코 정보목록 4개 메뉴는 같은 화면(v-poscoidb)의 탭
    ALL_VIEWS.forEach(x=>{const e=document.getElementById('v-'+vs(x));if(e)e.classList.toggle('hidden',vs(x)!==vs(v));});}
-  document.querySelectorAll('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
+  sbQ('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
   try{topnavMark(v);}catch(e){}
   document.getElementById('viewTitle').textContent=VIEWS[v][0];
   document.getElementById('viewSub').textContent=VIEWS[v][1];
@@ -21357,7 +21365,7 @@ function setPoscoField(item,key,val){
   if(key==='alloc'||key==='baseVendor'){
     let s=(val||'').trim();
     if(key==='alloc'&&s){s=s.replace(/[%\s]+/g,'').replace(/[\/\-·,;~]+/g,':');
-      if(!/^\d+(\.\d+)?(:\d+(\.\d+)?)*$/.test(s)){toast('배분율은 80:20 · 60:40 · 100 같은 형식으로 입력하세요');renderPosco();return;}}
+      if(!/^\d+(\.\d+)?(:\d+(\.\d+)?)*$/.test(s)){toast('배분율은 80:20 · 60:40 · 100 같은 형식으로 입력하세요');try{const ae=document.activeElement;if(ae&&ae.tagName==='INPUT'&&ae.value!==ae.defaultValue)ae.value=ae.defaultValue;}catch(e){}renderPosco();return;}}
     if(!s||s===(poscoOrig(item,key)||''))delete ov[key];else ov[key]=s;
     after=ov[key]!=null?ov[key]:poscoOrig(item,key);
   }else{
@@ -23564,7 +23572,11 @@ function pidbRender(){
   const st=w.scrollTop,sl=w.scrollLeft;
   pidbTabUi();
   const t=pidbTable('view');
-  w.innerHTML=t.html;w.classList.toggle('xl',(pidbTab==='bid'&&pidbBidIsB())||pidbTab==='spec');w.scrollTop=st;w.scrollLeft=sl;
+  const __same=(w.__h===t.html&&!!w.firstElementChild);
+  if(!__same){w.innerHTML=t.html;w.__h=t.html;}
+  else{const __ae=document.activeElement;w.querySelectorAll('input,textarea').forEach(el=>{if(el===__ae||el.type==='file')return;if(el.type==='checkbox'||el.type==='radio'){if(el.checked!==el.defaultChecked)el.checked=el.defaultChecked;}else if(el.value!==el.defaultValue)el.value=el.defaultValue;});}   /* 내용이 같아 표를 다시 만들지 않을 때는, 저장되지 않은 입력칸 표시만 원래 값으로 되돌린다 */
+  w.classList.toggle('xl',(pidbTab==='bid'&&pidbBidIsB())||pidbTab==='spec');
+  if(!__same){if(st)w.scrollTop=st;if(sl)w.scrollLeft=sl;}
   const c=document.getElementById('pidb_cards');if(c)c.innerHTML=pidbCards();
   const n=document.getElementById('pidb_cnt');if(n)n.textContent=t.txt?`${t.txt} · Q코드 ${t.nq}개`:`제품 ${t.np}종 · Q코드 ${t.nq}개 표시`;
   try{pidbCompUi();}catch(e){}
@@ -24942,6 +24954,97 @@ async function obsAllRun(forceZip,forcePick){
   }catch(e){say('내보내기 실패: '+(e&&e.message?e.message:e));console.error(e);}
 }
 
+/* ============ 최신 버전 확인 (2026-11-12) ============
+   프로그램 파일 맨 위에 빌드 표식(<meta name="app-build" content="연.월.일-시분">)을 넣어 두고,
+   접속·로그인 직후 / 5분마다 / 다른 창에 있다가 돌아올 때 서버에 올라가 있는 파일의 앞부분만 받아 표식을 비교한다.
+   서버 쪽이 더 새 것이면 화면 맨 위에 빨간 알림 띠를 띄운다(새로고침은 프로그램 파일만 다시 받으며 입력 자료는 그대로).
+   파일을 PC에서 직접 연 경우(file://)나 인터넷이 끊긴 경우에는 확인하지 못했다는 표시만 남긴다. */
+(function(){
+  const MY=((document.querySelector('meta[name="app-build"]')||{}).content||'').trim();
+  window.APP_BUILD=MY;
+  const VC={my:MY,remote:'',state:'unknown',last:0,snooze:0,told:false};window.VC=VC;
+  const web=()=>/^https?:$/.test(location.protocol);
+  const fmt=b=>{const m=/^(\d{4})\.(\d{2})\.(\d{2})-(\d{2})(\d{2})$/.exec(b||'');return m?(+m[2])+'/'+(+m[3])+' '+m[4]+':'+m[5]:(b||'표식 없음');};
+  VC.fmt=fmt;
+  async function remoteBuild(){
+    if(!web())return null;
+    const u=location.origin+location.pathname+'?vchk='+Date.now();
+    const ctl=(typeof AbortController!=='undefined')?new AbortController():null;const tm=setTimeout(()=>{try{ctl&&ctl.abort();}catch(e){}},15000);
+    try{
+      const r=await fetch(u,{cache:'no-store',headers:{Range:'bytes=0-4095'},signal:ctl?ctl.signal:undefined});
+      if(!r.ok)return null;
+      let t='';
+      if(r.body&&r.body.getReader){const rd=r.body.getReader(),dec=new TextDecoder();
+        while(t.length<8000){const x=await rd.read();if(x.done)break;t+=dec.decode(x.value,{stream:true});if(/name="app-build" content="[^"]*"/.test(t)||t.indexOf('</head>')>=0)break;}
+        try{await rd.cancel();}catch(e){}}
+      else t=(await r.text()).slice(0,8000);
+      const m=t.match(/<meta name="app-build" content="([^"]*)"/);return m?m[1].trim():'';
+    }catch(e){return null;}
+    finally{clearTimeout(tm);try{ctl&&ctl.abort();}catch(e){}}
+  }
+  function reloadNow(){
+    try{if(window.caches&&caches.keys)caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));}catch(e){}
+    const u=location.href.split('#')[0].split('?')[0];location.replace(u+'?v='+Date.now());
+  }
+  VC.reload=reloadNow;
+  function paint(){
+    const st=VC.state,old=(st==='old');
+    const chip=document.getElementById('verChip');
+    if(chip){
+      chip.textContent=old?'🔄 새 버전 있음':st==='latest'?'✔ 최신 버전':st==='local'?'💾 PC 파일':st==='offline'?'⚠ 버전 확인 못 함':'버전 확인 중';
+      chip.style.background=old?'#fee2e2':st==='latest'?'#dcfce7':'';chip.style.borderColor=old?'#f87171':st==='latest'?'#86efac':'';chip.style.color=old?'#b91c1c':st==='latest'?'#166534':'';chip.style.fontWeight=old?'800':'';
+      chip.title='지금 쓰는 프로그램: '+fmt(MY)+(VC.remote?' · 서버에 올라간 프로그램: '+fmt(VC.remote):'')+' — 누르면 다시 확인합니다';
+    }
+    try{const v=document.getElementById('appVer');if(v&&typeof APP_VERSION!=='undefined')v.textContent='버전 '+APP_VERSION+' · 빌드 '+fmt(MY)+(old?' (새 버전 있음)':'');}catch(e){}
+    let bar=document.getElementById('verBar');
+    if(!old||Date.now()<VC.snooze){if(bar)bar.remove();return;}
+    if(!bar){bar=document.createElement('div');bar.id='verBar';
+      bar.style.cssText='position:fixed;left:0;right:0;top:0;z-index:2147483000;background:#b91c1c;color:#fff;padding:9px 14px;font-size:13.5px;font-weight:700;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,.3);line-height:1.5';
+      bar.innerHTML='<span id="verBarTx"></span><button type="button" id="verBarGo" style="background:#fff;color:#b91c1c;border:0;border-radius:8px;padding:6px 14px;font-weight:800;font-size:13.5px;cursor:pointer">🔄 지금 새로고침</button><button type="button" id="verBarLater" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer">10분 뒤 다시 알림</button>';
+      document.body.appendChild(bar);
+      bar.querySelector('#verBarGo').addEventListener('click',reloadNow);
+      bar.querySelector('#verBarLater').addEventListener('click',()=>{VC.snooze=Date.now()+10*60000;paint();});}
+    bar.querySelector('#verBarTx').textContent='프로그램 새 버전이 올라왔습니다 (지금 '+fmt(MY)+' → 최신 '+fmt(VC.remote)+'). 입력하던 내용을 저장한 뒤 새로고침을 눌러 주세요. 자료는 그대로 유지됩니다.';
+  }
+  let busy=false;
+  async function check(why){
+    if(busy)return VC.state;busy=true;
+    try{
+      VC.last=Date.now();
+      const rb=await remoteBuild();
+      if(rb==null)VC.state=web()?'offline':'local';
+      else{VC.remote=rb;VC.state=(rb&&(!MY||rb>MY))?'old':'latest';}
+      paint();
+      const say=m=>{try{toast(m);}catch(e){}};
+      if(why==='manual'){
+        say(VC.state==='old'?'새 버전이 있습니다 — 화면 위 [지금 새로고침]을 눌러 주세요':VC.state==='latest'?'✔ 최신 버전입니다 (빌드 '+fmt(MY)+')':VC.state==='local'?'PC에 저장된 파일로 열어서 최신 여부를 확인할 수 없습니다 (빌드 '+fmt(MY)+')':'서버에 연결하지 못해 최신 여부를 확인하지 못했습니다');
+        if(VC.state==='old'){VC.snooze=0;paint();}
+      }else if((why==='login'||why==='load')&&VC.state==='latest'&&!VC.told){VC.told=true;say('✔ 프로그램이 최신 버전입니다 (빌드 '+fmt(MY)+')');}
+    }finally{busy=false;}
+    return VC.state;
+  }
+  VC.check=check;
+  function addChip(){
+    if(document.getElementById('verChip'))return;
+    const anchor=document.getElementById('afBtnObs')||document.getElementById('navBackBtn');if(!anchor)return;
+    const b=document.createElement('button');b.className='btn';b.id='verChip';b.type='button';b.textContent='버전 확인 중';b.onclick=()=>check('manual');
+    anchor.parentNode.insertBefore(b,anchor.nextSibling);paint();
+  }
+  function start(){
+    addChip();setTimeout(addChip,1500);
+    setTimeout(()=>check('load'),3500);
+    setInterval(()=>{if(document.visibilityState!=='hidden')check('timer');},5*60000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-VC.last>120000)check('focus');});
+    window.addEventListener('online',()=>check('online'));
+    /* 로그인 직후 한 번 더 확인해 결과를 알려 준다 */
+    try{if(typeof doLogin==='function'&&!doLogin.__vc){const _d=doLogin;const w=async function(){const r=await _d.apply(this,arguments);
+        try{const ov=document.getElementById('loginOverlay');const open=ov&&ov.classList.contains('show');
+          if(!open){VC.told=false;setTimeout(()=>check('login'),2300);}}catch(e){}
+        return r;};w.__vc=1;doLogin=w;}}catch(e){}
+  }
+  if(document.readyState==='complete')start();else window.addEventListener('load',start);
+})();
+
 function pidbXls(){const t=pidbTable('xls');downloadXls(pidbTab==='qa'?'포스코_Q코드_전체':pidbTab==='spec'?'포스코_자재규격':(pidbBidIsB()?'포스코_범용B_입찰결과':'포스코_정보목록'),t.html);}
 
 /* ============ ② 입찰 화면 (rpt67) ============
@@ -24978,6 +25081,7 @@ function pidbBEdit(r,key,w){const v=poscoField(r,key),ch=poscoFieldChanged(r,key
 function pidbBAlloc(r){let h=pidbBAlloc0(r);
   const W=r.winners||[],_sum=W.reduce((a,b)=>a+b.pct,0),v=String(poscoField(r,'alloc')||'');
   if(r.amount&&(W.length?_sum<0.995:v.indexOf(':')>=0)){h=h.replace('title="','title="※ 2순위 이하 업체가 지정되지 않아 일부 금액이 배분되지 않았습니다(업체 칸에서 순위 지정) · ').replace('border-color:#f59e0b','border-color:#dc2626').replace('style="width:60px;text-align:center','style="width:60px;text-align:center;border-color:#dc2626;box-shadow:0 0 0 1px #dc2626 inset');}
+  if(v.length>5)h=h.replace('width:60px','width:'+(v.length*8+16)+'px');   /* 50:30:20 처럼 긴 값이 잘려 보이지 않게 */
   return h;}
 function pidbBAlloc0(r){const v=poscoField(r,'alloc')||'',ch=poscoFieldChanged(r,'alloc');
   return `<input type="text" class="dtxt" style="width:60px;text-align:center${ch?';background:#fff7ed;border-color:#f59e0b;font-weight:800;color:#b45309':''}" value="${esc(v)}" placeholder="80:20" title="${ch?'원본 '+esc(r.alloc||'-')+' · 비우면 원본값으로 복귀':'클릭해서 수정'}" onchange="setPoscoField('${esc(r.item)}','alloc',this.value)">`;}
@@ -30967,7 +31071,7 @@ async function importJSON(e){
       if(Array.isArray(data.photos)){for(const ph of data.photos){if(ph&&ph.id)try{await putRec('photos',ph);}catch(e){}}try{await initPhotoCache();}catch(e){}try{fbPhotoReconcile&&fbPhotoReconcile();}catch(e){}}
       for(const st of FB_STORES)if(Array.isArray(stores[st]))await fbReloadStore(st);
     }finally{fbApplying=false;}
-    flashSave();fbRerender();
+    flashSave();fbRerenderNow();
     if(legacy){
       alert('기존 형식 백업을 불러왔습니다.\n\n이 파일에는 래들·턴디쉬만 들어 있어 일정·직원·휴가·잔업은 복원되지 않습니다.');
     }else if(fbOn&&confirm('전체 데이터를 이 PC에 복원했습니다.\n\n지금 새 Firebase에도 업로드할까요?')){
@@ -31169,7 +31273,7 @@ async function undoApply(){
         fbApplyKv(keep,null,true);
       }
     }finally{fbApplying=false;}
-    flashSave();try{fbRerender();}catch(e){}
+    flashSave();try{fbRerenderNow();}catch(e){}
     if(fbOn&&window.confirm('팀 공유(Firebase) 사용 중입니다.\n\n되돌린 내용을 팀 전체에도 반영할까요?\n(반영하지 않으면 다른 PC의 자료가 다시 내려와 되돌린 내용이 덮일 수 있습니다)')){
       for(const st of sel){if(st!=='__kv')await fbPushStore(st);}
       if(sel.indexOf('__kv')>=0)await fbPushKv();
@@ -35015,15 +35119,16 @@ let __fitwQ=0;
 function fitwNow(){if(__fitwQ)return;clearTimeout(__fitwT);__fitwQ=requestAnimationFrame(()=>{__fitwQ=0;fitwRun();});}
 function fitwRun(){
   if(__fitwBusy)return;const c=document.querySelector('.content');if(!c)return;
-  const __sig=((document.querySelector('.view.active')||{}).id||'')+'|'+c.getElementsByTagName('*').length+'|'+window.innerWidth+'|'+c.clientWidth+'|'+(fitwOn()?1:0);
+  const R=curRoot()||c;
+  const __sig=(R.id||'')+'|'+R.getElementsByTagName('*').length+'|'+window.innerWidth+'|'+c.clientWidth+'|'+(fitwOn()?1:0);
   if(__sig===__fitwSig&&performance.now()-__fitwLast<20000)return;
   __fitwBusy=true;const mn=document.querySelector('.main'),st=mn?mn.scrollTop:0,sl=mn?mn.scrollLeft:0,wsl=window.scrollX;
   try{
     try{stkhUndo();}catch(e){}
-    c.querySelectorAll('[data-fitw]').forEach(el=>{el.style.zoom='';el.removeAttribute('data-fitw');});
+    R.querySelectorAll('[data-fitw]').forEach(el=>{el.style.zoom='';el.removeAttribute('data-fitw');});
     if(!fitwOn()||document.body.classList.contains('mv')||window.innerWidth<900)return;
     const cand=[];
-    c.querySelectorAll('div,section,article,form,main,table,ul,ol,aside,details').forEach(e=>{
+    [R].concat([...R.querySelectorAll('div,section,article,form,main,table,ul,ol,aside,details')]).forEach(e=>{
       if(!e.offsetWidth||e.clientWidth<200||e.scrollWidth<=e.clientWidth+3)return;
       if(e.firstElementChild&&/scale\(/.test(e.firstElementChild.style.transform||''))return;   /* rpt169: transform으로 이미 축소한 미리보기(해체 목록 등)는 이중 축소 금지 */
       const cs=getComputedStyle(e),ox=cs.overflowX;
@@ -35036,7 +35141,7 @@ function fitwRun(){
         for(const ch of e.children){if(ch.tagName==='SCRIPT'||ch.tagName==='STYLE')continue;ch.style.zoom=z;ch.setAttribute('data-fitw','1');}
       }});
   }catch(err){}
-  finally{__fitwSig=((document.querySelector('.view.active')||{}).id||'')+'|'+c.getElementsByTagName('*').length+'|'+window.innerWidth+'|'+c.clientWidth+'|'+(fitwOn()?1:0);__fitwLast=performance.now();if(mn){mn.scrollTop=st;mn.scrollLeft=sl;}if(wsl&&window.scrollX!==wsl)window.scrollTo(wsl,window.scrollY);__fitwBusy=false;try{stkhRun();}catch(e){}}
+  finally{__fitwSig=(R.id||'')+'|'+R.getElementsByTagName('*').length+'|'+window.innerWidth+'|'+c.clientWidth+'|'+(fitwOn()?1:0);__fitwLast=performance.now();if(mn){mn.scrollTop=st;mn.scrollLeft=sl;}if(wsl&&window.scrollX!==wsl)window.scrollTo(wsl,window.scrollY);__fitwBusy=false;try{stkhRun();}catch(e){}}
 }
 (function(){const init=()=>{const c=document.querySelector('.content');if(!c||!window.MutationObserver)return;
   new MutationObserver(ms=>{if(__fitwBusy)return;let big=false;
@@ -35052,10 +35157,10 @@ function fitwRun(){
    한 화면 맞춤(fitwRun) 계산을 방해하지 않도록 fitwRun 시작 때 되돌리고(stkhUndo), 끝난 뒤 다시 적용(stkhSoon). 인쇄에는 영향 없음. */
 let __stkhT=0;
 function stkhSoon(){clearTimeout(__stkhT);__stkhT=setTimeout(()=>{try{stkhRun();}catch(e){}},60);}
-function stkhUndo(){
-  document.querySelectorAll('[data-stkh-o]').forEach(el=>{let o={};try{o=JSON.parse(el.getAttribute('data-stkh-o'))||{};}catch(e){}
+function stkhUndo(){const R=curRoot()||document;
+  R.querySelectorAll('[data-stkh-o]').forEach(el=>{let o={};try{o=JSON.parse(el.getAttribute('data-stkh-o'))||{};}catch(e){}
     el.style.overflowX=o.x||'';el.style.overflowY=o.y||'';el.style.maxHeight=o.m||'';el.style.display=o.d||'';el.removeAttribute('data-stkh-o');});
-  document.querySelectorAll('table[data-stkh]').forEach(t=>{t.removeAttribute('data-stkh');
+  R.querySelectorAll('table[data-stkh]').forEach(t=>{t.removeAttribute('data-stkh');
     t.querySelectorAll('thead th,thead td').forEach(h=>{h.style.top='';if(h.hasAttribute('data-stkh-bg')){h.style.backgroundColor='';h.removeAttribute('data-stkh-bg');}});});
 }
 function stkhBase(){let s=0;['fsBar','stickyHead'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const cs=getComputedStyle(e);if(cs.display==='none')return;if(cs.position==='sticky'||cs.position==='fixed')s+=e.getBoundingClientRect().height;});return Math.round(s);}
@@ -35064,7 +35169,7 @@ function stkhRun(){
   const c=document.querySelector('.content'),mn=document.querySelector('.main');if(!c||!mn)return;
   stkhUndo();
   const base=stkhBase(),small=document.body.classList.contains('mv')||window.innerWidth<900,st=mn.scrollTop;
-  c.querySelectorAll('table').forEach(t=>{
+  (curRoot()||c).querySelectorAll('table').forEach(t=>{
     const hd=t.tHead;if(!hd||!hd.rows.length||!t.offsetWidth||t.closest('[data-nostk],.nostk,.dtk-prev'))return;
     let mode='page',skip=false;
     for(let el=t.parentElement;el&&el!==mn&&el!==document.body;el=el.parentElement){
@@ -37815,6 +37920,21 @@ function fbRerender(){try{applyRoleLock();if(curView==='permadm')permRender();}c
 }catch(e){}
   try{updateMeChip();updateApprBadge();syncChip();
     if(document.body.classList.contains('mv')&&mvView==='home')mvHomeSoft();}catch(e){}}
+/* 2026-11-12(속도·입력 보호): 다른 PC가 저장할 때마다 지금 화면을 통째로 다시 그려, 입력하던 칸이 지워지거나 화면이 끊기던 문제.
+   ① 0.25초 안에 여러 번 오면 한 번만 그린다 ② 입력칸에 커서가 있고 아직 저장 전(값이 바뀐 상태)이면 커서가 빠질 때까지 미룬다(최대 60초) */
+(function(){const _rr=fbRerender;let tm=0,first=0,pend=false;
+  const dirty=()=>{const ae=document.activeElement;if(!ae||ae===document.body)return false;
+    if(ae.isContentEditable)return Date.now()-(window.__rrKeyT||0)<4000;
+    if(ae.tagName==='TEXTAREA')return ae.value!==ae.defaultValue||Date.now()-(window.__rrKeyT||0)<4000;
+    if(ae.tagName==='INPUT'){const ty=(ae.type||'text').toLowerCase();if(['checkbox','radio','button','submit','file','range'].indexOf(ty)>=0)return false;return ae.value!==ae.defaultValue||Date.now()-(window.__rrKeyT||0)<4000;}
+    return false;};
+  const run=()=>{if(!pend)return;if(dirty()&&Date.now()-first<60000){clearTimeout(tm);tm=setTimeout(run,700);return;}
+    pend=false;try{_rr();}catch(e){try{console.error(e);}catch(_){}}};
+  fbRerender=function(){if(!pend){pend=true;first=Date.now();}clearTimeout(tm);tm=setTimeout(run,250);};
+  window.fbRerenderNow=function(){pend=false;clearTimeout(tm);_rr();};
+  document.addEventListener('keydown',()=>{window.__rrKeyT=Date.now();},true);
+  document.addEventListener('focusout',()=>{if(pend){clearTimeout(tm);tm=setTimeout(run,300);}},true);
+})();
 function fbListen(){
   fbUnsub.forEach(u=>{try{u();}catch(e){}});fbUnsub=[];
   FB_STORES.forEach(store=>{
@@ -38303,7 +38423,7 @@ async function importLegacyAllData(){
     const targetKv=Object.assign({},fbCollectKv(),safeKv);
     await fbDoc('__kv').set({kv:targetKv,by:fbClientId,at:now,importedFrom:'dkrnspohang-23523/dkrnspohang'});
     for(const st of FB_STORES)if(Array.isArray(incoming[st]))await fbReloadStore(st);
-    fbRerender();
+    fbRerenderNow();
     toast('기존 서버 전체자료를 시험 서버로 가져왔습니다');
     alert('전체자료 복사가 완료되었습니다.\n\n'+counts.join('\n')+'\n\n기존 서버 원본은 변경하지 않았습니다.');
   }catch(err){
@@ -42132,7 +42252,7 @@ function vwLanding(){
     const c=document.querySelector('.content');if(c)c.appendChild(el);}
   el.hidden=false;
   try{document.getElementById('viewTitle').textContent='동국R&S 열람';document.getElementById('viewSub').textContent='';}catch(e){}
-  try{document.querySelectorAll('.side-item[data-view]').forEach(i=>i.classList.remove('active'));}catch(e){}
+  try{sbQ('.side-item[data-view]').forEach(i=>i.classList.remove('active'));}catch(e){}
   try{renderViewTabs();}catch(e){}
 }
 function defaultView(){
@@ -42166,12 +42286,12 @@ function openRoleDlg(){
 // 사이드바 노출 제어(포항사업소는 현장 메뉴만)
 function applyRoleNav(){
   const field=isField()||appRole()==='viewer', admin=isAdmin();
-  document.querySelectorAll('.side-item[data-view]').forEach(el=>{
+  sbQ('.side-item[data-view]').forEach(el=>{
     el.hidden=!viewAllowed(el.dataset.view);});
-  document.querySelectorAll('.side-item[data-act]').forEach(el=>{
+  sbQ('.side-item[data-act]').forEach(el=>{
     const a=el.dataset.act;
     el.hidden=!dataAllowed()||field||(!admin&&(a==='import'||a==='reload'));});  // 전체삭제/교체성 작업은 관리자 전용
-  document.querySelectorAll('.side-group').forEach(g=>{
+  sbQ('.side-group').forEach(g=>{
     const items=[...g.querySelectorAll('.side-item')];
     g.hidden=items.length>0&&items.every(i=>i.hidden);});
   try{topnavBuild();}catch(e){console.warn('topnav',e);}
@@ -42255,17 +42375,20 @@ function vwApplyUI(){
   const bar=document.getElementById('vwBar');if(bar)bar.hidden=!on;
   if(bar&&on){const ro=appRole()!=='viewer';const x=bar.querySelector('.vw-x');if(x)x.hidden=ro;if(x&&!ro&&vwAllOn())x.textContent='열람 종료';
     if(bar.firstChild&&bar.firstChild.nodeType===3)bar.firstChild.textContent=ro?'👁 보기 전용 화면 — 이 메뉴는 뷰 권한만 있어 입력·수정·삭제가 저장되지 않습니다. ':'👁 현장 열람 모드 — 조회만 가능합니다. 입력·수정·삭제는 저장되지 않습니다. ';}
-  if(!on){document.querySelectorAll('.vw-hide').forEach(e=>e.classList.remove('vw-hide'));
+  if(!on&&!window.__vwUsed)return;
+  if(on)window.__vwUsed=true;
+  if(!on){window.__vwUsed=false;document.querySelectorAll('.vw-hide').forEach(e=>e.classList.remove('vw-hide'));
     document.querySelectorAll('[data-vwro]').forEach(i=>{i.readOnly=false;i.removeAttribute('data-vwro');});
     document.querySelectorAll('[data-vwce]').forEach(e=>{e.setAttribute('contenteditable','true');e.removeAttribute('data-vwce');});return;}
-  document.querySelectorAll('.main button,.main .btn,#saveFab').forEach(b=>{if(vwIsWriteBtn(b)||b.id==='saveFab')b.classList.add('vw-hide');});
-  document.querySelectorAll('.main textarea,.main input').forEach(i=>{
+  const vwQ=sel=>{const out=[],mn=document.querySelector('.main');if(!mn)return out;for(const k of mn.children){const r=k.classList.contains('content')?curRoot():k;if(r)r.querySelectorAll(sel).forEach(e=>out.push(e));}return out;};
+  vwQ('button,.btn').concat([document.getElementById('saveFab')].filter(Boolean)).forEach(b=>{if(vwIsWriteBtn(b)||b.id==='saveFab')b.classList.add('vw-hide');});
+  vwQ('textarea,input').forEach(i=>{
     if(i.closest('.vw-ok,#vwBar'))return;
     const ty=(i.type||'text').toLowerCase();
     if(ty==='checkbox'||ty==='radio'||ty==='button'||ty==='submit'||ty==='file'||ty==='range'||ty==='hidden')return;
     if(ty==='search'||/search|filter|find/i.test(i.className+' '+i.id)||/검색|조회/.test(i.placeholder||''))return;
     if(['text','number','tel','email','password','url'].indexOf(ty)>=0||i.tagName==='TEXTAREA'){if(!i.readOnly){i.readOnly=true;i.setAttribute('data-vwro','1');}}});
-  document.querySelectorAll('.main [contenteditable="true"]').forEach(e=>{e.setAttribute('contenteditable','false');e.setAttribute('data-vwce','1');});
+  vwQ('[contenteditable="true"]').forEach(e=>{e.setAttribute('contenteditable','false');e.setAttribute('data-vwce','1');});
 }
 function vwSchedule(){clearTimeout(vwUiTimer);vwUiTimer=setTimeout(vwApplyUI,120);}
 document.addEventListener('click',e=>{
@@ -43401,7 +43524,9 @@ function xlPaint(root){
     }
   });
 }
-function xlPaintAll(){document.body.classList.add('xl-on');xlPaint(document.body);}
+function xlPaintAll(){document.body.classList.add('xl-on');
+  try{xlPaint(curRoot());}catch(e){}
+  for(const k of document.body.children){if(k.tagName==='SCRIPT'||k.tagName==='NAV'||k.classList.contains('main')||!k.firstElementChild)continue;if(k.classList.contains('hidden')||k.hidden)continue;xlPaint(k);}}
 (function(){let tm=null;const run=()=>{clearTimeout(tm);tm=setTimeout(()=>{try{xlPaintAll();}catch(e){console.error('xlPaint',e);}},60);};
   const start=()=>{new MutationObserver(run).observe(document.body,{childList:true,subtree:true});run();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();})();
