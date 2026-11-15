@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.13-1524">
+<meta name="app-build" content="2026.11.13-1947">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11166,7 +11166,7 @@ const DAYLOG_SEED={"cells":{"2025-01":{"NO.1":{"1":"62","2":"64/64","7":"SL보�
 const DL_DEF_COLS=['NO.1','NO.2','NO.3','NO.5','NO.6','NO.7','NO.8','NO.9','NO.10','NO.11','NO.12','NO.13','NO.15'];
 const DL_TD=['TD_T','TD_1','TD_2'], DL_TDNAME={TD_T:'턴디쉬 종류',TD_1:'턴디쉬 ①',TD_2:'턴디쉬 ②'};
 const DL_TOP=[['c1','1차콘수명'],['c2','2차콘수명'],['c3','3차콘수명'],['end','해체수명'],['sl','SL보수'],['memo','비고']];
-let dlStore=(()=>{try{const o=JSON.parse(localStorage.getItem('dgrns_daylog')||'{}');o.cells=o.cells||{};o.notes=o.notes||{};o.tops=o.tops||{};return o;}catch(e){return {cells:{},notes:{},tops:{}};}})();
+let dlStore=(()=>{try{const o=JSON.parse(localStorage.getItem('dgrns_daylog')||'{}');o.cells=o.cells||{};o.notes=o.notes||{};o.tops=o.tops||{};o.carry=o.carry||{};return o;}catch(e){return {cells:{},notes:{},tops:{},carry:{}};}})();
 let dlAutoCache=null;
 function dlSave(show){dlAutoCache=null;dlxInvalidate();try{localStorage.setItem('dgrns_daylog',JSON.stringify(dlStore));}catch(e){}flashSave();if(show)toast('저장되었습니다');}
 let dlYM=null;
@@ -11255,13 +11255,26 @@ function dlYMstr(y,m){return y+'-'+String(m).padStart(2,'0');}
 // 위(앞날) 칸의 누적값 : 신축/해체/폐기/축조를 만나면 0, 숫자(앞 숫자)를 만나면 그 값, 그 외 글자(콘보수 등)는 건너뜀
 function dlPrevNum(ym,no,d){let [y,m]=ym.split('-').map(Number),dd=d-1;
   for(let i=0;i<70;i++){
-    if(dd<1){m--;if(m<1){m=12;y--;}dd=new Date(y,m,0).getDate();}
+    if(dd<1){if(dlYMstr(y,m)===ym){const ov=dlCarryOv(ym,no);if(ov!=null){if(/신축|축조|해체|폐기|대수리/.test(ov))return 0;const mo=/^(\d+)/.exec(ov);if(mo)return parseInt(mo[1],10);}}   /* 전월 마지막 값을 직접 고쳤으면 그 값이 기준 */
+      m--;if(m<1){m=12;y--;}dd=new Date(y,m,0).getDate();}
     const v=String(dlGet(dlYMstr(y,m),no,String(dd))||'').trim();
     if(v){if(/신축|축조|해체|폐기|대수리/.test(v))return 0;const mm=/^(\d+)/.exec(v);if(mm)return parseInt(mm[1],10);}
     dd--;}
   return 0;}
 /* 2026-10-04: 새 달 표 맨 위에 "전월 마지막 데이터"(래들별 마지막으로 기록된 칸 · 날짜)를 이월 표시 — 1일에 어디서부터 이어지는지 헷갈리지 않게 */
+function dlCarryOv(ym,no){const o=(dlStore.carry||{})[ym];const v=o?o[no]:null;return (v==null||String(v).trim()==='')?null:String(v).trim();}
+function dlCarrySet(ym,no,v){v=String(v==null?'':v).trim();const a=dlCarryAuto(ym,no);dlStore.carry=dlStore.carry||{};const o=dlStore.carry[ym]=dlStore.carry[ym]||{};
+  if(v===''||(a&&v===String(a.v)))delete o[no];else o[no]=v;
+  if(!Object.keys(o).length)delete dlStore.carry[ym];}
+function dlCarryEdit(inp){dlCarrySet(dlYM,inp.dataset.no,inp.value);dlSave();dlRender();
+  const ov=dlCarryOv(dlYM,inp.dataset.no);toast(ov?'전월 마지막 값을 '+ov+'(으)로 고쳤습니다 — 비우면 자동 값으로 돌아갑니다':'전월 마지막 값을 자동 값으로 되돌렸습니다');}
 function dlCarry(ym,no){
+  const a=dlCarryAuto(ym,no),ov=dlCarryOv(ym,no);
+  if(ov==null)return a;
+  let [y,m]=ym.split('-').map(Number);m--;if(m<1){m=12;y--;}
+  return {v:ov,raw:'직접 고친 값입니다'+(a?' · 자동 값: '+a.v+' ('+a.m+'/'+a.d+')':'')+' · 비우면 자동 값으로 돌아갑니다',m:a?a.m:m,d:a?a.d:new Date(y,m,0).getDate(),ov:1};
+}
+function dlCarryAuto(ym,no){
   let [y,m]=ym.split('-').map(Number);m--;if(m<1){m=12;y--;}
   let dd=new Date(y,m,0).getDate();
   for(let i=0;i<70;i++){
@@ -11288,8 +11301,9 @@ function dlRender(){if(!dlxSwept){dlxSwept=true;setTimeout(()=>{try{dlxAutoSweep
   const [y,m]=dlYM.split('-').map(Number),nd=dlDays(dlYM),cols=dlCols(),WK=['일','월','화','수','목','금','토'],td=todayStr();
   let h='<thead><tr><th>구분</th>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+DL_TD.map(c=>`<th class="dl-tdh">${DL_TDNAME[c]}</th>`).join('')+'<th style="min-width:240px;text-align:left">비고(조업 특이사항)</th></tr></thead><tbody>';
   // 맨 위 : 전월 마지막 데이터(이월 · 읽기 전용)
-  h+=`<tr class="dl-carry" title="지난달에 마지막으로 기록된 칸입니다(읽기 전용). 이번 달 1일 칸에서 '+7'처럼 입력하면 이 누적에 더해집니다"><td>전월 마지막<br><span style="font-weight:400;font-size:9.5px;color:#475569">(이월)</span></td>`
-    +cols.concat(DL_TD).map(no=>{const c=dlCarry(dlYM,no);return c?`<td class="${dlCls(c.v)}"${c.raw!==c.v?` title="${esc(c.raw)}"`:''}>${esc(c.v)}<div style="font-weight:400;font-size:9.5px;color:#475569">${c.m}/${c.d}</div></td>`:'<td></td>';}).join('')
+  h+=`<tr class="dl-carry" title="지난달에 마지막으로 기록된 칸입니다. 칸을 눌러 직접 고칠 수 있습니다(비우면 자동 값). 이번 달 1일 칸에서 '+7'처럼 입력하면 이 누적에 더해집니다"><td>전월 마지막<br><span style="font-weight:400;font-size:9.5px;color:#475569">(이월)</span></td>`
+    +cols.concat(DL_TD).map(no=>{const c=dlCarry(dlYM,no);
+      return `<td class="${c?dlCls(c.v):''}"${c&&c.ov?' style="box-shadow:inset 0 0 0 2px #f59e0b"':''}${c&&c.raw!==c.v?` title="${esc(c.raw)}"`:''}><input data-carry="1" data-no="${esc(no)}" value="${esc(c?c.v:'')}" onchange="dlCarryEdit(this)" onkeydown="dlKey(event,this)" autocomplete="off" style="font-weight:700;color:#1e3a8a;padding:2px 2px 0">${c?`<div style="font-weight:400;font-size:9.5px;color:${c.ov?'#b45309':'#475569'}">${c.ov?'직접 수정':c.m+'/'+c.d}</div>`:''}</td>`;}).join('')
     +`<td></td></tr>`;
   // 상단 요약 6행 (엑셀 : 1차콘수명 ~ 비고) — 평균은 자동 계산
   DL_TOP.forEach(([k,lb])=>{
@@ -11364,6 +11378,7 @@ function dlSelClear(){dlSel=null;dlSelDraw();}
 function dlSelInputs(){const t=document.getElementById('dlTbl'),R=dlSelRect(),out=[];if(!t||!R)return out;
   for(let r=R.r1;r<=R.r2;r++){const row=[];for(let c=R.c1;c<=R.c2;c++){const i=dlCellInput(r,c);row.push(i||null);}out.push(row);}return out;}
 function dlApplyInput(inp,v,aff){v=String(v==null?'':v).trim();
+  if(inp.dataset.carry){dlCarrySet(dlYM,inp.dataset.no,v);return;}
   if(inp.dataset.top)dlTopSet(dlYM,inp.dataset.top,inp.dataset.no,v);
   else if(inp.dataset.note)dlSetNote(dlYM,inp.dataset.d,v);
   else{dlSet(dlYM,inp.dataset.no,inp.dataset.d,v);if(aff)aff.add(inp.dataset.no);}}
@@ -25176,7 +25191,7 @@ async function obsAllRun(forceZip,forcePick){
         }catch(e){bad.push(ent.name+' ('+(e&&e.message?e.message:e)+')');seen[ent.name]=f.lastModified;chSeen=true;}   // 양식이 아닌 파일은 바뀌기 전까지 다시 읽지 않는다
       }
       if(chSeen)S(SEEN,seen);
-      if(add||upd){S(KEY,ex);fieldExtraApply(true);try{seedFieldContactsNew();}catch(e){}rerender();}
+      if(add||upd){S(KEY,ex);fieldExtraApply(true);try{seedFieldContactsNew();}catch(e){}rerender();try{if(window.TBA)TBA.run('report');}catch(e){}}
       FF.last=Date.now();
       FF.msg=(add||upd)?('새 보고서 '+add+'건 추가'+(upd?' · '+upd+'건 갱신':'')):'새 보고서 없음';
       if(bad.length)FF.msg+=' · 읽지 못한 파일 '+bad.length+'건: '+bad.slice(0,3).join(', ');
@@ -25234,6 +25249,120 @@ async function obsAllRun(forceZip,forcePick){
     try{if(typeof window.fbRerenderNow==='function'&&!window.fbRerenderNow.__ff){const _n=window.fbRerenderNow;const w2=function(){try{fieldExtraApply();}catch(e){}return _n.apply(this,arguments);};w2.__ff=1;window.fbRerenderNow=w2;}}catch(e){}
     setTimeout(()=>{if(canUse())scan(false);},6000);
     setInterval(()=>{try{if(document.visibilityState!=='hidden'&&canUse()&&FF.state==='ok')scan(false);}catch(e){}},10*60000);
+  }
+  if(document.readyState==='complete')start();else window.addEventListener('load',start);
+})();
+
+/* ============ 팀 업무 보드 자동 반영 (2026-11-13) ============
+   목적: 모든 업무가 팀 업무 보드에 들어오게 한다.
+   ① 새 외근보고서(2026-11-13 이후) → 같은 업체·키워드의 진행 중 카드가 있으면 그 카드에 자동 연결하고 진행 기록에 남긴다.
+      맞는 카드가 없으면(또는 같은 업체 카드가 여러 개라 고를 수 없으면) [접수] 열에 새 카드를 만든다.
+   ② 업무진행현황의 진행 중 항목(진행중·예정·보류, 올해 항목 또는 기한이 이번 달 이후) → 보드에 없으면 카드를 만든다(완료·삭제한 것은 다시 만들지 않는다).
+   · 자동으로 만든 카드는 '가장 낮은 우선순위'로 저장한다 — 같은 카드를 다른 PC가 이미 고쳤으면 그쪽 내용이 남는다.
+   · 팀 자료를 한 번 받은 뒤에만, 사업소장·관리직 PC에서만 실행한다(오래된 PC가 옛 자료로 만들지 않게). */
+(function(){
+  const KEY='dgrns_tb_auto',START='2026-11-13';
+  const TBA={force:false,last:null,busy:false};window.TBA=TBA;
+  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}};
+  const can=()=>{try{return ['admin','office'].indexOf(appRole())>=0;}catch(e){return false;}};
+  const ready=()=>!!(TBA.force||window.__fbSynced||window.__fbSeen);
+  const ck=s=>{try{return tbxKey(s);}catch(e){return String(s||'');}};
+  const sameCo=(a,b)=>{const x=ck(a),y=ck(b);return !!x&&!!y&&(x===y||(x.length>=3&&y.length>=3&&(x.indexOf(y)>=0||y.indexOf(x)>=0)));};
+  const hash=s=>{let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))>>>0;return h.toString(36);};
+  const md=d=>String(d||'').slice(5).replace('-','/');
+  /* 새 카드 저장: 수정 시각을 가장 낮게 기록 → 다른 PC에 같은 카드가 이미 있으면 그쪽이 이긴다 */
+  function saveNew(c){
+    const k=TB_PRE+c.id;if(localStorage.getItem(k)!=null)return false;
+    c.up=new Date().toISOString();
+    try{(window.rawSetItem||localStorage.setItem.bind(localStorage))(k,JSON.stringify(c));}catch(e){return false;}
+    try{kvTimes[k]=1;kvTimesSave();}catch(e){}
+    tbCards.push(c);return true;
+  }
+  /* 기존 카드 수정(연결·기록 추가) */
+  function saveEdit(c){c.up=new Date().toISOString();try{localStorage.setItem(TB_PRE+c.id,JSON.stringify(c));}catch(e){return false;}return true;}
+  const sysLog=(c,x,sys)=>{(c.lg=c.lg||[]).push({d:tbNow(),w:sys?'(자동)':(tbWho()||'-'),x:x,s:sys?1:0});if(c.lg.length>400)c.lg=c.lg.slice(-400);};
+  function ownerOf(tv){try{const pp=tbPeople().filter(n=>n&&!/사업소|팀$|부$/.test(n)&&String(tv||'').indexOf(n)>=0);if(pp.length)return pp.join(', ');}catch(e){}try{return tbWho()||'';}catch(e){return '';}}
+  function repTitle(r){const co=fieldCompanyName(r.cu);const pu=String(r.pu||'').replace(co,'').trim();const t='[외근] '+co+(pu?' — '+pu:'');return t.length>60?t.slice(0,59)+'…':t;}
+  function pickCard(r){
+    const co=fieldCompanyName(r.cu),act=tbCards.filter(c=>c&&!c.del&&c.st!=='done');
+    const kwHit=c=>{try{return tbxRepHit(r,tbxKws(c));}catch(e){return false;}};
+    const byUp=(x,y)=>String(y.up||y.cr||'').localeCompare(String(x.up||x.cr||''));
+    const same=act.filter(c=>sameCo(c.cu,co));
+    const linked=act.filter(c=>(c.fr||[]).indexOf(r.d)>=0&&(sameCo(c.cu,co)||(!String(c.cu||'').trim()&&kwHit(c))));
+    if(linked.length)return {card:linked[0],already:true};
+    /* 1순위: 같은 업체 카드 — 키워드가 맞는 것 > 제목이 출장목적과 겹치는 것 > 하나뿐인 것 */
+    if(same.length){
+      const k=same.filter(kwHit);if(k.length)return {card:k.sort(byUp)[0]};
+      const toks=String(r.pu||'').split(/[\s,·()\/]+/).filter(x=>x.length>=3&&ck(x)!==ck(co)&&ck(co).indexOf(ck(x))<0);
+      const hit=same.filter(c=>toks.some(t=>String(c.t||'').toLowerCase().indexOf(t.toLowerCase())>=0));
+      if(hit.length)return {card:hit.sort(byUp)[0]};
+      if(same.length===1)return {card:same[0]};
+      return {card:null};   // 같은 업체 카드가 여러 개인데 고를 근거가 없으면 새 카드
+    }
+    /* 2순위: 업체가 비어 있는 카드 중 키워드가 맞는 것(다른 업체의 프로젝트에는 붙이지 않는다) */
+    const k2=act.filter(c=>!String(c.cu||'').trim()&&kwHit(c));
+    if(k2.length)return {card:k2.sort(byUp)[0]};
+    return {card:null};
+  }
+  function run(why){
+    if(TBA.busy)return null;if(!can()||!ready())return null;
+    TBA.busy=true;const R={link:0,newRep:0,newWp:0,skipOld:0,titles:[]};const _n=new Date(),CY=String(_n.getFullYear()),CYM=CY+'-'+String(_n.getMonth()+1).padStart(2,'0');
+    try{
+      tbLoad();
+      try{fieldExtraApply();}catch(e){}
+      const st=J(KEY,{});st.fr=st.fr||{};let chSt=false;
+      /* ① 외근보고서 */
+      FIELD_SEED.slice().sort((a,b)=>String(a.d).localeCompare(String(b.d))).forEach(r=>{
+        if(!r||!r.d||r.d<START)return;const co=fieldCompanyName(r.cu),key=r.d+'|'+ck(co);if(st.fr[key])return;
+        const p=pickCard(r);
+        if(p.card&&p.already){st.fr[key]=p.card.id;chSt=true;return;}
+        if(p.card){const c=p.card;c.fr=c.fr||[];if(c.fr.indexOf(r.d)<0)c.fr.push(r.d);
+          sysLog(c,'외근보고 자동 연결 · '+md(r.d)+' '+co+(r.pu?' — '+r.pu:''),1);
+          if(r.sm)sysLog(c,'['+md(r.d)+' 외근] '+String(r.sm).slice(0,200),0);
+          if(saveEdit(c)){st.fr[key]=c.id;chSt=true;R.link++;R.titles.push(c.t);}
+          return;}
+        const id='fr'+r.d.replace(/-/g,'')+'_'+hash(ck(co));
+        if(localStorage.getItem(TB_PRE+id)!=null){st.fr[key]=id;chSt=true;return;}
+        const c={id:id,t:repTitle(r),ln:'',st:'wait',pr:0,cu:co,cc:'',eq:'',ow:ownerOf(r.tv),co:String(r.sm||''),s:r.d,due:'',rp:[],rs:{},hold:0,hr:'',fr:[r.d],fi:[],wl:[],lg:[],cr:new Date().toISOString(),dn:''};
+        c.ln=tbMigLane({ln:'',t:c.t+' '+(r.t||''),cu:co,eq:'',ow:''});
+        sysLog(c,'외근보고서에서 자동 등록 · '+md(r.d)+' '+co,1);if(r.sm)sysLog(c,'['+md(r.d)+' 외근] '+String(r.sm).slice(0,200),0);
+        if(saveNew(c)){st.fr[key]=id;chSt=true;R.newRep++;R.titles.push(c.t);}
+      });
+      /* ② 업무진행현황 진행 중 항목 */
+      let wps=[];try{wps=wpItems();}catch(e){}
+      wps.forEach(i=>{
+        if(!i||!i.id||WP_OPEN.indexOf(i.status)<0)return;
+        /* 지난 연도 표에 '진행중'으로 남아 있는 항목은 제외 — 올해 항목이거나 기한이 이번 달 이후인 것만 */
+        if(!(String(i.year||String(i.start||'').slice(0,4))>=CY||(i.due&&String(i.due).slice(0,7)>=CYM))){R.skipOld++;return;}
+        if(localStorage.getItem(TB_PRE+'wp'+i.id)!=null)return;
+        if(tbCards.some(c=>(c.wl||[]).indexOf(i.id)>=0))return;
+        const last=(i.detail||'').split('\n').filter(Boolean).slice(-1)[0]||'';
+        const due=i.due?(i.due.length===7?i.due+'-'+String(new Date(+i.due.slice(0,4),+i.due.slice(5,7),0).getDate()).padStart(2,'0'):i.due):'';
+        const c={id:'wp'+i.id,wl:[i.id],t:i.title||'(제목 없음)',ln:tbGuessLane(i),st:i.status==='예정'?'wait':'doing',pr:0,cu:i.customer||'',cc:'',eq:'',ow:i.owner||'',co:'',
+          s:(i.start||'').length===7?i.start+'-01':(i.start||todayStr()),due:due,rp:[],rs:{},hold:i.status==='보류'?1:0,hr:i.status==='보류'?'업무진행현황 보류':'',
+          lg:[{d:tbNow(),w:'(자동)',x:'업무진행현황에서 자동 등록',s:1}].concat(last?[{d:tbNow(),w:'(업무진행현황)',x:last.replace(/^\[[^\]]*\]\s*-?\s*/,'').slice(0,120),s:0}]:[]),cr:new Date().toISOString(),dn:''};
+        if(saveNew(c)){R.newWp++;}
+      });
+      if(chSt){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+      if(R.newRep||R.newWp){try{if(window.fbOnKv)window.fbOnKv();}catch(e){}try{flashSave();}catch(e){}}
+      if(R.link||R.newRep||R.newWp){
+        const parts=[];if(R.link)parts.push('외근보고 '+R.link+'건 연결');if(R.newRep)parts.push('외근보고 카드 '+R.newRep+'건 생성');if(R.newWp)parts.push('업무진행현황 카드 '+R.newWp+'건 생성');
+        try{toast('🤝 팀 업무 보드 자동 반영 — '+parts.join(' · '));}catch(e){}
+        try{if(curView==='tboard'&&why!=='board'){tbLoad();tbRender();}}catch(e){}
+      }
+      TBA.last=Object.assign({at:Date.now(),why:why},R);
+    }catch(e){try{console.error('tbAuto',e);}catch(_){}}
+    finally{TBA.busy=false;}
+    return R;
+  }
+  TBA.run=run;
+  /* 팀 자료를 처음 다 받은 뒤 한 번 실행 */
+  try{if(typeof fbInitialSync==='function'){const _s=fbInitialSync;fbInitialSync=async function(){const r=await _s.apply(this,arguments);window.__fbSynced=true;setTimeout(()=>{try{run('sync');}catch(e){}},2000);return r;};}}catch(e){}
+  function start(){
+    /* 팀 자료를 받아 화면을 다시 그릴 때: 받았다는 표시 */
+    try{if(typeof fbRerender==='function'&&!fbRerender.__tba){const _r=fbRerender;const w=function(){window.__fbSeen=true;return _r.apply(this,arguments);};w.__tba=1;if(_r.__ff)w.__ff=1;fbRerender=w;}}catch(e){}
+    /* 팀 업무 보드에 들어갈 때 */
+    try{if(typeof tbInit==='function'&&!tbInit.__tba){const _t=tbInit;const w=function(){try{run('board');}catch(e){}return _t.apply(this,arguments);};w.__tba=1;tbInit=w;}}catch(e){}
   }
   if(document.readyState==='complete')start();else window.addEventListener('load',start);
 })();
