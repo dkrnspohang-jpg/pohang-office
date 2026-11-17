@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.16-1650">
+<meta name="app-build" content="2026.11.17-1535">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -198,6 +198,24 @@
   #sidenav .sn-foot{padding:9px 12px 12px;border-top:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap}
   #sidenav .sn-foot button{flex:1 1 auto;border:1px solid var(--line);background:#fff;color:#475569;border-radius:7px;padding:6px 8px;font-size:11.5px;cursor:pointer}
   #sidenav .sn-foot button:hover{border-color:var(--accent);color:var(--accent)}
+  /* 2026-11-17: 래들 수명관리 표 — 칸 글자 가운데 정렬 */
+  #lsp-life table th,#lsp-life table td{text-align:center!important;vertical-align:middle}
+  #lsp-life table td>div{justify-content:center}
+  #lsp-life table td input,#lsp-life table td select{text-align:center}
+  /* 2026-11-17: 턴디쉬 수명관리 — 래들 수명관리와 같은 형식(칸 글자 가운데) */
+  #tsp-life table th,#tsp-life table td{text-align:center!important;vertical-align:middle}
+  #tsp-life table td>div{justify-content:center}
+  #tundishMonthKind td{font-size:12.5px;white-space:nowrap}
+  /* 2026-11-17: 좌측 메뉴 — 글자를 칸 가운데로, 글자 크기 조금 키움(펼침 표시·배지는 오른쪽 끝에 고정) */
+  #sidenav .sn-gh,#sidenav .sn-it{justify-content:center;position:relative;text-align:center;padding-left:26px!important;padding-right:26px!important}
+  #sidenav .sn-gh{font-size:14.5px}
+  #sidenav .sn-it{font-size:13.5px;padding-left:6px!important;padding-right:20px!important;gap:6px}
+  #sidenav .sn-it>span:nth-child(2){white-space:normal}
+  #sidenav .sn-gh .car{position:absolute;right:10px;top:50%;margin:-7px 0 0 0}
+  #sidenav .sn-c2{position:absolute;right:4px;top:50%;margin:-10px 0 0 0!important}
+  #sidenav .sn-gh .sn-gbd,#sidenav .sn-gh .apbadge,#sidenav .sn-it .apbadge,#sidenav .sn-bd{position:absolute;right:24px;top:50%;transform:translateY(-50%);margin:0!important}
+  #sidenav .sn-si{text-align:center;font-size:13px}
+
   #topnav .tn-mode{margin:auto 0 auto 8px;border:1px solid var(--line);background:#fff;color:#475569;border-radius:7px;padding:5px 9px;font-size:11.5px;cursor:pointer;white-space:nowrap}
 
   /* ===== 전기로 사용실적 — 엑셀 양식(굴림체 · 검정 테두리 · 흰 바탕) ===== */
@@ -793,6 +811,9 @@
   .dl-cl li{display:flex;gap:10px;padding:6px 4px;border-bottom:1px dashed #e2e8f0;align-items:baseline}
   .dl-cl li:last-child{border-bottom:0}
   .dl-cl .lb{flex:0 0 150px;font-weight:700;color:#334155;white-space:nowrap}
+  .dl-cl-side{font-size:12.5px;line-height:1.45}.dl-cl-side li{padding:4px 2px}.dl-cl-side .lb{flex-basis:118px}
+  .dl-cltbl th,.dl-cltbl td{padding:4px 8px!important;font-size:12px!important}
+  .dl-cltbl td:not(:first-child){min-width:54px}.dl-cltbl tr:last-child td{white-space:pre-line!important;text-align:left!important}.dl-cltbl td:nth-child(2),.dl-cltbl td:nth-child(3),.dl-cltbl td:nth-child(5){max-width:150px}
   .dl-cl .tx{flex:1;min-width:0}
   .dl-cl .up{color:#15803d;font-weight:700}.dl-cl .dn{color:#c81e1e;font-weight:700}
   .dl-tbl tr.dl-carry td{background:#eff6ff;text-align:center;font-size:12.5px;font-weight:700;color:#1e3a8a;line-height:1.25;padding:3px 2px}
@@ -803,6 +824,8 @@
   .dl-sum{border-collapse:collapse;font-size:12.5px;width:100%}
   .dl-sum th{background:#334155;color:#fff;padding:6px 8px;text-align:left}
   .dl-sum td{border-bottom:1px solid #e2e8f0;padding:5px 8px;vertical-align:top}
+  .dl-sum td.dls-new{background:#dbeafe}.dl-sum td.dls-sl{background:#fce7f3}.dl-sum td.dls-cone{background:#ffedd5}.dl-sum td.dls-end{background:#fef9c3}
+  .dl-sum td[class^=dls-] b{font-weight:700}.dl-sum td[class^=dls-] div{font-size:11.5px;color:#334155}.dl-sum tr.dls-sub td{border-top:0}
   .binp{width:100%;border:1px solid transparent;background:transparent;font-size:13.5px;padding:4px 6px;border-radius:4px}
   .binp:hover{border-color:var(--line)}.binp:focus{border-color:var(--accent);background:#fff;outline:none}
   .eafgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -1974,6 +1997,11 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
       <thead><tr><th>업체</th><th>해체 건수</th><th>비율</th><th>평균 해체수명</th><th>최고</th><th>최저</th><th>누적 CH</th><th>SL 건수</th><th>평균 SL보수</th></tr></thead>
       <tbody id="ladleVendorSummary"></tbody>
     </table></div>
+    <div class="subhead">래들번호별 현황 <span class="hint">영구장 교체 이후 누적수명·신축횟수</span></div>
+    <div class="tablewrap"><table class="mini">
+      <thead><tr><th>래들번호</th><th>상태</th><th>현재수명</th><th>영구장 수리일</th><th>영구장 누적수명</th><th>신축횟수<br><span style="font-weight:400;font-size:10px">(영구장 이후)</span></th><th>대수리</th><th>최근 해체수명</th><th>최근 SL보수</th></tr></thead>
+      <tbody id="ladleSummary"></tbody>
+    </table></div>
     <div class="formbar">
       <h3 id="lFormTitle">＋ 래들 기록 등록</h3>
       <div class="frow">
@@ -2016,11 +2044,6 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
     <div class="tablewrap"><table>
       <thead><tr><th>일자</th><th>래들번호</th><th>업체</th><th>사용기간</th><th>구분</th><th style="min-width:170px">수명(CH)<br><span style="font-weight:400;font-size:9.5px">해체: 총수명 + 구성(<b>보수후</b>)</span></th><th>영구장 누적수명</th><th style="min-width:150px">비고</th><th style="width:150px">돌발 평균제외<br><span style="font-weight:400;font-size:9.5px">제외 사유 입력</span></th><th style="width:60px">해체<br>모식도</th><th style="width:130px">관리</th></tr></thead>
       <tbody id="ladleBody"></tbody>
-    </table></div>
-    <div class="subhead">래들번호별 현황 <span class="hint">영구장 교체 이후 누적수명·신축횟수</span></div>
-    <div class="tablewrap"><table class="mini">
-      <thead><tr><th>래들번호</th><th>상태</th><th>현재수명</th><th>영구장 수리일</th><th>영구장 누적수명</th><th>신축횟수<br><span style="font-weight:400;font-size:10px">(영구장 이후)</span></th><th>대수리</th><th>최근 해체수명</th><th>최근 SL보수</th></tr></thead>
-      <tbody id="ladleSummary"></tbody>
     </table></div>
     </div><!-- /lsp-life -->
 
@@ -2950,7 +2973,11 @@ service cloud.firestore {
     </div>
     <div class="subpanel active" id="tsp-life">
     <div class="cards" id="tundishCards"></div>
-    <div class="subhead" style="margin-top:0">호수별 누적수명 <span class="hint">(상단 고정 — 참고용) 사용차수 · 최고CH · 영구장누적 · 최근 사용일자·CH</span></div>
+    <div class="subhead" style="margin-top:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">월별 · 종류별 사용완료 <span class="hint" id="t_mkHint"></span><span style="flex:1"></span>
+      <select class="selbox" id="t_mkYear" onchange="tdMkYear=this.value;renderTundishMonthKind()"></select>
+      <button class="btn sm" onclick="tdKindEdit()" title="호수 범위별 종류(150각·BB·250+300각) 기준을 바꿉니다">⚙ 종류 기준 수정</button></div>
+    <div class="tablewrap"><table class="mini" id="tundishMonthKind"></table></div>
+    <div class="subhead">호수별 누적수명 <span class="hint">(상단 고정 — 참고용) 사용차수 · 최고CH · 영구장누적 · 최근 사용일자·CH</span></div>
     <div class="tablewrap"><table class="mini">
       <thead><tr><th>호수</th><th>종류</th><th>상태</th><th>차수</th><th>최고CH</th><th>영구장누적</th><th>영구장 수리일</th><th>최근 사용일자</th><th>최근 사용CH</th></tr></thead>
       <tbody id="tundishSummary"></tbody>
@@ -2962,7 +2989,7 @@ service cloud.firestore {
         <div class="field w-no"><label>호수</label><input list="tundishNos" id="t_no" placeholder="37"></div>
         <datalist id="tundishNos"></datalist>
         <div class="field w-kind"><label>종류</label><input list="tundishKinds" id="t_kind" placeholder="BB"></div>
-        <datalist id="tundishKinds"><option>150각</option><option>BB</option><option>B/L</option></datalist>
+        <datalist id="tundishKinds"><option value="150각"></option><option value="BB"></option><option value="B/L">250+300각</option></datalist>
         <div class="field w-sel"><label>구분</label>
           <select id="t_type"><option>사용</option><option>신축</option><option>대수리(영구장)</option><option>철피신규</option><option>철피폐기</option><option>해체</option></select>
         </div>
@@ -9986,7 +10013,7 @@ function renderTundish(){
   if(!rows.length){b.innerHTML=`<tr><td colspan="9"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
   const _dk={};tundishData.forEach(r=>{if(r.type==='해체'||r.type==='대수리(영구장)'){const k=[r.no,r.date,r.type,r.daily||0].join('|');_dk[k]=(_dk[k]||0)+1;}});
   b.innerHTML=rows.map(r=>{const mkMsg=_mk.get(r.id)||'';const _dn=_dk[[r.no,r.date,r.type,r.daily||0].join('|')]||0;return `<tr${mkMsg?' style="background:#fef08a" title="'+esc(mkMsg)+'"':''}>
-    <td style="white-space:nowrap">${esc(r.date)}${mkMsg?`<div style="font-size:10px;color:#a16207;white-space:normal;max-width:150px;line-height:1.25">🟡 ${esc(mkMsg)}</div>`:''}</td><td><strong>${esc(r.no)}</strong></td><td>${esc(r.kind)||'-'}</td>
+    <td style="white-space:nowrap">${esc(r.date)}${mkMsg?`<div style="font-size:10px;color:#a16207;white-space:normal;max-width:150px;line-height:1.25">🟡 ${esc(mkMsg)}</div>`:''}</td><td><strong>${esc(r.no)}</strong></td><td>${tdKindCell(r.no,r.kind)}</td>
     <td><span class="tag ${ttClass(r.type)}"${r._wasUse?' title="사용완료 처리 — 지금 사용 중인 호수가 아니어서 해체로 봅니다 (저장값은 사용)"':''}>${esc(r.type)}</span></td>
     <td>${r.daily?`<span class="ch-num">${r.daily}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
     <td><span class="ch-cum">${r._camp??'-'}</span></td><td><span class="ch-shell">${r._shell??'-'}</span></td>
@@ -10009,7 +10036,7 @@ function renderTundishSummary(){
     /* 2026-10-09: 최근 사용일자·최근 사용CH — 마지막으로 실제 사용한(사용·해체·철피폐기) 기록의 일자와 수명 */
     const lu=[...list].reverse().find(r=>(r.type==='사용'||END_EVT.includes(r.type))&&((r.daily||0)>0||r.type==='사용'));
     const luCH=lu?(lu.type==='사용'?(lu._camp||lu.daily||0):(lu.daily||lu._camp||0)):null;
-    return `<tr><td><strong>${esc(no)}</strong></td><td>${esc(tdKindNorm(last.kind))||'-'}</td><td>${status}</td>
+    return `<tr><td><strong>${esc(no)}</strong></td><td>${tdKindCell(no,last.kind)}</td><td>${status}</td>
       <td>${camps}</td><td><span class="ch-num">${maxCH}</span></td><td><span class="ch-shell">${last._shell}</span></td>
       <td>${lastRepair?`<span class="tag t-big">${esc(lastRepair.date)}</span>`:'-'}</td>
       <td>${lu?esc(lu.date):'-'}</td><td>${lu?`<span class="ch-cum">${luCH}</span>`:'-'}</td></tr>`;
@@ -11198,7 +11225,7 @@ function dlAutoTops(){
       const v=String(dlGet(ym,no,d)||'').trim();if(!v)return;
       const date=ym+'-'+String(d).padStart(2,'0'),nm=dlxNums(v);
       if(nm){last=nm;return;}
-      if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){cur={no,ev:[],end:null,newDate:date,newTxt:v};camps.push(cur);last=null;prev=0;return;}
+      if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){if(date>=dlNewEndFrom()&&last&&!cur.end)cur.end={date,cum:last[0],txt:v,viaNew:1};cur={no,ev:[],end:null,newDate:date,newTxt:v};camps.push(cur);last=null;prev=0;return;}
       if(DLX_END_TXT.includes(v)||/해체$/.test(v)){const c=last?last[0]:null;
         if(c!=null&&!cur.end){cur.end={date,cum:c,txt:v};}
         last=null;prev=0;cur={no,ev:[],end:null};camps.push(cur);return;}
@@ -11480,7 +11507,7 @@ function dlMetrics(ym){
       const life=()=>{const n=dlPrevNum(ym,no,d);return n>0?n:null;};
       if(/대수리/.test(v)){M.rep.push({no,d});continue;}
       if(/해체|폐기/.test(v)){M.end.push({no,d,life:life()});cnt.end=(cnt.end||0)+1;}
-      else if(/신축|축조|철피/.test(v)){M.nw.push({no,d});}
+      else if(/신축|축조|철피/.test(v)){M.nw.push({no,d});if(/신축|축조/.test(v)&&(ym+'-'+String(d).padStart(2,'0'))>=dlNewEndFrom()){const pn=dlPrevNum(ym,no,d);if(pn>0){M.end.push({no,d,life:pn,viaNew:1});cnt.end=(cnt.end||0)+1;}}}
       if(/SL보수/.test(v)){M.sl.push({no,d,life:life()});cnt.sl=(cnt.sl||0)+1;}
       if(/콘보수|콘교체/.test(v)){M.cone.push({no,d,life:life()});}
     }
@@ -11565,20 +11592,20 @@ function dlRenderClose(){
     return `<b style="color:${col}">${v>0?'▲ +'+ab:'▼ −'+ab}</b>`;};
   const th='style="background:#f1f5f9;padding:5px 10px;text-align:center;border:1px solid #e2e8f0;font-size:12px;white-space:nowrap"', td='style="padding:5px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12.5px;white-space:nowrap"', tl='style="padding:5px 10px;border:1px solid #e2e8f0;font-size:12.5px;text-align:left;white-space:nowrap"';
   // 1) 한 줄에 한 항목씩 세로로 나열한 요약
-  let h='<ul class="dl-cl">'+dlCloseLines(C).map(x=>`<li><span class="lb">${esc(x.lb)}</span><span class="tx${x.d!=null?(x.d>0?' up':x.d<0?' dn':''):''}">${esc(x.tx)}</span></li>`).join('')+'</ul>';
+  let h='';const clUl='<ul class="dl-cl dl-cl-side">'+dlCloseLines(C).map(x=>`<li><span class="lb">${esc(x.lb)}</span><span class="tx${x.d!=null?(x.d>0?' up':x.d<0?' dn':''):''}">${esc(x.tx)}</span></li>`).join('')+'</ul>';
   // 2) 비교표 — 항목명은 한 줄로
   const rows=[['해체 건수 (건)',m=>m.endN,0,null],['평균 해체수명 (CH)',m=>m.endAvg,1,true],['SL보수 건수 (건)',m=>m.slN,0,null],['평균 SL보수 수명 (CH)',m=>m.slAvg,1,true],
               ['1차 콘 건수 (건)',m=>m.c1N,0,null],['1차 콘 평균수명 (CH)',m=>m.c1Avg,1,true],
               ['2차 콘 건수 (건)',m=>m.c2N,0,null],['2차 콘 평균수명 (CH)',m=>m.c2Avg,1,true],
               ['3차 콘 건수 (건)',m=>m.c3N,0,null],['3차 콘 평균수명 (CH)',m=>m.c3Avg,1,true],
               ['콘보수 건수 (건)',m=>m.coneN,0,null],['신축 건수 (건)',m=>m.nwN,0,null],['일평균 사용 래들 (기)',m=>m.useAvg,1,null]];
-  h+=`<div style="overflow-x:auto;margin-top:10px"><table style="border-collapse:collapse;min-width:640px"><thead><tr><th ${th}>항목</th><th ${th}>${mo}월</th><th ${th}>전월${P.has?'':'(기록 없음)'}</th><th ${th}>증감</th><th ${th}>전년 동월${Y.has?'':'(기록 없음)'}</th><th ${th}>증감</th></tr></thead><tbody>`;
+  h+=`<div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap"><div style="overflow-x:auto;flex:0 0 auto;max-width:100%"><table class="dl-cltbl" style="border-collapse:collapse;width:auto"><thead><tr><th ${th}>항목</th><th ${th}>${mo}월</th><th ${th}>전월${P.has?'':'(기록 없음)'}</th><th ${th}>증감</th><th ${th}>전년 동월${Y.has?'':'(기록 없음)'}</th><th ${th}>증감</th></tr></thead><tbody>`;
   rows.forEach(([lb,g,d,good])=>{const a=g(M),b=P.has?g(P):null,c=Y.has?g(Y):null;
     h+=`<tr><td ${tl}><b>${lb}</b></td><td ${td}><b>${num(a,d)}</b></td><td ${td}>${num(b,d)}</td><td ${td}>${dl(a,b,d,good)}</td><td ${td}>${num(c,d)}</td><td ${td}>${dl(a,c,d,good)}</td></tr>`;});
   h+=`<tr><td ${tl}><b>해체수명 최고 / 최저 (CH)</b></td><td ${td}>${M.endMax!=null?M.endMax+' / '+M.endMin:'-'}</td><td ${td}>${P.endMax!=null?P.endMax+' / '+P.endMin:'-'}</td><td ${td}></td><td ${td}>${Y.endMax!=null?Y.endMax+' / '+Y.endMin:'-'}</td><td ${td}></td></tr>`;
   const tdTxt=m=>Object.keys(m.td).length?Object.keys(m.td).map(k=>k+' '+m.td[k]+'일').join(' · '):'-';
-  h+=`<tr><td ${tl}><b>턴디쉬 종류 (기록일수)</b></td><td ${td.replace('white-space:nowrap','white-space:normal')}>${esc(tdTxt(M))}</td><td ${td.replace('white-space:nowrap','white-space:normal')}>${esc(tdTxt(P))}</td><td ${td}></td><td ${td.replace('white-space:nowrap','white-space:normal')}>${esc(tdTxt(Y))}</td><td ${td}></td></tr></tbody></table></div>`;
-  if(M.endN){h+=`<div style="margin-top:10px;font-size:12.5px;line-height:1.9"><b>해체 내역</b><br>`+M.end.slice().sort((a,b)=>a.d-b.d).map(e=>`${e.d}일 ${esc(e.no)} <b>${e.life!=null?e.life+'CH':'수명?'}</b>`).join('<br>')+'</div>';}
+  h+=`<tr><td ${tl}><b>턴디쉬 종류 (기록일수)</b></td><td ${td.replace('white-space:nowrap','white-space:normal')}>${esc(tdTxt(M))}</td><td ${td.replace('white-space:nowrap','white-space:normal')}>${esc(tdTxt(P))}</td><td ${td}></td><td ${td.replace('white-space:nowrap','white-space:normal')}>${esc(tdTxt(Y))}</td><td ${td}></td></tr></tbody></table></div><div style="flex:1 1 420px;min-width:340px;border-left:3px solid #e2e8f0;padding-left:14px">${clUl}</div></div>`;
+  if(M.endN){h+=`<div style="margin-top:10px;font-size:12.5px;line-height:1.9"><b>해체 내역</b><br>`+M.end.slice().sort((a,b)=>a.d-b.d).map(e=>`${e.d}일 ${esc(e.no)} <b>${e.life!=null?e.life+'CH':'수명?'}</b>${e.viaNew?' <span style="color:#64748b;font-size:11px">(신축 입력 · 해체 미기록)</span>':''}`).join('<br>')+'</div>';}
   if(X){
     const bad=X.onlyDl.length+X.onlyOff.length+X.diff.length;
     if(bad){h+=`<div style="margin-top:8px;padding:7px 10px;border-radius:6px;font-size:12px;line-height:1.7;background:#fff7ed;border:1px solid #fed7aa"><b style="color:#c2410c">🔎 수명관리와 차이 ${bad}건</b>`
@@ -11615,7 +11642,7 @@ function dlxLadleEvents(){
       const date=ym+'-'+String(d).padStart(2,'0'),nm=dlxNums(v);
       if(nm){last=nm;return;}
       const note=dlGetNote(ym,d)||'';
-      if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){out.push({no,date,type:'NEW',cum:0,seg:0,vendor:dlxVendorOf(v),txt:v});last=null;prev=0;lastSL=null;started=true;return;}
+      if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){if(date>=dlNewEndFrom()&&last)out.push({no,date,type:'END',cum:last[0],seg:last[0],vendor:dlxVendorOf(v),txt:'신축(해체 미기록)',viaNew:1});out.push({no,date,type:'NEW',cum:0,seg:0,vendor:dlxVendorOf(v),txt:v});last=null;prev=0;lastSL=null;started=true;return;}
       if(DLX_END_TXT.includes(v)||/해체$/.test(v)){const c=last?last[0]:null;
         if(c!=null)out.push({no,date,type:'END',cum:c,seg:c,vendor:dlxVendorOf(v),txt:v});   // 수명 숫자 없이 반복 표기된 해체(원진해체→해체 등)는 건너뜀
         last=null;prev=0;lastSL=null;started=false;return;}
@@ -11708,7 +11735,7 @@ function dlxTundishEvents(){
   dlxMonths().forEach(ym=>{
     const days=new Set();['TD_1','TD_2'].forEach(c=>dlxDayKeys(ym,c).forEach(d=>days.add(d)));
     [...days].sort((a,b)=>a-b).forEach(d=>{
-      const v1=String(dlGet(ym,'TD_1',d)||'').trim(),v2=String(dlGet(ym,'TD_2',d)||'').trim();
+      const v1=dlTdClean(dlGet(ym,'TD_1',d)),v2=dlTdClean(dlGet(ym,'TD_2',d));
       if(!/^\d+(\/\d+)*$/.test(v1))return;
       const date=ym+'-'+String(d).padStart(2,'0');
       const a=v1.split('/').map(Number),b=/^\d+(\/\d+)*$/.test(v2)?v2.split('/').map(Number):[];
@@ -25368,6 +25395,293 @@ async function obsAllRun(forceZip,forcePick){
   }
   if(document.readyState==='complete')start();else window.addEventListener('load',start);
 })();
+
+/* ============ 결재 문서(휴가원·잔업신청) 팀 공유 보호 (2026-11-17) ============
+   문제: 팀에 올릴 때 'PC에 있는 문서 = 무조건 이 PC 것'으로 덮어썼다. 그래서 최신 내용을 아직 못 받은 PC·휴대폰(오래 켜 둔 화면,
+         새로고침 전 옛 버전)이 무엇이든 하나 저장하면, 다른 사람이 끝낸 결재·관리직 「확인」이 결재 전 상태로 되돌아가고
+         지운 중복 문서도 다시 살아났다(→ "결재했는데 업데이트하면 또 뜬다").
+   해결: ① 문서마다 마지막 수정 시각(_u)을 기록 ② 올릴 때·받을 때 모두 문서 단위로 비교해 더 최신(시각이 같거나 없으면 결재가 더 진행된 쪽)을 남김
+         ③ 지운 문서는 '삭제 표식'을 팀에 공유해 옛 PC가 다시 올려도 되살아나지 않게 함
+         ④ 옛 버전 PC가 덮어쓴 내용을 받으면, 더 최신 내용을 가진 PC가 자동으로 다시 올려 바로잡음 */
+(function(){
+  const AS={leave:1,ot:1};
+  const KT=s=>'dgrns_fbtomb_'+s,KL=s=>'fbtombl_'+s,KS=s=>'fbseen_'+s,KD=s=>'fbdrop_'+s;
+  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}};
+  const raw=(k,v)=>{try{(window.rawSetItem||localStorage.setItem.bind(localStorage))(k,v);}catch(e){}};
+  /* 삭제 표식: 팀 공유본(dgrns_) ∪ 이 PC 보관본 */
+  function tombs(s){return Object.assign({},J(KL(s),{}),J(KT(s),{}));}
+  function tombAdd(s,ids){
+    const now=Date.now(),lim=now-200*864e5,t=tombs(s);ids.forEach(id=>{if(id!=null)t[id]=now;});
+    Object.keys(t).forEach(k=>{if(t[k]<lim)delete t[k];});
+    raw(KL(s),JSON.stringify(t));
+    try{localStorage.setItem(KT(s),JSON.stringify(t));}catch(e){}   // 팀 공유(설정 동기화로 전파)
+  }
+  const isTomb=(T,x)=>!!(x&&T[x.id]&&!((+x._u||0)>T[x.id]));   // 삭제 뒤 같은 번호로 다시 만든 문서는 살림
+  /* 이 PC가 팀 저장소에서 본 적 있는 문서 번호(동기화 안 함) */
+  const seenOn=s=>localStorage.getItem(KS(s))!=null;
+  function seenAdd(s,items){const m=J(KS(s),{});(items||[]).forEach(x=>{if(x&&x.id!=null)m[x.id]=1;});raw(KS(s),JSON.stringify(m));}
+  function dropKeep(s,list){if(!list.length)return;const a=J(KD(s),[]);list.forEach(x=>a.push({at:new Date().toISOString(),x}));raw(KD(s),JSON.stringify(a.slice(-40)));}
+  /* 결재 진행 정도 */
+  function score(d){if(!d)return -1;let n=0;const sp=d.steps||{};Object.keys(sp).forEach(k=>{if(sp[k])n+=10;});
+    if(d.status==='done'||d.status==='rej')n+=1000;if(d.conf&&d.conf.by)n+=5;return n;}
+  function pick(l,r){
+    const a=+l._u||0,b=+r._u||0;
+    if(a&&b&&a!==b)return a>b?l:r;          // 둘 다 새 버전에서 고친 문서 → 더 나중에 고친 쪽
+    const sa=score(l),sb=score(r);
+    if(sa!==sb)return sa>sb?l:r;            // 그 외 → 결재가 더 진행된 쪽
+    if(a!==b)return a>b?l:r;
+    return r;                               // 같으면 팀 쪽
+  }
+  const same=(x,y)=>{try{return JSON.stringify(x)===JSON.stringify(y);}catch(e){return false;}};
+  /* mode: 'push'(올리기 전) | 'recv'(받을 때) */
+  function merge(s,loc,rem,mode){
+    const T=tombs(s),L=new Map(),R=new Map(),out=[],drop=[];let locWin=0,locNew=0,remWin=0,remOnly=0,tombHit=0;
+    (loc||[]).forEach(x=>{if(x&&x.id!=null)L.set(x.id,x);});(rem||[]).forEach(x=>{if(x&&x.id!=null)R.set(x.id,x);});
+    const seen=J(KS(s),{}),init=seenOn(s);
+    new Set([...R.keys(),...L.keys()]).forEach(id=>{
+      const l=L.get(id),r=R.get(id);
+      const lt=!!(l&&isTomb(T,l)),rt=!!(r&&isTomb(T,r));
+      if(l&&r){
+        if(lt&&rt){tombHit++;return;}
+        if(lt){out.push(r);remWin++;return;}               // 지운 뒤 다시 만든 문서
+        if(rt){out.push(l);locWin++;tombHit++;return;}
+        const w=pick(l,r);out.push(w);if(!same(l,r)){if(w===l)locWin++;else remWin++;}return;}
+      if(r){if(rt){tombHit++;return;}out.push(r);remOnly++;return;}
+      if(lt){drop.push(l);return;}
+      /* 이 PC에만 있는 문서 */
+      if(init&&seen[id]){drop.push(l);return;}               // 팀에 있다가 지워진 문서 → 다시 올리지 않음
+      if(!init&&!(+l._u)){drop.push(l);return;}               // 처음 1회: 옛 문서는 팀 것을 따름(기존 방식과 같음)
+      out.push(l);locNew++;
+    });
+    return {items:out,drop,locWin,locNew,remWin,remOnly,tombHit,
+      heal:(locWin+locNew+tombHit)>0,locChanged:(remWin+remOnly+drop.length)>0||(tombHit>0)};
+  }
+  window.APS={merge,score,pick,tombs,tombAdd,last:{}};
+  /* ① 저장할 때 수정 시각 기록 */
+  try{const _put=putRec;putRec=function(s,rec){if(AS[s]&&rec&&typeof rec==='object'&&!fbApplying)rec._u=Date.now();return _put.apply(this,arguments);};}catch(e){}
+  /* ② 지울 때 삭제 표식 */
+  try{const _del=delRec;delRec=function(s,id){if(AS[s])tombAdd(s,[id]);return _del.apply(this,arguments);};}catch(e){}
+  /* ③ 받을 때: 통째로 바꾸지 않고 문서별 병합 */
+  try{const _apply=fbApplyStore;fbApplyStore=async function(store,items){
+    if(!AS[store])return _apply.apply(this,arguments);
+    let loc=[];try{loc=await txAll(store);}catch(e){}
+    const M=merge(store,loc,items||[],'recv');
+    dropKeep(store,M.drop);
+    await _apply.call(this,store,M.items);
+    seenAdd(store,(items||[]).filter(x=>!isTomb(tombs(store),x)));if(!seenOn(store))seenAdd(store,[]);
+    APS.last[store]={at:new Date().toISOString(),mode:'recv',n:M.items.length,locWin:M.locWin,locNew:M.locNew,tombHit:M.tombHit,drop:M.drop.length};
+    if(M.heal){try{syncLog('🛡 '+store+' 받은 자료보다 이 PC가 더 최신인 문서 '+(M.locWin+M.locNew)+'건'+(M.tombHit?' · 삭제된 문서 '+M.tombHit+'건':'')+' → 팀에 다시 올림');}catch(e){}
+      setTimeout(()=>{try{fbPushStore(store);}catch(e){}},1200+Math.floor(Math.random()*1500));}
+  };}catch(e){}
+  /* ④ 올릴 때: 팀 저장소를 먼저 읽어 문서별 병합 후 올림(이 PC 자료도 병합 결과로 맞춤) */
+  try{const _push=fbPushStore;fbPushStore=async function(store,force){
+    if(!AS[store])return _push.apply(this,arguments);
+    if(!fbOn)return;
+    try{
+      const loc=await txAll(store);let rem=[],ok=false;
+      try{const rr=await fbReadItems(store);rem=rr.exists?(rr.items||[]):[];ok=true;}catch(e){}
+      if(!ok){syncLog('업로드 보류 '+store+': 팀 저장소를 읽지 못함');return;}
+      const M=merge(store,loc,rem,'push');
+      dropKeep(store,M.drop);
+      if(M.locChanged){
+        await new Promise((res,rej)=>{const tx=db.transaction(store,'readwrite');const os=tx.objectStore(store);os.clear();M.items.forEach(it=>{try{os.put(it);}catch(e){}});tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
+        try{await fbReloadStore(store);}catch(e){}
+      }
+      await fbWriteItems(store,M.items,force?{}:undefined);
+      seenAdd(store,M.items);
+      APS.last[store]={at:new Date().toISOString(),mode:'push',n:M.items.length,locWin:M.locWin,locNew:M.locNew,remWin:M.remWin,tombHit:M.tombHit,drop:M.drop.length};
+      syncLog('↑ '+store+' ('+M.items.length+')'+(M.remWin?' · 팀의 더 최신 문서 '+M.remWin+'건 유지':'')+(M.drop.length?' · 지워진 문서 '+M.drop.length+'건 제외':''));
+    }catch(e){syncLog('업로드 오류 '+store+': '+e.message);}
+  };}catch(e){}
+})();
+/* ============ 업무진행현황: 2026년 이전 진행 항목 일괄 완료 (2026-11-17 요청, 1회) ============
+   2025년 이전 표에 '진행중·보류·예정'으로 남은 항목을 '완료'로 바꾼다(진척 100%, 변경 이력에 사유 기록).
+   팀 자료를 받은 뒤 사업소장·관리직 PC 한 곳에서 1회만 실행 — 실행 표식(dgrns_mig_wp_pre2026)이 팀에 공유되어 다른 PC는 다시 하지 않는다. */
+(function(){
+  const FLAG='dgrns_mig_wp_pre2026';
+  function run(){
+    if(localStorage.getItem(FLAG))return true;
+    try{if(['admin','office'].indexOf(appRole())<0)return false;}catch(e){return false;}
+    if(!(window.TBA&&TBA.force)&&!(window.fbOn&&(window.__fbSynced||window.__fbSeen)))return false;   // 팀 자료를 받은 뒤에만
+    try{wpReload();}catch(e){}
+    let n=0;const names=[];
+    wpItems().forEach(it=>{
+      const y=+it.year||+String(it.start||'').slice(0,4)||0;
+      if(!y||y>=2026||WP_OPEN.indexOf(it.status)<0)return;
+      const r=wpS.rows[it.id]=Object.assign(wpS.rows[it.id]||{id:it.id},{status:'완료',confirmed:true});
+      if(it.progress==null||it.progress<100)r.progress=100;
+      wpHistPush(it.id,'status',it.status,'완료','2026년 이전 진행 항목 일괄 완료');n++;names.push(y+' '+it.title);});
+    if(n){wpSave();try{if(curView==='workprog')wpRender();}catch(e){}}
+    try{localStorage.setItem(FLAG,JSON.stringify({at:new Date().toISOString(),n,by:(function(){try{return wpWho();}catch(e){return '';}})()}));}catch(e){}
+    window.__wpPre2026={n,names};
+    if(n){try{toast('🧭 업무진행현황 — 2026년 이전 진행 항목 '+n+'건을 완료로 정리했습니다');}catch(e){}}
+    return true;
+  }
+  window.wpPre2026Run=run;
+  let tries=0;const t=setInterval(()=>{tries++;let done=false;try{done=run();}catch(e){done=true;}if(done||tries>120)clearInterval(t);},5000);
+})();
+
+/* ============ 턴디쉬 수명관리 — 호수 기준 종류 고정 · 월별/종류별 대수·평균수명 (2026-11-17) ============
+   · 종류는 호수로 정한다(기본 1~10호 150각 · 20~30호 BB · 31~38호 250+300각(B/L)) — [종류 기준 수정]으로 바꿀 수 있고 팀 전체에 공유된다.
+   · 범위에 없는 호수는 기록에 적힌 종류를 쓴다.
+   · 월별·종류별 표 = 그 달 사용완료(해체) 기록의 대수와 평균수명(CH). */
+const TD_KMAP_KEY='dgrns_td_kindmap',TD_KMAP_DEF=[[1,10,'150각'],[20,30,'BB'],[31,38,'B/L']];
+function tdKmap(){try{const a=JSON.parse(localStorage.getItem(TD_KMAP_KEY));if(Array.isArray(a)&&a.length)return a;}catch(e){}return TD_KMAP_DEF;}
+function tdKindByNo(no){const n=parseInt(String(no==null?'':no).replace(/[^\d]/g,''),10);if(!n)return '';for(const r of tdKmap()){if(n>=+r[0]&&n<=+r[1])return r[2];}return '';}
+function tdKindOfRec(no,kind){return tdKindByNo(no)||tdKindNorm(kind)||'';}
+function tdKindLabel(k){k=tdKindNorm(k);return k==='B/L'?'250+300각':(k||'-');}
+function tdKindParse(t){t=String(t||'').trim();if(/150/.test(t))return '150각';if(/BB/i.test(t))return 'BB';if(/250|300|B\s*\/?\s*L/i.test(t))return 'B/L';return t;}
+function tdKmapText(){return tdKmap().map(r=>r[0]+'-'+r[1]+'='+tdKindLabel(r[2])).join(', ');}
+function tdKindCell(no,kind){const m=tdKindByNo(no),rk=tdKindNorm(kind);
+  if(!m)return rk?esc(tdKindLabel(rk)):'-';
+  return `<b>${esc(tdKindLabel(m))}</b>${rk&&rk!==m?`<div style="font-size:10px;color:#94a3b8" title="기록에 적힌 종류">기록: ${esc(tdKindLabel(rk))}</div>`:''}`;}
+function tdKindEdit(){
+  if(!['admin','office'].includes(appRole())){alert('종류 기준 수정은 사업소장·관리직만 할 수 있습니다.');return;}
+  const v=prompt('턴디쉬 호수별 종류 기준을 입력하세요 (쉼표로 구분)\n예) 1-10=150각, 20-30=BB, 31-38=250+300각\n\n범위에 없는 호수는 기록에 적힌 종류를 씁니다. 비우면 기본값으로 돌아갑니다.',tdKmapText());
+  if(v==null)return;
+  if(!v.trim()){try{localStorage.removeItem(TD_KMAP_KEY);localStorage.setItem(TD_KMAP_KEY,JSON.stringify(TD_KMAP_DEF));}catch(e){}refreshTundish();toast('기본 기준으로 되돌렸습니다');return;}
+  const out=[],bad=[];
+  v.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean).forEach(x=>{const m=/^(\d+)\s*(?:[-~]\s*(\d+))?\s*[=:]\s*(.+)$/.exec(x);
+    if(!m){bad.push(x);return;}const a=+m[1],b=m[2]?+m[2]:a;out.push([Math.min(a,b),Math.max(a,b),tdKindParse(m[3])]);});
+  if(bad.length||!out.length){alert('읽지 못한 부분: '+(bad.join(', ')||'(없음)')+'\n예) 1-10=150각, 20-30=BB, 31-38=250+300각');return;}
+  try{localStorage.setItem(TD_KMAP_KEY,JSON.stringify(out));}catch(e){}
+  refreshTundish();toast('턴디쉬 종류 기준을 저장했습니다 — '+tdKmapText());
+}
+/* 사용완료(해체) 기록 목록 [{no,date,ym,kind,life}] */
+function tdDoneList(){
+  const g={};tundishData.forEach(r=>{(g[r.no]=g[r.no]||[]).push(r);});const out=[];
+  Object.keys(g).forEach(no=>{let L=[];try{L=withCum(g[no]);}catch(e){L=g[no];}
+    L.forEach(r=>{if(!END_EVT.includes(r.type)||r.type==='철피폐기')return;
+      const life=+(r.daily||r._camp||0)||0;out.push({no,date:r.date,ym:String(r.date).slice(0,7),kind:tdKindOfRec(no,r.kind),life});});});
+  return out;
+}
+let tdMkYear='';
+function renderTundishMonthKind(){
+  const tb=document.getElementById('tundishMonthKind');if(!tb)return;
+  const all=tdDoneList(),yrs=[...new Set(all.map(x=>x.ym.slice(0,4)))].sort().reverse(),cy=todayStr().slice(0,4);
+  if(!tdMkYear||!yrs.includes(tdMkYear))tdMkYear=yrs.includes(cy)?cy:(yrs[0]||cy);
+  const sel=document.getElementById('t_mkYear');if(sel){sel.innerHTML=yrs.map(y=>`<option${y===tdMkYear?' selected':''}>${y}</option>`).join('');}
+  const hint=document.getElementById('t_mkHint');if(hint)hint.textContent='해체(사용완료) 기록 기준 · 종류는 호수 기준 ('+tdKmapText()+')';
+  const L=all.filter(x=>x.ym.slice(0,4)===tdMkYear);
+  const PO=['150각','B/L','BB'],kinds=[...new Set(tdKmap().map(r=>r[2]))].sort((x,y)=>{const i=PO.indexOf(x),j=PO.indexOf(y);return (i<0?9:i)-(j<0?9:j);});if(L.some(x=>!kinds.includes(x.kind)))kinds.push('__etc');
+  const kOf=x=>kinds.includes(x.kind)?x.kind:'__etc';
+  const st=a=>{const v=a.filter(x=>x.life>0);return {n:a.length,avg:v.length?Math.round(v.reduce((s,x)=>s+x.life,0)/v.length*10)/10:null};};
+  const cellHtml=(o,strong)=>o.n?`<b style="font-size:${strong?14:13}px">${o.n}</b>대 <span style="color:#94a3b8">/</span> 평균 <b style="color:#1d4ed8">${o.avg!=null?o.avg:'-'}</b>`:'<span style="color:#cbd5e1">-</span>';
+  const lab=k=>k==='__etc'?'기타':tdKindLabel(k);
+  const curM=todayStr().slice(0,7),maxM=tdMkYear===cy?+curM.slice(5):12;
+  let h=`<thead><tr><th style="width:80px">월</th>${kinds.map(k=>`<th>${esc(lab(k))}<div style="font-weight:400;font-size:10px">대수 / 평균수명(CH)</div></th>`).join('')}<th>합계</th></tr></thead><tbody>`;
+  for(let m=1;m<=maxM;m++){const ym=tdMkYear+'-'+String(m).padStart(2,'0'),a=L.filter(x=>x.ym===ym);
+    h+=`<tr${ym===curM?' style="background:#eff6ff"':''}><td><b>${m}월</b></td>${kinds.map(k=>`<td>${cellHtml(st(a.filter(x=>kOf(x)===k)))}</td>`).join('')}<td style="background:#f8fafc">${cellHtml(st(a),1)}</td></tr>`;}
+  h+=`<tr style="background:#fef3c7;font-weight:700"><td><b>${tdMkYear}년 계</b></td>${kinds.map(k=>`<td>${cellHtml(st(L.filter(x=>kOf(x)===k)),1)}</td>`).join('')}<td>${cellHtml(st(L),1)}</td></tr></tbody>`;
+  tb.innerHTML=h;
+}
+try{const _rts=renderTundishSummary;renderTundishSummary=function(){const r=_rts.apply(this,arguments);try{renderTundishMonthKind();}catch(e){console.warn('tdMonthKind',e);}return r;};}catch(e){}
+/* 등록 폼: 호수를 넣으면 종류 자동 입력 */
+document.addEventListener('change',e=>{const t=e.target;if(!t||t.id!=='t_no')return;const k=tdKindByNo(t.value);if(k){const kk=document.getElementById('t_kind');if(kk)kk.value=k;}});
+
+/* ============ 래들/턴디쉬 사용현황 개선 (2026-11-17) ============
+   ① 신축 = 해체 미기록 캠페인의 마감: 숫자(누적) 다음에 '해체' 없이 바로 '신축'을 입력하면, 직전 누적을 해체수명으로 본다
+      (상단 해체수명·1·2·3차콘 자동집계, 이 달 마감 요약, 수명관리 자동 연동 모두 반영). 2026-11-01 입력분부터 적용.
+   ② 턴디쉬 종류 칸(맨 위 줄): 전월 이월 대신 이 달 사용완료 턴디쉬를 종류별(150각 / 250각+300각 / BB) 대수·평균수명으로 표시.
+      종류 = 그 턴디쉬를 새로 쓰기 시작한 날 기준(같은 날 종류를 바꿔 적으면 새 턴디쉬부터 적용), 수명 = 턴디쉬 ② 칸 값. */
+function dlNewEndFrom(){return '2026-11-01';}
+const DL_TDG=[['150','150각',/150/],['250300','250·300각',/250|300/],['BB','BB',/BB/i]];
+function dlTdGroup(t){t=String(t||'');for(const g of DL_TDG)if(g[2].test(t))return g[0];return t?'etc':'';}
+function dlTdClean(v){return String(v==null?'':v).trim().replace(/^['‘’`]+/,'').replace(/\s+/g,'');}
+/* 사용완료 턴디쉬 목록 [{no,date(사용완료일),life,start(사용 시작일),type}] — 전 기간 */
+function dlTdLives(){
+  const out=[];let cur=null,ty='';
+  dlxMonths().forEach(ym=>{
+    const days=new Set();['TD_T','TD_1','TD_2'].forEach(c=>dlxDayKeys(ym,c).forEach(d=>days.add(+d)));
+    [...days].sort((a,b)=>a-b).forEach(d=>{
+      const t=String(dlGet(ym,'TD_T',String(d))||'').trim();if(t)ty=t;
+      const v1=dlTdClean(dlGet(ym,'TD_1',String(d))),v2=dlTdClean(dlGet(ym,'TD_2',String(d)));
+      if(!/^\d+(\/\d+)*$/.test(v1))return;
+      const date=ym+'-'+String(d).padStart(2,'0');
+      const a=v1.split('/').map(Number),b=/^\d+(\/\d+)*$/.test(v2)?v2.split('/').map(Number):[];
+      const done=(no,life)=>{const s=(cur&&cur.no===no)?cur:{no,start:null,type:ty};out.push({no,date,life:(life>0?life:null),start:s.start,type:s.type});};
+      if(a.length>1){
+        for(let i=0;i<a.length-1;i++)done(a[i],b.length===a.length?b[i]:(cur&&cur.no===a[i]?cur.life:null));
+        cur={no:a[a.length-1],start:date,type:ty,life:b.length===a.length?b[b.length-1]:null};
+      }else{const n=a[0];
+        if(cur&&cur.no!==n){done(cur.no,cur.life);cur={no:n,start:date,type:ty,life:b.length?b[b.length-1]:null};}
+        else{if(!cur)cur={no:n,start:null,type:ty,life:null};if(b.length)cur.life=b[b.length-1];}
+      }});});
+  return out;
+}
+/* 이 달 종류별 집계 {150:{n,k,s,avg,list},250300:…,BB:…,etc:…} */
+function dlTdStat(ym){
+  const G={};dlTdLives().filter(x=>x.date.slice(0,7)===ym).forEach(x=>{
+    const g=dlTdGroup(x.type)||'etc',o=G[g]=G[g]||{n:0,k:0,s:0,avg:null,list:[]};
+    o.n++;if(x.life>0){o.k++;o.s+=x.life;}o.list.push(x);});
+  Object.values(G).forEach(o=>{o.avg=o.k?Math.round(o.s/o.k*10)/10:null;});
+  return G;
+}
+function dlTdStatText(G,sep){
+  const lab={'150':'150각','250300':'250·300각','BB':'BB','etc':'기타'};
+  return ['150','250300','BB','etc'].filter(k=>G[k]).map(k=>lab[k]+' '+G[k].n+'대 / 평균 '+(G[k].avg!=null?G[k].avg:'-')).join(sep||' · ');
+}
+function dlTdTypeCell(ym){
+  const G=dlTdStat(ym),lab={'150':'150각','250300':'250·300각','BB':'BB'};
+  const md=x=>x?(+x.slice(5,7))+'/'+(+x.slice(8,10)):'?';
+  const tip=Object.keys(G).map(k=>((lab[k]||'기타')+'\n'+G[k].list.map(x=>'  '+md(x.date)+' '+x.no+'호 '+(x.life!=null?x.life:'수명?')+' (사용 시작 '+md(x.start)+(x.type?' · '+x.type:'')+')').join('\n'))).join('\n');
+  const line=k=>{const o=G[k];return `<div style="white-space:nowrap;font-size:10.5px;line-height:1.35;${o?'':'color:#94a3b8;font-weight:400'}"><span style="display:inline-block;min-width:60px;text-align:left">${lab[k]}</span> ${o?`<b>${o.n}대</b> / 평균 <b>${o.avg!=null?o.avg:'-'}</b>`:'0대'}</div>`;};
+  return `<td class="dl-tdstat" style="text-align:left;padding:3px 6px;background:#fff7ed" title="${esc('이 달 사용완료 턴디쉬 (종류 = 사용 시작일 기준 · 수명 = 턴디쉬 ② 칸)\n'+(tip||'아직 없음'))}">${line('150')}${line('250300')}${line('BB')}${G.etc?`<div style="font-size:10px;color:#64748b;white-space:nowrap">기타 ${G.etc.n}대 / 평균 ${G.etc.avg!=null?G.etc.avg:'-'}</div>`:''}</td>`;
+}
+/* ③ 이 달 사용기간 · 보수일자 요약 — 캠페인(신축~해체) 기준으로 신축 / 1·2·3차 보수 / 해체 칸을 나눠 날짜·수명 표시, 마지막 칸 대신 현재수명 */
+function dlCampsOf(no){
+  const camps=[];let cur=null,last=null;
+  const open=(start)=>{cur={no,start,reps:[],end:null,notes:[],cells:[],last:null};camps.push(cur);last=null;};
+  open(null);
+  dlxMonths().forEach(ym=>{dlxDayKeys(ym,no).forEach(d=>{
+    const v=String(dlGet(ym,no,d)||'').trim().replace(/\s+/g,' ');if(!v)return;
+    const date=ym+'-'+String(d).padStart(2,'0'),nm=dlxNums(v.replace(/^['‘’`]+/,''));
+    if(nm){cur.cells.push(date);last=nm;cur.last={date,cum:nm[0]};if(nm.length>1)cur.notes.push({date,txt:v+' (누적/구간)'});return;}
+    if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){
+      if(date>=dlNewEndFrom()&&last&&!cur.end)cur.end={date,cum:last[0],txt:'신축 (해체 미기록)',viaNew:1};
+      open({date,txt:v});cur.cells.push(date);return;}
+    if(DLX_END_TXT.includes(v)||/해체$|폐기$/.test(v)){
+      cur.cells.push(date);if(!cur.end)cur.end={date,cum:last?last[0]:null,txt:v};
+      open(null);return;}
+    if(/SL보수|콘보수|콘교체/.test(v)){cur.cells.push(date);cur.reps.push({date,type:/SL보수/.test(v)?'SL보수':'콘보수',txt:v,cum:last?last[0]:null});return;}
+    cur.cells.push(date);cur.notes.push({date,txt:v});
+  });});
+  return camps;
+}
+dlRenderSum=function(){
+  const ym=dlYM,mdF=x=>(+x.slice(5,7))+'/'+(+x.slice(8,10)),inM=x=>x&&x.slice(0,7)===ym;
+  const dF=x=>inM(x)?(+x.slice(8,10))+'일':mdF(x);
+  const cell=(ev,cls,lab)=>{if(!ev)return '<td></td>';const old=!inM(ev.date);
+    return `<td class="dls-${cls}"${old?' style="opacity:.6"':''} title="${old?'지난달 기록':''}"><b>${esc(lab)}</b><div>${dF(ev.date)}${ev.cum!=null?` · <b>${ev.cum}</b>`:''}</div></td>`;};
+  let rows='';
+  dlCols().forEach(no=>{
+    const cs=dlCampsOf(no).filter(c=>c.cells.some(inM)||(c.end&&inM(c.end.date)));
+    cs.forEach((c,ci)=>{
+      const ds=c.cells.filter(inM).map(x=>+x.slice(8,10));
+      const span=ds.length?`${+ym.slice(5)}월 ${Math.min(...ds)}일 ~ ${Math.max(...ds)}일`:'';
+      let now;
+      if(c.end)now=`<span style="color:#92400e">${c.end.cum!=null?'<b>'+c.end.cum+'</b> (해체)':'해체'}</span>`;
+      else if(c.last&&(!c.start||c.last.date>=c.start.date))now=`<b style="font-size:13.5px">${c.last.cum}</b> <span style="color:#64748b;font-size:11px">(${dF(c.last.date)})</span>`;
+      else now='<span style="color:#64748b">0 (신축 후)</span>';
+      const rp=[0,1,2].map(i=>{const r=c.reps[i];return cell(r,r&&r.type==='SL보수'?'sl':'cone',r?(i+1)+'차 '+r.type:'');}).join('');
+      const extra=c.reps.slice(3).map((r,i)=>`${i+4}차 ${r.type} ${dF(r.date)}${r.cum!=null?' · '+r.cum:''}`);
+      const notes=extra.concat(c.notes.filter(n=>inM(n.date)).map(n=>`${dF(n.date)} ${n.txt}`));
+      rows+=`<tr${ci>0?' class="dls-sub"':''}><td><b>${esc(no)}</b>${ci>0?'<div style="font-size:10.5px;color:#64748b">신규 캠페인</div>':''}</td><td>${span}</td><td>${now}</td>`
+        +(c.start?cell(c.start,'new',c.start.txt||'신축'):'<td style="color:#cbd5e1">-</td>')+rp
+        +(c.end?cell(c.end,'end',c.end.viaNew?'해체(신축 기준)':c.end.txt):'<td></td>')
+        +`<td style="font-size:11.5px;color:#475569">${notes.map(esc).join('<br>')}</td></tr>`;
+    });
+  });
+  const tdChg=[];let prev='';
+  for(let d=1;d<=dlDays(ym);d++){const v=String(dlGet(ym,'TD_T',String(d))||'').trim();if(v&&v!==prev){tdChg.push(`${d}일 ${esc(v)}`);prev=v;}}
+  const tst='';
+  if(tdChg.length||tst)rows+=`<tr><td><b>턴디쉬</b></td><td>종류 변경</td><td colspan="7">${tdChg.join(' → ')}${tst?`<div style="color:#475569;margin-top:2px">사용완료: ${esc(tst)}</div>`:''}</td></tr>`;
+  document.getElementById('dlSum').innerHTML='<thead><tr><th style="width:62px">호수</th><th style="width:120px">기록 구간</th><th style="width:100px">현재수명</th><th>신축</th><th>1차 보수</th><th>2차 보수</th><th>3차 보수</th><th>해체</th><th style="min-width:200px">비고</th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="9" style="color:var(--muted);padding:14px">이 달 기록이 없습니다.</td></tr>')+'</tbody>';
+  try{dlRenderClose();}catch(e){console.warn('dlRenderClose',e);}
+};
+
+
 
 function pidbXls(){const t=pidbTable('xls');downloadXls(pidbTab==='qa'?'포스코_Q코드_전체':pidbTab==='spec'?'포스코_자재규격':(pidbBidIsB()?'포스코_범용B_입찰결과':'포스코_정보목록'),t.html);}
 
