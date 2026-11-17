@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.17-1535">
+<meta name="app-build" content="2026.11.18-0836">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -206,15 +206,10 @@
   #tsp-life table th,#tsp-life table td{text-align:center!important;vertical-align:middle}
   #tsp-life table td>div{justify-content:center}
   #tundishMonthKind td{font-size:12.5px;white-space:nowrap}
-  /* 2026-11-17: 좌측 메뉴 — 글자를 칸 가운데로, 글자 크기 조금 키움(펼침 표시·배지는 오른쪽 끝에 고정) */
-  #sidenav .sn-gh,#sidenav .sn-it{justify-content:center;position:relative;text-align:center;padding-left:26px!important;padding-right:26px!important}
+  /* 2026-11-18: 좌측 메뉴 — 글자는 왼쪽 정렬 유지, 크기만 조금 키움 */
   #sidenav .sn-gh{font-size:14.5px}
-  #sidenav .sn-it{font-size:13.5px;padding-left:6px!important;padding-right:20px!important;gap:6px}
-  #sidenav .sn-it>span:nth-child(2){white-space:normal}
-  #sidenav .sn-gh .car{position:absolute;right:10px;top:50%;margin:-7px 0 0 0}
-  #sidenav .sn-c2{position:absolute;right:4px;top:50%;margin:-10px 0 0 0!important}
-  #sidenav .sn-gh .sn-gbd,#sidenav .sn-gh .apbadge,#sidenav .sn-it .apbadge,#sidenav .sn-bd{position:absolute;right:24px;top:50%;transform:translateY(-50%);margin:0!important}
-  #sidenav .sn-si{text-align:center;font-size:13px}
+  #sidenav .sn-it{font-size:13.5px}
+  #sidenav .sn-si{font-size:12.5px}
 
   #topnav .tn-mode{margin:auto 0 auto 8px;border:1px solid var(--line);background:#fff;color:#475569;border-radius:7px;padding:5px 9px;font-size:11.5px;cursor:pointer;white-space:nowrap}
 
@@ -25520,6 +25515,13 @@ async function obsAllRun(forceZip,forcePick){
   window.wpPre2026Run=run;
   let tries=0;const t=setInterval(()=>{tries++;let done=false;try{done=run();}catch(e){done=true;}if(done||tries>120)clearInterval(t);},5000);
 })();
+
+/* 2026-11-18: 결재완료 문서에 '최종 결재 일시'(·확인 일시) 표시 — 결재함에 새로 올라온 건이 언제 결재가 끝난 것인지 바로 보이게 */
+try{const _sb=stepBar;stepBar=function(d){let h=_sb.apply(this,arguments);
+  try{if(d&&d.status==='done'){const at=Object.values(d.steps||{}).map(x=>(x&&x.at)||'').sort().pop();
+    const f=t=>String(t||'').slice(5,16).replace('-','/');
+    if(at)h+=` <span style="font-size:10px;color:#64748b;white-space:nowrap">· 최종결재 ${f(at)}${d.conf&&d.conf.by?' · 확인 '+f(d.conf.at):''}</span>`;}}catch(e){}
+  return h;};}catch(e){}
 
 /* ============ 턴디쉬 수명관리 — 호수 기준 종류 고정 · 월별/종류별 대수·평균수명 (2026-11-17) ============
    · 종류는 호수로 정한다(기본 1~10호 150각 · 20~30호 BB · 31~38호 250+300각(B/L)) — [종류 기준 수정]으로 바꿀 수 있고 팀 전체에 공유된다.
