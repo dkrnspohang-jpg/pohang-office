@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.18-0836">
+<meta name="app-build" content="2026.11.18-1015">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -9932,6 +9932,7 @@ async function submitTundish(){
   if(rec.ns===undefined)delete rec.ns;
   rec.seq=(old&&old.seq&&old.date===date)?old.seq:Date.now();
   rec.src=old?((old.src==='auto-repair'||old.src==='daylog')?'manual':(old.src||'manual')):'manual';
+  if(!old||tdKindNorm(old.kind)!==rec.kind)rec.kindBy='user';   /* 2026-11-18: 직접 입력·수정한 종류 표시 */
   Object.keys(rec).forEach(k=>{if(k[0]==='_')delete rec[k];});
   if(old){   // 옮기거나 고친 기록은 일일수명 자동 반영·자동 대수리가 되살리지 않게 표시
     if((old.type==='해체'||old._wasUse)&&(old.date!==date||String(old.no)!==String(no)))tSkipAdd('E|'+old.no+'|'+old.date);
@@ -10008,7 +10009,7 @@ function renderTundish(){
   if(!rows.length){b.innerHTML=`<tr><td colspan="9"><div class="empty">기록이 없습니다.</div></td></tr>`;return;}
   const _dk={};tundishData.forEach(r=>{if(r.type==='해체'||r.type==='대수리(영구장)'){const k=[r.no,r.date,r.type,r.daily||0].join('|');_dk[k]=(_dk[k]||0)+1;}});
   b.innerHTML=rows.map(r=>{const mkMsg=_mk.get(r.id)||'';const _dn=_dk[[r.no,r.date,r.type,r.daily||0].join('|')]||0;return `<tr${mkMsg?' style="background:#fef08a" title="'+esc(mkMsg)+'"':''}>
-    <td style="white-space:nowrap">${esc(r.date)}${mkMsg?`<div style="font-size:10px;color:#a16207;white-space:normal;max-width:150px;line-height:1.25">🟡 ${esc(mkMsg)}</div>`:''}</td><td><strong>${esc(r.no)}</strong></td><td>${tdKindCell(r.no,r.kind)}</td>
+    <td style="white-space:nowrap">${esc(r.date)}${mkMsg?`<div style="font-size:10px;color:#a16207;white-space:normal;max-width:150px;line-height:1.25">🟡 ${esc(mkMsg)}</div>`:''}</td><td><strong>${esc(r.no)}</strong></td><td>${tdKindCell(r.no,r.kind,r)}</td>
     <td><span class="tag ${ttClass(r.type)}"${r._wasUse?' title="사용완료 처리 — 지금 사용 중인 호수가 아니어서 해체로 봅니다 (저장값은 사용)"':''}>${esc(r.type)}</span></td>
     <td>${r.daily?`<span class="ch-num">${r.daily}</span>`:'<span style="color:#c5ccd3">-</span>'}</td>
     <td><span class="ch-cum">${r._camp??'-'}</span></td><td><span class="ch-shell">${r._shell??'-'}</span></td>
@@ -10026,7 +10027,7 @@ function renderTundishSummary(){
     const maxCH=Math.max(...list.map(r=>r._camp||0));
     const lastRepair=[...list].reverse().find(r=>r.type==='대수리(영구장)'||r.type==='철피신규');
     const done=END_EVT.includes(last.type);
-    const scrap=last.type==='철피폐기';
+    const scrap=tdScrapped(list);
     const status=scrap?`<span class="tag t-out">철피폐기</span>`:done?`<span class="tag t-done">해체</span>`:`<span class="tag" style="background:#ffedd5;color:#b45309;font-weight:700">사용대기</span>`;
     /* 2026-10-09: 최근 사용일자·최근 사용CH — 마지막으로 실제 사용한(사용·해체·철피폐기) 기록의 일자와 수명 */
     const lu=[...list].reverse().find(r=>(r.type==='사용'||END_EVT.includes(r.type))&&((r.daily||0)>0||r.type==='사용'));
@@ -11215,14 +11216,15 @@ function dlAutoTops(){
   const put=(ym,k,no,v)=>{((T[ym]=T[ym]||{})[k]=T[ym][k]||{})[no]=String(v);};
   const camps=[];
   [...nos].sort((a,b)=>dlNum(a)-dlNum(b)).forEach(no=>{
-    let last=null,prev=0,cur={no,ev:[],end:null};camps.push(cur);
+    let last=null,prev=0,cur={no,ev:[],end:null},pend=null;camps.push(cur);
     months.forEach(ym=>{dlxDayKeys(ym,no).forEach(d=>{
       const v=String(dlGet(ym,no,d)||'').trim();if(!v)return;
       const date=ym+'-'+String(d).padStart(2,'0'),nm=dlxNums(v);
-      if(nm){last=nm;return;}
-      if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){if(date>=dlNewEndFrom()&&last&&!cur.end)cur.end={date,cum:last[0],txt:v,viaNew:1};cur={no,ev:[],end:null,newDate:date,newTxt:v};camps.push(cur);last=null;prev=0;return;}
+      if(nm){if(pend){pend.end.pend=0;pend=null;}last=nm;return;}
+      if(v==='신축'||v==='신규래들 입고'||/축조$/.test(v)){if(pend){pend.end.date=date;pend.end.newAt=date;pend.end.pend=0;pend=null;}else if(date>=dlNewEndFrom()&&last&&!cur.end)cur.end={date,cum:last[0],txt:v,viaNew:1};cur={no,ev:[],end:null,newDate:date,newTxt:v};camps.push(cur);last=null;prev=0;return;}
       if(DLX_END_TXT.includes(v)||/해체$/.test(v)){const c=last?last[0]:null;
-        if(c!=null&&!cur.end){cur.end={date,cum:c,txt:v};}
+        if(pend){pend.end.pend=0;pend=null;}
+        if(c!=null&&!cur.end){cur.end={date,cum:c,txt:v};if(date>=dlNewEndFrom()&&!/폐기/.test(v)){cur.end.pend=1;pend=cur;}}
         last=null;prev=0;cur={no,ev:[],end:null};camps.push(cur);return;}
       if(v==='콘보수'||v==='SL보수'){const c=last?last[0]:null,sl=v==='SL보수';
         const seg=(c!=null&&c>prev)?c-prev:null;
@@ -11231,10 +11233,10 @@ function dlAutoTops(){
     });});
   });
   const endKey=new Set();
-  camps.forEach(c=>{if(c.end)endKey.add(c.end.date.slice(0,7)+'|'+c.no);});
+  camps.forEach(c=>{if(c.end&&!c.end.pend)endKey.add(c.end.date.slice(0,7)+'|'+c.no);});
   camps.forEach(c=>{
     const no=c.no;
-    if(c.end){const ym=c.end.date.slice(0,7);
+    if(c.end&&!c.end.pend){const ym=c.end.date.slice(0,7);
       const segs=c.ev.map(e=>e.seg);
       const lastCum=Math.max(0,...c.ev.map(e=>e.cum||0));
       segs.push(c.end.cum-lastCum);
@@ -11323,9 +11325,9 @@ function dlRender(){if(!dlxSwept){dlxSwept=true;setTimeout(()=>{try{dlxAutoSweep
   let h='<thead><tr><th>구분</th>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+DL_TD.map(c=>`<th class="dl-tdh">${DL_TDNAME[c]}</th>`).join('')+'<th style="min-width:240px;text-align:left">비고(조업 특이사항)</th></tr></thead><tbody>';
   // 맨 위 : 전월 마지막 데이터(이월 · 읽기 전용)
   h+=`<tr class="dl-carry" title="지난달에 마지막으로 기록된 칸입니다. 칸을 눌러 직접 고칠 수 있습니다(비우면 자동 값). 이번 달 1일 칸에서 '+7'처럼 입력하면 이 누적에 더해집니다"><td>전월 마지막<br><span style="font-weight:400;font-size:9.5px;color:#475569">(이월)</span></td>`
-    +cols.concat(DL_TD).map(no=>{const c=dlCarry(dlYM,no);
+    +cols.map(no=>{const c=dlCarry(dlYM,no);
       return `<td class="${c?dlCls(c.v):''}"${c&&c.ov?' style="box-shadow:inset 0 0 0 2px #f59e0b"':''}${c&&c.raw!==c.v?` title="${esc(c.raw)}"`:''}><input data-carry="1" data-no="${esc(no)}" value="${esc(c?c.v:'')}" onchange="dlCarryEdit(this)" onkeydown="dlKey(event,this)" autocomplete="off" style="font-weight:700;color:#1e3a8a;padding:2px 2px 0">${c?`<div style="font-weight:400;font-size:9.5px;color:${c.ov?'#b45309':'#475569'}">${c.ov?'직접 수정':c.m+'/'+c.d}</div>`:''}</td>`;}).join('')
-    +`<td></td></tr>`;
+    +`<td colspan="3" style="background:#f8fafc;color:#94a3b8;font-size:10.5px;font-weight:400" title="턴디쉬 종류·수명은 턴디쉬 수명관리에서 관리합니다">턴디쉬 → 턴디쉬 수명관리</td><td></td></tr>`;
   // 상단 요약 6행 (엑셀 : 1차콘수명 ~ 비고) — 평균은 자동 계산
   DL_TOP.forEach(([k,lb])=>{
     h+=`<tr class="dl-top"><td>${lb}</td>`;
@@ -12074,7 +12076,7 @@ async function dlxUndo(){
       if(r.dlPrev){const _od=r.date;r.daily=r.dlPrev.daily;if(r.dlPrev.date)r.date=r.dlPrev.date;if(store==='ladle'&&_od!==r.date)diaMoveKey(r.no,_od,r.no,r.date);delete r.dlPrev;delete r.dlBatch;await putRec(store,r);}
       else{await delRec(store,r.id);arr.splice(arr.indexOf(r),1);}
       n++;}}
-  for(const q of (b.removed||[])){if(!ladleData.some(x=>x.id===q.id)){ladleData.push(q);await putRec('ladle',q);n++;}}
+  for(const q of (b.removed||[])){if(q._store==='tundish'){const t=Object.assign({},q);delete t._store;if(!tundishData.some(x=>x.id===t.id)){tundishData.push(t);await putRec('tundish',t);n++;}continue;}if(!ladleData.some(x=>x.id===q.id)){ladleData.push(q);await putRec('ladle',q);n++;}}
   bt.pop();dlxSaveBatches(bt);flashSave();toast('↶ '+n+'건 되돌렸습니다');
   refreshLadle();refreshTundish();dlxRun();
 }
@@ -25523,6 +25525,103 @@ try{const _sb=stepBar;stepBar=function(d){let h=_sb.apply(this,arguments);
     if(at)h+=` <span style="font-size:10px;color:#64748b;white-space:nowrap">· 최종결재 ${f(at)}${d.conf&&d.conf.by?' · 확인 '+f(d.conf.at):''}</span>`;}}catch(e){}
   return h;};}catch(e){}
 
+/* ============ 래들/턴디쉬 사용현황 — 다른 PC 입력을 바로 읽기 · 저장 시 칸 단위 합치기 (2026-11-18) ============
+   예전: 이 화면의 자료(dlStore)는 프로그램을 열 때 한 번만 읽어, 다른 PC가 고친 칸이 새로고침 전까지 보이지 않았고
+         그 상태로 이 PC에서 한 칸만 고쳐도 이 PC의 옛 자료 전체가 저장돼 다른 PC 입력을 덮을 수 있었다.
+   지금: ① 팀 자료를 받을 때마다 바뀐 기록표를 다시 읽고 상단 자동집계·요약을 다시 계산(입력 중이면 끝난 뒤 다시 그림)
+         ② 저장할 때 그 사이 다른 PC가 고친 내용이 있으면, 이 PC가 실제로 바꾼 칸만 얹어서 저장(칸 단위 합치기) */
+(function(){
+  const K='dgrns_daylog';
+  const rd=()=>{try{return localStorage.getItem(K)||'';}catch(e){return '';}};
+  const norm=o=>{o=o||{};o.cells=o.cells||{};o.notes=o.notes||{};o.tops=o.tops||{};o.carry=o.carry||{};return o;};
+  const parse=t=>{try{return norm(JSON.parse(t||'{}'));}catch(e){return norm({});}};
+  let base=rd();
+  function flat(o,p,out){Object.keys(o||{}).forEach(k=>{const v=o[k],q=p?p+'\u0001'+k:k;
+    if(v&&typeof v==='object'&&!Array.isArray(v))flat(v,q,out);else out[q]=JSON.stringify(v);});return out;}
+  function unflat(m){const o={};Object.keys(m).forEach(q=>{const ks=q.split('\u0001');let c=o;
+    for(let i=0;i<ks.length-1;i++){if(!c[ks[i]]||typeof c[ks[i]]!=='object')c[ks[i]]={};c=c[ks[i]];}
+    try{c[ks[ks.length-1]]=JSON.parse(m[q]);}catch(e){}});return norm(o);}
+  function merge3(b,l,r){const B=flat(b,'',{}),L=flat(l,'',{}),R=flat(r,'',{});
+    new Set(Object.keys(B).concat(Object.keys(L))).forEach(q=>{if(L[q]===B[q])return;if(q in L)R[q]=L[q];else delete R[q];});
+    return unflat(R);}
+  window.DLS={merge3,reloads:0,merges:0};
+  /* 저장: 그 사이 다른 PC가 바꿨으면 칸 단위로 합쳐서 저장 */
+  try{const _save=dlSave;dlSave=function(){
+    const raw=rd();
+    if(raw!==base){try{dlStore=merge3(parse(base),dlStore,parse(raw));DLS.merges++;}catch(e){}}
+    const r=_save.apply(this,arguments);base=rd();return r;};}catch(e){}
+  /* 받기: 바뀐 기록표 다시 읽기 */
+  function reload(){const raw=rd();if(raw===base)return false;
+    dlStore=parse(raw);base=raw;dlAutoCache=null;try{dlxInvalidate();}catch(e){}DLS.reloads++;return true;}
+  let tm=0,t0=0;
+  function repaint(){
+    const ae=document.activeElement,typing=ae&&ae.closest&&ae.closest('#dlTbl')&&ae.tagName==='INPUT';
+    if(typing&&Date.now()-t0<60000){clearTimeout(tm);tm=setTimeout(repaint,800);return;}
+    try{if(curView==='daylog'){const w=document.querySelector('#v-daylog .dl-wrap'),st=w?w.scrollTop:0,sl=w?w.scrollLeft:0;dlRender();const w2=document.querySelector('#v-daylog .dl-wrap');if(w2){w2.scrollTop=st;w2.scrollLeft=sl;}}}catch(e){}
+  }
+  window.dlSyncCheck=function(){if(reload()){t0=Date.now();clearTimeout(tm);tm=setTimeout(repaint,300);return true;}return false;};
+  try{const _r=fbRerender;const w=function(){try{dlSyncCheck();}catch(e){}return _r.apply(this,arguments);};['__ff','__tba'].forEach(k=>{if(_r[k])w[k]=1;});fbRerender=w;}catch(e){}
+  try{if(typeof window.fbRerenderNow==='function'){const _n=window.fbRerenderNow;window.fbRerenderNow=function(){try{dlSyncCheck();}catch(e){}return _n.apply(this,arguments);};}}catch(e){}
+  /* 다른 창(같은 PC)에서 고친 경우 */
+  window.addEventListener('storage',e=>{if(e.key===K){try{dlSyncCheck();}catch(_){}}});
+})();
+/* ============ 턴디쉬: 일일수명(사용현황) 수정 → 수명관리 자동 반영 기록 따라가기 (2026-11-18) ============
+   예전: 사용현황 칸을 고쳐도 이미 자동으로 만든 수명관리 기록(src:'daylog')은 그대로 남아,
+         오타로 생긴 기록(예: 11/6 36호)·하루 어긋난 기록(예: 10/29 27호)이 '일일수명과 다름'으로 계속 표시됐다.
+   지금: 자동으로 만든 기록만 대상으로 ① 수명이 바뀌면 고치고 ② 날짜가 1~3일 어긋나면 날짜를 옮기고
+         ③ 사용현황에서 사라진 사용완료(같은 호수 ±3일 없음)는 지운다. 직접 입력·수정한 기록(manual)은 건드리지 않는다(노랑 표시만).
+         모든 변경은 [마지막 반영 되돌리기]로 되돌릴 수 있다. 종류는 호수 기준(직접 입력한 종류 우선)으로 넣는다. */
+(function(){
+  /* 자동 반영 종류: 사용현황 '턴디쉬 종류' 칸 대신 턴디쉬 수명관리 기준(직접 입력 > 호수 기준) */
+  try{const _k=dlxTundishKind;dlxTundishKind=function(e){try{const k=tdKindOfRec(e.no,'',{date:e.date,seq:9e15});if(k)return k;}catch(x){}return _k.apply(this,arguments);};}catch(e){}
+  const dd=(a,b)=>Math.abs((new Date(a)-new Date(b))/86400000);
+  const ready=()=>{try{if(['admin','office'].indexOf(appRole())<0)return false;}catch(e){return false;}return !!((window.TBA&&TBA.force)||!window.fbOn||window.__fbSynced||window.__fbSeen);};
+  let busy=false;
+  async function recon(quiet){
+    if(busy||!DLX_ON||!dlxAutoOn()||!ready())return null;busy=true;
+    const R={fix:0,move:0,del:0};const bid='b'+Date.now()+'R',removed=[];
+    try{
+      const from=DLX_SYNC_FROM_T,evs=dlxTundishEvents().filter(e=>e.date>=from).sort((a,b)=>a.date.localeCompare(b.date));
+      const recs=tundishData.filter(r=>r.type==='해체'&&!r._wasUse&&r.date>=from);
+      const used=new Set(),plan=[];
+      /* 1) 같은 호수·같은 날짜 먼저 짝짓기 */
+      evs.forEach(e=>{const r=recs.find(x=>!used.has(x.id)&&String(x.no)===e.no&&x.date===e.date);if(r){used.add(r.id);e._r=r;}});
+      /* 2) 남은 사용완료는 ±3일 안의 같은 호수 기록과 짝짓기 */
+      evs.forEach(e=>{if(e._r)return;const r=recs.filter(x=>!used.has(x.id)&&String(x.no)===e.no&&dd(x.date,e.date)<=3).sort((a,b)=>dd(a.date,e.date)-dd(b.date,e.date))[0];if(r){used.add(r.id);e._r=r;}});
+      evs.forEach(e=>{const r=e._r;if(!r||r.src!=='daylog')return;
+        const nd=r.date!==e.date&&!recs.some(x=>x!==r&&String(x.no)===e.no&&x.date===e.date);
+        const nl=e.life!=null&&(r.daily||0)!==e.life;
+        if(nd||nl)plan.push({r,date:nd?e.date:null,life:nl?e.life:null});});
+      const orphan=recs.filter(r=>!used.has(r.id)&&r.src==='daylog'&&!tSkipEv(r.no,r.date));
+      if(quiet&&orphan.length>5){R.held=orphan.length;orphan.length=0;}   // 한꺼번에 많이 지워야 하면 자동으로 지우지 않고 상세 비교에서 직접 실행
+      for(const p of plan){const r=p.r;r.dlPrev={daily:r.daily||0,date:r.date};r.dlBatch=bid;
+        if(p.date){r.date=p.date;R.move++;}if(p.life!=null){r.daily=p.life;R.fix++;}await putRec('tundish',r);}
+      for(const r of orphan){removed.push(Object.assign(JSON.parse(JSON.stringify(r)),{_store:'tundish'}));await delRec('tundish',r.id);const i=tundishData.indexOf(r);if(i>=0)tundishData.splice(i,1);R.del++;}
+      if(R.fix||R.move||R.del){const at=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        const bt=dlxBatches();bt.push({id:bid,at,n:R.fix+R.move+R.del,tab:'tundish',auto:true,removed});dlxSaveBatches(bt);flashSave();dlxInvalidate();
+        try{toast('🔄 사용현황 수정 반영 · 턴디쉬 자동 기록 '+[R.fix?'수명 '+R.fix+'건':'',R.move?'날짜 '+R.move+'건':'',R.del?'삭제 '+R.del+'건':''].filter(Boolean).join(' · ')+' (되돌리기 가능)');}catch(e){}
+        try{refreshTundish();}catch(e){}}
+    }catch(err){console.warn('dlxTdRecon',err);}
+    finally{busy=false;}
+    return R;
+  }
+  window.dlxTdRecon=recon;
+  try{const _s=dlxAutoSyncTundish;dlxAutoSyncTundish=async function(){const r=await _s.apply(this,arguments);try{await recon(true);}catch(e){}return r;};}catch(e){}
+  /* 턴디쉬 수명관리를 열 때도 1회 점검(팀 자료 받은 뒤) */
+  let onceT=false;
+  try{const _n=nav;nav=function(v){const r=_n.apply(this,arguments);if(v==='tundish'&&!onceT){setTimeout(()=>{recon(true).then(x=>{if(x)onceT=true;});},1500);}return r;};}catch(e){}
+  /* 상세 비교(턴디쉬): 수명관리에만 있는 기록도 함께 표시 — 노랑 표시와 같은 기준 */
+  try{const _r=dlxRender;dlxRender=function(){const out=_r.apply(this,arguments);
+    try{if(dlxTab!=='tundish')return out;const m=document.getElementById('dlxModal'),box=m&&m.firstElementChild;if(!box)return out;
+      const T=dlxMarks().T,list=tundishData.filter(r=>T.has(r.id)).sort((a,b)=>a.date.localeCompare(b.date));
+      const d=document.createElement('div');d.style.cssText='margin-top:10px;font-size:12px;line-height:1.8;padding:8px 10px;border-radius:8px;'+(list.length?'background:#fefce8;border:1px solid #fde68a':'background:#f0fdf4;border:1px solid #bbf7d0');
+      d.innerHTML=list.length?`<b style="color:#854d0e">수명관리 쪽에서 본 차이 ${list.length}건</b> <span style="color:#64748b">(사용현황에 없거나 날짜·수명이 다른 수명관리 기록 — 직접 입력한 기록은 자동으로 바꾸지 않습니다)</span><br>`+list.map(r=>`${fmtMD(r.date)} ${esc(String(r.no))}호 ${r.daily||0}CH <span style="color:#64748b">${r.src==='daylog'?'자동 반영':r.src==='seed'?'엑셀 원본':'직접 입력'} · ${esc(T.get(r.id))}</span>`).join('<br>')+`<div style="margin-top:6px"><button class="btn sm" onclick="dlxTdRecon(false).then(x=>{dlxRun();toast(x?'자동 기록 정리: 수명 '+x.fix+' · 날짜 '+x.move+' · 삭제 '+x.del+'건':'사업소장·관리직 PC에서 실행됩니다');})">자동 기록 다시 맞추기</button></div>`
+        :'<span style="color:#166534">✔ 수명관리 쪽에서 본 차이도 없습니다</span>';
+      box.appendChild(d);}catch(e){}
+    return out;};}catch(e){}
+})();
+
+
 /* ============ 턴디쉬 수명관리 — 호수 기준 종류 고정 · 월별/종류별 대수·평균수명 (2026-11-17) ============
    · 종류는 호수로 정한다(기본 1~10호 150각 · 20~30호 BB · 31~38호 250+300각(B/L)) — [종류 기준 수정]으로 바꿀 수 있고 팀 전체에 공유된다.
    · 범위에 없는 호수는 기록에 적힌 종류를 쓴다.
@@ -25530,13 +25629,25 @@ try{const _sb=stepBar;stepBar=function(d){let h=_sb.apply(this,arguments);
 const TD_KMAP_KEY='dgrns_td_kindmap',TD_KMAP_DEF=[[1,10,'150각'],[20,30,'BB'],[31,38,'B/L']];
 function tdKmap(){try{const a=JSON.parse(localStorage.getItem(TD_KMAP_KEY));if(Array.isArray(a)&&a.length)return a;}catch(e){}return TD_KMAP_DEF;}
 function tdKindByNo(no){const n=parseInt(String(no==null?'':no).replace(/[^\d]/g,''),10);if(!n)return '';for(const r of tdKmap()){if(n>=+r[0]&&n<=+r[1])return r[2];}return '';}
-function tdKindOfRec(no,kind){return tdKindByNo(no)||tdKindNorm(kind)||'';}
+/* 사용자가 직접 입력·수정한 종류(등록 폼 저장분) — 엑셀 원본(seed)·일일수명 자동 반영(daylog) 값보다 우선 */
+function tdUserKind(r){return (r&&(r.kindBy==='user'||r.src==='manual')&&r.kind)?tdKindNorm(r.kind):'';}
+const tdOrd=(a,b)=>String(a.date).localeCompare(String(b.date))||(a.seq||0)-(b.seq||0);
+/* 그 기록 시점의 종류: ①그 기록에 직접 입력한 종류 ②같은 호수에서 그 이전에 직접 입력한 마지막 종류 ③호수 기준 ④기록 값 */
+function tdKindOfRec(no,kind,rec){
+  if(rec){const u=tdUserKind(rec);if(u)return u;
+    const prev=tundishData.filter(x=>String(x.no)===String(no)&&tdUserKind(x)&&tdOrd(x,rec)<=0).sort(tdOrd).pop();if(prev)return tdUserKind(prev);}
+  else{const last=tundishData.filter(x=>String(x.no)===String(no)&&tdUserKind(x)).sort(tdOrd).pop();if(last)return tdUserKind(last);}
+  return tdKindByNo(no)||tdKindNorm(kind)||'';}
+/* 철피폐기 뒤에 철피신규·대수리·신축이 없으면 폐기 상태(그 뒤 자동 반영 기록이 있어도) */
+function tdScrapped(list){let s=false;(list||[]).slice().sort(tdOrd).forEach(r=>{if(r.type==='철피폐기')s=true;else if(['철피신규','대수리(영구장)','신축'].includes(r.type))s=false;});return s;}
 function tdKindLabel(k){k=tdKindNorm(k);return k==='B/L'?'250+300각':(k||'-');}
 function tdKindParse(t){t=String(t||'').trim();if(/150/.test(t))return '150각';if(/BB/i.test(t))return 'BB';if(/250|300|B\s*\/?\s*L/i.test(t))return 'B/L';return t;}
 function tdKmapText(){return tdKmap().map(r=>r[0]+'-'+r[1]+'='+tdKindLabel(r[2])).join(', ');}
-function tdKindCell(no,kind){const m=tdKindByNo(no),rk=tdKindNorm(kind);
-  if(!m)return rk?esc(tdKindLabel(rk)):'-';
-  return `<b>${esc(tdKindLabel(m))}</b>${rk&&rk!==m?`<div style="font-size:10px;color:#94a3b8" title="기록에 적힌 종류">기록: ${esc(tdKindLabel(rk))}</div>`:''}`;}
+function tdKindCell(no,kind,rec){
+  const k=tdKindOfRec(no,kind,rec);
+  const user=rec?(!!tdUserKind(rec)):tundishData.some(x=>String(x.no)===String(no)&&tdUserKind(x));
+  const src=user?'직접 입력한 종류':(tdKindByNo(no)?'호수 기준('+tdKmapText()+')':'기록 값');
+  return `<b title="${esc(src)}">${esc(tdKindLabel(k))}</b>${user?'<div style="font-size:10px;color:#2563eb">직접 입력</div>':''}`;}
 function tdKindEdit(){
   if(!['admin','office'].includes(appRole())){alert('종류 기준 수정은 사업소장·관리직만 할 수 있습니다.');return;}
   const v=prompt('턴디쉬 호수별 종류 기준을 입력하세요 (쉼표로 구분)\n예) 1-10=150각, 20-30=BB, 31-38=250+300각\n\n범위에 없는 호수는 기록에 적힌 종류를 씁니다. 비우면 기본값으로 돌아갑니다.',tdKmapText());
@@ -25554,7 +25665,7 @@ function tdDoneList(){
   const g={};tundishData.forEach(r=>{(g[r.no]=g[r.no]||[]).push(r);});const out=[];
   Object.keys(g).forEach(no=>{let L=[];try{L=withCum(g[no]);}catch(e){L=g[no];}
     L.forEach(r=>{if(!END_EVT.includes(r.type)||r.type==='철피폐기')return;
-      const life=+(r.daily||r._camp||0)||0;out.push({no,date:r.date,ym:String(r.date).slice(0,7),kind:tdKindOfRec(no,r.kind),life});});});
+      const life=+(r.daily||r._camp||0)||0;out.push({no,date:r.date,ym:String(r.date).slice(0,7),kind:tdKindOfRec(no,r.kind,r),life});});});
   return out;
 }
 let tdMkYear='';
