@@ -2,19 +2,19 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.20-1213">
+<meta name="app-build" content="2026.11.20-1237">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="동국R&amp;S 포항사업소">
-<title>동국R&amp;S 포항사업소</title>
-<meta property="og:title" content="동국R&amp;S 포항사업소">
+<meta name="apple-mobile-web-app-title" content="동국R&amp;S">
+<title>동국R&amp;S</title>
+<meta property="og:title" content="동국R&amp;S">
 <meta property="og:description" content="동국알앤에스 포항사업소 · 근태 · 인수인계 · 내화물 수명관리">
 <meta property="og:type" content="website">
 <meta name="description" content="동국알앤에스 포항사업소 업무 시스템 — 휴가·잔업 신청, 교대 인수인계, 래들·턴디쉬·전기로 수명관리">
-<meta name="application-name" content="동국R&amp;S 포항사업소">
+<meta name="application-name" content="동국R&amp;S">
 <style>
   :root{
     --bg:#f7fafd; --panel:#ffffff; --line:#e2e8f0; --line2:#eef3f8;
@@ -2543,7 +2543,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
             <button class="btn hidden" id="ot_cancel" onclick="resetOtForm()">취소</button>
           </div></div>
         </div>
-        <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ 신청자 옆 <b>[＋]</b> 로 같은 시간에 함께 일한 인원을 추가하면 <b>1건(명단 포함)으로 묶어 상신</b>되어 결재도 1번에 끝납니다(결재선은 맨 앞 신청자 기준). <b>상신자가 주임·계장·기성이면 본인 직급 단계에는 등록 사인이 자동 날인</b>되고 바로 상위 결재자에게 올라갑니다. 상주 근무 08:30~17:30 기준. 교대(4조 3교대) 근무자는 종료시각이 다음날이면 자동으로 24시간을 넘겨 계산합니다. <b>4시간마다 30분 휴게시간이 자동 공제</b>되어 실잔업시간이 산출됩니다(집계·엑셀은 실잔업 기준).</div>
+        <div style="font-size:11.5px;color:var(--accent);margin-top:8px">※ <b>[👥 인원 선택]</b>에서 같은 시간에 함께 일한 인원을 체크(소속 전체 선택 가능)하면 <b>1건(명단 포함)으로 묶어 상신</b>되어 결재도 1번에 끝납니다(결재선은 맨 앞 신청자 기준). <b>상신자가 주임·계장·기성이면 본인 직급 단계에는 등록 사인이 자동 날인</b>되고 바로 상위 결재자에게 올라갑니다. 상주 근무 08:30~17:30 기준. 교대(4조 3교대) 근무자는 종료시각이 다음날이면 자동으로 24시간을 넘겨 계산합니다. <b>4시간마다 30분 휴게시간이 자동 공제</b>되어 실잔업시간이 산출됩니다(집계·엑셀은 실잔업 기준).</div>
       </div>
       <div class="toolrow">
         <select class="selbox" id="ot_fEmp" onchange="renderOt();renderOtCards()"></select>
@@ -25881,6 +25881,102 @@ const IC_PWH={"ic2023147":"b70dc713d268e03e07cffc5fd3e98b3670e4be36b225bf4c7f94c
   window.icPwRun=run;
   let tries=0;const t=setInterval(async()=>{tries++;let done=false;try{done=await run();}catch(e){done=true;}if(done||tries>150)clearInterval(t);},6000);
 })();
+
+
+/* ============ 인천사업소 잔업 — 한 사람이 여러 명(전원)을 한 번에 등록 (2026-11-20) ============
+   · 인천 화면에서는 누구나 신청자 목록에 인천 직원 전원이 보인다(소속·직급 제한 없음).
+   · PC: 신청자 옆 [👥 여러 명] → 소속별 체크(소속 전체 선택) → 함께 근무한 인원으로 한 건에 묶어 상신.
+   · 휴대폰: 잔업 신청 화면의 [👥 함께 등록할 인원] → 같은 방식. '본인 포함'을 끄면 등록만 대신 해 준다. */
+const IC_DORD=['기성','축로반','SN반','안전관리담당자','관리직','사업소장'];
+function icEmpSorted(){let ok=null;try{if(window.__site!=='I'){const o=otEmpOptions();ok=new Set(o.map(x=>x.v));}}catch(e){}return empData.filter(e=>e.active!==0&&(!ok||ok.has(e.id))).slice().sort((a,b)=>{const i=x=>{const k=IC_DORD.indexOf(normDept(x.dept));return k<0?9:k;};return i(a)-i(b)||rankLv(b)-rankLv(a)||String(a.name).localeCompare(String(b.name),'ko');});}
+try{const _oeo=otEmpOptions;otEmpOptions=function(){if(window.__site==='I')return icEmpSorted().map(e=>({v:e.id,l:e.name+(e.dept?' ('+e.dept+(e.team?' '+e.team:'')+')':'')}));return _oeo.apply(this,arguments);};}catch(e){}
+let __icOtSel=[],__icOtMe=true;
+function icOtPick(mode){
+  let sel=new Set();
+  if(mode==='pc'){const r=(document.getElementById('ot_emp')||{}).value;if(r)sel.add(r);(otExtra||[]).forEach(x=>sel.add(x));}
+  else __icOtSel.forEach(x=>sel.add(x));
+  const L=icEmpSorted(),groups={};L.forEach(e=>{const d=normDept(e.dept)||'기타';(groups[d]=groups[d]||[]).push(e);});
+  let ov=document.getElementById('icOtOv');if(!ov){ov=document.createElement('div');ov.id='icOtOv';document.body.appendChild(ov);}
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px';
+  const gh=Object.keys(groups).map(d=>`<div style="margin:8px 0 4px;display:flex;align-items:center;gap:8px"><b style="font-size:13px">${esc(d)}</b><span style="font-size:11px;color:#64748b">${groups[d].length}명</span><label style="margin-left:auto;font-size:12px;color:#1d4ed8;cursor:pointer"><input type="checkbox" data-g="${esc(d)}" onchange="icOtGrp(this)"> 소속 전체</label></div>`
+    +`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:4px">${groups[d].map(e=>`<label style="font-size:12.5px;border:1px solid #e2e8f0;border-radius:6px;padding:5px 6px;cursor:pointer;background:#fff"><input type="checkbox" class="icot" data-g="${esc(d)}" value="${e.id}"${sel.has(e.id)?' checked':''}> ${esc(e.name)} <span style="color:#94a3b8;font-size:10.5px">${esc(e.rank||'')}</span></label>`).join('')}</div>`).join('');
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+    <div style="padding:12px 14px;border-bottom:1px solid #e2e8f0"><b style="font-size:15px">👥 잔업 함께 등록할 인원</b><div style="font-size:11.5px;color:#64748b;margin-top:2px">같은 날·같은 시간에 근무한 인원을 체크하세요. 한 건으로 묶여 상신됩니다.</div>
+      ${mode==='mv'?`<label style="display:block;margin-top:6px;font-size:12.5px"><input type="checkbox" id="icOtMe"${__icOtMe?' checked':''}> 본인도 잔업 대상에 포함</label>`:''}</div>
+    <div style="padding:6px 14px;overflow:auto;flex:1">${gh||'<div style="padding:20px;color:#64748b">등록된 직원이 없습니다.</div>'}</div>
+    <div style="padding:10px 14px;border-top:1px solid #e2e8f0;display:flex;gap:8px;align-items:center"><span id="icOtN" style="font-size:12.5px;color:#334155"></span><span style="flex:1"></span>
+      <button class="btn" onclick="document.getElementById('icOtOv').remove()">취소</button><button class="btn primary" onclick="icOtApply('${mode}')">적용</button></div></div>`;
+  const upd=()=>{const n=ov.querySelectorAll('input.icot:checked').length;document.getElementById('icOtN').textContent=n+'명 선택';};
+  ov.querySelectorAll('input.icot').forEach(c=>c.addEventListener('change',upd));upd();
+}
+function icOtGrp(cb){document.querySelectorAll('#icOtOv input.icot[data-g="'+cb.dataset.g+'"]').forEach(c=>{c.checked=cb.checked;});const n=document.querySelectorAll('#icOtOv input.icot:checked').length;const s=document.getElementById('icOtN');if(s)s.textContent=n+'명 선택';}
+function icOtApply(mode){
+  const ids=[...document.querySelectorAll('#icOtOv input.icot:checked')].map(c=>c.value);
+  if(mode==='pc'){
+    const sel=document.getElementById('ot_emp');
+    if(!ids.length){otExtra=[];renderOtPeople();}
+    else{let rep=sel&&sel.value;if(!rep||ids.indexOf(rep)<0){rep=ids[0];if(sel)sel.value=rep;}
+      otExtra=ids.filter(x=>x!==rep);renderOtPeople();}
+  }else{
+    __icOtSel=ids;const me=document.getElementById('icOtMe');__icOtMe=me?me.checked:true;icMvOtShow();
+  }
+  document.getElementById('icOtOv').remove();
+  toast(ids.length+'명 선택했습니다');
+}
+/* PC 잔업 신청서: 신청자 선택칸·＋ 대신 [👥 인원 선택](체크) — 2026-11-20 포항·인천 공통 */
+function icOtPcLabel(){try{const b=document.getElementById('icOtPcBtn');if(!b)return;const r=(document.getElementById('ot_emp')||{}).value;
+  const ids=[...new Set([r].concat(otExtra||[]))].filter(Boolean),rep=empData.find(e=>e.id===r);
+  b.innerHTML='👥 인원 선택 <b>'+ids.length+'명</b>'+(rep?' <span style="font-weight:400;color:#64748b">· 대표 '+esc(rep.name)+'</span>':'');}catch(e){}}
+function icOtBtn(){try{const pl=document.querySelector('button[onclick="otAddPerson()"]'),se=document.getElementById('ot_emp');
+  if(pl&&se&&!document.getElementById('icOtPcBtn')){pl.style.display='none';se.style.display='none';
+    pl.insertAdjacentHTML('afterend','<button class="btn" id="icOtPcBtn" type="button" onclick="icOtPick(\'pc\')" style="flex:1;text-align:left;white-space:nowrap" title="잔업한 인원을 체크해서 고릅니다(소속 전체 선택 가능)">👥 인원 선택</button>');
+    try{const lb=se.closest('.field').querySelector('label');if(lb)lb.textContent='신청 인원';}catch(e){}}
+  icOtPcLabel();}catch(e){}}
+icOtBtn();
+try{const _rop=renderOtPeople;renderOtPeople=function(){const r=_rop.apply(this,arguments);icOtPcLabel();return r;};}catch(e){}
+try{const _ia=initAttend;initAttend=function(){const r=_ia.apply(this,arguments);try{icOtBtn();}catch(e){}return r;};}catch(e){}
+/* 휴대폰 잔업 신청: 함께 등록할 인원 */
+function icMvOtShow(){const b=document.getElementById('icMvOtBox');if(!b)return;
+  const nm=__icOtSel.map(id=>(empData.find(e=>e.id===id)||{}).name).filter(Boolean);
+  b.innerHTML=`<button type="button" class="btn" style="width:100%;padding:10px" onclick="icOtPick('mv')">👥 함께 등록할 인원 선택${nm.length?' ('+nm.length+'명)':''}</button>`
+    +(nm.length?`<div style="font-size:12px;color:#334155;margin-top:6px;line-height:1.6">${__icOtMe?'<b>본인</b> + ':''}${nm.map(esc).join(', ')}</div>`:`<div style="font-size:11.5px;color:#64748b;margin-top:4px">선택하지 않으면 본인만 신청됩니다.</div>`);}
+try{const _mo=mvOt;mvOt=function(){const r=_mo.apply(this,arguments);
+  try{if(!mvEditOtId){__icOtSel=[];__icOtMe=true;const c=document.querySelector('#mvBody .mv-card');if(c){c.insertAdjacentHTML('beforeend','<div class="mv-f" id="icMvOtBox"></div>');icMvOtShow();}}}catch(e){}
+  return r;};}catch(e){}
+try{const _mp=mvPut;mvPut=function(store,rec){
+  try{if(store==='ot'&&rec&&!(Array.isArray(rec.members)&&rec.members.length>1)&&__icOtSel.length){
+    const me=meEmp(),ids=(__icOtMe&&me?[me.id]:[]).concat(__icOtSel.filter(x=>!me||x!==me.id));
+    const emps=ids.map(id=>empData.find(e=>e.id===id)).filter(Boolean);
+    if(emps.length){const rep=emps[0];rec.empId=rep.id;rec.name=rep.name;rec.dept=rep.dept||'';
+      if(rep.id!==(me&&me.id)){try{const sf=otStartFor(rep,me);rec.status=sf.status;rec.st0=sf.st0;rec.steps=sf.steps;rec.line=docLineFor(rep);rec.lineConf=docConfFor(rep);rec.who=((apprLineOf(rep.id)||{}).who)||{};}catch(e){}}
+      if(emps.length>1)rec.members=emps.map(e=>({empId:e.id,name:e.name,dept:e.dept||'',team:e.team||'',rank:e.rank||''}));}
+    __icOtSel=[];}}catch(e){}
+  return _mp.apply(this,arguments);};}catch(e){}
+
+
+/* ============ 본인 비밀번호 변경 (2026-11-20) — PC: 상단 「현재 모드」 줄 [🔑 비밀번호 변경] · 휴대폰: 홈 아래 [🔑 비밀번호 변경] ============ */
+async function myPwChange(){
+  const me=meEmp();if(!me){toast('먼저 로그인하세요');return;}
+  if(window.__site==='I'&&!empData.some(x=>x.id===me.id)){alert('포항 직원은 포항 화면에서 바꿔 주세요.');return;}
+  if(me.pwh){const cur=prompt(me.name+' 님 — 현재 비밀번호를 입력하세요');if(cur==null)return;
+    if((await hashPw(cur))!==me.pwh){alert('현재 비밀번호가 일치하지 않습니다.');return;}}
+  const a=prompt('새 비밀번호를 입력하세요 (4자리 이상)');if(a==null)return;
+  if(String(a).trim().length<4){alert('4자리 이상 입력하세요.');return;}
+  const b=prompt('새 비밀번호를 한 번 더 입력하세요');if(b==null)return;
+  if(a!==b){alert('두 번 입력한 비밀번호가 다릅니다. 처음부터 다시 해 주세요.');return;}
+  const e=empData.find(x=>x.id===me.id)||me;e.pwh=await hashPw(String(a).trim());
+  await putRec('emp',e);try{flashSave();}catch(x){}toast('🔑 비밀번호를 바꿨습니다 — 다음 로그인부터 새 비밀번호를 쓰세요');
+}
+try{const _rmp2=renderModePanel;renderModePanel=function(){const r=_rmp2.apply(this,arguments);
+  try{const b=document.getElementById('modeBar');if(b&&!b.hidden&&meEmp()&&!b.querySelector('.mypw'))b.insertAdjacentHTML('beforeend','<button class="btn sm mypw" onclick="myPwChange()" style="margin-left:6px">🔑 비밀번호 변경</button>');}catch(e){}
+  return r;};}catch(e){}
+try{const _mh=mvHome;mvHome=function(){const r=_mh.apply(this,arguments);
+  try{const lo=[...document.querySelectorAll('#mvBody button')].find(x=>/다른 사람으로 로그인/.test(x.textContent));
+    if(lo&&meEmp()&&!document.querySelector('#mvBody .mypw'))lo.insertAdjacentHTML('afterend',' <button class="btn sm mypw" onclick="myPwChange()">🔑 비밀번호 변경</button>');}catch(e){}
+  return r;};}catch(e){}
+try{const _om=openMeDlg;openMeDlg=function(){const r=_om.apply(this,arguments);
+  try{if(meEmp()){const s=document.getElementById('pk_sub');if(s&&!s.querySelector('.mypw'))s.insertAdjacentHTML('beforeend',' <button class="btn sm mypw" onclick="closePicker();myPwChange()" style="margin-left:6px">🔑 내 비밀번호 변경</button>');}}catch(e){}
+  return r;};}catch(e){}
 
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
