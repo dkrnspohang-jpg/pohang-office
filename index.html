@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.20-1237">
+<meta name="app-build" content="2026.11.20-1310">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1046,7 +1046,7 @@
     /* 2026-09-23: 열려있지 않은 다른 오버레이(직원 일괄등록·휴가 기록 일괄등록·사용자 선택 등)까지
        인쇄 대상에 같이 끌려나와 PDF 페이지가 깨지던 문제 수정 — 현재 열려있는(.show) 오버레이만 인쇄 */
     body.qprint .qdoc-overlay:not(.show){display:none!important}
-    body.qprint .qdoc-overlay.show{position:static;background:none;padding:0;display:block!important}
+    body.qprint .qdoc-overlay.show{position:static;background:none;padding:0;display:block!important;width:100%;flex:1 1 100%}
     body.qprint .qdoc{box-shadow:none;margin:0;max-width:100%}
     body.qprint .qdoc-toolbar{display:none!important}
     body.attprint .qdoc{padding:0;font-size:12px}
@@ -25978,6 +25978,17 @@ try{const _om=openMeDlg;openMeDlg=function(){const r=_om.apply(this,arguments);
   try{if(meEmp()){const s=document.getElementById('pk_sub');if(s&&!s.querySelector('.mypw'))s.insertAdjacentHTML('beforeend',' <button class="btn sm mypw" onclick="closePicker();myPwChange()" style="margin-left:6px">🔑 내 비밀번호 변경</button>');}}catch(e){}
   return r;};}catch(e){}
 
+
+/* ============ 인천 직원 관리 — 반 없이 근무형태(상주/교대)만 · 기장 결재 알림 (2026-11-20) ============ */
+try{const st=document.createElement('style');st.textContent='body.site-ic #em_teamWrap{display:none!important}';document.head.appendChild(st);}catch(e){}
+try{const _re=renderEmp;renderEmp=function(){const r=_re.apply(this,arguments);
+  try{const th=[...document.querySelectorAll('#v-emp thead th')].find(x=>/반\/근무|근무형태/.test(x.textContent));if(th)th.textContent=window.__site==='I'?'근무형태':'반/근무';}catch(e){}
+  return r;};}catch(e){}
+try{const _na=nextApprovers;nextApprovers=function(d){const r=_na.apply(this,arguments);
+  try{if(window.__site==='I'&&!r.length&&pendingStep(d)==='gye'){const ap=empData.find(e=>e.id===d.empId)||{},td=normDept(d.dept||ap.dept);
+    return empData.filter(e=>e.active!==0&&e.id!==d.empId&&!otHas(d,e.id)&&normRank(e.rank)==='기장'&&normDept(e.dept)===td);}}catch(e){}
+  return r;};}catch(e){}
+
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
@@ -41682,10 +41693,10 @@ function openAttDoc(kind,id){
   document.getElementById('attdocBody').innerHTML=`
     <h1 class="adt">${kind==='leave'?'휴 가 원':'잔업신청서'}</h1>
     <div class="adr">${appr}</div>
-    <div class="qbar"><div>동국알앤에스 · 포항사업소</div><div>상신일 ${esc(d.at||'')}</div></div>
+    <div class="qbar"><div>동국알앤에스 · ${(d.site==='I'||window.__site==='I')?'인천사업소':'포항사업소'}</div><div>상신일 ${esc(d.at||'')}</div></div>
     <table class="adbody">
       <tr><th style="width:96px">${kind==='ot'&&otMembers(d).length>1?'대표 신청자':'성명'}</th><td style="width:170px">${esc(d.name)}${kind==='ot'&&otMembers(d).length>1?' 외 '+(otMembers(d).length-1)+'명':''}</td><th style="width:96px">소속</th><td>${esc(d.dept||'')}${emp.pos?' / '+esc(emp.pos):''}</td></tr>
-      <tr><th>근무형태</th><td>${esc(emp.wtype||'')}${emp.team?' '+esc(emp.team):''} ${esc(WORKTIME[emp.wtype]||'')}</td><th>입사일</th><td>${esc(emp.hire||'')}</td></tr>
+      <tr><th>근무형태</th><td>${esc(emp.wtype||'')}${(d.site==='I'||window.__site==='I')?'':(emp.team?' '+esc(emp.team):'')+' '+esc(WORKTIME[emp.wtype]||'')}</td><th>입사일</th><td>${esc(emp.hire||'')}</td></tr>
       ${body}
       <tr><th>결재 상태</th><td colspan="3">${esc(ST_LABEL[d.status]||'')}${d.status==='rej'&&d.rej?' · 사유: '+esc(d.rej.reason||''):''}</td></tr>
     </table>
@@ -41857,8 +41868,8 @@ function renderEmp(){
     <td style="white-space:nowrap">${empQuickSel(r,'rank',ranksFor(r.dept,r.rank))}${r.pos?`<div style="font-size:10px;color:var(--muted)">${esc(r.pos)}</div>`:''}</td>
     <td><span class="tag" style="background:${r.part?'#dbeafe':'#eef2f6'};color:${r.part?'#1d4ed8':'#334155'}">${esc(ROLE_LABEL[empPart(r)]||'')}</span>${r.part?'':'<div style="font-size:10px;color:var(--muted)">자동</div>'}</td>
     <td>${empLineCell(r)}</td>
-    <td style="white-space:nowrap">${empQuickSel(r,'team',teamsOf(r.dept),'반없음')} ${empQuickSel(r,'wtype',WTYPES)}
-      <div style="font-size:10.5px;color:var(--muted);white-space:nowrap">${r.tel?esc(r.tel):esc(WORKTIME[r.wtype]||'')}</div></td>
+    <td style="white-space:nowrap">${window.__site==='I'?empQuickSel(r,'wtype',WTYPES):empQuickSel(r,'team',teamsOf(r.dept),'반없음')+' '+empQuickSel(r,'wtype',WTYPES)+`
+      <div style="font-size:10.5px;color:var(--muted);white-space:nowrap">${r.tel?esc(r.tel):esc(WORKTIME[r.wtype]||'')}</div>`}</td>
     <td style="white-space:nowrap">${esc(r.hire||'')}</td>
     <td class="n" style="white-space:nowrap"><b>${g-st.used-st.pend}</b> / ${g}</td>
     <td class="n" style="white-space:nowrap">${(yg-st.yUsed-st.yPend)} / ${yg}</td>
