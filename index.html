@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.18-1015">
+<meta name="app-build" content="2026.11.20-1146">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1174,6 +1174,8 @@
   .modepanel .mp-title{font-size:15px;font-weight:800;color:#1d4ed8;margin-bottom:3px}
   .modepanel .mp-sub{font-size:12px;color:#5b7189;margin-bottom:13px}
   .mp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px}
+  .mp-site{margin-bottom:14px}.mp-site .mp-sl{font-weight:800;font-size:13.5px;color:#334155;margin:2px 2px 7px}.mp-site .mp-sl small{font-weight:500;color:#64748b;margin-left:4px}
+  .mp-grid.mp4{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:760px){.mp-grid.mp4{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .mp-btn{border:2px solid transparent;border-radius:12px;padding:14px 12px;cursor:pointer;text-align:left;
     font-size:14px;font-weight:800;color:#fff;line-height:1.3;box-shadow:0 3px 10px rgba(0,0,0,.09);transition:.12s}
   .mp-btn small{display:block;font-size:11px;font-weight:600;opacity:.92;margin-top:4px}
@@ -1858,6 +1860,13 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
     <div class="side-item" data-view="safetygear" onclick="nav('safetygear')"><span class="ic">🦺</span>안전보호구 발주 관리</div>
     <div class="side-item" data-view="msds" onclick="nav('msds')"><span class="ic">🧪</span>MSDS</div>
     <div class="side-item" data-view="edudoc" onclick="nav('edudoc')"><span class="ic">🎓</span>안전교육 자료</div>
+  </div>
+  <div class="side-group">
+    <div class="gh">인천사업소 근태·결재</div>
+    <div class="side-item" data-view="icattend" onclick="nav('icattend')"><span class="ic">🏖️</span>휴가 · 잔업 신청</div>
+    <div class="side-item" data-view="icapprove" onclick="nav('icapprove')"><span class="ic">✍️</span>결재함</div>
+    <div class="side-item" data-view="icemp" onclick="nav('icemp')"><span class="ic">👥</span>직원 관리</div>
+    <div class="side-item" data-view="icmypay" onclick="nav('icmypay')"><span class="ic">💰</span>내 급여 계산</div>
   </div>
   <div class="side-group">
     <div class="gh">관리자</div>
@@ -3059,7 +3068,7 @@ service cloud.firestore {
     <div id="modeBar" class="modebar" hidden></div>
     <div class="startbrand">
       <div class="sb-logo">동국<br>R&amp;S</div>
-      <div><div class="sb-t1">동국R&amp;S 포항사업소</div>
+      <div><div class="sb-t1">동국R&amp;S</div>
         <div class="sb-t2" id="sbT2">작업현황판 · 업무 파트를 선택하면 해당 메뉴가 열립니다</div>
         <div style="font-size:11px;color:var(--muted);margin-top:8px">버전 <span id="boardVer">로딩중</span> · <button class="btn sm" onclick="appReload()" style="font-size:11px;padding:3px 6px">🔄 최신 버전 받기</button></div></div>
     </div>
@@ -4466,7 +4475,7 @@ service cloud.firestore {
 <div id="mobileApp">
   <div class="mv-top">
     <div>
-      <div class="mv-t1" id="mvTitle">동국R&amp;S 포항사업소</div>
+      <div class="mv-t1" id="mvTitle">동국R&amp;S</div>
       <div class="mv-t2" id="mvSub">현장 근태 · 인수인계</div>
     </div>
     <button class="mv-btn" id="mvTopBtn" onclick="mvTopAction()">PC 화면</button>
@@ -4760,6 +4769,7 @@ window.AF=window.AF||{};
         else if(top==='q'&&seg[2]==='cm')push('Q코드 '+seg[1],'코멘트',a==null?'':a,b==null?'':b);
         else if(top==='q'&&seg[2]==='nbr')push('Q코드 '+seg[1],'미입찰 사유',a==null?'':a,b==null?'':b);
         else if(top==='q27'||top==='b27')push(seg.slice(1).join('›'),top==='q27'?'27년 물량·제철소':'27년 입찰가·낙찰가',a==null?'':a,b==null?'':b);
+        else if(top==='sb'||top==='sq'||top==='se')push(seg.slice(1).join('›'),top==='se'?'설비별 SET 결과':top==='sq'?'설비별 SET Q물량':'설비별 SET 단가·입찰가',a==null?'':a,b==null?'':b);
       }else if(k==='dgrns_cmt'){
         if(seg[seg.length-1]!=='t')return;
         const lb=(n&&n[seg[0]]&&n[seg[0]].l)||(o&&o[seg[0]]&&o[seg[0]].l)||seg[0];
@@ -6273,7 +6283,7 @@ function dedupProd(arr){
   let snCh=false;
   arr.forEach(p=>{const w=keep[(p.name||'')+'|'+(p.spec||'')];if(!w||w===p)return;
     for(const k in sn){const pr=sn[k]&&sn[k].prices;if(!pr)continue;const v=+pr[p.id]||0;if(v>0&&!(+pr[w.id]>0)){pr[w.id]=v;snCh=true;}}});
-  if(snCh){try{localStorage.setItem('dgrns_pricesnaps',JSON.stringify(sn));}catch(e){}}
+  if(snCh&&!prodHoldWrite()){try{localStorage.setItem('dgrns_pricesnaps',JSON.stringify(sn));}catch(e){}}
   const ids=new Set(Object.values(keep).map(p=>p.id));
   return arr.filter(p=>ids.has(p.id));
 }
@@ -6299,7 +6309,7 @@ function loadProd(){
         arr.push(seedProdObj(x,'p'+(++maxn)));changed=true;}});
   }
   const d=dedupProd(arr);if(d.length!==arr.length){arr=d;changed=true;}
-  if(changed){try{localStorage.setItem('dgrns_prod',JSON.stringify(arr));}catch(e){}}
+  if(changed&&!prodHoldWrite()){try{localStorage.setItem('dgrns_prod',JSON.stringify(arr));}catch(e){}}   // 2026-11-20: 팀 자료를 받기 전에는 저장 보류(옛 자료가 팀 자료를 덮지 않게)
   return arr;}
 let prodData=loadProd();
 function saveProd(){try{localStorage.setItem('dgrns_prod',JSON.stringify(prodData));}catch(e){}try{plUpdateSoon();}catch(e){}}
@@ -12324,6 +12334,7 @@ const TOPNAV=[
  {ic:'🧪',lb:'포스코(Q코드 통합)',it:['poscoidb','pidbbid','pidbdw','pidbqa']},
  {ic:'👥',lb:'근태·결재',it:['attend','approve','emp','shift4','mypay']},
  {ic:'🦺',lb:'안전',it:['safetygear','msds','edudoc']},
+ {ic:'🏢',lb:'인천사업소 근태·결재',it:['icattend','icapprove','icemp','icmypay']},
  {ic:'🛡',lb:'관리자',it:['permadm']},
  {ic:'⚙',lb:'데이터',right:true,it:['sync','act:export','act:import','act:reload','act:undo']}
 ];
@@ -24625,7 +24636,7 @@ window.afRenderBanner=function(force){
   box.innerHTML='<div class="afBan ok" style="opacity:.7">🔍 자동 점검 중…</div>';
   setTimeout(()=>{
     const C=AF.runChecks();AF.cache=C;AF.cacheT=Date.now();
-    let last={};try{last=JSON.parse(localStorage.getItem('dgrns_af_last')||'{}');}catch(e){}
+    let last={};try{last=JSON.parse(localStorage.getItem('af_last_local')||'{}');}catch(e){}
     const tot=C.reduce((s,x)=>s+x.n,0),bad=C.filter(x=>x.n>0);
     let html;
     if(!bad.length)html='<div class="afBan ok"><b>✅ 자동 점검: 이상 없음</b> <span style="font-size:11.5px;color:#64748b">('+new Date().toTimeString().slice(0,5)+' 기준 · 단가·중복·물량표·연동·결재)</span></div>';
@@ -24634,7 +24645,7 @@ window.afRenderBanner=function(force){
       html='<div class="afBan"><b>🔍 자동 점검: 확인 필요 '+tot+'건</b> <span style="font-size:11.5px;color:#64748b">'+(Object.keys(last).length?'· 지난번 대비 '+(dl>0?'+'+dl:dl<0?String(dl):'변동 없음'):'')+' · 눌러서 해당 화면으로 이동</span><div class="chips">'+bad.map(x=>'<span class="afChip '+x.sev+'" title="'+E(x.hint)+'" onclick="afChipGo(\''+x.id+'\')">'+E(x.label)+' <b>'+x.n+'</b></span>').join('')+'<span class="afChip" style="border-color:#94a3b8" onclick="afRenderBanner(true)">↻ 다시 점검</span></div></div>';
     }
     AF.cacheHtml=html;box.innerHTML=html;
-    const cur={};C.forEach(x=>cur[x.id]=x.n);try{localStorage.setItem('dgrns_af_last',JSON.stringify(cur));}catch(e){}
+    const cur={};C.forEach(x=>cur[x.id]=x.n);try{localStorage.setItem('af_last_local',JSON.stringify(cur));}catch(e){}
   },60);
 };
 window.afChipGo=function(id){const c=(AF.cache||[]).find(x=>x.id===id);if(c)try{c.open();}catch(e){}};
@@ -25620,6 +25631,458 @@ try{const _sb=stepBar;stepBar=function(d){let h=_sb.apply(this,arguments);
       box.appendChild(d);}catch(e){}
     return out;};}catch(e){}
 })();
+
+/* ============ 포스코 품목정보(dgrns_pidb_ov) — 다른 PC 입력 바로 읽기 · 저장 시 항목 단위 합치기 (2026-11-19) ============
+   예전: 프로그램을 열 때 한 번만 읽어, 다른 PC가 입력한 27년 입찰가·SET 입찰 결과 등이 새로고침 전까지 안 보였고
+         그 상태로 이 PC에서 한 칸만 저장해도 이 PC의 옛 자료 전체가 올라가 다른 PC 입력을 덮을 수 있었다.
+   지금: ① 팀 자료를 받으면 다시 읽어 화면을 다시 그림 ② 저장 때 그 사이 바뀐 내용이 있으면 이 PC가 바꾼 항목만 얹어서 저장 */
+(function(){
+  const K=PIDB_OV_KEY;
+  const rd=()=>{try{return localStorage.getItem(K)||'';}catch(e){return '';}};
+  const norm=o=>{o=o||{};['q','d','sp','t','g','dq','cm'].forEach(k=>{o[k]=o[k]||{};});o.dx=o.dx||[];o.cp=o.cp||[];return o;};
+  const parse=t=>{try{return norm(JSON.parse(t||'{}'));}catch(e){return norm({});}};
+  let base=rd();
+  function flat(o,p,out){Object.keys(o||{}).forEach(k=>{const v=o[k],q=p?p+'\u0001'+k:k;
+    if(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length)flat(v,q,out);else out[q]=JSON.stringify(v);});return out;}
+  function unflat(m){const o={};Object.keys(m).forEach(q=>{const ks=q.split('\u0001');let c=o;
+    for(let i=0;i<ks.length-1;i++){if(!c[ks[i]]||typeof c[ks[i]]!=='object'||Array.isArray(c[ks[i]]))c[ks[i]]={};c=c[ks[i]];}
+    try{const lk=ks[ks.length-1],v=JSON.parse(m[q]);if(v&&typeof v==='object'&&!Array.isArray(v)&&!Object.keys(v).length&&c[lk]&&typeof c[lk]==='object')return;c[lk]=v;}catch(e){}});return norm(o);}
+  function merge3(b,l,r){const B=flat(b,'',{}),L=flat(l,'',{}),R=flat(r,'',{});
+    new Set(Object.keys(B).concat(Object.keys(L))).forEach(q=>{if(L[q]===B[q])return;if(q in L)R[q]=L[q];else delete R[q];});
+    return unflat(R);}
+  window.PIDBS={merge3,reloads:0,merges:0};
+  try{const _save=pidbOvSave;pidbOvSave=function(){
+    const raw=rd();
+    if(raw!==base){try{pidbOv=merge3(parse(base),pidbOv,parse(raw));PIDBS.merges++;}catch(e){}}
+    const r=_save.apply(this,arguments);base=rd();return r;};}catch(e){}
+  function reload(){const raw=rd();if(raw===base)return false;
+    if(JSON.stringify(pidbOv)===raw){base=raw;return false;}
+    pidbOv=parse(raw);base=raw;PIDBS.reloads++;return true;}
+  let tm=0,t0=0;
+  function repaint(){
+    const ae=document.activeElement,typing=ae&&ae.closest&&ae.closest('#pidb_wrap')&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName);
+    if(typing&&Date.now()-t0<60000){clearTimeout(tm);tm=setTimeout(repaint,800);return;}
+    try{if(curView==='poscoidb')pidbKeepRender();}catch(e){}
+  }
+  window.pidbSyncCheck=function(){if(reload()){t0=Date.now();clearTimeout(tm);tm=setTimeout(repaint,300);return true;}return false;};
+  try{const _r=fbRerender;const w=function(){try{pidbSyncCheck();}catch(e){}return _r.apply(this,arguments);};['__ff','__tba'].forEach(k=>{if(_r[k])w[k]=1;});fbRerender=w;}catch(e){}
+  try{if(typeof window.fbRerenderNow==='function'){const _n=window.fbRerenderNow;window.fbRerenderNow=function(){try{pidbSyncCheck();}catch(e){}return _n.apply(this,arguments);};}}catch(e){}
+  window.addEventListener('storage',e=>{if(e.key===K){try{pidbSyncCheck();}catch(_){}}});
+})();
+
+
+
+
+/* ============ 품목마스터 — 11/11 전체 백업 기준으로 되살리기 (2026-11-20, 1회) ============
+   원인: 옛 자료를 가진 PC가 프로그램을 열 때 품목마스터를 자동 정리·저장하면서(팀 자료를 받기 전) 그 시각이 더 최신으로 기록돼
+         팀 저장소의 최신 품목마스터(고객사 제품명·배합·기준 분기)를 덮어썼다.
+   ① 되살리기: 백업에 있는 품목은 백업 값 그대로, 백업 뒤에 새로 추가된 품목은 유지. 삭제 목록은 합치고, 시점 단가는 빠진 분기·품목만 채움.
+      팀 자료를 받은 뒤 사업소장·관리직 PC 한 곳에서 1회 실행(표식 dgrns_mig_prod_restore1111 팀 공유). 되살리기 전 자료는 이 PC에 보관(prod_pre_restore1111).
+   ② 재발 방지: 팀 자료를 받기 전에는 품목마스터·시점 단가를 자동으로 저장하지 않고, 받은 뒤 팀 자료 위에서 다시 정리해 저장한다. */
+const PROD_BK1111={"prod":[{"id":"p1792729514025","cat":"전기로","gubun":"제품","name":"앙카허스 DC-25","mix":"앙카허스","spec":"B1200","uw":1200,"price":0,"kind":"","use":1,"custName":"앙카허스,DC25","qcode":"U12120112","since":"2026Q4"},{"id":"p1792649978741","cat":"턴디쉬","gubun":"제품","name":"CA-180M","mix":"2004762","spec":"B250","uw":250,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"캐스터블,CA-180MH","qcode":"U12100033"},{"id":"p1792649862293","cat":"전기로","gubun":"제품","name":"MAGRAM-98","mix":"ST-M98-11","spec":"B25","uw":25,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"마그네시아 로상재(MAGRAM-98)","qcode":"U12120217"},{"id":"p1792643969965_7028","cat":"형강가열로","gubun":"제품","name":"CA-165S","mix":"","spec":"CA-165S","uw":25,"price":1470,"kind":"","use":1,"since":"2026Q4"},{"id":"p1792395779514","cat":"래들","gubun":"상품","name":"HAU-BS","mix":"HB1","spec":"LW9","uw":2.35,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"고알루미나브릭,HA-85","qcode":"U12110023"},{"id":"p1792395776462","cat":"래들","gubun":"상품","name":"HAU-BS","mix":"HB1","spec":"LW9-5","uw":2.65,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"고알루미나브릭,HA-85","qcode":"U12110023"},{"id":"p1792392222113_4887","cat":"턴디쉬","gubun":"제품","name":"AR-MTNP","mix":"베수비우스","spec":"AR-MTNP","uw":13.4,"price":248029,"kind":"","use":1,"since":"2026Q4","unit":"ea","custName":"C52용내화물,MPNT-C52","qcode":"U12100008"},{"id":"p1791865099043","cat":"전기로","gubun":"제품","name":"MAGRAM-95","mix":"BU-12-02-01-016","spec":"B25-3","uw":25,"price":1703,"kind":"","use":1,"since":"2026Q4","custName":"드라이스탐프재, MAGRAM-95","qcode":"U12120079"},{"id":"p1791443585867","cat":"턴디쉬","gubun":"제품","name":"ONQC BL","mix":"조선내화","spec":"BL","uw":3,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"ONQC블랭크노즐,BN-LN-60","qcode":"U12120019","unit":"ea"},{"id":"p1791356611345","cat":"턴디쉬","gubun":"상품","name":"JOINT SHEET","mix":"조선내화","spec":"조선내화","uw":1,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"EASY-200,JOINT SHEET, 조선내화","qcode":"U12120011","unit":"ea"},{"id":"p1791356396790","cat":"턴디쉬","gubun":"제품","name":"ONQC","mix":"조선내화","spec":"상노즐","uw":3,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"ONQC상부노즐,23.0/ONQC-UN-60","qcode":"U12120021","unit":"ea"},{"id":"p1791356395057","cat":"턴디쉬","gubun":"제품","name":"ONQC","mix":"조선내화","spec":"웰블럭","uw":5,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"ONQC웰블록,28/WB-ONQC-LN-60","qcode":"U12120022","unit":"ea"},{"id":"p1791356376730","cat":"턴디쉬","gubun":"제품","name":"ONQC","mix":"조선내화","spec":"하부노즐","uw":3,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"ONQC하부노즐,18.0/LN-60","qcode":"U12120255","unit":"ea"},{"id":"p1791328828926","cat":"전기로","gubun":"상품","name":"올리빈샌드","mix":"266000","spec":"B1000","uw":1000,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"올리빈샌드(EBT충진재)","qcode":"U12120219"},{"id":"p1791160974348","cat":"턴디쉬","gubun":"제품","name":"PCB-TD-HOLE","mix":"PCB-TD-HOLE-02","spec":"PCB-TD-HOLE","uw":95,"price":287888,"kind":"","use":1,"since":"2026Q4","custName":"TD커버홀블록,NA,동국알앤에스,OD430xID230xH150mm","qcode":"N12130066","unit":"ea"},{"id":"p1791160973583","cat":"턴디쉬","gubun":"제품","name":"PCB-TD-HOLE","mix":"PCB-TD-HOLE-02","spec":"PCB-TD-HOLE-410","uw":95,"price":287888,"kind":"","use":1,"since":"2026Q4","custName":"TD커버홀블록,NA,동국알앤에스,OD430xID230xH150mm","qcode":"N12130066","unit":"ea"},{"id":"p1791076231437","cat":"전기로","gubun":"제품","name":"MAGGUN-85S","mix":"BU-10-06-01-55","spec":"B1880","uw":1880,"price":0,"kind":"","use":1,"since":"2026Q4","custName":"스프레이재,SPRAY재","qcode":"U12120107"},{"id":"p1790562924965","cat":"공통","gubun":"상품","name":"SK-34 ","mix":"STD-B","spec":"20000053","uw":3.7,"price":0,"kind":"","use":1,"since":"2026Q3","custName":"점토질브릭,STD","qcode":"U12110036"},{"id":"p1790562808190","cat":"턴디쉬","gubun":"상품","name":"AMC-DAM","mix":"DAM-A","spec":"T3 75T","uw":24.89,"price":0,"kind":"","use":1,"since":"2026Q3","custName":"TD댐브릭,T/D DAM BRICK","qcode":"U12110021"},{"id":"p1790562606649","cat":"턴디쉬","gubun":"제품","name":"CA-165SYD","mix":"CA-165SYD-27","spec":"B500-2","uw":500,"price":0,"kind":"","use":1,"since":"2026Q3","custName":"캐스터블,CA-165SYD","qcode":"U12100016"},{"id":"p1790561543300","cat":"래들","gubun":"제품","name":"CA-150S","mix":"CA-150S-07","spec":"B1000","uw":1000,"price":0,"kind":"","use":1,"since":"2026Q3","custName":"캐스터블,CA-150S","qcode":"U12100014"},{"id":"p1","cat":"전기로","name":"ACT-20","mix":"EBT-TM-07-2","spec":"TMB-200","uw":77.2,"price":642753,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"EBT터미널블록,ETM-180","qcode":"U12120014"},{"id":"p2","cat":"래들","name":"AMC-B","mix":"DB8B","spec":"LW250","uw":14.7,"price":1931,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC BRICK","qcode":"U12110001"},{"id":"p3","cat":"래들","name":"AMC-B","mix":"DB8B","spec":"LW280","uw":16.4,"price":1931,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC BRICK","qcode":"U12110001"},{"id":"p4","cat":"래들","name":"AMC-B","mix":"DB17A","spec":"LW300","uw":18.1,"price":1931,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC BRICK","qcode":"U12110001"},{"id":"p5","cat":"래들","name":"AMC-B","mix":"DB8B","spec":"LW300-1/2","uw":8.7,"price":1931,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC BRICK","qcode":"U12110001"},{"id":"p6","cat":"래들","name":"AMC-BS","mix":"BS","spec":"LW9","uw":2.5,"price":1584,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-BS","qcode":"U12110002"},{"id":"p7","cat":"래들","name":"AMC-BS","mix":"BS","spec":"LW9-5","uw":2.7,"price":1584,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-BS","qcode":"U12110002"},{"id":"p8","cat":"래들","name":"AMC-BS","mix":"BS","spec":"LW90","uw":4.88,"price":1584,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-BS","qcode":"U12110002"},{"id":"p9","cat":"래들","name":"AMC-BS","mix":"BS","spec":"LW95","uw":4.88,"price":1584,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-BS","qcode":"U12110002"},{"id":"p10","cat":"래들","name":"AMC-FB","mix":"FBP","spec":"LW25-5FS","uw":6.53,"price":1247,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-FB","qcode":"U12110003"},{"id":"p12","cat":"래들","name":"AMC-FB","mix":"FBP","spec":"LW25FS","uw":5.8,"price":1247,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-FB","qcode":"U12110003"},{"id":"p13","cat":"턴디쉬","name":"AMC-T3","mix":"T3","spec":"T3 90T(450*450)","uw":58.68,"price":2480,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"탕수연와 B, T3 90T(대)","qcode":"U12120139"},{"id":"p14","cat":"턴디쉬","name":"AMC-TD","mix":"TDH5","spec":"LW150","uw":9.3,"price":1931,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC BRICK","qcode":"U12110001"},{"id":"p15","cat":"턴디쉬","name":"AMC-TD","mix":"TDH5","spec":"LW152","uw":8.1,"price":1931,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC BRICK","qcode":"U12110001"},{"id":"p16","cat":"턴디쉬","name":"AMC-TDP","mix":"SLP-A","spec":"TD-SLP 350","uw":5.31,"price":28094,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"TD플레이트,MGO-C","qcode":"U12120075"},{"id":"p17","cat":"공통","name":"AMUD-85P","mix":"BU-57-01-07","spec":"B20","uw":20,"price":2148,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"MUD재,B25","qcode":"U12120018"},{"id":"p18","cat":"래들","name":"ASC-NS","mix":"ASC-NS-26","spec":"SN-5","uw":62.85,"price":306986,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"T/D댐블럭,WB-140","qcode":"U12120068"},{"id":"p19","cat":"래들","name":"ASC-NS","mix":"ASC-NS-26","spec":"SN-6","uw":65.35,"price":306987,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"T/D댐블럭,WB-140","qcode":"U12120068"},{"id":"p20","cat":"턴디쉬","name":"C-52 S-COVER","mix":"C-52 S-COVER 244","spec":"C-52 S-COVER 244","uw":3,"price":44793,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"스타팅튜브캡,Starting Tube Cover,동국알앤에스,연주Star","qcode":"U12120105"},{"id":"p21","cat":"래들","name":"CA-160","mix":"20000311","spec":"B25","uw":25,"price":687,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"캐스터블,CA-160","qcode":"U12100015"},{"id":"p22","cat":"래들","name":"CA-160","mix":"20000311","spec":"B250","uw":250,"price":687,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"캐스터블,CA-160","qcode":"U12100015"},{"id":"p23","cat":"래들","name":"CA-180M","mix":"20000330","spec":"B1000","uw":1000,"price":1528,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"캐스터블,CA-180MH","qcode":"U12100033"},{"id":"p24","cat":"공통","name":"CA-180M","mix":"20000330","spec":"B25","uw":25,"price":1528,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"캐스터블,CA-180MH","qcode":"U12100033"},{"id":"p25","cat":"공통","name":"CERABOND #38","mix":"BU-60-01-05","spec":"B25-2","uw":25,"price":2148,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"MUD재,B25","qcode":"U12120018"},{"id":"p26","cat":"공통","name":"CNC-RAMMING","mix":"CNC","spec":"B1000","uw":1000,"price":1589,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"CNC용내화물,RAMMING MATERIAL-CNC","qcode":"U12100012"},{"id":"p27","cat":"전기로","name":"DONG-DC 16","mix":"20000193","spec":"Φ480xΦ280x425L","uw":143.1,"price":1992565,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"로저전극슬리브브릭,DC-16","qcode":"U12110033"},{"id":"p28","cat":"전기로","name":"DONG-DC 15","mix":"20000193","spec":"Φ600xΦ280x365L","uw":227.6,"price":3289613,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"로저전극슬리브브릭,DC-15","qcode":"U12110032"},{"id":"p29","cat":"전기로","name":"FM7C","mix":"FM7C(DK)-B","spec":"452","uw":8.8,"price":2437,"kind":"","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p30","cat":"전기로","name":"FM7C","mix":"FM7C(DK)-B","spec":"453","uw":7.9,"price":2437,"kind":"","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p31","cat":"전기로","name":"FM7C","mix":"FM7C(HY)","spec":"604D","uw":27.09,"price":2437,"kind":"","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p32","cat":"전기로","name":"FM7C","mix":"EBT-S1","spec":"EBT-S-03","uw":7.74,"price":2437,"kind":"","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p33","cat":"전기로","name":"FM7C","mix":"FM7C(DK)-B","spec":"K4","uw":7.55,"price":2437,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p34","cat":"전기로","name":"FM7C","mix":"FM7C(DK)-B","spec":"K5","uw":6.8,"price":2437,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p35","cat":"전기로","name":"FM7C","mix":"FM7C(DK)-B","spec":"K5 1/2","uw":3.3,"price":2437,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p36","cat":"전기로","name":"FM7C","mix":"FM7C(DK)-B","spec":"K6","uw":6.15,"price":2437,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO-C브릭,PGT-FMH1","qcode":"U12110045"},{"id":"p37","cat":"턴디쉬","name":"HAF-80","mix":"HAF-80S-04","spec":"T3 500*75T","uw":54.85,"price":2083,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"탕수연와 A,T3 500","qcode":"U12120138"},{"id":"p38","cat":"전기로","name":"HAU-BS","mix":"HAU-P83-13-1","spec":"DONG-DC17","uw":6.38,"price":101653,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"로저전극납배출브릭,DC-17","qcode":"U12110028"},{"id":"p39","cat":"전기로","name":"HAU-BS","mix":"HAU-P83-13-1","spec":"DONG-DC18","uw":7,"price":110790,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"로저전극납배출브릭,DC-18","qcode":"U12110029"},{"id":"p40","cat":"전기로","name":"HAU-BS","mix":"HAU-P83-13-1","spec":"DONG-DC19","uw":8.3,"price":125639,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"로저전극납배출브릭,DC-19","qcode":"U12110030"},{"id":"p41","cat":"전기로","name":"HAU-BS","mix":"HAU-P83-13-1","spec":"DONG-DC20","uw":8.29,"price":125639,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"로저전극납배출브릭,DC-20","qcode":"U12110031"},{"id":"p42","cat":"래들","name":"HAU-BS","mix":"HB1","spec":"LW90","uw":5.07,"price":1601,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"고알루미나브릭,HA-85","qcode":"U12110023"},{"id":"p43","cat":"래들","name":"HAU-BS","mix":"HB1","spec":"LW95","uw":4.83,"price":1601,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"고알루미나브릭,HA-85","qcode":"U12110023"},{"id":"p44","cat":"턴디쉬","name":"HAU-CAP","mix":"HAU-CAP-03-1","spec":"C-52 CAP BLOCK","uw":12.61,"price":47174,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"C52용내화물,cap BLOCK-C52","qcode":"U12100002"},{"id":"p45","cat":"래들","name":"MAC-W","mix":"MW3B","spec":"LW21","uw":6,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MAC브릭;MAC-W","qcode":"U12110043"},{"id":"p46","cat":"래들","name":"MAC-W","mix":"MW11B","spec":"LW21-5","uw":6.7,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MAC브릭;MAC-W","qcode":"U12110043"},{"id":"p47","cat":"래들","name":"MAC-W","mix":"MW11B","spec":"LW210","uw":12,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MAC브릭;MAC-W","qcode":"U12110043"},{"id":"p48","cat":"래들","name":"MAC-W","mix":"MW11B","spec":"LW211","uw":11.1,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MAC브릭;MAC-W","qcode":"U12110043"},{"id":"p49","cat":"래들","name":"MAC-W","mix":"MW11B","spec":"LW21K","uw":6,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MAC브릭;MAC-W","qcode":"U12110043"},{"id":"p50","cat":"전기로","name":"MAGRAM-95CR","mix":"MR-95CR-01","spec":"B25-2","uw":25,"price":1855,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"마그-크롬 스탐프재-MAGRAM-CR;B25","qcode":"U12120235"},{"id":"p51","cat":"전기로","name":"MAGRAM-98","mix":"ST-M98-04","spec":"B1000","uw":1000,"price":2776,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"마그네시아 로상재(MAGRAM-98)","qcode":"U12120217"},{"id":"p52","cat":"전기로","name":"MAGRAM-98","mix":"ST-M98-04","spec":"B2000","uw":2000,"price":2776,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"마그네시아 로상재(MAGRAM-98)","qcode":"U12120217"},{"id":"p53","cat":"공통","name":"MAL","mix":"BU-28-01-10","spec":"B25","uw":25,"price":1182,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"몰탈,MAL","qcode":"U12120091"},{"id":"p54","cat":"전기로","name":"MCT-18","mix":"TTB-200","spec":"MCT-18","uw":42,"price":365007,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"EBT튜브브릭,ETB-180","qcode":"U12110007"},{"id":"p55","cat":"턴디쉬","name":"PCB-DB(댐블록)","mix":"DP-DAM-2(NEW)","spec":"PCB-DB2-13-BL","uw":121,"price":293997,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"턴디쉬 댐블럭, DCM-CO1-342(SIZE 축소품)","qcode":"U12120216"},{"id":"p56","cat":"턴디쉬","name":"PCB-IP(TD IMPACT)","mix":"PCB-IP-11-BL","spec":"TD-IP-1","uw":133,"price":305903,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"C52용내화물,IMPACT PAD","qcode":"U12100004"},{"id":"p57","cat":"공통","name":"PCB-R(전기로 천정슬리브)","mix":"불소성","spec":"R/S 동국포항","uw":900,"price":3409,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"루프슬리브,EAF용 ROOF SLEEVE","qcode":"U12120089"},{"id":"p58","cat":"래들","name":"PCB-RL(래들 천정슬리브)","mix":"PCB-RL1-15-BL","spec":"L/F SV 동국포항520-3","uw":700,"price":3423,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"LF루프슬리브,PCB-SV140","qcode":"U12120017"},{"id":"p59","cat":"래들","name":"PCB-RL(래들 천정슬리브)","mix":"PCB-RL1-17-BL","spec":"L/F 천정S/V-2(포항)","uw":50,"price":3423,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"LF루프슬리브,PCB-SV140","qcode":"U12120017"},{"id":"p60","cat":"전기로","name":"PCB-US(이형 블록)","mix":"PCB-US-11","spec":"EBT SAND 투입S/V","uw":47,"price":287888,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"TD커버홀블록,NA,동국알앤에스,OD430xID230xH150mm","qcode":"N12130066"},{"id":"p61","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW15","uw":4.2,"price":2033,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p62","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW15-5","uw":4.7,"price":2033,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p63","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW150","uw":8.4,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p64","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW151","uw":7.8,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p65","cat":"래들","name":"PGT-BT","mix":"U5B","spec":"LW18","uw":5.6,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p66","cat":"래들","name":"PGT-BT","mix":"U5B","spec":"LW18-5","uw":5.6,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p67","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW180","uw":10,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p68","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW181","uw":9.3,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p69","cat":"턴디쉬","name":"PGT-BT","mix":"JTM3","spec":"LW200","uw":11.08,"price":2033,"kind":"","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p70","cat":"래들","name":"PGT-BT","mix":"ES-1A","spec":"LW21","uw":5.8,"price":2033,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p71","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW21-5","uw":6.5,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p72","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW21-5(160H)","uw":4.55,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p73","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW21(160H)","uw":4.1,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p74","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW210","uw":11.6,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p75","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW210(160H)","uw":8.1,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p76","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW211","uw":10.9,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p77","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW211(160H)","uw":7.6,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p78","cat":"래들","name":"PGT-BT","mix":"ES-1B","spec":"LW21K","uw":5.8,"price":2033,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"LD MGO-C브릭,PGT-BT","qcode":"U12110010"},{"id":"p80","cat":"래들","name":"PGT-IND SET","mix":"결합","spec":"LW211-IND50-90/100","uw":13.8,"price":3352,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"인디케이트연와","qcode":"U12110106"},{"id":"p81","cat":"래들","name":"PP-CONE SET","mix":"결합","spec":"PPSET RD375L PR IS-N","uw":127,"price":627075,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"SLOT플러그,D370H","qcode":"U12120053"},{"id":"p82","cat":"래들","name":"PP-CONE SET","mix":"결합","spec":"S520-250N PR540-360 OS","uw":178,"price":997650,"kind":"기능성","gubun":"제품","use":1,"since":"2026Q3","unit":"ea","custName":"포러스플러그,DK520-3S","qcode":"U12120143"},{"id":"p83","cat":"턴디쉬","name":"RM-37S","mix":"BU-14-01-23","spec":"B20","uw":20,"price":1391,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"램밍재,RM37S","qcode":"U12120081"},{"id":"p84","cat":"공통","name":"SK-36","mix":"월드이엔티32T","spec":"1/2STD","uw":1.87,"price":700,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"알루미나브릭,H-3(1/2STD)","qcode":"U12110034"},{"id":"p85","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"1.5J","uw":7.52,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p86","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"281","uw":5.78,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p87","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"282","uw":5.25,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p88","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"EBS-317","uw":15.5,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p89","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"EBT-S2","uw":7.21,"price":1500,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p90","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"K4","uw":7.22,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p91","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"K5","uw":6.57,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p92","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"K6","uw":5.9,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p93","cat":"전기로","name":"SMC-95","mix":"20000095","spec":"STD","uw":5,"price":1500,"kind":"","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"MGO브릭,SMC-95","qcode":"U12110020"},{"id":"p94","cat":"공통","name":"TC-2","mix":"부정형","spec":"B1000","uw":1000,"price":1109,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"유입재캐스터블,TC-2","qcode":"U12120123"},{"id":"p96","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 Lower plate (G)","uw":8.6,"price":155217,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C-52 LOWER PLATE(GASKET 일체형)","qcode":"U12120099"},{"id":"p97","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 Middle plate(Z)","uw":5.1,"price":158783,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C-52 MIDDLE PALTE(Z)","qcode":"U12120077"},{"id":"p98","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 Middleplate(AL)","uw":5.1,"price":105637,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52용내화물,MIDDLE PLATE-C52","qcode":"U12100006"},{"id":"p99","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 MTNP(Z)","uw":13.4,"price":324114,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52 MTNP(Z)","qcode":"U12120078"},{"id":"p100","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 S-Tube350mm*40t","uw":3,"price":103321,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52 스타팅 튜브 350MM X 40T;S-Tube 350","qcode":"U12100027"},{"id":"p101","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 S-Tube400mm*40t","uw":3,"price":105982,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52 스타팅 튜브 400MM X 40T;S-Tube 400","qcode":"U12100028"},{"id":"p102","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 S-Tube420L*40t","uw":3,"price":107209,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52 스타팅 튜브 420MM X 40T;S-TUBE 420","qcode":"U12100036"},{"id":"p103","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"C-52 SES bloom(장)","uw":13.16,"price":254176,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52용내화물,SES BL용,VESUVIUS,장연주용","qcode":"U12120009"},{"id":"p104","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"SES BEAM 100(장)","uw":12.02,"price":307733,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C-52 BEAM BLANK(Z) SES 내화물","qcode":"U12120076"},{"id":"p105","cat":"턴디쉬","name":"TUNGUN-5","mix":"BU-11-60-09","spec":"B1000","uw":1000,"price":1092,"kind":"내화물","gubun":"제품","use":1,"since":"2026Q3","unit":"kg","custName":"TD건닝재,TUNGUN-2(5)","qcode":"U12120071"},{"id":"p106","cat":"래들","name":"단열보드","mix":"(대한동방)","spec":"LB 312*100*12.7","uw":0.3,"price":4730,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"단열보드","qcode":"U12120234"},{"id":"p107","cat":"전기로","name":"앙카허스 DC-25","mix":"부정형","spec":"B1250","uw":1250,"price":1275,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"앙카허스,DC25","qcode":"U12120112"},{"id":"p108","cat":"래들","name":"AMC-FB","mix":"FBP","spec":"LW251FS","uw":11.01,"price":1247,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"kg","custName":"AMC브릭,AMC-FB","qcode":"U12110003"},{"id":"p109","cat":"턴디쉬","name":"TD Slide gate","mix":"XP06054","spec":"GASKET","uw":1,"price":0,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52용내화물,GASKET-C52","qcode":"U12100003"},{"id":"p111","cat":"턴디쉬","name":"TD Slide gate","mix":"불소성","spec":"롱노즐","uw":32,"price":0,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"롱노즐,DCM-B02-078,00,VESVIUS,삽입부 형상변경 개선품","qcode":"U12120168"},{"id":"p113","cat":"턴디쉬","name":"TD Slide gate","mix":"BK53128","spec":"SES Bloom(무예열)","uw":11.8,"price":0,"kind":"내화물","gubun":"상품","use":1,"since":"2026Q3","unit":"ea","custName":"C52용내화물,SES BL용,VESUVIS,무예열,DCM-B02-081","qcode":"U12120008"},{"id":"p1791547157740_0","cat":"턴디쉬","gubun":"제품","name":"ONQC하부노즐,19.0/LN-60","mix":"조선","spec":"조선","uw":3,"price":36985,"kind":"","use":1,"custName":"ONQC하부노즐,19.0/LN-60","qcode":"U12120030","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_1","cat":"턴디쉬","gubun":"제품","name":"ONQC하부노즐,19.5/LN-60","mix":"조선","spec":"조선","uw":3,"price":36985,"kind":"","use":1,"custName":"ONQC하부노즐,19.5/LN-60","qcode":"U12120031","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_2","cat":"턴디쉬","gubun":"제품","name":"ONQC하부노즐,20.0/LN-60","mix":"조선","spec":"조선","uw":3,"price":36985,"kind":"","use":1,"custName":"ONQC하부노즐,20.0/LN-60","qcode":"U12120032","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_3","cat":"턴디쉬","gubun":"제품","name":"ONQC하부노즐,20.5LN-60","mix":"조선","spec":"조선","uw":3,"price":36985,"kind":"","use":1,"custName":"ONQC하부노즐,20.5LN-60","qcode":"U12120033","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_4","cat":"턴디쉬","gubun":"제품","name":"ONQC하부노즐,21.0/LN-60","mix":"조선","spec":"조선","uw":3,"price":36985,"kind":"","use":1,"custName":"ONQC하부노즐,21.0/LN-60","qcode":"U12120034","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_5","cat":"턴디쉬","gubun":"제품","name":"TD 건닝재(원진)","mix":"원진","spec":"건닝재","uw":1000,"price":1092,"kind":"","use":1,"custName":"TD 건닝재(원진)","qcode":"U12120201","since":"2026Q4"},{"id":"p1791547157740_6","cat":"턴디쉬","gubun":"제품","name":"롱노즐;SHROUND NOZZLE;오성스틸;140Ton(철근재용)","mix":"오성","spec":"오성","uw":22,"price":184570,"kind":"","use":1,"custName":"롱노즐;SHROUND NOZZLE;오성스틸;140Ton(철근재용)","qcode":"U12120206","since":"2026Q4"},{"id":"p1791547157740_7","cat":"전기로","gubun":"제품","name":"스탐프재;MC-STAMP재","mix":"B1000","spec":"1000","uw":1000,"price":832,"kind":"","use":1,"custName":"스탐프재;MC-STAMP재","qcode":"U12120173","since":"2026Q4"},{"id":"p1791547157740_8","cat":"전기로","gubun":"제품","name":"스프레이재, 원진","mix":"원진","spec":"원진","uw":2000,"price":635,"kind":"","use":1,"custName":"스프레이재, 원진","qcode":"U12120188","since":"2026Q4"},{"id":"p1791547157740_9","cat":"전기로","gubun":"제품","name":"스프레이재, KR","mix":"KR","spec":"KR","uw":2000,"price":635,"kind":"","use":1,"custName":"스프레이재, KR","qcode":"U12120190","since":"2026Q4"},{"id":"p1791547157740_10","cat":"전기로","gubun":"제품","name":"스프레이재;조선내화;전기로 스프레이재;","mix":"조선","spec":"조선","uw":2000,"price":635,"kind":"","use":1,"custName":"스프레이재;조선내화;전기로 스프레이재;","qcode":"U12120256","since":"2026Q4"},{"id":"p1791547157740_11","cat":"래들","gubun":"제품","name":"캐스타블;KR;CT-180","mix":"케이알","spec":"케이알","uw":0,"price":1435,"kind":"","use":1,"custName":"캐스타블;KR;CT-180","qcode":"U12100030","since":"2026Q4"},{"id":"p1791547157740_12","cat":"래들","gubun":"제품","name":"캐스타블;원진;RM-180","mix":"원진","spec":"원진","uw":0,"price":1528,"kind":"","use":1,"custName":"캐스타블;원진;RM-180","qcode":"U12100031","since":"2026Q4"},{"id":"p1791547157740_13","cat":"래들","gubun":"제품","name":"KR 바닥","mix":"KR","spec":"KR","uw":0,"price":1814,"kind":"","use":1,"custName":"KR 바닥","qcode":"U12110049","since":"2026Q4"},{"id":"p1791547157740_14","cat":"래들","gubun":"제품","name":"KR SL","mix":"케이알","spec":"케이알 슬라그라인","uw":0,"price":1910,"kind":"","use":1,"custName":"KR SL","qcode":"U12110050","since":"2026Q4"},{"id":"p1791547157740_15","cat":"래들","gubun":"제품","name":"원진;SL","mix":"원진","spec":"원진","uw":0,"price":2033,"kind":"","use":1,"custName":"원진;SL","qcode":"U12110054","since":"2026Q4"},{"id":"p1791547157740_16","cat":"래들","gubun":"제품","name":"원진;ML","mix":"원진","spec":"원진","uw":0,"price":2033,"kind":"","use":1,"custName":"원진;ML","qcode":"U12110055","since":"2026Q4"},{"id":"p1791547157740_17","cat":"래들","gubun":"제품","name":"원진;바닥","mix":"원진","spec":"원진","uw":0,"price":1931,"kind":"","use":1,"custName":"원진;바닥","qcode":"U12110056","since":"2026Q4"},{"id":"p1791547157740_18","cat":"래들","gubun":"제품","name":"KR ML","mix":"케이알","spec":"메탈라인","uw":0,"price":1910,"kind":"","use":1,"custName":"KR ML","qcode":"U12110068","since":"2026Q4"},{"id":"p1791547157740_19","cat":"래들","gubun":"제품","name":"원진래들 후렌지","mix":"원진","spec":"원진","uw":0,"price":1247,"kind":"","use":1,"custName":"원진래들 후렌지","qcode":"U12110105","since":"2026Q4"},{"id":"p1791547157740_20","cat":"래들","gubun":"제품","name":"S/N상부노즐,EASY200-UPPER NOZZLE,조선내화","mix":"조선","spec":"조선","uw":0,"price":62110,"kind":"","use":1,"custName":"S/N상부노즐,EASY200-UPPER NOZZLE,조선내화","qcode":"U12120036","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_21","cat":"래들","gubun":"제품","name":"S/N상부플레이트,EASY200-UPPER PLATE,조선내화","mix":"조선","spec":"조선","uw":0,"price":115682,"kind":"","use":1,"custName":"S/N상부플레이트,EASY200-UPPER PLATE,조선내화","qcode":"U12120038","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_22","cat":"래들","gubun":"제품","name":"S/N하부노즐,EASY200-LOWER NOZZLE,조선내화","mix":"조선","spec":"조선","uw":0,"price":63027,"kind":"","use":1,"custName":"S/N하부노즐,EASY200-LOWER NOZZLE,조선내화","qcode":"U12120043","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_23","cat":"래들","gubun":"제품","name":"S/N하부플레이트,EASY200-LOWER PLATE,조선내화","mix":"조선","spec":"조선","uw":0,"price":115682,"kind":"","use":1,"custName":"S/N하부플레이트,EASY200-LOWER PLATE,조선내화","qcode":"U12120046","since":"2026Q4","unit":"ea"},{"id":"p1791547157740_24","cat":"래들","gubun":"상품","name":"몰탈,SK-38","mix":"SN 몰탈","spec":"B25","uw":25,"price":2732,"kind":"","use":1,"custName":"몰탈,SK-38","qcode":"U12120096","since":"2026Q4"},{"id":"p1791547157740_25","cat":"턴디쉬","gubun":"제품","name":"턴디쉬 임팩트 패드;IMPACT PAD;동국알앤에스;TD-IP-1","mix":"IMPACT-PAD TEST","spec":"IMPACT-PAD TEST","uw":251,"price":586320,"kind":"","use":1,"custName":"턴디쉬 임팩트 패드;IMPACT PAD;동국알앤에스;TD-IP-1","qcode":"U12120257","since":"2026Q4","unit":"ea"}],"del":["ACT-20|TMB-190","AMC-BS|LW7","AMC-BS|LW7-5","AMC-BS|LW75","AMC-BS|LW78","AMC-DAM|T3 75T","AMC-TD|LW151","AMC-TDP|TD-SLP350","AMC-W|LW153","AMUD-85P|B25","CA-150S|B1000-1","CA-160|B500","CA-160|B500-2","CA-165SYD|B500","CA-165SYD|B500-3","HAF-80|T3 500*75t","HAU-BS|LW7","HAU-BS|LW7-5","HAU-BS|LW75","HAU-BS|LW78","MAGGUN-85S|B1000","PCB-DB(댐블록)|DP-DAM-2","PGT-FM7C|451","PGT-FM7C|452","PGT-FM7C|452-1/2","PGT-FM7C|453","PGT-FM7C|604D","PGT-FM7C|K5","PGT-FM7C|K5 1/2","PGT-LL|LW150","MAC-W|LW180","MAC-W|LW181","PGT-BT|LW11","PGT-BT|LW11-5","PGT-BT|LW110","PGT-BT|LW111","PGT-BT|LW15","PGT-BT|LW15-5","PGT-BT|LW18-5FS","PGT-BT|LW21","TD Slide gate|C-52 MTNP","TD Slide gate|C-52 S-Tube460mm*30t","AIR INLET COUPLING|AIR INLET COUPLING","MgO-C|LW210","MgO-C|LW180","MgO-C|LW150","FM7C|1.5J","DONG-DC|15~20","Maram95|","CA-180M|","AMC-W|","AMC TDP|","AMC-W|LT150","AMC-W|LT151","AMUD-85P|B25-2","ARAM-80S|B30","ARAM-80S|B30-1","BILLET CRUCIBLE|Billet Crucible ㅁ155 X 350h","CA-150S|B1000","CA-150S|B500-2","CA-160|B1000","CA-160|B250-1","CA-160|B400-3","CA-165S|B25","CA-165SYD|B1000","CA-165SYD|B500-2","CA-180M|B500-3","EBT-S|EBT-S1","HAF-80|T3 500","HAU-BS|LW9","HAU-BS|LW9-5","HAU-BS|LW91","MA-POT|B500","MA-POT|CAN-20","MAGGUN-85S|B2000","MAGGUN-85S|B500","MAGGUN-85S|B700","MAGRAM-95|B25-3","MAGRAM-95S|B25","MAGRAM-95S|B25-2","MAGRAM-95S|B25-3","MAGRAM-95S|B250-1","MAGRAM-98|B25-2","MCT-18|TTB-200","MCT-18|TTB-200L","MH-34|B25","MH-36|B25","MOPC|CAN-20","PA-165|B25-1","PCB-BT(버너타일)|포항TD번버너타일","PCB-CAP BLOCK|C-52 CAP BLOCK","PCB-DB(댐블록)|DP-DAM-2(NEW)","PCB-DB(댐블록)|DP-DAM-3","PCB-IP(TD IMPACT)|IMPACT PAD(NEW)","PCB-R(전기로 천정슬리브)|R/S 동국포항 30","PCB-TD-HOLE|TD COVER HOLE","PCB-TD-HOLE|TD COVER HOLE Ø410","AMC-FB|LW231F","AMC-FB|LW251FS","AMC-LW|LW200","AMC-TDP|TD-SLP440","AMC-W|LW150","AMC-W|LW151","AMC-W|LW181","AMC-W|LW200","BEARING CPL|BEARING CPL","CA-160|B500-3","CA-180M|B250-1","CNC-RAMMING|B25","CNC-RAMMING|B500","COLLECTOR NOZZLE|","COLLECTOR NOZZLE|SN CS-60","CONVEY SCREW RISE|CONVEYOR SCREW 50","DOL-STAMP|B1000","DOL-STAMP|B1000(C)","Dry material tube|Dry material tube","EBT충진재|B1000","ECCENTRIC LOCK|Eccentric lock","FLAP FOR MIXING TUBE CPL|MIXING TUBE CPL","FLOW METER|600L","FLOW METER|600MM","FLOW SCRAPER;DCM-C08-010;00;CASTABLE MIX|FLOW SCRAPER","GEKA COUPLING|coupling","HERIX|38Φ","LADLE NOZZLE|SN CS-60","LG32C|포항 SN-COL NZ","LG32C|포항 SN-PLATE","LG32C|포항 SN-TOP NZ","LWC-110|B20","MA95E|B1250","MAC-W|LT150","MAC-W|LT151","MAC-W|LW23-5","MIXER 내부 SCRAPER;DCM-C08-014;00;CASTABLE|MIXER 내부 SCRAPER","MIXING SHAFT|MIXING SHAFT Ø190","MIXING TUBE|MIXING TUBE","MONO PUMP|MONO PUMP(M-TEC)","MORTAR HOSE|Mortar Hose-NW35 set","MORTAR HOSE|Ø45","NOZZLE TIP|NOZZLE Ø14","PGT-BT|LW152","PGT-BT|LW200","PGT-BT|LW202","PGT-BT|LW212","PGT-FM7C|450","PGT-BT|LW21-5FS","PGT-BT|LW210FS","PGT-BT|LW211FS","PGT-BT|LW21FS","PGT-BT|LW23","PGT-BT|LW23-5","PGT-BT|LW231","PGT-BT|LW232","PGT-FB-SD|LW211FS","PGT-FB-SD|LW251FS","PGT-FM4C(M/C)|K5 1/2","탕수연와B|","루미보드|312*100*12.7T","포러스콘|PP #1","포러스콘|PP #2","금형|Billet Crucible ㅁ155x380H","금형|IMPACT PAD(NEW)","금형|턴디쉬카바홀","단열벽돌B5|STD","루미보드|312*100*12.7t","앙카허스 DC-25|B2000","앙카허스 DC-25|B500","에어 시린더|63×160 TC TYPE","올리빈샌드|B1000","전극봉|L/F 전극봉 16인치","캐스터블믹스기|MIXER&HOPPER","PGT-FM7C|EBT-S1","PP-CONE SET|P520-330N NS530-360 IS","TC-2|B500-2","TC-2|B500-3","PGT-FM7C|K4","PGT-FM7C|K6","TD Slide gate|C-52 Lower plate","TD Slide gate|C-52 SES bloom(무)","RM-37S|","PGT-FM7C|EBT-S1-SET","PGT-IND|LW211","PGT-IND|LW231","PP-CONE SET|S420-250N NS430-360IS","PP-CONE SET|S460-250N PS505-360 OS","PP-CONE SET|S465-250N NS505-360 OS","PP-CONE SET|S465-250N PR485-360 OS","PP-CONE SET|S465-250N PR505-360 IS","TUNGUN-6|B1000","PGT-FM7C|LW150","PGT-FM7C|LW90","WELL BLOCK(A)|포항 WB-A (VES)","WELL BLOCK(B)|포항 WB-B (vES)","SK-36|1/2반형","SK-36|STD","PGT-LL|LW151","PP-CONE SET|P430-250N NS423-320 OS","SK-34|STD","PGT-LBT|LW151","PGT-LL|LT150","PGT-LL|LW20","PGT-LL|LW211","PGT-MBT|LW210","PGT-MBT|LW211","PLATE|","PLATE|SN CS-60","PUMP END PIECE CPL|PUMP END PIECE CPL","Pressure reducing valve|1/2 INCH","Pump Motor Set|PUMP MOTOR SET","RHIM WELL BLOCK|SN CS-60","ROTATOR|SPRAY GUN","S/N MORTAR|B25","SHROUD NOZZLE|롱노즐(베스)","SK-34|STD-B","SK-36|STD-B","SK-36|입10정","SK-36|입6정","SK-36|입8정","SK-38|STD","SOLENOID VALVE|3/4 INCH","SPRAY GUN|600MM","SPRAY GUN|SPRAY GUN","T/D 연속측온내화물|ACCUCONE TUBE(VES)","TD Slide gate|626mm","TD 연속측온 설비|T.B.A","TRANSFER CONVEYOR SCREW|TRANSPORT SCREW","Tension rod&Clampnut set|Tension rod&Clampnut set","VARIFORM|B10","WELL BLOCK|A87CRS-15-IN","건닝기부품|Pressure Control 2.2bar pre-set","건닝기부품|Pressure reducer 1/2″","건닝기부품|Solenoid Valve 3/4″ 24V","건닝기자재감지센서|Probe Set","소괴탄|B1000","SMC-95|LW281","SMC-95|LW282","PGT-IND SET|LW211-IND70-90/100","RM-37S|B25","TD Slide gate|C-52 BB SES BL00M","TD Slide gate|C-52 Gasket","TD Slide gate|C-52 Middle plate","TD Slide gate|C-52 SES Bloom","TD Slide gate|롱노즐(베스)","TD Slide gate|C-52 S-Tube350mm*30t","TD Slide gate|C-52 S-Tube400mm*30t","TD Slide gate|C-52 S-Tube420mm*30t","TD Slide gate|C-52 S-Tube430mm*30t","TD Slide gate|Funnel shroud","TD Slide gate|SES BLOOM 130(장)","T/D Gunning재|","유입재|TC-2","앙카허스 DC-25|B1200","앙카하스|DC25","신규 제품|","PGT-FM7C|EBT-S-03","TD Slide gate|Lower+GASKET(신규)","TD Slide gate|Middle Plate(재질개선)","TD Slide gate|Ar-MTMP(재질개선)","TD Slide gate|롱노즐(Butt)","TD Slide gate|SES BLOOM(무)","드라이스탐프재, MAGRAM-95|","C-52|Ramming Material","C-52|Start Tube(400mm*40T)","C-52|SES BEAM100(Z)","DONG-DC|Φ480xΦ280x425L","DONG-DC|Φ600xΦ280x365L","TD Slide gate|Ar-MTMP","AR-MTNP(Z)|AR-MTNP (Z)","AMC-FB|LW251FBP","스타팅튜브;동국알앤에스;S-TUBE;626|COVER"],"snaps":{"2026Q4":{"date":"2026-11-06","label":"26년 4분기","prices":{"p1792729514025":1275,"p1792649978741":1528,"p1792649862293":2776,"p1792643969965_7028":1565,"p1792395779514":1601,"p1792395776462":1601,"p1792392222113_4887":264027,"p1791865099043":1703,"p1791443585867":25088,"p1791356611345":4962,"p1791356396790":37228,"p1791356395057":38892,"p1791356376730":36985,"p1791328828926":95,"p1791160974348":306458,"p1791160973583":306458,"p1791076231437":635,"p1790562924965":399,"p1790562808190":1978,"p1790562606649":1250,"p1790561543300":1144,"p1":642753,"p2":1931,"p3":1931,"p4":1931,"p5":1931,"p6":1584,"p7":1584,"p8":1584,"p9":1584,"p10":1247,"p12":1247,"p13":2480,"p14":1931,"p15":1931,"p16":28094,"p17":2148,"p18":306986,"p19":306987,"p20":44793,"p21":687,"p22":687,"p23":1528,"p24":1528,"p25":2148,"p26":1589,"p27":1992565,"p28":3289613,"p29":2437,"p30":2437,"p31":2437,"p32":2437,"p33":2437,"p34":2437,"p35":2437,"p36":2437,"p37":2083,"p38":101653,"p39":110790,"p40":125639,"p41":125639,"p42":1601,"p43":1601,"p44":47174,"p45":2033,"p46":2033,"p47":2033,"p48":2033,"p49":2033,"p50":1855,"p51":2776,"p52":2776,"p53":1182,"p54":365007,"p55":293997,"p56":305903,"p57":3409,"p58":3423,"p59":3423,"p60":306458,"p61":2033,"p62":2033,"p63":2033,"p64":2033,"p65":2033,"p66":2033,"p67":2033,"p68":2033,"p69":2033,"p70":2033,"p71":2033,"p72":2033,"p73":2033,"p74":2033,"p75":2033,"p76":2033,"p77":2033,"p78":2033,"p80":3352,"p81":627075,"p82":997650,"p83":1391,"p84":700,"p85":1597,"p86":1597,"p87":1597,"p88":1597,"p89":1597,"p90":1597,"p91":1597,"p92":1597,"p93":1597,"p94":1109,"p96":155217,"p97":158783,"p98":105637,"p99":324114,"p100":103321,"p101":105982,"p102":107209,"p103":254176,"p104":307733,"p105":1092,"p106":4730,"p107":1275,"p108":1247,"p109":18562,"p111":260062,"p113":227420,"p1791547157740_0":36985,"p1791547157740_1":36985,"p1791547157740_2":36985,"p1791547157740_3":36985,"p1791547157740_4":36985,"p1791547157740_5":1092,"p1791547157740_6":184570,"p1791547157740_7":832,"p1791547157740_8":635,"p1791547157740_9":635,"p1791547157740_10":635,"p1791547157740_11":1435,"p1791547157740_12":1528,"p1791547157740_13":1814,"p1791547157740_14":1910,"p1791547157740_15":2033,"p1791547157740_16":2033,"p1791547157740_17":1931,"p1791547157740_18":1910,"p1791547157740_19":1247,"p1791547157740_20":62110,"p1791547157740_21":115682,"p1791547157740_22":63027,"p1791547157740_23":115682,"p1791547157740_24":2732,"p1791547157740_25":586320}},"2027Q1":{"date":"2026-10-08","label":"27년 1분기","prices":{"p1791356611345":0,"p1791356396790":0,"p1791356395057":0,"p1791356376730":0,"p1791328828926":0,"p1791160974348":0,"p1791160973583":0,"p1791076231437":0,"p1790562924965":0,"p1790562808190":1978,"p1790562606649":0,"p1790561543300":0,"p1":642753,"p2":1931,"p3":1931,"p4":1931,"p5":1931,"p6":1584,"p7":1584,"p8":1584,"p9":1584,"p10":1247,"p12":1247,"p13":2480,"p14":1931,"p15":1931,"p16":28094,"p17":2148,"p18":306986,"p19":306987,"p20":44793,"p21":687,"p22":687,"p23":1528,"p24":1528,"p25":2148,"p26":1589,"p27":1992565,"p28":3289613,"p29":2437,"p30":2437,"p31":2437,"p32":2437,"p33":2437,"p34":2437,"p35":2437,"p36":2437,"p37":2083,"p38":101653,"p39":110790,"p40":125639,"p41":125639,"p42":1601,"p43":1601,"p44":47174,"p45":2033,"p46":2033,"p47":2033,"p48":2033,"p49":2033,"p50":1855,"p51":2776,"p52":2776,"p53":1182,"p54":365007,"p55":293997,"p56":2447224,"p57":3409,"p58":3423,"p59":3423,"p60":287888,"p61":2033,"p62":2033,"p63":2033,"p64":2033,"p65":2033,"p66":2033,"p67":2033,"p68":2033,"p69":2033,"p70":2033,"p71":2033,"p72":2033,"p73":2033,"p74":2033,"p75":2033,"p76":2033,"p77":2033,"p78":2033,"p80":3352,"p81":627075,"p82":997650,"p83":1391,"p84":700,"p85":1500,"p86":1500,"p87":1500,"p88":1500,"p89":1500,"p90":1500,"p91":1500,"p92":1500,"p93":1500,"p94":1109,"p95":264027,"p96":155217,"p97":158783,"p98":105637,"p99":324114,"p100":103321,"p101":105982,"p102":107209,"p103":254176,"p104":307733,"p105":1092,"p106":4730,"p107":1275,"p108":1247,"p109":0,"p111":0,"p113":0}}}};
+function prodHoldWrite(){return !window.__fbSynced&&!window.__prodHoldOff;}
+setTimeout(()=>{window.__prodHoldOff=true;},45000);
+try{const _isP=fbInitialSync;fbInitialSync=async function(){const r=await _isP.apply(this,arguments);
+  try{window.__fbSynced=true;prodData=loadProd();if(curView==='prodm')renderProdMaster();}catch(e){}
+  return r;};}catch(e){}
+(function(){
+  const FLAG='dgrns_mig_prod_restore1111';
+  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}};
+  function run(){
+    try{if(localStorage.getItem(FLAG))return true;}catch(e){return true;}
+    try{if(!(isAdmin()||['admin','office'].indexOf(appRole())>=0))return false;}catch(e){return false;}
+    if(window.fbOn&&!(window.__fbSynced||window.__fbSeen))return false;
+    const B=PROD_BK1111,cur=J('dgrns_prod',[]),curDel=J('dgrns_prod_del',[]),curSn=J('dgrns_pricesnaps',{});
+    try{(window.rawSetItem||localStorage.setItem.bind(localStorage))('prod_pre_restore1111',JSON.stringify({at:new Date().toISOString(),prod:cur,del:curDel,snaps:curSn}));}catch(e){}
+    const ids=new Set(B.prod.map(p=>p.id)),nk=p=>(p.name||'')+'|'+(p.spec||''),keys=new Set(B.prod.map(nk));
+    const delSet=new Set(B.del.concat(Array.isArray(curDel)?curDel:[]));
+    const extra=(Array.isArray(cur)?cur:[]).filter(p=>p&&!ids.has(p.id)&&!keys.has(nk(p)));
+    const out=B.prod.map(p=>Object.assign({},p)).concat(extra);
+    let fixed=0;const cm=new Map((Array.isArray(cur)?cur:[]).map(p=>[p.id,p]));
+    B.prod.forEach(p=>{const c=cm.get(p.id);if(!c||JSON.stringify(c)!==JSON.stringify(p))fixed++;});
+    const sn=JSON.parse(JSON.stringify(curSn&&typeof curSn==='object'?curSn:{}));let snAdd=0;
+    Object.keys(B.snaps).forEach(q=>{const b=B.snaps[q];if(!sn[q]){sn[q]=b;snAdd+=Object.keys(b.prices||{}).length;return;}
+      sn[q].prices=sn[q].prices||{};Object.keys(b.prices||{}).forEach(id=>{if(sn[q].prices[id]==null){sn[q].prices[id]=b.prices[id];snAdd++;}});});
+    try{localStorage.setItem('dgrns_prod_del',JSON.stringify([...delSet]));}catch(e){}
+    try{localStorage.setItem('dgrns_pricesnaps',JSON.stringify(sn));}catch(e){}
+    try{localStorage.setItem('dgrns_prod',JSON.stringify(out));}catch(e){}
+    try{prodData=loadProd();}catch(e){}
+    try{localStorage.setItem(FLAG,JSON.stringify({at:new Date().toISOString(),fixed,extra:extra.length,snAdd,total:out.length}));}catch(e){}
+    window.__prodRestore={fixed,extra:extra.length,snAdd,total:out.length};
+    try{if(curView==='prodm')renderProdMaster();}catch(e){}
+    try{if(curView==='home')window.afRenderBanner&&window.afRenderBanner(true);}catch(e){}
+    try{toast('🧱 품목마스터를 11/11 백업 기준으로 되살렸습니다 — '+fixed+'개 품목 복구'+(extra.length?' · 백업 뒤 추가 '+extra.length+'개 유지':''));}catch(e){}
+    return true;
+  }
+  window.prodRestoreRun=run;
+  let tries=0;const t=setInterval(()=>{tries++;let done=false;try{done=run();}catch(e){console.warn('prodRestore',e);done=true;}if(done||tries>120)clearInterval(t);},4000);
+})();
+
+/* ============ 인천사업소 — 현장 근태·결재 (2026-11-20) ============
+   · 첫 화면: 포항(관리직·현장총괄·SN반·축로반) / 인천(관리직·현장총괄·SN반·축로반) 두 줄. 포항 현장총괄 = 기성 + 안전관리담당자.
+   · 사이드바 「인천사업소 근태·결재」(안전과 관리자 사이): 휴가·잔업 신청 · 결재함 · 직원 관리 · 내 급여 계산 (4조 3교대 근무표 제외)
+   · 자료: 포항과 같은 저장소(직원·휴가원·잔업)를 쓰되 인천 기록에는 site:'I' 표식 — 화면에는 지금 보고 있는 사업소 자료만 올린다.
+     인천 직원으로 로그인하면 인천 메뉴만 보이고 포항 자료는 보이지 않는다. 포항 관리직은 인천 메뉴에서 인천 자료를 볼 수 있다(결재는 인천 결재자만).
+   · 결재선(인천): 포항과 같은 주임 → 계장 → 기성 → 사업소장. 인천은 계장 대신 기장이 같은 반의 계장 단계를 결재한다. 결재선 설정은 사업소별 따로 저장. */
+const IC_VIEWS={icattend:'attend',icapprove:'approve',icemp:'emp',icmypay:'mypay'};
+const IC_REV={attend:'icattend',approve:'icapprove',emp:'icemp',mypay:'icmypay'};
+const ATT_BASE=['attend','approve','emp','mypay','shift4'];
+const IC_KEY='rns_ic_user';
+const PM_CARDS=[['office','관리직','mp-office','🏢','mv-m5'],['chief','현장총괄','mp-fore','🧭','mv-m3'],['sn','SN반','mp-sn','🔩','mv-m1'],['furnace','축로반','mp-fur','🧱','mv-m2']];
+function isICUser(){try{return localStorage.getItem(IC_KEY)==='1'&&['pohang','viewer'].indexOf(appRole())<0;}catch(e){return false;}}
+function icClear(){try{localStorage.removeItem(IC_KEY);}catch(e){}window.__icLg=false;}
+function pmLabel(r){return r==='chief'?'현장총괄':(ROLE_LABEL[r]||r);}
+function apprKey(){return window.__site==='I'?'dgrns_ic_apprline':'dgrns_apprline';}
+try{if(['pohang','viewer'].indexOf(appRole())>=0)icClear();}catch(e){}
+window.__site=isICUser()?'I':'P';
+try{applyApprCfg();}catch(e){}
+function siteF(a){const I=window.__site==='I';return (a||[]).filter(x=>!!(x&&x.site==='I')===I);}
+let __empP=[];
+async function siteSwitch(s){
+  if(window.__site===s)return false;
+  if(window.__site==='P')__empP=empData.slice();
+  window.__site=s;document.body.classList.toggle('site-ic',s==='I');
+  try{empData=siteF(await txAll('emp'));}catch(e){empData=[];}
+  try{leaveData=siteF(await txAll('leave'));}catch(e){leaveData=[];}
+  try{otData=siteF(await txAll('ot'));}catch(e){otData=[];}
+  if(s==='P')__empP=empData.slice();
+  try{applyApprCfg();}catch(e){}
+  try{updateApprBadge();}catch(e){}
+  try{updateMeChip();}catch(e){}
+  return true;
+}
+document.body.classList.toggle('site-ic',window.__site==='I');
+/* 저장: 인천 화면에서 새로 만든 직원·휴가원·잔업에 인천 표식 */
+try{const _p=putRec;putRec=function(s,rec){try{if((s==='emp'||s==='leave'||s==='ot')&&rec&&typeof rec==='object'&&window.__site==='I'&&!rec.site&&!fbApplying)rec.site='I';}catch(e){}return _p.apply(this,arguments);};}catch(e){}
+/* '나' — 포항 직원이 인천 화면을 볼 때도 본인 확인 */
+try{const _me=meEmp;meEmp=function(){const m=_me.apply(this,arguments);if(m)return m;if(window.__site==='I'&&!isICUser()){const id=myEmpId();return __empP.find(e=>e.id===id)||null;}return null;};}catch(e){}
+/* 결재: 인천 문서는 인천 결재자만 · 인천은 기장이 같은 반 계장 단계 결재 */
+try{const _ca=canApprove;canApprove=function(d){
+  if(window.__site==='I'){const me=meEmp();if(!me||!empData.some(e=>e.id===me.id))return false;
+    const r=_ca.apply(this,arguments);if(r)return r;
+    try{const st=pendingStep(d);if(st!=='gye')return false;if(me.id===d.empId||otHas(d,me.id))return false;
+      const named=(d.who||{})[st];if(named)return named===me.id;
+      return normRank(me.rank)==='기장'&&normDept(me.dept)===normDept(d.dept);}catch(e){return false;}}
+  return _ca.apply(this,arguments);};}catch(e){}
+/* 화면 권한 */
+try{const _va=viewAllowed;viewAllowed=function(v){
+  if(isICUser()){const r=appRole();
+    if(v==='icemp'||v==='emp')return r==='office'||r==='admin';
+    if(v==='icapprove'||v==='approve'){try{return r==='office'||r==='admin'||isApproverMe();}catch(e){return false;}}
+    return ['icattend','attend','icmypay','mypay'].indexOf(v)>=0;}
+  if(IC_VIEWS[v]){try{return isAdmin()||['admin','office'].indexOf(appRole())>=0;}catch(e){return false;}}
+  return _va.apply(this,arguments);};}catch(e){}
+try{const _dv=defaultView;defaultView=function(){if(isICUser())return 'attend';return _dv.apply(this,arguments);};}catch(e){}
+/* 이동: 인천 메뉴 → 인천 자료로 바꾼 뒤 같은 화면을 연다 */
+let __navForce=null;
+function icNavSite(v){if(isICUser())return 'I';if(IC_VIEWS[v])return 'I';if(ATT_BASE.indexOf(v)>=0)return window.__site;return 'P';}
+function icAfterNav(){
+  try{if(window.__site==='I'&&VIEWS[curView]){const t=document.getElementById('viewTitle');if(t&&!/^인천 /.test(t.textContent))t.textContent='인천 '+VIEWS[curView][0];}}catch(e){}
+  try{sbQ('.side-item[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===((window.__site==='I'&&IC_REV[curView])||curView)));}catch(e){}
+}
+try{const _nav=nav;nav=function(v){
+  const base=IC_VIEWS[v]||v,s=__navForce||icNavSite(v);__navForce=null;
+  if(s!==window.__site){siteSwitch(s).then(()=>{_nav(base);icAfterNav();});return;}
+  const r=_nav(base);icAfterNav();return r;};}catch(e){}
+try{const _tg=topnavGo;topnavGo=function(k){if(!isICUser()&&ATT_BASE.indexOf(k)>=0)__navForce='P';return _tg.apply(this,arguments);};}catch(e){}
+try{const _tgo=topnavGroupOf;topnavGroupOf=function(v){return _tgo((window.__site==='I'&&IC_REV[v])?IC_REV[v]:v);};}catch(e){}
+try{const _sm=sidenavMarkItems;sidenavMarkItems=function(){if(window.__site==='I'&&IC_REV[curView]){const cv=curView;curView=IC_REV[cv];try{return _sm.apply(this,arguments);}finally{curView=cv;}}return _sm.apply(this,arguments);};}catch(e){}
+/* 메뉴: 인천 직원은 인천 메뉴만 · 상단 이름 */
+function icBrand(){const ti=isICUser()?'인천사업소':'포항사업소';document.querySelectorAll('#sidenav .sn-brand .ti,#topnav .tn-brand .ti').forEach(x=>{if(x.textContent!==ti)x.textContent=ti;});}
+try{const _sb=sidenavBuild;sidenavBuild=function(){const r=_sb.apply(this,arguments);try{icBrand();}catch(e){}return r;};}catch(e){}
+try{const _arn=applyRoleNav;applyRoleNav=function(){const r=_arn.apply(this,arguments);
+  try{if(isICUser()){sbQ('.side-item[data-view]').forEach(el=>{if(ATT_BASE.indexOf(el.dataset.view)>=0)el.hidden=true;});
+      sbQ('.side-group').forEach(g=>{const it=[...g.querySelectorAll('.side-item')];g.hidden=it.length>0&&it.every(i=>i.hidden);});
+      topnavBuild();}
+    icBrand();}catch(e){}
+  return r;};}catch(e){}
+try{const _urc=updateRoleChip;updateRoleChip=function(){const r=_urc.apply(this,arguments);try{if(isICUser()){const c=document.getElementById('roleChip');if(c)c.textContent='👤 인천 '+(ROLE_LABEL[appRole()]||'');}}catch(e){}return r;};}catch(e){}
+/* 첫 화면 */
+function icModeHtml(){
+  const row=(site,lab,fn)=>`<div class="mp-site"><div class="mp-sl">${lab}</div><div class="mp-grid mp4">${PM_CARDS.map(m=>`<button class="mp-btn ${m[2]}" onclick="${fn}('${m[0]}')">${m[3]} ${site} ${m[1]}</button>`).join('')}</div></div>`;
+  return row('포항','🏭 포항사업소','pickMode')+row('인천','🏢 인천사업소 <small>현장 근태·결재</small>','icPick')
+    +`<div class="mp-site"><div class="mp-grid mp4"><button class="mp-btn mp-view" onclick="pickViewer()" title="타 부서 열람용 · 비밀번호 필요 · 조회만 가능">🏭 동국R&amp;S <small>타 부서 열람 · 조회 전용</small></button></div></div>`;
+}
+try{const _rmp=renderModePanel;renderModePanel=function(){const r=_rmp.apply(this,arguments);
+  try{const p=document.getElementById('modePanel'),b=document.getElementById('modeBar'),cur=appRole();
+    if(cur==='pohang'&&p)p.innerHTML=icModeHtml();
+    else if(b&&!b.hidden&&isICUser())b.innerHTML=b.innerHTML.replace('현재 모드 : ','현재 모드 : 인천 ');}catch(e){}
+  return r;};}catch(e){}
+function mvRoleCards(){
+  const sec=t=>`<div style="grid-column:1/-1;font-weight:800;font-size:13px;color:#334155;margin:6px 2px -2px">${t}</div>`;
+  return sec('🏭 포항사업소')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 포항 '+m[1],'',`pickMode('${m[0]}')`)).join('')
+    +sec('🏢 인천사업소 <small style="font-weight:500;color:#64748b">현장 근태·결재</small>')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 인천 '+m[1],'',`icPick('${m[0]}')`)).join('')
+    +sec('')+mvB('mv-m4','🏭 동국R&S 열람','타 부서 · 조회 전용','pickViewer()');
+}
+/* 로그인 */
+async function icPick(r){
+  window.__icLg=true;try{localStorage.setItem(IC_KEY,'1');}catch(e){}
+  await siteSwitch('I');
+  pickMode(r);
+  try{const ov=document.getElementById('loginOverlay');if(ov&&ov.classList.contains('show'))document.getElementById('lgTitle').textContent='인천 '+pmLabel(r)+' 파트 로그인';}catch(e){}
+}
+try{const _pm=pickMode;pickMode=function(r){if(!window.__icLg&&window.__site==='I'&&!isICUser()){icClear();siteSwitch('P').then(()=>_pm(r));return;}return _pm.apply(this,arguments);};}catch(e){}
+try{const _cl=closeLogin;closeLogin=function(){if(window.__icLg&&!window.__lgDoing&&!isICUser()){icClear();siteSwitch('P');}return _cl.apply(this,arguments);};}catch(e){}
+try{const _dl=doLogin;doLogin=async function(){window.__lgDoing=true;try{return await _dl.apply(this,arguments);}finally{window.__lgDoing=false;if(isICUser())window.__icLg=false;}};}catch(e){}
+try{const _ls=lgSelAdmin;lgSelAdmin=function(){if(window.__icLg)return false;return _ls.apply(this,arguments);};}catch(e){}
+try{const _sr=setRole;setRole=function(r){if(r==='pohang'||r==='viewer'){icClear();if(window.__site==='I')siteSwitch('P');}return _sr.apply(this,arguments);};}catch(e){}
+/* 인천 기능직 명단 (2026-11-20 '인천 기능직.xlsx' — 명단·연차 시트, 1회 등록) */
+const IC_EMP_SEED=[{"sabun":"2023147","name":"김명희","dept":"기성","rank":"기성","annual":16,"used0":6.5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":3,"no":1},{"sabun":"2023146","name":"김정욱","dept":"축로반","rank":"기장","annual":16,"used0":8.5,"semi":4,"sUsed0":3,"yearLeave":5,"yUsed0":5,"no":2},{"sabun":"2023152","name":"노명기","dept":"축로반","rank":"기장","annual":16,"used0":7,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":3},{"sabun":"2023153","name":"박성진","dept":"축로반","rank":"주임(을)","annual":16,"used0":11,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":0,"no":4},{"sabun":"2023158","name":"안계환","dept":"축로반","rank":"주임(을)","annual":16,"used0":9.5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":5},{"sabun":"2023164","name":"정장문","dept":"축로반","rank":"주임(을)","annual":16,"used0":6,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":6},{"sabun":"2023166","name":"황용구","dept":"축로반","rank":"주임(을)","annual":16,"used0":7.5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":7},{"sabun":"2023209","name":"김진래","dept":"축로반","rank":"주임(을)","annual":16,"used0":9,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":3,"no":8},{"sabun":"2023148","name":"김성대","dept":"축로반","rank":"사원","annual":16,"used0":5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":9},{"sabun":"2023149","name":"김상훈","dept":"축로반","rank":"사원","annual":16,"used0":8,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":10},{"sabun":"2023156","name":"신상호","dept":"축로반","rank":"사원","annual":16,"used0":2,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":11},{"sabun":"2023157","name":"심기현","dept":"축로반","rank":"사원","annual":16,"used0":10,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":0,"no":12},{"sabun":"2023159","name":"이진선","dept":"축로반","rank":"사원","annual":16,"used0":8,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":0,"no":13},{"sabun":"2023163","name":"장윤진","dept":"축로반","rank":"사원","annual":16,"used0":14,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":3,"no":14},{"sabun":"2023174","name":"김건우","dept":"축로반","rank":"사원","annual":16,"used0":4,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":15},{"sabun":"2024008","name":"정민수","dept":"축로반","rank":"사원","annual":15,"used0":15,"semi":4,"sUsed0":0.5,"yearLeave":5,"yUsed0":5,"no":16},{"sabun":"2024041","name":"장동식","dept":"축로반","rank":"사원","annual":15,"used0":13,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":17},{"sabun":"2024094","name":"이해찬","dept":"축로반","rank":"사원","annual":15,"used0":12,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":5,"no":18},{"sabun":"2024128","name":"양해진","dept":"축로반","rank":"사원","annual":15,"used0":9,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":0,"no":19},{"sabun":"2024165","name":"이성찬","dept":"축로반","rank":"사원","annual":15,"used0":9.5,"semi":4,"sUsed0":2,"yearLeave":5,"yUsed0":5,"no":20},{"sabun":"2025073","name":"한대한","dept":"축로반","rank":"사원","annual":15,"used0":10,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":0,"no":21},{"sabun":"2025101","name":"정창민","dept":"축로반","rank":"사원","annual":6,"used0":3.5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":0,"no":22},{"sabun":"2025113","name":"임제훈","dept":"축로반","rank":"사원","annual":12.5,"used0":10,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":23},{"sabun":"2026011","name":"박인태","dept":"축로반","rank":"사원","annual":11,"used0":6.5,"semi":2,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":24},{"sabun":"2023178","name":"김호영","dept":"SN반","rank":"기장","annual":16,"used0":6,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":25},{"sabun":"2023167","name":"하태욱","dept":"SN반","rank":"주임(을)","annual":16,"used0":10,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":26},{"sabun":"2023169","name":"손진규","dept":"SN반","rank":"주임(을)","annual":16,"used0":0,"semi":4,"sUsed0":2,"yearLeave":5,"yUsed0":5,"no":27},{"sabun":"2023172","name":"함종훈","dept":"SN반","rank":"주임(을)","annual":16,"used0":9,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":5,"no":28},{"sabun":"2023175","name":"박현수","dept":"SN반","rank":"주임(을)","annual":16,"used0":10,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":5,"no":29},{"sabun":"2023177","name":"이정열","dept":"SN반","rank":"주임(을)","annual":16,"used0":2,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":30},{"sabun":"2023179","name":"고효택","dept":"SN반","rank":"주임(을)","annual":16,"used0":5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":31},{"sabun":"2023181","name":"이재호","dept":"SN반","rank":"주임(을)","annual":16,"used0":3,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":4,"no":32},{"sabun":"2023183","name":"배정인","dept":"SN반","rank":"주임(을)","annual":16,"used0":7.5,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":33},{"sabun":"2023168","name":"차경호","dept":"SN반","rank":"사원","annual":16,"used0":1,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":5,"no":34},{"sabun":"2023170","name":"박현수","dept":"SN반","rank":"사원","annual":16,"used0":0,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":4,"no":35},{"sabun":"2023176","name":"최학봉","dept":"SN반","rank":"사원","annual":16,"used0":9,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":5,"no":36},{"sabun":"2023184","name":"이진환","dept":"SN반","rank":"사원","annual":16,"used0":2,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":5,"no":37},{"sabun":"2023214","name":"정희규","dept":"SN반","rank":"사원","annual":16,"used0":5,"semi":4,"sUsed0":4,"yearLeave":5,"yUsed0":5,"no":38},{"sabun":"2025111","name":"연이안","dept":"SN반","rank":"사원","annual":12.5,"used0":6,"semi":4,"sUsed0":0,"yearLeave":5,"yUsed0":4,"no":39},{"sabun":"2026120","name":"고광현","dept":"SN반","rank":"사원","annual":11,"used0":0,"semi":0,"sUsed0":0,"yearLeave":0,"yUsed0":0,"no":40}];
+(function(){
+  const FLAG='dgrns_mig_ic_emp1';
+  async function run(){
+    try{if(localStorage.getItem(FLAG))return true;}catch(e){return true;}
+    try{if(!(isAdmin()||['admin','office'].indexOf(appRole())>=0))return false;}catch(e){return false;}
+    if(window.fbOn&&!(window.__fbSynced||window.__fbSeen))return false;
+    if(window.__icSeeding)return false;window.__icSeeding=true;
+    try{
+      const all=await txAll('emp'),have=new Set(all.map(e=>e.id));let n=0;const t0=Date.now();
+      for(const s of IC_EMP_SEED){const id='ic'+s.sabun;if(have.has(id))continue;
+        const rec={id,site:'I',name:s.name,dept:s.dept,rank:s.rank,team:'',pos:'',tel:'',sabun:s.sabun,hire:'',wtype:'상주',part:'',
+          annual:s.annual,used0:s.used0,semi:s.semi,sUsed0:s.sUsed0,yearLeave:s.yearLeave,yUsed0:s.yUsed0,active:1,memo:'',sign:'',pwh:'',seq:t0+s.no};
+        await putRec('emp',rec);n++;if(window.__site==='I')empData.push(rec);}
+      localStorage.setItem(FLAG,JSON.stringify({at:new Date().toISOString(),n}));
+      if(n){try{toast('🏢 인천사업소 기능직 '+n+'명을 등록했습니다');}catch(e){}}
+      return true;
+    }finally{window.__icSeeding=false;}
+  }
+  window.icSeedRun=run;
+  let tries=0;const t=setInterval(async()=>{tries++;let done=false;try{done=await run();}catch(e){done=true;}if(done||tries>120)clearInterval(t);},5000);
+})();
+/* 자동 점검: 팀 자료를 다 받은 뒤에 점검 · 「지난번 대비」는 이 PC 기준 */
+try{const _af=window.afRenderBanner;window.afRenderBanner=function(force){
+  const box=document.getElementById('homeAfBanner');
+  if(box&&window.fbOn&&!(window.__fbSynced||window.__fbSeen)){box.innerHTML='<div class="afBan ok" style="opacity:.7">🔍 자동 점검 — 팀 자료를 받는 중입니다. 받은 뒤 점검합니다…</div>';
+    clearTimeout(window.__afWait);window.__afWait=setTimeout(()=>{try{window.afRenderBanner(true);}catch(e){}},3000);return;}
+  return _af.apply(this,arguments);};}catch(e){}
+try{const _is=fbInitialSync;fbInitialSync=async function(){const r=await _is.apply(this,arguments);setTimeout(()=>{try{if(curView==='home')window.afRenderBanner(true);}catch(e){}},1500);return r;};}catch(e){}
+try{const bv=document.getElementById('boardVer'),mb=(document.querySelector('meta[name="app-build"]')||{}).content;if(bv&&mb){bv.textContent=mb;new MutationObserver(()=>{if(bv.textContent!==mb)bv.textContent=mb;}).observe(bv,{childList:true,characterData:true,subtree:true});}}catch(e){}
+try{Object.keys(IC_VIEWS).forEach(k=>{if(!VIEWS[k]&&VIEWS[IC_VIEWS[k]])VIEWS[k]=['인천 '+VIEWS[IC_VIEWS[k]][0],VIEWS[IC_VIEWS[k]][1]];});}catch(e){}
+
+/* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
+   ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
+   · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
+   · 🎯 SET 단가·물량(품명별): 설비 → 품명(재질) 한 줄 — 기존단가(SET-V1 現단가)·물량(1SET 사용량)·당사 입찰가·낙찰가·변동율·금액, 품명을 누르면 Q코드별 물량
+   · 🗂 품목 정보: 이전 화면(입찰 유/무·입찰가능업체·납품실적)
+   기준 자료 = 설비별 SET 단가의 마지막 차수(현재 26-8 SET-V1). 자동값은 그대로 두고 입력값만 따로 저장해 자료가 바뀌어도 덮어쓰지 않는다.
+   저장(팀 동기화): dgrns_pidb_ov.sb[설비|품명]={base,qty,bid,win} · .sq[설비|Q|PART|규격]=물량 · .se[설비]={st,vendor,amt,note} */
+const PSB_MODE_KEY='dgrns_pidb_sm';
+let psbM=(()=>{try{const v=localStorage.getItem(PSB_MODE_KEY);return ['r','p','o'].includes(v)?v:'r';}catch(e){return 'r';}})();
+let psbShowEx=false,psbOpen={};
+const pidbBidIsS=()=>pidbTab==='bid'&&(pidbUI.grp||'')==='S';
+const psbOn=()=>pidbBidIsS()&&psbM!=='o';
+function psbSet(m){psbM=m;try{localStorage.setItem(PSB_MODE_KEY,m);}catch(e){}psbOpen={};pidbRender();}
+function psbExTog(){psbShowEx=!psbShowEx;pidbKeepRender();}
+function psbEqGo(eq){pidbSetEq=eq||'';psbM='p';try{localStorage.setItem(PSB_MODE_KEY,'p');}catch(e){}psbOpen={};pidbRender();try{document.getElementById('pidb_wrap').scrollTop=0;}catch(e){}}
+const PSB_ST=[['','결과 대기','#b45309','#fff7ed'],['투찰 완료','투찰 완료','#334155','#f1f5f9'],['우선협상','우선협상','#1d4ed8','#eff6ff'],['낙찰','낙찰','#15803d','#f0fdf4'],['일부 낙찰','일부 낙찰','#0f766e','#f0fdfa'],['탈락','탈락','#c81e1e','#fef2f2'],['미입찰','미입찰','#64748b','#f8fafc']];
+const psbStOf=v=>PSB_ST.find(x=>x[0]===(v||''))||PSB_ST[0];
+function psbEd(){const e=psrEds();return e[e.length-1]||{};}
+function psbSite(eq){return /^광양/.test(eq)?'광양제철소':/^포항/.test(eq)?'포항제철소':'';}
+function psbEqNm(eq){return String(eq||'').replace(/^(포항|광양)-/,'');}
+function psbEqs(){const L=SETREG_EQ.map(e=>e.id);psrItems(psbEd().set_id).forEach(r=>{const e=String(r[1]||'').trim();if(e&&!L.includes(e))L.push(e);});return L;}
+const psbQk=(eq,r)=>[eq,String(r[5]||'').toUpperCase(),r[2]||'',r[7]||''].join('|');
+function psbB(k){return ((pidbOv.sb||{})[k])||{};}
+function psbE(eq){return ((pidbOv.se||{})[eq])||{};}
+function psbSq(k){const v=(pidbOv.sq||{})[k];return v>0?+v:null;}
+/* 품명(재질)별 묶음 */
+function psbGroups(){
+  const M=new Map();
+  psrItems(psbEd().set_id).forEach(r=>{const eq=String(r[1]||'').trim();if(!eq)return;const nm=String(r[6]||'').trim()||'(재질 미기재)',k=eq+'|'+nm;
+    let g=M.get(k);if(!g){g={k,eq,nm,rows:[],parts:[],flags:[]};M.set(k,g);}
+    g.rows.push(r);if(r[2]&&!g.parts.includes(r[2]))g.parts.push(r[2]);if(r[3]&&!g.flags.includes(r[3]))g.flags.push(r[3]);});
+  return [...M.values()];
+}
+let psbRefMap=null;
+function psbRef(nm){
+  if(!psbRefMap){psbRefMap={};try{poscoEffAll().forEach(r=>{const k=pidbNk(r.item);if(!k)return;const w=+poscoField(r,'winPrice')||0,b=+poscoField(r,'basePrice')||0;if(w>0||b>0)psbRefMap[k]={w,b,y:r.year};});}catch(e){}setTimeout(()=>{psbRefMap=null;},3000);}
+  return psbRefMap[pidbNk(nm)]||null;
+}
+/* 품명 1건 산출 */
+function psbCalc(g){
+  const o=psbB(g.k);
+  const inc=g.rows.filter(r=>r[4]===1),ex=!inc.length,use=ex?g.rows:inc;
+  let sq=0,s0=0,sp=0,nEd=0,np=0;
+  const qr=g.rows.map(r=>{const k=psbQk(g.eq,r),v1=+r[9]||0,ov=psbSq(k),q=ov!=null?ov:v1,p=+r[10]||0,on=ex||r[4]===1;
+    if(on){sq+=q;if(ov!=null)nEd++;if(p>0){s0+=q*p;sp+=q;np++;}}return {r,k,v1,ov,q,p,on};});
+  const p0=sp>0?s0/sp:0,ps=[...new Set(use.map(r=>+r[10]||0).filter(x=>x>0))];
+  const base=o.base>0?o.base:p0,baseAuto=!(o.base>0);
+  const baseSrc=o.base>0?'수정':(p0>0?(ps.length>1?'SET-V1 現단가(평균)':'SET-V1 現단가'):'단가 공란');
+  const qty=o.qty>0?o.qty:sq,qsrc=o.qty>0?'m':(nEd?'q':'v1');
+  const amtB=(o.base>0||o.qty>0)?qty*base:s0;
+  const bid=o.bid>0?o.bid:0,win=o.win>0?o.win:0;
+  return {o,ex,qr,qty,qsrc,base,baseAuto,baseSrc,p0,amtB:amtB>0?amtB:0,bid,win,amtI:bid>0?qty*bid:0,amtW:win>0?qty*win:0,nQ:use.length,nEd};
+}
+function psbBSet(k,f,v){
+  pidbOv.sb=pidbOv.sb||{};const o=pidbOv.sb[k]=pidbOv.sb[k]||{};const n=pidbNum(v);
+  if(n==null||n<=0)delete o[f];else o[f]=n;
+  if(!Object.keys(o).length)delete pidbOv.sb[k];
+  pidbOvSave();pidbKeepRender();
+}
+function psbQSet(k,v){pidbOv.sq=pidbOv.sq||{};const n=pidbNum(v);if(n==null||n<=0)delete pidbOv.sq[k];else pidbOv.sq[k]=n;pidbOvSave();pidbKeepRender();}
+function psbESet(eq,f,v){
+  pidbOv.se=pidbOv.se||{};const o=pidbOv.se[eq]=pidbOv.se[eq]||{};
+  if(f==='amt'){const n=pidbNum(v);if(n==null||n<=0)delete o.amt;else o.amt=n;}
+  else{const s=String(v||'').trim();if(s)o[f]=s;else delete o[f];}
+  if(Object.keys(o).length){const t=new Date(),p=x=>String(x).padStart(2,'0');o.at=t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes());}
+  if(!Object.keys(o).filter(x=>x!=='at').length)delete pidbOv.se[eq];
+  pidbOvSave();pidbKeepRender();
+}
+function psbReset(){
+  if(!confirm('설비별 SET 입력값을 모두 지울까요?\n(기존단가 수정·물량 수정·당사 입찰가·낙찰가·결과·선정업체·낙찰금액·비고)\n되돌리기에서 복원할 수 있습니다.'))return;
+  try{undoSnap('설비별 SET 입력 초기화','bulk');}catch(e){}
+  pidbOv.sb={};pidbOv.sq={};pidbOv.se={};pidbOvSave();pidbRender();toast('설비별 SET 입력을 초기화했습니다 (SET-V1 기준)');
+}
+/* 필터: 설비 칩 · 검색 · 체크한 것만 */
+function psbFilter(G){
+  const q=String(pidbUI.q||'').trim().toLowerCase();
+  return G.filter(g=>{
+    if(pidbSetEq&&g.eq!==pidbSetEq)return false;
+    if(!psbShowEx&&!g.rows.some(r=>r[4]===1))return false;
+    if(pidbPinOn&&!pidbPin[pidbNk(g.nm)])return false;
+    if(q&&!(g.nm+' '+g.eq+' '+g.parts.join(' ')+' '+g.rows.map(r=>r[5]+' '+r[7]).join(' ')).toLowerCase().includes(q))return false;
+    return true;});
+}
+/* 설비 1개 합계 */
+function psbEqSum(eq,G){
+  const gs=G.filter(g=>g.eq===eq);let q=0,b=0,i=0,bc=0,ni=0,w=0,wc=0,nw=0,nQ=0,np=0;
+  gs.forEach(g=>{const c=psbCalc(g);if(c.ex)return;np++;nQ+=c.nQ;q+=c.qty;b+=c.amtB;if(c.bid>0){i+=c.amtI;bc+=c.amtB;ni++;}if(c.win>0){w+=c.amtW;wc+=c.amtB;nw++;}});
+  return {n:np,nQ,q,b,i,bc,ni,w,wc,nw};
+}
+const psbPc=v=>v==null||!isFinite(v)?'':`<span style="color:${v>0?'#c81e1e':v<0?'#1d4ed8':'#15803d'};font-weight:700">${v>0?'+':''}${(v*100).toFixed(1)}%</span>`;
+const psbInp=(k,f,v,w,ph,auto,fn)=>`<input type="text" class="dnum" style="width:${w}px;text-align:right${auto?';color:#94a3b8':''}" value="${v>0?Math.round(v).toLocaleString():''}" placeholder="${ph||''}" data-k="${esc(k)}" onchange="${fn||'psbBSet'}(this.dataset.k,'${f}',this.value)">`;
+/* ---------- 📊 설비별 SET 입찰 결과 ---------- */
+function psbPageEq(mode){
+  const xls=mode==='xls',G=psbGroups(),eqs=psbEqs().filter(e=>!pidbSetEq||e===pidbSetEq);
+  const T={q:0,b:0,i:0,bc:0,w:0,wc:0,n:0,nQ:0,ni:0};let body='';
+  eqs.forEach(eq=>{
+    const s=psbEqSum(eq,G),o=psbE(eq),st=psbStOf(o.st),bidI=SETREG_BID.find(x=>x.eq===eq)||{};
+    const wAmt=o.amt>0?o.amt:s.w,wSrc=o.amt>0?'입력':(s.nw?'품명별 낙찰가 합계':'');
+    const chI=s.bc>0?(s.i-s.bc)/s.bc:null,chW=wAmt>0?(o.amt>0?(o.amt-s.b)/s.b:(s.wc>0?(s.w-s.wc)/s.wc:null)):null;
+    T.q+=s.q;T.b+=s.b;T.i+=s.i;T.bc+=s.bc;T.w+=wAmt;T.wc+=o.amt>0?s.b:s.wc;T.n+=s.n;T.nQ+=s.nQ;T.ni+=s.ni;
+    const life=String(bidI.life||'').replace(/\n/g,' · ');
+    if(xls){body+=`<tr><td>${esc(psbSite(eq))}</td><td>${esc(psbEqNm(eq))}</td><td>${s.n}</td><td>${s.nQ}</td><td>${Math.round(s.q)}</td><td>${Math.round(s.b)}</td><td>${s.i?Math.round(s.i):''}</td><td>${s.ni}/${s.n}</td><td>${chI!=null?(chI*100).toFixed(1)+'%':''}</td><td>${esc(st[1])}</td><td>${esc(o.vendor||'')}</td><td>${wAmt?Math.round(wAmt):''}</td><td>${chW!=null?(chW*100).toFixed(1)+'%':''}</td><td>${esc(life)}</td><td>${esc(o.note||'')}</td></tr>`;return;}
+    body+=`<tr style="background:${st[3]}">
+      <td><span class="tag" style="font-size:10.5px;color:#fff;background:${/광양/.test(eq)?'#b45309':'#1d4ed8'}">${esc(psbSite(eq).replace('제철소',''))}</span></td>
+      <td class="l nm"><a href="#" data-e="${esc(eq)}" onclick="psbEqGo(this.dataset.e);return false" title="눌러서 이 설비의 품명별 단가·물량 보기"><b>${esc(psbEqNm(eq))}</b> ▸</a></td>
+      <td class="n">${s.n}<span style="color:#94a3b8"> / Q ${s.nQ}</span></td>
+      <td class="n">${pN(s.q)}</td>
+      <td class="n"><b>${pN(s.b)}</b></td>
+      <td class="n ywl">${s.i>0?'<b>'+pN(s.i)+'</b>':'<span style="color:#cbd5e1">-</span>'}<div style="font-size:10px;color:#64748b">입찰가 입력 ${s.ni}/${s.n}</div></td>
+      <td class="n">${psbPc(chI)}</td>
+      <td><select class="bsel" style="font-weight:700;color:${st[2]}" data-e="${esc(eq)}" onchange="psbESet(this.dataset.e,'st',this.value)">${PSB_ST.map(x=>`<option value="${esc(x[0])}"${x[0]===(o.st||'')?' selected':''}>${esc(x[1])}</option>`).join('')}</select></td>
+      <td><input type="text" class="dtxt" list="pvDL" style="width:110px" value="${esc(o.vendor||'')}" placeholder="선정업체" data-e="${esc(eq)}" onchange="psbESet(this.dataset.e,'vendor',this.value)"></td>
+      <td class="n"><input type="text" class="dnum" style="width:104px;text-align:right${o.amt>0?'':';color:#94a3b8'}" value="${wAmt>0?Math.round(wAmt).toLocaleString():''}" placeholder="낙찰금액" title="${wSrc?'현재: '+wSrc:''} — 직접 넣으면 그 값을 씁니다(비우면 품명별 낙찰가 × 물량 합계)" data-e="${esc(eq)}" onchange="psbESet(this.dataset.e,'amt',this.value)"></td>
+      <td class="n">${psbPc(chW)}</td>
+      <td class="l" style="font-size:10.5px;color:#475569;white-space:normal;min-width:170px;max-width:240px">${esc(life)}</td>
+      <td><input type="text" class="dtxt" style="width:150px" value="${esc(o.note||'')}" placeholder="메모" data-e="${esc(eq)}" onchange="psbESet(this.dataset.e,'note',this.value)">${o.at?`<div style="font-size:9.5px;color:#94a3b8">${esc(o.at)}</div>`:''}</td></tr>`;
+  });
+  const chT=T.bc>0?(T.i-T.bc)/T.bc:null,chTW=T.wc>0?(T.w-T.wc)/T.wc:null;
+  if(xls){const h='<table border="1"><thead><tr>'+['제철소','설비','품명수','Q코드수','1SET 물량(kg)','기존단가 기준 금액(원)','당사 입찰가 기준 금액(원)','입찰가 입력','입찰가 변동율','결과','선정·낙찰업체','낙찰금액(원)','낙찰 변동율','수명 기준(SET-V1)','비고'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+body
+      +`<tr><td colspan="2">합계</td><td>${T.n}</td><td>${T.nQ}</td><td>${Math.round(T.q)}</td><td>${Math.round(T.b)}</td><td>${T.i?Math.round(T.i):''}</td><td>${T.ni}/${T.n}</td><td>${chT!=null?(chT*100).toFixed(1)+'%':''}</td><td></td><td></td><td>${T.w?Math.round(T.w):''}</td><td>${chTW!=null?(chTW*100).toFixed(1)+'%':''}</td><td></td><td></td></tr></tbody></table>`;
+    return {html:h,np:T.n,nq:T.nQ,txt:''};}
+  const ft=`<tr class="xf"><td colspan="2" style="text-align:center;font-weight:800">합계 <span class="s">(${eqs.length}개 설비)</span></td><td class="n" style="font-weight:800">${T.n}<span style="color:#94a3b8;font-weight:400"> / Q ${T.nQ}</span></td><td class="n" style="font-weight:800">${pN(T.q)}</td><td class="n" style="font-weight:800">${pN(T.b)}</td><td class="n" style="font-weight:800">${T.i>0?pN(T.i):''}</td><td class="n">${psbPc(chT)}</td><td colspan="2"></td><td class="n" style="font-weight:800">${T.w>0?pN(T.w):''}</td><td class="n">${psbPc(chTW)}</td><td colspan="2"></td></tr>`;
+  const E=psbEd();
+  const top=`<div class="xlp-top"><span class="tt">▣ 포스코 설비별 SET 입찰 결과</span><span class="lg">기준 ${esc(E.label||E.set_id||'')} · 금액 = 1SET 물량 × 단가(마모장 기준, 영구장·보수재 제외) · 설비명을 누르면 품명별 단가·물량 · 결과·선정업체·낙찰금액은 직접 입력</span></div>`;
+  const tbl=`<table class="xlp bid p27 psb"><thead><tr><th class="gy">제철소</th><th class="gy">설비 <span class="s">(눌러서 품명별)</span></th><th class="gy">품명<br><span class="s">/ Q코드</span></th><th class="gy">1SET 물량<br><span class="s">kg</span></th><th class="gy">금액(원)<br><span class="s">기존단가 기준</span></th><th class="gy ywl">금액(원)<br><span class="s">당사 입찰가 기준</span></th><th class="gy">입찰가<br>변동율</th><th class="gy">결과</th><th class="gy">선정·낙찰업체</th><th class="gy">낙찰금액(원)</th><th class="gy">낙찰<br>변동율</th><th class="gy">수명 기준<br><span class="s">SET-V1</span></th><th class="gy">비고</th></tr></thead><tbody>${body}${ft}</tbody></table>`;
+  return {html:top+tbl,np:T.n,nq:T.nQ,txt:`설비 ${eqs.length}개 · 1SET 기존단가 기준 ${(T.b/1e8).toFixed(2)}억`+(T.i?` · 입찰가 기준 ${(T.i/1e8).toFixed(2)}억`:'')};
+}
+/* ---------- 🎯 SET 단가·물량 (품명별) ---------- */
+function psbSubRow(g,c,nc){
+  const body=c.qr.map(x=>{const r=x.r,w=+r[8]||0,ea=(x.q>0&&w>0)?Math.round(x.q/w):null;
+    const bE=(c.base>0&&w>0)?Math.round(c.base*w):null,iE=(c.bid>0&&w>0)?Math.round(c.bid*w):null;
+    return `<tr${x.on?'':' class="dim" title="합계 제외(영구장·보수재·사용중단)"'}><td><code>${esc(r[5])}</code></td><td style="font-size:11px">${esc(r[2]||'')}</td><td style="text-align:center" title="${esc(PSR_FLAG[r[3]]||'')}">${esc(r[3]||'')}</td><td>${esc(r[7]||'')}</td><td class="n">${w||'-'}</td>
+      <td class="n" style="color:#64748b">${pN(x.v1)}</td>
+      <td class="n"><input type="text" class="dnum" style="width:90px;text-align:right${x.ov!=null?'':';color:#94a3b8'}" value="${x.q>0?Math.round(x.q).toLocaleString():''}" placeholder="kg" data-k="${esc(x.k)}" onchange="psbQSet(this.dataset.k,this.value)"></td>
+      <td class="n">${ea!=null?ea.toLocaleString():''}</td><td class="n">${x.p>0?pN(x.p):'<span style="color:#c81e1e">공란</span>'}</td><td class="n">${bE!=null?pN(bE):''}</td><td class="n"><b>${iE!=null?pN(iE):''}</b></td>
+      <td class="n">${x.q>0&&c.base>0?pN(x.q*c.base):''}</td><td style="font-size:10.5px;color:#c81e1e">${esc(r[12]||'')}</td></tr>`;}).join('');
+  return `<tr class="lkr"><td colspan="${nc}"><div class="bo-sub"><div class="ttl">🎯 ${esc(psbEqNm(g.eq))} · ${esc(g.nm)} — Q코드별 물량 <span class="s">· 물량을 고치면 품명 물량(합계)이 자동으로 바뀝니다 · 회색 줄은 합계 제외(영구장·보수재)</span>
+      <button class="btn sm" style="margin-left:8px" data-k="${esc(g.k)}" onclick="psbQClear(this.dataset.k)">이 품명 물량 수정 지우기</button></div>
+    <table class="bomtbl"><thead><tr><th>Q코드</th><th>PART</th><th>구분</th><th>규격</th><th class="n">단중(kg)</th><th class="n">SET-V1<br>사용량(kg)</th><th class="n">물량(kg)<br><span class="s">수정 가능</span></th><th class="n">환산 수량(EA)</th><th class="n">現단가<br>(원/kg)</th><th class="n">기존단가<br>(원/EA)</th><th class="n">입찰가<br>(원/EA)</th><th class="n">금액(원)<br><span class="s">물량×기존단가</span></th><th>오류의심</th></tr></thead><tbody>${body}</tbody></table></div></td></tr>`;
+}
+function psbQClear(k){const g=psbGroups().find(x=>x.k===k);if(!g)return;g.rows.forEach(r=>{const qk=psbQk(g.eq,r);if(pidbOv.sq)delete pidbOv.sq[qk];});const o=(pidbOv.sb||{})[k];if(o){delete o.qty;if(!Object.keys(o).length)delete pidbOv.sb[k];}pidbOvSave();pidbKeepRender();}
+function psbTog(k){if(psbOpen[k])delete psbOpen[k];else psbOpen[k]=1;pidbKeepRender();}
+function psbPageItems(mode){
+  const xls=mode==='xls',G=psbFilter(psbGroups()),eqs=psbEqs().filter(e=>G.some(g=>g.eq===e));
+  const NC=(xls?0:1)+14;let sQ=0,sB=0,sI=0,sW=0,body='',nq=0;
+  const rowH=(g,c)=>{
+    const ek=esc(g.k),open=!xls&&!!psbOpen[g.k],nk=pidbNk(g.nm),ref=psbRef(g.nm);
+    const chBid=(c.bid>0&&c.base>0)?(c.bid-c.base)/c.base:null,chWin=(c.win>0&&c.base>0)?(c.win-c.base)/c.base:null;
+    const qTxt=c.qsrc==='m'?'<span class="tag" style="background:#fef3c7;color:#92400e;font-size:10px">직접</span>':c.qsrc==='q'?'<span class="tag" style="background:#dcfce7;color:#166534;font-size:10px" title="Q코드별 물량을 고친 합계">Q수정</span>':'<span class="tag" style="background:#f1f5f9;color:#64748b;font-size:10px" title="SET-V1 1SET 사용량">SET-V1</span>';
+    const fl=g.flags.map(f=>`<span title="${esc(PSR_FLAG[f]||'')}" style="font-size:10px;padding:0 4px;border-radius:3px;background:${f==='O'?'#dcfce7':f==='X'?'#f1f5f9':'#fef3c7'};color:${f==='O'?'#166534':f==='X'?'#64748b':'#92400e'}">${esc(f)}</span>`).join(' ');
+    if(xls)return `<tr><td>${esc(psbSite(g.eq))}</td><td>${esc(psbEqNm(g.eq))}</td><td>${esc(g.nm)}</td><td>${esc(g.parts.join(', '))}</td><td>${esc(g.flags.join(''))}</td><td>${c.base>0?Math.round(c.base):''}</td><td>${esc(c.baseSrc)}</td><td>${ref&&ref.w?ref.w:''}</td><td>${Math.round(c.qty)}</td><td>${c.qsrc==='m'?'직접':c.qsrc==='q'?'Q수정':'SET-V1'}</td><td>${c.bid||''}</td><td>${chBid!=null?(chBid*100).toFixed(1)+'%':''}</td><td>${c.win||''}</td><td>${chWin!=null?(chWin*100).toFixed(1)+'%':''}</td><td>${c.amtB?Math.round(c.amtB):''}</td><td>${c.amtI?Math.round(c.amtI):''}</td></tr>`;
+    let h=`<tr${c.ex?' style="color:#94a3b8;background:#fafafa" title="합계 제외 품명(영구장·보수재)"':c.win>0?' style="background:#f0fdf4"':''}>`;
+    h+=`<td class="ck"><input type="checkbox" ${pidbPin[nk]?'checked':''} title="체크해 두면 [체크한 것만 보기]로 모아 볼 수 있습니다" onclick="pidbPinSet('${esc(nk)}',this.checked)"></td>`;
+    h+=`<td class="l nm" title="눌러서 Q코드별 물량"><span class="bo-nm" data-k="${ek}" onclick="psbTog(this.dataset.k)"><span class="car">${open?'▼':'▶'}</span> <b>${esc(g.nm)}</b></span> <a href="#" class="pidb-ed" title="내화물 기준정보 · 포스코 품목단가에서 보기" data-n="${esc(g.nm)}" onclick="poscoGotoMaster(this.dataset.n);return false">↗</a><div style="font-size:10px;color:#64748b;font-weight:400;max-width:190px;white-space:normal">${esc(g.parts.join(' · '))}</div></td>`;
+    h+=`<td style="font-size:11px">${pidbSetEq?'':esc(psbEqNm(g.eq))+'<br>'}${fl}</td>`;
+    h+=`<td class="n ywl">${psbInp(g.k,'base',c.base,64,'',c.baseAuto)}</td>`;
+    h+=`<td class="n" style="color:#64748b;font-size:11px">${esc(c.baseSrc)}${ref&&ref.w?`<div style="font-size:10px;color:#7c3aed" title="같은 품명의 범용B ${esc(ref.y||'')}년 낙찰가(원/kg)">범용B 낙찰 ${pN(ref.w)}</div>`:''}</td>`;
+    h+=`<td class="n">${c.qsrc==='q'?`<b title="Q코드별 물량의 합계 — 품명을 눌러 Q코드에서 수정">${pN(c.qty)}</b>`:psbInp(g.k,'qty',c.qty,88,'kg',c.qsrc==='v1')}</td>`;
+    h+=`<td>${qTxt}<div style="font-size:10.5px;color:var(--muted)">Q ${c.nQ}</div></td>`;
+    h+=`<td class="n ywl">${psbInp(g.k,'bid',c.bid,64,'입찰가')}</td><td class="n">${psbPc(chBid)}</td>`;
+    h+=`<td class="n">${psbInp(g.k,'win',c.win,64,'결과')}</td><td class="n">${psbPc(chWin)}</td>`;
+    h+=`<td class="n">${c.amtB>0?pN(c.amtB):''}</td><td class="n"><b>${c.amtI>0?pN(c.amtI):''}</b></td><td class="n">${c.amtW>0?pN(c.amtW):''}</td></tr>`;
+    if(open)h+=psbSubRow(g,c,NC);
+    return h;
+  };
+  eqs.forEach(eq=>{
+    const L=G.filter(g=>g.eq===eq).map(g=>({g,c:psbCalc(g)})).sort((a,b)=>(a.c.ex-b.c.ex)||(b.c.amtB-a.c.amtB));
+    let q=0,b=0,i=0,w=0;L.forEach(({c})=>{if(c.ex)return;q+=c.qty;b+=c.amtB;i+=c.amtI;w+=c.amtW;nq+=c.nQ;});
+    sQ+=q;sB+=b;sI+=i;sW+=w;
+    const st=psbStOf(psbE(eq).st);
+    if(!xls&&(!pidbSetEq||eqs.length>1))body+=`<tr class="grp"><td colspan="${NC}" style="text-align:left;background:#e8f0fe;font-weight:800;padding:5px 10px">🏭 ${esc(eq)} <span style="font-weight:400;color:#475569">· ${L.filter(x=>!x.c.ex).length}품명</span> <span class="tag" style="font-size:10.5px;color:${st[2]};background:${st[3]};border:1px solid ${st[2]}55">${esc(st[1])}</span></td></tr>`;
+    body+=L.map(({g,c})=>rowH(g,c)).join('');
+    if(!xls&&eqs.length>1)body+=`<tr class="xf xy"><td colspan="5" style="text-align:center;font-weight:800">${esc(psbEqNm(eq))} 소계</td><td class="n" style="font-weight:800">${pN(q)}</td><td colspan="5"></td><td class="n" style="font-weight:800">${pN(b)}</td><td class="n" style="font-weight:800">${i>0?pN(i):''}</td><td class="n" style="font-weight:800">${w>0?pN(w):''}</td></tr>`;
+  });
+  pidbVisK=G.map(g=>pidbNk(g.nm));
+  if(xls){const h='<table border="1"><thead><tr>'+['제철소','설비','품명','PART','구분(O/△/X)','기존단가(원/kg)','기존단가 출처','범용B 낙찰가(원/kg)','물량(kg)','물량 출처','당사 입찰가(원/kg)','입찰가 변동율','낙찰가(원/kg)','낙찰 변동율','금액(기존단가 기준)','금액(입찰가 기준)'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'
+      +eqs.map(eq=>G.filter(g=>g.eq===eq).map(g=>({g,c:psbCalc(g)})).sort((a,b)=>(a.c.ex-b.c.ex)||(b.c.amtB-a.c.amtB)).map(({g,c})=>rowH(g,c)).join('')).join('')
+      +`<tr><td colspan="8">합계</td><td>${Math.round(sQ)}</td><td colspan="5"></td><td>${Math.round(sB)}</td><td>${sI?Math.round(sI):''}</td></tr></tbody></table>`;
+    return {html:h,np:G.length,nq,txt:''};}
+  if(!G.length)body=`<tr><td colspan="${NC}"><div class="empty">조건에 맞는 SET 품명이 없습니다.</div></td></tr>`;
+  const ft=G.length?`<tr class="xf"><td colspan="5" style="text-align:center;font-weight:800">${pidbSetEq&&eqs.length===1?esc(psbEqNm(pidbSetEq))+' ':''}합계 <span class="s">(${G.filter(g=>!psbCalc(g).ex).length}품명)</span></td><td class="n" style="font-weight:800">${pN(sQ)}</td><td colspan="5"></td><td class="n" style="font-weight:800">${pN(sB)}</td><td class="n" style="font-weight:800">${sI>0?pN(sI):''}</td><td class="n" style="font-weight:800">${sW>0?pN(sW):''}</td></tr>`:'';
+  const E=psbEd();
+  const top=`<div class="xlp-top"><span class="tt">▣ 포스코 설비별 SET 단가·물량${pidbSetEq?' — '+esc(pidbSetEq):''}</span><span class="lg">기존단가 = ${esc(E.label||'')} 現단가(포스코 현재 계약단가 추정, 수정 가능) · 물량 = 1SET 사용량 · 품명을 눌러 Q코드별 물량 · 위쪽 설비 칩으로 설비 선택</span></div>`;
+  const tbl=`<table class="xlp bid p27 psb"><thead><tr><th class="gy ck"><input type="checkbox" id="pidb_chkall" title="표시된 품명 전체 체크/해제" onclick="pidbPinAll(this.checked)"></th><th class="gy">품명(재질) <span class="s">(눌러서 Q코드별)</span></th><th class="gy">${pidbSetEq?'':'설비 · '}구분</th><th class="gy ywl">기존단가<br><span class="s">SET 現단가 · 원/kg</span></th><th class="gy">기존단가<br>출처</th><th class="gy">물량(kg)<br><span class="s">1SET</span></th><th class="gy">물량 출처</th><th class="gy ywl">당사 입찰가<br><span class="s">원/kg</span></th><th class="gy">입찰가<br>변동율</th><th class="gy">낙찰가<br><span class="s">결과 입력</span></th><th class="gy">낙찰<br>변동율</th><th class="gy">금액(원)<br><span class="s">기존단가 기준</span></th><th class="gy">금액(원)<br><span class="s">입찰가 기준</span></th><th class="gy">금액(원)<br><span class="s">낙찰가 기준</span></th></tr></thead><tbody>${body}${ft}</tbody></table>`;
+  return {html:top+tbl,np:G.length,nq,txt:`SET ${G.length}품명 · 1SET 물량 ${(sQ/1000).toLocaleString(undefined,{maximumFractionDigits:1})}톤 · 기존단가 기준 ${(sB/1e8).toFixed(2)}억`};
+}
+/* ---------- 카드 ---------- */
+function psbCards(){
+  const card=(l,v,u,sub)=>`<div class="card"><div class="l">${l}</div><div class="v">${v}<small> ${u}</small></div>${sub?`<div style="font-size:11px;color:var(--muted)">${sub}</div>`:''}</div>`;
+  const G=psbGroups(),eqs=psbEqs().filter(e=>!pidbSetEq||e===pidbSetEq);let n=0,nQ=0,b=0,i=0,ni=0,w=0;const sc={};
+  eqs.forEach(eq=>{const s=psbEqSum(eq,G);n+=s.n;nQ+=s.nQ;b+=s.b;i+=s.i;ni+=s.ni;const o=psbE(eq);w+=o.amt>0?o.amt:s.w;const k=o.st||'';sc[k]=(sc[k]||0)+1;});
+  const done=eqs.length-(sc['']||0)-(sc['투찰 완료']||0);
+  const ps=eqs.filter(e=>/^포항/.test(e)).length,gy=eqs.filter(e=>/^광양/.test(e)).length;
+  return card(pidbSetEq?'선택 설비':'설비별 SET',eqs.length,'개 설비',pidbSetEq?esc(pidbSetEq):'포항 '+ps+' · 광양 '+gy)
+    +card('SET 품명',n,'품명','Q코드 '+nQ+'개 (영구장·보수재 제외)')
+    +card('기존단가 기준 금액',(b/1e8).toFixed(2),'억원','1SET 물량 × SET 現단가')
+    +card('당사 입찰가',ni,'/'+n+' 품명',i?'입찰가 기준 '+(i/1e8).toFixed(2)+'억'+(b?'':''):'품명별 입찰가를 입력하세요')
+    +card('결과 확정',done,'/'+eqs.length+' 설비',['낙찰','일부 낙찰','우선협상','탈락'].filter(k=>sc[k]).map(k=>k+' '+sc[k]).join(' · ')||(w?'낙찰금액 '+(w/1e8).toFixed(2)+'억':'결과 대기'));
+}
+/* ---------- 상단 바 ---------- */
+function psbBar(){
+  const box=document.getElementById('pidb_comp');if(!box)return;
+  box.style.display='';
+  const sg=(on,fn,t,ti)=>`<button class="${on?'on':''}" onclick="${fn}" title="${esc(ti||'')}">${t}</button>`;
+  let h=`<div class="pidb-bar"><div class="rw"><span class="seg big">${sg(psbM==='r',"psbSet('r')",'📊 설비별 SET 입찰 결과 <small>설비 요약</small>','8개 설비 한 줄씩 — 1SET 금액·당사 입찰금액·결과·선정업체')}${sg(psbM==='p',"psbSet('p')",'🎯 SET 단가·물량 <small>품명별 입찰가·낙찰가</small>','설비별 품명(재질) — 기존단가·물량·당사 입찰가·낙찰가·변동율·금액')}${sg(psbM==='o',"psbSet('o')",'🗂 품목 정보 <small>이전 화면</small>','입찰 유/무·입찰가능업체·납품실적(이전 화면)')}</span>`;
+  if(psbM!=='o'){
+    h+=`<button class="btn sm" onclick="psbXls()">📥 ${psbM==='r'?'설비별 SET 결과표':'SET 단가·물량표'}</button>`;
+    if(psbM==='p')h+=`<button class="btn sm${psbShowEx?' primary':''}" onclick="psbExTog()" title="SET-V1에서 합계 제외(영구장·보수재 X·사용중단)인 품명도 함께 보기">${psbShowEx?'☑':'☐'} 영구장·보수재 포함</button>`;
+    h+=`<button class="btn sm" onclick="nav('poscononsup')" title="신규 입찰 정보 ▸ 설비별 SET 단가(차수 누적·오류의심)">📑 SET 단가 차수</button><button class="btn sm" onclick="psbReset()" title="설비별 SET 입력값을 모두 지우고 SET-V1 기준으로 되돌립니다">↺ SET 입력 초기화</button>`;
+  }
+  box.innerHTML=h+'</div></div>';
+}
+function psbXls(){const t=psbM==='r'?psbPageEq('xls'):psbPageItems('xls');downloadXls(psbM==='r'?'포스코_설비별SET_입찰결과':'포스코_설비별SET_단가물량'+(pidbSetEq?'_'+pidbSetEq:''),t.html);}
+/* ---------- 기존 화면에 연결 ---------- */
+try{const _t=pidbTable;pidbTable=function(mode){if(psbOn())return psbM==='r'?psbPageEq(mode==='view'?'view':'xls'):psbPageItems(mode==='view'?'view':'xls');return _t.apply(this,arguments);};}catch(e){}
+try{const _c=pidbCards;pidbCards=function(){if(psbOn())return psbCards();return _c.apply(this,arguments);};}catch(e){}
+try{const _u=pidbCompUi;pidbCompUi=function(){if(pidbBidIsS()){psbBar();return;}return _u.apply(this,arguments);};}catch(e){}
+try{const _x=pidbXls;pidbXls=function(){if(psbOn()){psbXls();return;}return _x.apply(this,arguments);};}catch(e){}
+try{const _a=pidbAll;pidbAll=function(open){if(psbOn()){psbOpen={};if(open&&psbM==='p')psbFilter(psbGroups()).forEach(g=>{psbOpen[g.k]=1;});pidbRender();return;}return _a.apply(this,arguments);};}catch(e){}
+try{const _pa=pidbPinAll;pidbPinAll=function(on){if(psbOn()){(pidbVisK||[]).forEach(k=>{if(on)pidbPin[k]=1;else delete pidbPin[k];});pidbPinSave();pidbRender();return;}return _pa.apply(this,arguments);};}catch(e){}
+try{const _ch=pidbChipsUi;pidbChipsUi=function(){const r=_ch.apply(this,arguments);try{if(psbOn()){const hn=document.querySelector('#pidb_gchips .hint');if(hn)hn.textContent='SET — 기존단가 = SET-V1 現단가(포스코 현재 계약단가 추정) · 물량 = 1SET 사용량. 설비 칩을 누르면 그 설비만 봅니다. 입력값은 팀에 자동 공유됩니다.';}}catch(e){}return r;};}catch(e){}
+try{const _tu=pidbTabUi;pidbTabUi=function(){const r=_tu.apply(this,arguments);try{const on=psbOn();['pidb_bid','pidb_perf'].forEach(id=>{const el=document.getElementById(id);if(el&&on)el.style.display='none';});}catch(e){}return r;};}catch(e){}
+try{const _rr=pidbRender;pidbRender=function(){const r=_rr.apply(this,arguments);try{const w=document.getElementById('pidb_wrap');if(w&&psbOn())w.classList.add('xl');}catch(e){}return r;};}catch(e){}
+
 
 
 /* ============ 턴디쉬 수명관리 — 호수 기준 종류 고정 · 월별/종류별 대수·평균수명 (2026-11-17) ============
@@ -38527,7 +38990,7 @@ async function fbReloadStore(store){
   else if(store==='inv'){invData=await txAll('inv');}
   else if(store==='invin'){invInData=await txAll('invin');}
   else if(store==='stock'){stockData=await txAll('stock');try{await ensureSdFixedUse();}catch(e){}try{await ensureSdTarget();}catch(e){}}
-  else if(store==='emp'){empData=await txAll('emp');
+  else if(store==='emp'){empData=siteF(await txAll('emp'));
     /* 2026-09-21: Firebase/가져오기로 직원 명부가 (재)적재된 직후에도 서명 일괄반영을 다시 시도.
        최초 접속처럼 로컬이 비어있던 상태에서 로그인 시점의 loadAttend()가 빈 명단에 대해 먼저
        실행되어 서명을 채울 대상이 없었던 경우를 보완한다. !e.sign 조건이라 이미 채워진 서명은
@@ -38535,8 +38998,8 @@ async function fbReloadStore(store){
        그 상태에서 바로 putRec하면 fbOnWrite가 무시되어 팀 저장소에 업로드가 안 된다 — 짧게
        지연시켜 fbApplying이 false로 돌아온 뒤 실행되게 한다(정상적으로 팀에도 업로드됨). */
     setTimeout(()=>{try{if(typeof seedEmpSignaturesFromSheet==='function')seedEmpSignaturesFromSheet();}catch(e){}},50);}
-  else if(store==='leave'){leaveData=await txAll('leave');}
-  else if(store==='ot'){otData=await txAll('ot');}
+  else if(store==='leave'){leaveData=siteF(await txAll('leave'));}
+  else if(store==='ot'){otData=siteF(await txAll('ot'));}
   else if(store==='handover'){hoData=await txAll('handover');}
   else if(store==='planactual'){planActualData=await txAll('planactual');}
   fbRerender();
@@ -38764,10 +39227,9 @@ async function fbInitialSync(){
     const more=ask.filter(a=>a.inN>a.myN);
     if(more.length){
       const det=more.map(a=>a.st+' 팀 '+a.inN+'건 / 이 PC '+a.myN+'건').join('\n');
-      if(confirm('팀 저장소에 이 PC보다 많은 자료가 있습니다.\n\n'+det+'\n\n팀 데이터를 받아올까요? (이 PC의 해당 자료는 팀 것으로 교체됩니다)')){
-        for(const a of more)await fbApplyStore(a.st,a.items);
-        toast('팀 데이터를 받았습니다');
-      }
+      /* 2026-11-20: 묻지 않고 바로 받는다(휴가원·잔업은 문서별 병합, 그 외는 팀 자료 기준) — 매번 뜨던 확인창 제거 */
+      for(const a of more){try{await fbApplyStore(a.st,a.items);}catch(e){}}
+      try{syncLog('팀 자료가 더 많아 자동으로 받음 · '+det.replace(/\n/g,' · '));}catch(e){}
     }
   }
   for(const st of zmig){if(migrate.indexOf(st)>=0)continue;try{await fbPushStore(st,true);syncLog((CAP_NAMES[st]||st)+' 팀 저장소 문서를 압축 저장으로 전환했습니다');}catch(e){}}
@@ -39124,7 +39586,7 @@ async function importLegacyEmployees(){
     let targetKv=fbCollectKv();
     ['dgrns_apprline','dgrns_apprline_emp'].forEach(k=>{if(oldKv[k]!=null)targetKv[k]=oldKv[k];});
     await fbDoc('__kv').set({kv:targetKv,by:fbClientId,at:now,importedFrom:'dkrnspohang-23523/dkrnspohang'});
-    empData=await txAll('emp');
+    empData=siteF(await txAll('emp'));
     try{renderEmp();updateApprBadge();}catch(e){}
     toast(`기존 서버 직원 ${employees.length}명을 시험 서버로 가져왔습니다`);
     alert(`완료되었습니다.\n\n직원 ${employees.length}명과 직원별 결재선 설정을\n새 시험 서버로 복사했습니다.\n기존 서버 자료는 변경하지 않았습니다.`);
@@ -39337,7 +39799,7 @@ const NODAY_TYPES=['조퇴'];                    // 일수 차감 없음(기록�
    · 관리직은 결재선에 없고, 결재완료 후 [확인]란에 날인 = 회사 시스템 입력 완료 */
 const STEP_ALL=['jun','gye','gis','bos'];
 const APPR_DEF={steps:['jun','gye','gis','bos'],conf:true,skipOwn:true};
-function apprCfg(){try{const o=JSON.parse(localStorage.getItem('dgrns_apprline')||'null');
+function apprCfg(){try{const o=JSON.parse(localStorage.getItem(apprKey())||'null');
   const c=Object.assign({},APPR_DEF,o||{});
   if(!Array.isArray(c.steps)||!c.steps.length)c.steps=APPR_DEF.steps.slice();
   c.steps=STEP_ALL.filter(k=>c.steps.includes(k));
@@ -39413,7 +39875,7 @@ async function seedEmpSignaturesFromSheet(){
 }
 
 async function loadAttend(){
-  try{empData=await txAll('emp');}catch(e){empData=[];}
+  try{empData=siteF(await txAll('emp'));}catch(e){empData=[];}
   await seedEmpSignaturesFromSheet();
   // 구버전 값 이전: 소속 명칭(관리직→관리직 등), 조(1~4조)→반(A~D반), 직급 기본값
   const T={'1조':'A반','2조':'B반','3조':'C반','4조':'D반'};
@@ -39426,8 +39888,8 @@ async function loadAttend(){
     if(!e.rank){e.rank='사원';ch=true;}
     else if(normRank(e.rank)!==e.rank){e.rank=normRank(e.rank);ch=true;}
     if(ch){try{await putRec('emp',e);}catch(err){}}}
-  try{leaveData=await txAll('leave');}catch(e){leaveData=[];}
-  try{otData=await txAll('ot');}catch(e){otData=[];}
+  try{leaveData=siteF(await txAll('leave'));}catch(e){leaveData=[];}
+  try{otData=siteF(await txAll('ot'));}catch(e){otData=[];}
 }
 /* ---- 이 PC 사용자(신청자·결재자) ---- */
 function myEmpId(){try{return localStorage.getItem('dgrns_me')||'';}catch(e){return '';}}
@@ -40018,14 +40480,14 @@ function acPrev(){
 function acSave(){
   const c=acRead();
   if(!c.steps.length&&!confirm('결재 단계를 하나도 선택하지 않았습니다.\n상신하면 바로 결재완료가 됩니다. 계속할까요?'))return;
-  try{localStorage.setItem('dgrns_apprline',JSON.stringify(c));}catch(e){}
+  try{localStorage.setItem(apprKey(),JSON.stringify(c));}catch(e){}
   try{window.fbOnWrite&&fbOnWrite('__kv');}catch(e){}
   applyApprCfg();
   document.getElementById('apprCfgOverlay').classList.remove('show');
   refreshAttend();toast('결재선을 저장했습니다 · 새로 상신하는 문서부터 적용됩니다');
 }
 function acReset(){
-  try{localStorage.setItem('dgrns_apprline',JSON.stringify(APPR_DEF));}catch(e){}
+  try{localStorage.setItem(apprKey(),JSON.stringify(APPR_DEF));}catch(e){}
   applyApprCfg();openApprCfg();toast('기본 결재선으로 되돌렸습니다');
 }
 /* ── 다음 결재자 찾기 · 알림(문자/카톡/브라우저) ── */
@@ -40069,7 +40531,7 @@ function apprMsg(kind,d){
     ? `${d.type} ${d.start}${d.end&&d.end!==d.start?'~'+d.end:''} (${d.days}일)`
     : `잔업 ${d.date} ${d.st}~${d.et} (${d.hours}h)`;
   const url=webBase()||'';
-  return `[동국R&S 포항사업소]\n${kind==='leave'?d.name:otWho(d)} 님이 ${kind==='leave'?'휴가원':'잔업신청'}을 상신했습니다.\n`
+  return `[동국R&S ${window.__site==='I'?'인천사업소':'포항사업소'}]\n${kind==='leave'?d.name:otWho(d)} 님이 ${kind==='leave'?'휴가원':'잔업신청'}을 상신했습니다.\n`
     +`· 내용 : ${what}\n· 소속 : ${d.dept||''}\n· 사유 : ${d.reason||'-'}\n`
     +`· 결재 단계 : ${STEP_LABEL[st]||''}\n${url?'\n▶ '+url:''}`;
 }
@@ -41950,12 +42412,12 @@ function mvHome(){
     return;
   }
   if(!me||role==='pohang'){
-    mvHead('동국R&S 포항사업소','업무 파트 또는 담당자를 선택하세요');
+    mvHead('동국R&S','업무 파트 또는 담당자를 선택하세요');
     document.getElementById('mvBody').innerHTML=
       `<div class="mv-card"><div class="mv-h">업무 파트 선택</div>
         <div class="mv-sub">본인 파트를 고른 뒤 이름과 개인 비밀번호로 로그인하세요.</div>
         <div class="mv-menu">`
-      +mvB('mv-m1','🏭 동국R&S','','pickViewer()')+MODE_LIST.filter(m=>m[0]!=='admin').map(m=>mvB('mv-'+({admin:'m4',office:'m5',foreman:'m3',sn:'m1',furnace:'m2',safety:'m6'}[m[0]]||'m5'),m[4]+' '+m[1],'',`pickMode('${m[0]}')`)).join('')
+      +mvRoleCards()
       +`</div></div>`;
     return;
   }
@@ -42868,17 +43330,17 @@ function pickMode(r){
   // 2026-09-28: 파트별 공용 PIN은 직원 의견을 반영해 폐지 — 이제 개인 비밀번호로만 로그인함.
   // (사업소장 전환 시의 관리자 PIN은 별도 보안장치로 그대로 유지)
   const needPin=!!(r==='admin'&&adminPin());
-  const cands=empData.filter(e=>e.active!==0&&(r==='office'?['office','admin']:[r]).includes(empPart(e)));   // 관리직 로그인에서 사업소장(본인 선택)도 함께
+  const cands=empData.filter(e=>e.active!==0&&(r==='office'?['office','admin']:r==='chief'?['foreman','safety']:[r]).includes(empPart(e)));   // 관리직 로그인에서 사업소장(본인 선택)도 함께
   if(!needPin&&!cands.length){   // PIN·직원 등록 전이면 바로 전환
-    setRole(r);updateRoleChip();renderModePanel();
+    if(r==='chief')r='foreman';setRole(r);updateRoleChip();renderModePanel();
     if(document.body.classList.contains('mv')){mvHome();toast(ROLE_LABEL[r]+' 모드로 전환되었습니다');}
     else{
       // 2026-09-30: 사업소장·관리직 로그인 시 일정·스케줄(home) 화면이 가장 먼저 뜨도록
-      if(r==='admin'||r==='office')nav('home');
+      if(isICUser())nav('icattend');else if(r==='admin'||r==='office')nav('home');
       toast(ROLE_LABEL[r]+' 모드로 전환되었습니다 · 왼쪽 메뉴에서 업무를 진행하세요');
     }
     return;}
-  document.getElementById('lgTitle').textContent=ROLE_LABEL[r]+' 파트 로그인';
+  document.getElementById('lgTitle').textContent=pmLabel(r)+' 파트 로그인';
   document.getElementById('lgSub').textContent=needPin
     ? '관리자 PIN'+(cands.length?'과 본인 비밀번호를':'을')+' 입력하세요.'
     : '본인을 선택하고 개인 비밀번호를 입력하세요.';
@@ -42923,12 +43385,13 @@ async function doLogin(){
     }
     try{localStorage.setItem('dgrns_me',emp.id);}catch(e){}
   }
-  const r0=r,rr=(r==='office'&&emp&&empPart(emp)==='admin')?'admin':r;   // 관리직 로그인에서 사업소장 본인 → 관리자 권한
+  const r0=r,rr=(r==='chief')?(emp?empPart(emp):'foreman'):(r==='office'&&emp&&empPart(emp)==='admin'&&!window.__icLg)?'admin':r;   // 관리직 로그인에서 사업소장 본인 → 관리자 권한
   closeLogin();
   try{snOpenSet=new Set();snOpenSave();}catch(e){}   // rpt43: 로그인 시 사이드바 대메뉴를 모두 접는다
   setRole(rr);try{sidenavBuild();}catch(e){}updateMeChip();renderModePanel();
   if(document.body.classList.contains('mv'))mvHome();
   // 2026-09-30: 사업소장·관리직 로그인 시 일정·스케줄(home) 화면이 가장 먼저 뜨도록
+  else if(isICUser())nav('icattend');
   else if(rr==='admin'||rr==='office')nav('home');
   toast(ROLE_LABEL[rr]+' 모드'+(emp?' · '+emp.name+(emp.rank?' '+emp.rank:''):'')+'로 로그인되었습니다');
 }
@@ -42973,8 +43436,8 @@ function renderModePanel(){
 const PERSON_RULES={
   '강경묵':{full:true},
   '서승수':{full:true,seeProgress:true},   // 2026-10-09: 결재 진행중 문서는 서승수(관리자)만 전체 열람
-  // 2026-10-09: 정현주 = 관리직 접근 그대로(데이터 폴더 제외) · 삭제 불가는 유지
-  '정현주':{noDelete:true}
+  // 2026-11-19: 관리직 3명(강경묵·서승수·정현주) 동일 권한 — 정현주 삭제 불가 해제(이전: 2026-10-09 noDelete)
+  '정현주':{full:true}
 };
 /* 2026-10-09: '데이터' 폴더(팀 공유·전체 내보내기/불러오기·엑셀 최신 반영)는 사업소장(강경묵)·서승수만.
    (직원 명부가 아직 비어 있는 새 브라우저에서는 백업 복원이 가능하도록 예외 허용) */
