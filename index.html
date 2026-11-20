@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.20-1146">
+<meta name="app-build" content="2026.11.20-1201">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -39770,8 +39770,11 @@ const WTYPES=['상주','교대'];
 const TEAMS=['A반','B반','C반','D반'];
 /* 직급 : 숫자가 클수록 상위 · 열람 범위가 넓음 */
 /* 현장 직급체계 : 사원 → 주임(을) → 주임(갑) → 계장 → 기장 → 기성  (+ 관리직 과장 · 사업소장) */
-const RANKS=['사원','주임(을)','주임(갑)','계장','기장','기성','과장','사업소장'];
-const RANK_LV={'사원':1,'주임(을)':2,'주임(갑)':3,'계장':4,'기장':5,'기성':6,'과장':6,'사업소장':7};
+const RANKS=['사원','주임(을)','주임(갑)','계장','기장','기성','대리','과장','차장','부장','사업소장'];
+const RANK_LV={'사원':1,'주임(을)':2,'주임(갑)':3,'계장':4,'기장':5,'기성':6,'대리':4,'과장':6,'차장':6,'부장':6,'사업소장':7};
+/* 2026-11-20: 소속별 직급 목록 — 관리직(사업소장 포함)은 사원·대리·과장·차장·부장·사업소장, 현장은 사원~기성 */
+const RANKS_OFFICE=['사원','대리','과장','차장','부장','사업소장'],RANKS_FIELD=['사원','주임(을)','주임(갑)','계장','기장','기성'];
+function ranksFor(dept,cur){const d=normDept(dept);const a=(d==='관리직'||d==='사업소장')?RANKS_OFFICE.slice():RANKS_FIELD.slice();if(cur&&a.indexOf(cur)<0)a.push(cur);return a;}
 const RANK_ALIAS={'주임':'주임(을)','주임을':'주임(을)','주임갑':'주임(갑)','주임 을':'주임(을)','주임 갑':'주임(갑)'};
 function normRank(r){r=(r||'').trim();return RANK_ALIAS[r]||r;}
 const JUNIOR_MAX=3;   // 주임(갑) 이하 = 반 단위
@@ -41637,6 +41640,7 @@ function empDeptChange(){
     const cur=document.getElementById('em_team').value;
     fillSel('em_team',tl,tl.includes(cur)?cur:'','반 미지정');}
   const r=document.getElementById('em_rank');
+  if(r){const cv=r.value,L=ranksFor(d);fillSel('em_rank',L,L.includes(cv)?cv:'사원');}
   if(r&&d==='사업소장')r.value='사업소장';
 }
 function initEmpView(){
@@ -41644,7 +41648,7 @@ function initEmpView(){
   fillSel('em_dept',DEPTS,normDept(document.getElementById('em_dept').value)||'SN반');
   fillPartSel();
   fillSel('em_wtype',WTYPES,document.getElementById('em_wtype').value||'교대');
-  fillSel('em_rank',RANKS,document.getElementById('em_rank').value||'사원');
+  {const cv=document.getElementById('em_rank').value||'사원',L=ranksFor(document.getElementById('em_dept').value);fillSel('em_rank',L,L.includes(cv)?cv:'사원');}
   fillPartSel();
   fillSel('em_fDept',DEPTS,document.getElementById('em_fDept').value||'','전체 소속');
   {const sp=document.getElementById('em_fPart'),cv=sp.value;
@@ -41730,7 +41734,7 @@ function renderEmp(){
     <td class="adm-only" style="text-align:center"><input type="checkbox" class="em-sel" ${empSel.has(r.id)?'checked':''} onchange="empSelToggle('${r.id}',this.checked)" style="width:15px;height:15px"></td>
     <td style="white-space:nowrap"><b>${esc(r.name)}</b> <button class="btn sm" style="padding:1px 5px;font-size:10.5px" onclick="editEmp('${r.id}')" title="정보 수정(휴가갯수 등)">⚙️</button><button class="btn sm" style="padding:1px 5px;font-size:10.5px" onclick="setEmpPw('${r.id}')" title="개인 비밀번호 설정/수정">🔑</button></td>
     <td style="white-space:nowrap">${empQuickSel(r,'dept',DEPTS)}</td>
-    <td style="white-space:nowrap">${empQuickSel(r,'rank',RANKS)}${r.pos?`<div style="font-size:10px;color:var(--muted)">${esc(r.pos)}</div>`:''}</td>
+    <td style="white-space:nowrap">${empQuickSel(r,'rank',ranksFor(r.dept,r.rank))}${r.pos?`<div style="font-size:10px;color:var(--muted)">${esc(r.pos)}</div>`:''}</td>
     <td><span class="tag" style="background:${r.part?'#dbeafe':'#eef2f6'};color:${r.part?'#1d4ed8':'#334155'}">${esc(ROLE_LABEL[empPart(r)]||'')}</span>${r.part?'':'<div style="font-size:10px;color:var(--muted)">자동</div>'}</td>
     <td>${empLineCell(r)}</td>
     <td style="white-space:nowrap">${empQuickSel(r,'team',teamsOf(r.dept),'반없음')} ${empQuickSel(r,'wtype',WTYPES)}
