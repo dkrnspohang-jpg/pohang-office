@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.20-1201">
+<meta name="app-build" content="2026.11.20-1213">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -25800,7 +25800,7 @@ try{const _urc=updateRoleChip;updateRoleChip=function(){const r=_urc.apply(this,
 /* 첫 화면 */
 function icModeHtml(){
   const row=(site,lab,fn)=>`<div class="mp-site"><div class="mp-sl">${lab}</div><div class="mp-grid mp4">${PM_CARDS.map(m=>`<button class="mp-btn ${m[2]}" onclick="${fn}('${m[0]}')">${m[3]} ${site} ${m[1]}</button>`).join('')}</div></div>`;
-  return row('포항','🏭 포항사업소','pickMode')+row('인천','🏢 인천사업소 <small>현장 근태·결재</small>','icPick')
+  return row('포항','🏭 포항사업소','pickMode')+row('인천','🏢 인천사업소','icPick')
     +`<div class="mp-site"><div class="mp-grid mp4"><button class="mp-btn mp-view" onclick="pickViewer()" title="타 부서 열람용 · 비밀번호 필요 · 조회만 가능">🏭 동국R&amp;S <small>타 부서 열람 · 조회 전용</small></button></div></div>`;
 }
 try{const _rmp=renderModePanel;renderModePanel=function(){const r=_rmp.apply(this,arguments);
@@ -25811,7 +25811,7 @@ try{const _rmp=renderModePanel;renderModePanel=function(){const r=_rmp.apply(thi
 function mvRoleCards(){
   const sec=t=>`<div style="grid-column:1/-1;font-weight:800;font-size:13px;color:#334155;margin:6px 2px -2px">${t}</div>`;
   return sec('🏭 포항사업소')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 포항 '+m[1],'',`pickMode('${m[0]}')`)).join('')
-    +sec('🏢 인천사업소 <small style="font-weight:500;color:#64748b">현장 근태·결재</small>')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 인천 '+m[1],'',`icPick('${m[0]}')`)).join('')
+    +sec('🏢 인천사업소')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 인천 '+m[1],'',`icPick('${m[0]}')`)).join('')
     +sec('')+mvB('mv-m4','🏭 동국R&S 열람','타 부서 · 조회 전용','pickViewer()');
 }
 /* 로그인 */
@@ -25858,6 +25858,29 @@ try{const _af=window.afRenderBanner;window.afRenderBanner=function(force){
 try{const _is=fbInitialSync;fbInitialSync=async function(){const r=await _is.apply(this,arguments);setTimeout(()=>{try{if(curView==='home')window.afRenderBanner(true);}catch(e){}},1500);return r;};}catch(e){}
 try{const bv=document.getElementById('boardVer'),mb=(document.querySelector('meta[name="app-build"]')||{}).content;if(bv&&mb){bv.textContent=mb;new MutationObserver(()=>{if(bv.textContent!==mb)bv.textContent=mb;}).observe(bv,{childList:true,characterData:true,subtree:true});}}catch(e){}
 try{Object.keys(IC_VIEWS).forEach(k=>{if(!VIEWS[k]&&VIEWS[IC_VIEWS[k]])VIEWS[k]=['인천 '+VIEWS[IC_VIEWS[k]][0],VIEWS[IC_VIEWS[k]][1]];});}catch(e){}
+
+
+/* ============ 인천 기능직 개인 비밀번호 1회 설정 (2026-11-20 '인천 생년월일.xlsx' — 생년월일 6자리) ============
+   생년월일 자체는 저장하지 않고 비밀번호 해시만 담는다. 비밀번호가 비어 있는 직원에게만 넣는다(이미 바꾼 비밀번호는 유지). */
+const IC_PWH={"ic2023147":"b70dc713d268e03e07cffc5fd3e98b3670e4be36b225bf4c7f94c00c128fb76d","ic2023146":"eb6586d8a7a35bd147ccf2931cb7c760c84be49a37e03e591a00568f7dc8133d","ic2023152":"2ad36bea5626a6dda503e46a2879fa121a93516363e8c1702320e216767b9fc0","ic2023153":"eb0da6e63605240d4c3bae48163bed7a90d42251f93c7b2a50c16c43eebf8477","ic2023158":"72fbc460817cf05eb657eb04b8a31cced9c180390a25cfd55588f757aabb1aec","ic2023164":"05e955d2a0bdb08dfcba45b7bcd1c508ca2773199ae765c6a5cbb7979155c86c","ic2023166":"7706f24d010913cc02eac54a95b709a547ad240354668e8ef407480770bec000","ic2023209":"739701dcf2a11d67b96984db8c7433183138dabf2746c94bca21281b2881b98d","ic2023148":"0439717a93f24c29b9a87f277fc89e9fd9c14abd55a9314dd698ebd48a59697c","ic2023149":"ce78ccf7c6b01af0f2bbb2abdb4d0a9764d4c5c55ae2963914fd33def0031ef2","ic2023156":"d909d0eb408a28d9fae70df9d494f1a9f2b194e3029a75123a9d811df3c184c7","ic2023157":"e90bdfa151a00b4ef8b673af46d291633b1add601b1a22b542303812444d9e3b","ic2023159":"08efe10fe128f4317ea6b7e5bfe3a418d7736b327a2d2d481e4e0d0ec3fa29b5","ic2023163":"3ca306853832b5c2f8c3f70938eeba01ba244edc38069c55425ce434c8f6a05b","ic2023174":"4b0f69304e2f0f9d501ec619d123963c1825cdd51bee67443e23c3c43f98f2d6","ic2024008":"8d7407aec30adbc6f85b4d3c723d57d0d6d9fdb60e46b9d06ed818cbed432ac0","ic2024041":"d328b42a6aab73086de6bf31299a6beaf37d48c3925e7bb5894a957138dee28b","ic2024094":"e84ef61a6e0ee779680b438d410433d882b03993f4972ea5a6004c2b0fbade43","ic2024128":"e66a6cf9a3b4690b96cae08fdaeb166093ad01888bcb30345bd6b9015042d963","ic2024165":"ec8c448cfbf585aa48d5bc8b074af3fdf38b7a34f6c8dff4d5dd02929cc7093e","ic2025073":"1a17f565d924989628729f63e557688c7cc2e98e0aca598d076461bf7cab56be","ic2025101":"0aa18eea5e2b3e5f7a3ebe488a399c2c2d9fda95c247dbddef4397fa6c07aacd","ic2025113":"a4354e297dc1c612048a6372a43497b7e89a82001b920d16fd2d72f74eecd412","ic2026011":"6a038abd6c69ddb3569214740f1c4f3cc58ba45fb3e624a058380788e9bbaaa2","ic2023178":"9caa1acb988307fdc8ce1e8d0145f946b6641bdf3c85372b875c92ad238b1b85","ic2023167":"1d9b90e12ea351d805d5307c72169e119541f974095ffc7beda0e0dd535e93c2","ic2023169":"39396430d92470e0e6c8ffdb1c56d51494d0696d643f61090419fe224d4c0a00","ic2023172":"4f5c066fff7299d573ce15ffa138dd4751459fc290614be4c03728b9c406e2d1","ic2023175":"0f762bafd6bb629ae51ac994649b6b6e20b615e39dd703f8b04dcdb93f5d2ba8","ic2023177":"101ed841a6828c3de8a30a0f3e3b0951fbc8d7cb3f2833058998d5f3ef6898cc","ic2023179":"b8aa5cdbae855e6373a8cb9ee625aa9865ba5319142585d912876919bbf45bc2","ic2023181":"acb7a288785f9061245cfdcfa4c2673aa5c00d57174adfc9034dca2d1702e7bd","ic2023183":"e85c81a87e84c7ad78f2fdd94e44d23df937aa2b07cd5a777ccad99b491e3056","ic2023168":"7f889a50b825312fb468a270c51c8e06d9667d5071487eb237dbdd8c374e75b3","ic2023170":"c679ae35dce8463f28a963172610dcd087c8f6b7af029b582ab19636a6755c77","ic2023176":"13901bc21c0eea65aeef061b7211701d04c642841961541ee74bcac97b8a9b4c","ic2023184":"8b9080ed19a96991fe9d1d91d67bf2be7178723a3434c063375be9b2c3f8e447","ic2023214":"f13243c5768e5f3fef935fd6bd422e42cf259230146adc09b9295872158b6d8b","ic2025111":"7cd696c948596a1b510bf0d03e3fffc5774c4ea5326668bdaa13f65cac318603","ic2026120":"f066f694d61c595eccceed63690814545f6be3ff74210b1cd4733a3f09f8bb2c"};
+(function(){
+  const FLAG='dgrns_mig_ic_pw1';
+  async function run(){
+    try{if(localStorage.getItem(FLAG))return true;}catch(e){return true;}
+    try{if(!localStorage.getItem('dgrns_mig_ic_emp1'))return false;}catch(e){return false;}
+    try{if(!(isAdmin()||['admin','office'].indexOf(appRole())>=0))return false;}catch(e){return false;}
+    if(window.fbOn&&!(window.__fbSynced||window.__fbSeen))return false;
+    if(window.__icPwRun)return false;window.__icPwRun=true;
+    try{const all=await txAll('emp');let n=0;
+      for(const e of all){const h=IC_PWH[e.id];if(!h||e.pwh)continue;e.pwh=h;await putRec('emp',e);n++;
+        const m=empData.find(x=>x.id===e.id);if(m)m.pwh=h;}
+      localStorage.setItem(FLAG,JSON.stringify({at:new Date().toISOString(),n}));
+      if(n){try{toast('🔑 인천사업소 기능직 '+n+'명 개인 비밀번호를 설정했습니다');}catch(e){}try{if(curView==='emp')renderEmp();}catch(e){}}
+      return true;}finally{window.__icPwRun=false;}
+  }
+  window.icPwRun=run;
+  let tries=0;const t=setInterval(async()=>{tries++;let done=false;try{done=await run();}catch(e){done=true;}if(done||tries>150)clearInterval(t);},6000);
+})();
 
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
@@ -40368,7 +40391,8 @@ function alSetConf(id,on){const m=alEnsure(id);m[id].conf=!!on;apprLineSave(m);r
 function alClear(id){const m=apprLineAll();delete m[id];apprLineSave(m);renderEmp();toast('기본 결재선으로 되돌렸습니다');}
 function alResetAll(){
   if(!confirm('모든 직원의 개인 결재선을 지우고 기본 결재선으로 되돌립니다. 계속할까요?'))return;
-  apprLineSave({});renderEmp();toast('전체를 기본 결재선으로 되돌렸습니다');
+  {const m=apprLineAll();empData.forEach(e=>{delete m[e.id];});apprLineSave(m);}   // 2026-11-20: 지금 보고 있는 사업소 직원만(포항·인천 서로 영향 없음)
+  renderEmp();toast('전체를 기본 결재선으로 되돌렸습니다');
 }
 /* ── 직원관리 : 선택/목록 일괄 결재선 ── */
 const empSel=new Set(); let empVisIds=[]; let elbTargets=[];
