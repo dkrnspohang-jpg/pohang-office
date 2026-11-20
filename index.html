@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.20-1310">
+<meta name="app-build" content="2026.11.20-1330">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -25801,7 +25801,7 @@ try{const _urc=updateRoleChip;updateRoleChip=function(){const r=_urc.apply(this,
 function icModeHtml(){
   const row=(site,lab,fn)=>`<div class="mp-site"><div class="mp-sl">${lab}</div><div class="mp-grid mp4">${PM_CARDS.map(m=>`<button class="mp-btn ${m[2]}" onclick="${fn}('${m[0]}')">${m[3]} ${site} ${m[1]}</button>`).join('')}</div></div>`;
   return row('포항','🏭 포항사업소','pickMode')+row('인천','🏢 인천사업소','icPick')
-    +`<div class="mp-site"><div class="mp-grid mp4"><button class="mp-btn mp-view" onclick="pickViewer()" title="타 부서 열람용 · 비밀번호 필요 · 조회만 가능">🏭 동국R&amp;S <small>타 부서 열람 · 조회 전용</small></button></div></div>`;
+    ;
 }
 try{const _rmp=renderModePanel;renderModePanel=function(){const r=_rmp.apply(this,arguments);
   try{const p=document.getElementById('modePanel'),b=document.getElementById('modeBar'),cur=appRole();
@@ -25812,7 +25812,7 @@ function mvRoleCards(){
   const sec=t=>`<div style="grid-column:1/-1;font-weight:800;font-size:13px;color:#334155;margin:6px 2px -2px">${t}</div>`;
   return sec('🏭 포항사업소')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 포항 '+m[1],'',`pickMode('${m[0]}')`)).join('')
     +sec('🏢 인천사업소')+PM_CARDS.map(m=>mvB(m[4],m[3]+' 인천 '+m[1],'',`icPick('${m[0]}')`)).join('')
-    +sec('')+mvB('mv-m4','🏭 동국R&S 열람','타 부서 · 조회 전용','pickViewer()');
+    ;
 }
 /* 로그인 */
 async function icPick(r){
@@ -25989,6 +25989,13 @@ try{const _na=nextApprovers;nextApprovers=function(d){const r=_na.apply(this,arg
     return empData.filter(e=>e.active!==0&&e.id!==d.empId&&!otHas(d,e.id)&&normRank(e.rank)==='기장'&&normDept(e.dept)===td);}}catch(e){}
   return r;};}catch(e){}
 
+/* ============ 2026-11-20 동국R&S 타 부서 열람 로그인 폐지 ============
+   첫 화면(PC·휴대폰)의 「동국R&S(타 부서 열람)」 버튼 삭제 · 비밀번호로 들어가던 전체 메뉴 조회 차단.
+   이미 그 모드로 열려 있던 화면도 첫 화면으로 되돌린다. (기기 고정 '현장 열람'은 그대로) */
+try{pickViewer=function(){toast('동국R&S 열람 로그인은 사용하지 않습니다');};}catch(e){}
+try{vwAllOn=function(){return false;};}catch(e){}
+setTimeout(function(){try{const had=sessionStorage.getItem('dgrns_viewall')==='1';sessionStorage.removeItem('dgrns_viewall');
+  if(had&&localStorage.getItem('dgrns_viewlock')!=='1'&&localStorage.getItem('dgrns_role')==='viewer'){setRole('pohang');try{sidenavBuild();}catch(e){}renderModePanel();try{nav('home');}catch(e){}}}catch(e){}},0);
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
@@ -43556,7 +43563,7 @@ function renderModePanel(){
     // 요청 — 역할명만 크게 보이도록 부제(<small>) 출력을 제거. MODE_LIST 자체의 순서(사업소장→관리직→
     // 기성→SN반→축로반→안전담당자)는 기존 그대로 유지(요청한 순서와 이미 일치).
     /* 2026-10-20(rpt82): 첫 화면에서 '사업소장' 버튼을 빼고(사업소장은 관리직 › 본인 선택으로 로그인), 타 부서 열람용 '동국R&S' 버튼(비밀번호·열람 전용)을 둔다 */
-    p.innerHTML='<div class="mp-grid"><button class="mp-btn mp-view" onclick="pickViewer()" title="타 부서 열람용 · 비밀번호 필요 · 조회만 가능">🏭 동국R&amp;S</button>'+MODE_LIST.filter(m=>m[0]!=='admin').map(m=>
+    p.innerHTML='<div class="mp-grid">'+MODE_LIST.filter(m=>m[0]!=='admin').map(m=>
         `<button class="mp-btn ${m[3]}" onclick="pickMode('${m[0]}')">${m[4]} ${esc(m[1])}</button>`).join('')+'</div>';
   }else{
     p.hidden=true;b.hidden=false;
