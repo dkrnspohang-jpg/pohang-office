@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.24-1730">
+<meta name="app-build" content="2026.11.24-1800">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26081,6 +26081,35 @@ try{const _fak=fbApplyKv;fbApplyKv=function(kv){const r=_fak.apply(this,argument
   return r;};}catch(e){}
 try{const _fis4=fbInitialSync;fbInitialSync=async function(){const r=await _fis4.apply(this,arguments);setTimeout(sgShareSeed,4000);return r;};}catch(e){}
 setTimeout(sgSavApply,0);
+/* 2026-11-24(2차) 보강 — ① 빈 목록('[]')도 '없음'으로 보고 관리직 PC가 채움 ② 현장 기기에 빈 목록이 남아 있으면 팀 목록을 시각과 상관없이 받음
+   ③ 화면 위 안내줄: 목록 개수·공유 상태 표시, 관리직 PC에 [📤 팀에 품목 목록 공유] 버튼(누르면 최신 시각으로 다시 올려 모든 기기가 받음) */
+function sgLsArr(k){try{const v=JSON.parse(localStorage.getItem(k)||'null');return Array.isArray(v)?v:null;}catch(e){return null;}}
+sgShareSeed=function(){try{
+  if(!spHas('biz'))return;
+  const cur=sgLsArr('dgrns_sg_price');
+  if((!cur||!cur.length)&&Array.isArray(SG_PRICE_SEED)&&SG_PRICE_SEED.length){sgPrice=SG_PRICE_SEED;saveSgPrice();}
+  const sv=sgSavLoad();if((!sv||!sv.items.length)&&SG_SAVINGS_ITEMS.length)localStorage.setItem('dgrns_sg_savings',JSON.stringify({summary:SG_SAVINGS_SUMMARY,items:SG_SAVINGS_ITEMS}));
+}catch(e){console.warn('안전보호구 공유',e);}};
+function sgForceShare(){
+  if(!spHas('biz')){alert('영업·단가 기준자료가 있는 관리직 PC에서 눌러 주세요.');return;}
+  if(!fbLive()){alert('팀 저장소에 연결된 뒤 눌러 주세요.');return;}
+  const cur=sgLsArr('dgrns_sg_price');sgPrice=(cur&&cur.length)?cur:(Array.isArray(sgPrice)&&sgPrice.length?sgPrice:SG_PRICE_SEED);
+  saveSgPrice();try{kvTouch('dgrns_sg_price');}catch(e){}
+  if(SG_SAVINGS_ITEMS.length){localStorage.setItem('dgrns_sg_savings',JSON.stringify({summary:SG_SAVINGS_SUMMARY,items:SG_SAVINGS_ITEMS}));try{kvTouch('dgrns_sg_savings');}catch(e){}}
+  ['dgrns_sg_order','dgrns_sg_size'].forEach(k=>{try{if(localStorage.getItem(k))kvTouch(k);}catch(e){}});
+  try{if(window.fbOnKv)window.fbOnKv();}catch(e){}
+  toast('📤 안전보호구 품목 '+sgPrice.length+'개·발주물량·사이즈를 팀에 공유했습니다 — 다른 기기는 새로고침하면 보입니다');sgBar();}
+function sgBar(){try{const v=document.getElementById('v-safetygear');if(!v)return;let b=document.getElementById('sgShareBar');
+  if(!b){b=document.createElement('div');b.id='sgShareBar';b.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;margin:0 0 8px;padding:6px 10px;border-radius:8px';v.insertBefore(b,v.firstChild);}
+  const n=Array.isArray(sgPrice)?sgPrice.length:0,biz=spHas('biz'),build=((document.querySelector('meta[name="app-build"]')||{}).content||'');
+  b.style.background=n?'#f0fdf4':'#fff7ed';b.style.border='1px solid '+(n?'#bbf7d0':'#fed7aa');b.style.color=n?'#166534':'#9a3412';
+  b.innerHTML=(n?'✔ 품목 '+n+'개 (팀 공유 자료)':'⚠ 이 기기에 안전보호구 품목 목록이 아직 없습니다 — '+(biz?'아래 버튼을 눌러 팀에 공유하세요.':'관리직(서승수) PC에서 [📤 팀에 품목 목록 공유]를 누른 뒤 이 화면을 새로고침하세요.'))
+    +' <span style="color:#64748b">· 버전 '+esc(build)+'</span>'+(biz?' <button class="btn sm" onclick="sgForceShare()">📤 팀에 품목 목록 공유</button>':'');}catch(e){}}
+try{const _is2=initSafety;initSafety=function(){const r=_is2.apply(this,arguments);sgBar();return r;};}catch(e){}
+try{const _fak2=fbApplyKv;fbApplyKv=function(kv,times,force){
+  try{if(kv&&kv.dgrns_sg_price!==undefined){const rem=JSON.parse(kv.dgrns_sg_price||'null'),loc=sgLsArr('dgrns_sg_price');
+    if(Array.isArray(rem)&&rem.length&&(!loc||!loc.length)){try{localStorage.removeItem('dgrns_sg_price');}catch(e){}if(typeof kvTimes!=='undefined')delete kvTimes.dgrns_sg_price;}}}catch(e){}
+  return _fak2.apply(this,arguments);};}catch(e){}
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
