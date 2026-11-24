@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.24-1700">
+<meta name="app-build" content="2026.11.24-1730">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26060,6 +26060,27 @@ function fcRole(r){return r==='safety'?'foreman':r;}
 try{const _rvo=roleViewsOf;roleViewsOf=function(r){return _rvo(fcRole(r));};}catch(e){}
 try{const _rro=roleRoOf;roleRoOf=function(r){return _rro(fcRole(r));};}catch(e){}
 try{const _rdo=roleDelOf;roleDelOf=function(r){return _rdo(fcRole(r));};}catch(e){}
+/* ============ 2026-11-24 안전보호구 — 기준자료(영업·단가)가 없는 기기(안전관리담당자·현장총괄)에서도 보이게 ============
+   원인: 안전보호구 품목단가 목록·원가절감 표가 '영업·단가 기준자료'에서만 채워져, 현장 기기(설비 기준자료만 받음)에는 품목 0개로 보였다.
+   해결: 영업·단가 기준자료가 있는 기기(관리직)가 품목단가 목록·원가절감 표를 팀 공유 자료(dgrns_sg_price·dgrns_sg_savings)로 1회 올려 두고,
+         모든 기기는 팀 공유 자료를 먼저 읽는다(발주물량·사이즈는 이미 팀 공유). */
+function sgSavLoad(){try{const v=JSON.parse(localStorage.getItem('dgrns_sg_savings')||'null');return v&&Array.isArray(v.items)?v:null;}catch(e){return null;}}
+function sgSavApply(){try{const v=sgSavLoad();if(!v)return;
+  if(!SG_SAVINGS_ITEMS.length&&v.items.length){v.items.forEach(x=>SG_SAVINGS_ITEMS.push(x));}
+  if(!(+SG_SAVINGS_SUMMARY.oldCostTotal)&&v.summary)Object.assign(SG_SAVINGS_SUMMARY,v.summary);}catch(e){}}
+function sgShareSeed(){try{
+  if(!spHas('biz'))return;
+  if(!localStorage.getItem('dgrns_sg_price')&&Array.isArray(SG_PRICE_SEED)&&SG_PRICE_SEED.length){
+    if(!Array.isArray(sgPrice)||!sgPrice.length)sgPrice=SG_PRICE_SEED;saveSgPrice();}
+  if(!localStorage.getItem('dgrns_sg_savings')&&SG_SAVINGS_ITEMS.length)
+    localStorage.setItem('dgrns_sg_savings',JSON.stringify({summary:SG_SAVINGS_SUMMARY,items:SG_SAVINGS_ITEMS}));
+}catch(e){console.warn('안전보호구 공유',e);}}
+try{const _is=initSafety;initSafety=function(){try{sgPrice=loadSgPrice();sgSize=loadSgSize();sgOrder=loadSgOrder();}catch(e){}sgSavApply();return _is.apply(this,arguments);};}catch(e){}
+try{const _fak=fbApplyKv;fbApplyKv=function(kv){const r=_fak.apply(this,arguments);
+  try{if(kv&&(kv.dgrns_sg_price!==undefined||kv.dgrns_sg_savings!==undefined||kv.dgrns_sg_order!==undefined)){sgSavApply();if(curView==='safetygear')setTimeout(()=>{try{initSafety();}catch(e){}},50);}}catch(e){}
+  return r;};}catch(e){}
+try{const _fis4=fbInitialSync;fbInitialSync=async function(){const r=await _fis4.apply(this,arguments);setTimeout(sgShareSeed,4000);return r;};}catch(e){}
+setTimeout(sgSavApply,0);
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
