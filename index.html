@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.23-1000">
+<meta name="app-build" content="2026.11.24-1200">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -25494,6 +25494,8 @@ try{const _d=pidbBackup;pidbBackup=function(){if(!dataGuard())return;return _d.a
    · 현장·인천으로 로그인하면 그 기기에 남아 있던 필요 없는 기준자료는 지운다(공용 PC 대비).
    · 올리기: 서승수 과장만(팀 공유 화면 [🔐 기준자료 올리기]) — 기준자료 파일(.json)은 GitHub에 올리지 않는다. */
 const SP_PART=700000;
+/* 팀 저장소 연결 여부 (11/24 수정: fbOn은 window 속성이 아니므로 직접 확인) */
+function fbLive(){try{return !!(fbOn&&fbDb);}catch(e){return false;}}
 function spNeed(){let ic=false;try{ic=isICUser()||window.__site==='I';}catch(e){}
   const r=appRole();
   if(ic)return {ops:false,biz:false,known:true};
@@ -25511,7 +25513,7 @@ function spEnforce(){const n=spNeed();if(!n.known)return false;let drop=false;
   if(drop){spReload('이 기기에 필요 없는 기준자료를 정리했습니다');return true;}return false;}
 let __spMeta=null,__spPulling=false;
 async function spPull(force){
-  if(__spPulling||!window.fbOn||!window.fbDb)return;const n=spNeed();if(!n.known)return;
+  if(__spPulling||!fbLive())return;const n=spNeed();if(!n.known)return;
   const need=['ops','biz'].filter(k=>n[k]);if(!need.length){spBanner();return;}
   __spPulling=true;
   try{
@@ -25536,7 +25538,7 @@ function spBanner(mode){
     let html='';
     if(mode==='upd')html='🔐 새 기준자료를 받았습니다. <button class="btn sm" onclick="location.reload()">지금 적용(새로고침)</button>';
     else if(miss){const owner=(typeof dlOwner==='function')&&dlOwner();
-      html=window.fbOn?(__spMeta?'🔐 기준자료를 받는 중입니다…':'🔐 팀 저장소에 기준자료가 아직 없습니다 — '+(owner?'<button class="btn sm" onclick="spPick()">기준자료 올리기</button>':'서승수 과장이 [기준자료 올리기]를 해야 단가·사업계획 화면이 채워집니다.'))
+      html=fbLive()?(__spMeta?'🔐 기준자료를 받는 중입니다…':'🔐 팀 저장소에 기준자료가 아직 없습니다 — '+(owner?'<button class="btn sm" onclick="spPick()">기준자료 올리기</button>':'서승수 과장이 [기준자료 올리기]를 해야 단가·사업계획 화면이 채워집니다.'))
         :'🔐 팀 저장소에 연결되면 기준자료(단가·사업계획 등)를 받습니다.';}
     if(!html){if(b)b.remove();return;}
     if(!b){b=document.createElement('div');b.id='spBan';b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9998;background:#1e293b;color:#fff;padding:9px 14px;border-radius:10px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;gap:8px;align-items:center;max-width:94vw';document.body.appendChild(b);}
@@ -25547,7 +25549,7 @@ function spPick(){if(!dataGuard())return;let i=document.getElementById('spFile')
     i.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)spUpload(f);});}
   i.click();}
 async function spUpload(file){
-  if(!dataGuard())return;if(!window.fbOn){alert('팀 저장소에 연결된 뒤 올려 주세요.');return;}
+  if(!dataGuard())return;if(!fbLive()){alert('팀 저장소에 연결된 뒤 올려 주세요.');return;}
   let pk;try{pk=JSON.parse(await file.text());}catch(e){alert('기준자료 파일을 읽지 못했습니다.');return;}
   if(!pk||!pk.v||!pk.ops||!pk.biz){alert('기준자료 파일 형식이 아닙니다.');return;}
   const no=Object.keys(pk.ops).length,nb=Object.keys(pk.biz).length;
@@ -25576,8 +25578,8 @@ function spPanel(){try{const v=document.getElementById('v-sync');if(!v)return;le
   const h=spPanelHtml();if(p)p.outerHTML=h;else v.insertAdjacentHTML('afterbegin',h);}catch(e){}}
 /* 연결 · 로그인 시점에 맞춰 실행 */
 try{const _fis=fbInitialSync;fbInitialSync=async function(){const r=await _fis.apply(this,arguments);try{if(!spEnforce())spPull();}catch(e){}return r;};}catch(e){}
-try{const _sr2=setRole;setRole=function(){const r=_sr2.apply(this,arguments);setTimeout(()=>{try{if(!spEnforce()&&window.fbOn)spPull();else spBanner();}catch(e){}},300);return r;};}catch(e){}
-try{const _nv=nav;nav=function(v){const r=_nv.apply(this,arguments);if(v==='sync')setTimeout(()=>{spPanel();if(window.fbOn&&!__spMeta)fbDoc('__sp_meta').get().then(s=>{__spMeta=s.exists?s.data():null;spPanel();}).catch(()=>{});},50);return r;};}catch(e){}
+try{const _sr2=setRole;setRole=function(){const r=_sr2.apply(this,arguments);setTimeout(()=>{try{if(!spEnforce()&&fbLive())spPull();else spBanner();}catch(e){}},300);return r;};}catch(e){}
+try{const _nv=nav;nav=function(v){const r=_nv.apply(this,arguments);if(v==='sync')setTimeout(()=>{spPanel();if(fbLive()&&!__spMeta)fbDoc('__sp_meta').get().then(s=>{__spMeta=s.exists?s.data():null;spPanel();}).catch(()=>{});},50);return r;};}catch(e){}
 setTimeout(()=>{try{if(!spEnforce())spBanner();}catch(e){}},2500);
 
 /* ============ 2026-11-23 마스터 자료 1인 관리 — 마스터 PC 1대만 팀에 저장 ============
@@ -25603,7 +25605,7 @@ try{fbApplyKv=function(kv,times,force){
   return __msApplyKv0.call(this,kv,times,force);};}catch(e){}
 /* 마스터 PC → __master 올리기 */
 async function msPush(){
-  if(!msIsMaster()||!window.fbOn||!window.fbDb)return false;
+  if(!msIsMaster()||!fbLive())return false;
   try{const kv={},times={};
     MASTER_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null){kv[k]=v;times[k]=(typeof kvTimes!=='undefined'&&kvTimes[k])||Date.now();}});
     const me=(meEmp()||{}).name||'';
@@ -25623,7 +25625,7 @@ async function msApplyDoc(d){
   try{fbRerender();}catch(e){}
   try{if(curView==='home'&&window.afRenderBanner)window.afRenderBanner(true);}catch(e){}
 }
-function msSubscribe(){if(__msSub||!window.fbOn||!window.fbDb)return;__msSub=true;
+function msSubscribe(){if(__msSub||!fbLive())return;__msSub=true;
   try{const u=fbDoc('__master').onSnapshot(s=>{if(!s.exists){__msMeta=null;return;}msApplyDoc(s.data());},e=>{console.warn('master listen',e);__msSub=false;});
     if(typeof fbUnsub!=='undefined'&&Array.isArray(fbUnsub))fbUnsub.push(()=>{try{u();}catch(e){}__msSub=false;});}catch(e){__msSub=false;}}
 try{const _fis2=fbInitialSync;fbInitialSync=async function(){const r=await _fis2.apply(this,arguments);
@@ -25646,7 +25648,7 @@ function msRestoreProd(){
   try{raw('prod_pre_restore1123',JSON.stringify({at:new Date().toISOString(),prod:cur,del:curDel,snaps:curSn}));}catch(e){}
   const ids=new Set(B.prod.map(p=>p.id)),nk=p=>(p.name||'')+'|'+(p.spec||''),keys=new Set(B.prod.map(nk));
   const delSet=new Set(B.del.concat(Array.isArray(curDel)?curDel:[]));
-  const extra=(Array.isArray(cur)?cur:[]).filter(p=>p&&!ids.has(p.id)&&!keys.has(nk(p)));
+  const extra=(Array.isArray(cur)?cur:[]).filter(p=>p&&!ids.has(p.id)&&!keys.has(nk(p))&&!delSet.has(nk(p))&&!/^p\d{1,3}$/.test(String(p.id)));   // 삭제 목록·내장 기본값(p1~p999) 품목은 되살리지 않음
   const out=B.prod.map(p=>Object.assign({},p)).concat(extra);
   let fixed=0;const cm=new Map((Array.isArray(cur)?cur:[]).map(p=>[p.id,p]));
   B.prod.forEach(p=>{const c=cm.get(p.id);if(!c||JSON.stringify(c)!==JSON.stringify(p))fixed++;});
@@ -25663,7 +25665,7 @@ function msRestoreProd(){
 }
 async function msRegister(){
   if(!dataGuard())return;if(!(typeof dlOwner==='function'&&dlOwner())){alert('서승수 과장 로그인 상태에서만 지정할 수 있습니다.');return;}
-  if(!window.fbOn){alert('팀 저장소에 연결된 뒤 지정해 주세요.');return;}
+  if(!fbLive()){alert('팀 저장소에 연결된 뒤 지정해 주세요.');return;}
   if(!spHas('biz')){alert('먼저 [🔐 기준자료 올리기]를 해 주세요.');return;}
   const cur=msDev();
   if(!confirm((cur&&cur!==fbClientId?'다른 기기가 마스터 PC로 지정되어 있습니다. 이 PC로 바꿉니다.\n\n':'')+'이 PC를 마스터 PC로 지정합니다.\n· 품목마스터·단가·사업계획 등은 앞으로 이 PC(서승수 로그인)에서만 저장됩니다.\n· 품목마스터를 11/11 백업 기준으로 다시 되살립니다(백업 뒤 추가 품목은 유지).\n\n계속할까요?'))return;
