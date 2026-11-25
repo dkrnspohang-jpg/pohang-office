@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.24-1800">
+<meta name="app-build" content="2026.11.25-1900">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -25863,7 +25863,7 @@ async function bxParse(f){
   const need={dk:sh('제강사업계획'),gd:sh('제강가동일수'),posco:sh('포스코'),market:sh('시중'),fc:sh('예상실적'),prod:sh('제강생산량'),mon:sh('월판매계획')};
   if(!need.dk)throw new Error('「제강 사업계획」 시트를 찾지 못했습니다.');
   for(const k of Object.keys(need))if(need[k])G[k]=await xlsxParseSheetGrid(wb,need[k].path);
-  const V={dk:[],posco:[],market:[],gd:{h:{},pp:{}},fc26:null,xl:{},year:'2027',warn:[]};
+  const V={dk:[],posco:[],market:[],gd:{h:{},pp:{}},fc26:null,xl:{},year:'2027',warn:[],G};
   /* ① 제강 */
   {const g=G.dk;const t=bxS((g[1]||{})[1]);const ym=/(20\d\d)/.exec(t)||/(20\d\d)/.exec(f.name);if(ym)V.year=ym[1];
     const hr=bxFindRow(g,row=>!!bxMonthCols(row));if(!hr)throw new Error('제강 시트에서 1월~12월 머리글을 찾지 못했습니다.');
@@ -25888,14 +25888,14 @@ async function bxParse(f){
   if(G.posco){const g=G.posco,hr=bxFindRow(g,row=>!!bxMonthCols(row));const MC=hr?bxMonthCols(g[hr]):null;let cat='';
     if(MC)Object.keys(g).map(Number).sort((a,b)=>a-b).forEach(r=>{if(r<=hr)return;const row=g[r]||{};const A=bxS(row[1]);
       if(A&&!/계/.test(A))cat=A;const Q=bxS(row[2]).toUpperCase();if(!/^Q\d{5,9}$/.test(Q))return;
-      const q=[];for(let m=1;m<=12;m++)q.push(bxNum(row[MC[m]]));V.posco.push({q:Q,cat,spec:bxS(row[3]),price:bxNum(row[4]),uw:bxNum(row[5]),qty:q});});}
+      const q=[],w=[],a=[];for(let m=1;m<=12;m++){q.push(bxNum(row[MC[m]]));w.push(bxNum(row[MC[m]+1]));a.push(bxNum(row[MC[m]+2]));}V.posco.push({q:Q,cat,spec:bxS(row[3]),price:bxNum(row[4]),uw:bxNum(row[5]),qty:q,w,a});});}
   /* ④ 시중·포스코퓨처엠 */
   if(G.market){const g=G.market;let vendor='',MC=null;
     Object.keys(g).map(Number).sort((a,b)=>a-b).forEach(r=>{const row=g[r]||{};const mc=bxMonthCols(row);if(mc){MC=mc;return;}
       const A=bxS(row[1]);if(!A)return;const filled=Object.keys(row).filter(c=>+c>1&&bxS(row[c])!=='').length;
       if(!filled&&!/계|total/i.test(A)){vendor=A;return;}
       if(!MC||/계|total|품\s*명|구\s*분/i.test(A))return;
-      const q=[];for(let m=1;m<=12;m++)q.push(bxNum(row[MC[m]]));V.market.push({vendor,cat:A,spec:bxS(row[2]),price:bxNum(row[3]),uw:row[4],qty:q});});}
+      const q=[],w=[],a=[];for(let m=1;m<=12;m++){q.push(bxNum(row[MC[m]]));w.push(bxNum(row[MC[m]+1]));a.push(bxNum(row[MC[m]+2]));}V.market.push({vendor,cat:A,spec:bxS(row[2]),price:bxNum(row[3]),uw:row[4],qty:q,w,a});});}
   /* ⑤ 26년 예상실적(비교 기준) */
   if(G.fc){const g=G.fc,F={prod:{},dk:{},posco:{},ext:{}};let n=0;
     Object.keys(g).map(Number).forEach(r=>{const row=g[r]||{};const m=/^(\d{1,2})월/.exec(bxS(row[1]));if(!m)return;const k=+m[1];
@@ -25966,7 +25966,7 @@ function bxDlg(){
     return `<tr><td style="text-align:left">${esc(D.V.dk.length?c.m.x.eq:'')} ${esc(nmx)}</td><td class="n">${c.dq?N(S(c.bq.map(v=>v||0))):'-'}</td><td class="n" style="font-weight:700">${c.dq?N(S(c.nq)):'-'}</td>
       <td class="n">${c.dp?N(c.bp):'-'}</td><td class="n" style="font-weight:700">${c.dp?N(c.np):'-'}</td><td style="font-size:11px;text-align:left;color:#64748b">${[t.del?'앱에서 삭제한 품목':'',c.du?'단중 '+c.du:''].filter(Boolean).join(' · ')}</td></tr>`;}).join('');
   const nwr=D.nw.map(m=>`<li>${esc(m.x.eq)} ${esc(m.x.name)} ${esc(m.x.spec)} · 연 ${N(S(m.x.q))} · 단가 ${N(m.x.price)} → <b>품목 추가</b></li>`).join('');
-  const dlr=(D.dl||[]).map(m=>{const t=BIZPLAN_ITEMS_SEED[m.i];return `<li>${esc(t.name)} ${esc(t.spec==null?'':t.spec)} · 엑셀 연 ${N(S(m.x.q))}개 · ${N(S(m.x.a)/1e6)}백만원 → <b>앱에서 삭제한 품목이라 0으로 계산</b> (필요하면 품목 탭에서 복원)</li>`;}).join('');
+  const dlr=(D.dl||[]).map(m=>{const t=BIZPLAN_ITEMS_SEED[m.i];return `<li>${esc(t.name)} ${esc(t.spec==null?'':t.spec)} · 엑셀 연 ${N(S(m.x.q))}개 · ${N(S(m.x.a)/1e6)}백만원 → 앱에서 삭제한 품목</li>`;}).join('');
   const zr=D.zero.map(i=>{const t=BIZPLAN_ITEMS_SEED[i];return `<li>${esc(t.name)} ${esc(t.spec==null?'':t.spec)} → 0 (엑셀에 없음)</li>`;}).join('');
   ov.innerHTML=`<div style="background:#fff;border-radius:12px;width:min(980px,98vw);max-height:92vh;overflow:auto;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.3)">
     <div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0">📥 엑셀로 사업계획 버전 만들기</h3><span style="flex:1"></span><button class="btn sm" onclick="bxClose()">✕ 닫기</button></div>
@@ -25978,7 +25978,8 @@ function bxDlg(){
     <div style="font-weight:800;margin:6px 0">기준 버전(${esc(D.base)}) 대비 바뀌는 품목 ${D.ch.length}건</div>
     <div style="overflow:auto;max-height:40vh"><table class="qi-tb"><thead><tr><th>품목</th><th class="n">연 수량(${esc(D.base)})</th><th class="n">연 수량(엑셀)</th><th class="n">단가(${esc(D.base)})</th><th class="n">단가(엑셀)</th><th>비고</th></tr></thead><tbody>${rows||'<tr><td colspan="6"><div class="empty">바뀌는 품목이 없습니다.</div></td></tr>'}</tbody></table></div>
     ${nwr?`<div style="margin-top:8px;font-size:12.5px"><b>엑셀에만 있는 품목</b><ul style="margin:4px 0 0 18px">${nwr}</ul></div>`:''}
-    ${dlr?`<div style="margin-top:6px;font-size:12.5px;color:#b45309"><b>⚠ 엑셀에 수량이 있지만 앱에서 삭제한 품목</b><ul style="margin:4px 0 0 18px">${dlr}</ul></div>`:''}
+    ${dlr?`<div style="margin-top:6px;font-size:12.5px;color:#b45309"><b>⚠ 엑셀에 수량이 있지만 앱에서 삭제한 품목</b><ul style="margin:4px 0 0 18px">${dlr}</ul>
+      <label style="display:inline-flex;gap:6px;align-items:center;margin-top:4px;color:#334155;font-weight:700"><input type="checkbox" id="bxRestore" checked> 이 품목들을 복원해 엑셀과 맞춤 (품목 목록에 다시 표시 — 다른 버전에서도 보임)</label></div>`:''}
     ${zr?`<div style="margin-top:6px;font-size:12.5px"><b>${esc(D.base)}에는 있고 엑셀에 없는 품목</b><ul style="margin:4px 0 0 18px">${zr}</ul></div>`:''}
     ${D.V.warn.length?`<div style="margin-top:6px;font-size:12px;color:#b45309">${D.V.warn.map(esc).join(' · ')}</div>`:''}
     <div style="font-size:11.5px;color:#64748b;margin-top:8px">※ 수량·단가·단중(월별)·금액 기준(중량/수량)은 엑셀 그대로 이 버전에만 저장됩니다(다른 버전·품목 기본값은 그대로). 보수계획 연동 끔·다원화 규칙 비움(엑셀 수량에 다원화 반영). 만든 뒤 화면 합계를 엑셀 합계와 비교해 알려 드립니다.</div>
@@ -25991,7 +25992,11 @@ async function bxApply(){
   if(meta.list.includes(name)&&!confirm('"'+name+'" 버전이 이미 있습니다. 엑셀 값으로 덮어쓸까요?'))return;
   if(bpFixIs(Y,name)&&!confirm('"'+name+'"은 확정된 버전입니다. 그래도 덮어쓸까요?'))return;
   try{await undoSnap('사업계획 엑셀 버전 '+name+' ('+D.f+')','bulk');}catch(e){}
+  const restore=!!((document.getElementById('bxRestore')||{}).checked);let restored=0;
   try{
+    if(restore&&(D.dl||[]).length){D.dl.forEach(m=>{const t=BIZPLAN_ITEMS_SEED[m.i];if(!t)return;
+        if(t.custom){t.del=false;}else{bizplanOv.itemOv=bizplanOv.itemOv||{};const x=bizplanOv.itemOv[m.i];if(x)delete x.hide;}restored++;});
+      try{bizplanCustomSave();}catch(e){}try{bizplanApplyItemOv();}catch(e){}}
     // 1) 신규 품목
     const zeroMo=()=>Array.from({length:12},()=>({q:0,w:0,a:0}));
     D.M.forEach(m=>{if(m.i>=0)return;BIZPLAN_ITEMS_SEED.push({eq:m.x.eq,name:m.x.name,spec:m.x.spec,price:m.x.price,uw:m.x.uw,basis:bxBasis(m.x,'wt'),m:{},custom:true});m.i=BIZPLAN_ITEMS_SEED.length-1;});
@@ -26039,7 +26044,7 @@ async function bxApply(){
     const t=bxTotals(Y),x=V.xl,f=v=>(Math.round(v*10)/10).toLocaleString();
     const line=(l,a,b)=>l+': 화면 '+f(a)+' / 엑셀 '+f(b)+(Math.abs(a-b)<0.5?' ✔':' (차이 '+f(a-b)+')');
     alert('"'+name+'" 버전을 만들었습니다.\n\n'+line('제강 금액(백만원)',t.dkA/1e6,x.dkA||0)+'\n'+line('제강 중량(톤)',t.dkW/1000,x.dkW||0)+'\n'+line('포스코/외부 금액(백만원)',t.exA/1e6,x.exA||0)+'\n'+line('포스코/외부 중량(톤)',t.exW/1000,x.exW||0)
-      +(conv?'\n\n※ 단중이 품목 기본값과 다른 '+conv+'개 품목은 엑셀 단중을 이 버전에 저장했습니다.':'')+((D.dl||[]).length?'\n⚠ 앱에서 삭제한 품목 '+D.dl.length+'건은 0으로 계산됨(엑셀과 차이 원인)':'')+(miss.length?'\n⚠ 매칭 실패: '+miss.join(', '):''));
+      +(conv?'\n\n※ 단중이 품목 기본값과 다른 '+conv+'개 품목은 엑셀 단중을 이 버전에 저장했습니다.':'')+(restored?'\n✔ 삭제돼 있던 품목 '+restored+'건 복원(엑셀과 맞춤)':((D.dl||[]).length?'\n⚠ 앱에서 삭제한 품목 '+D.dl.length+'건은 0으로 계산됨(엑셀과 차이 원인)':''))+(miss.length?'\n⚠ 매칭 실패: '+miss.join(', '):''));
     BX=null;
   }catch(e){alert('버전 만들기 중 오류: '+e.message);console.error(e);}
 }
@@ -26110,6 +26115,487 @@ try{const _fak2=fbApplyKv;fbApplyKv=function(kv,times,force){
   try{if(kv&&kv.dgrns_sg_price!==undefined){const rem=JSON.parse(kv.dgrns_sg_price||'null'),loc=sgLsArr('dgrns_sg_price');
     if(Array.isArray(rem)&&rem.length&&(!loc||!loc.length)){try{localStorage.removeItem('dgrns_sg_price');}catch(e){}if(typeof kvTimes!=='undefined')delete kvTimes.dgrns_sg_price;}}}catch(e){}
   return _fak2.apply(this,arguments);};}catch(e){}
+/* ============ 2026-11-25 사업계획 — 엑셀 양식 화면 (기존 · V1 · V2) ============
+   엑셀 「2027년 사업계획(포항영업소)」 시트 구성을 그대로 화면에 옮기고, 잘 보이고 고치기 쉽게 만든 새 사업계획 화면.
+   · 버전: 기존(현재 단가) / V1(단가 −4.96%, 엑셀 원본) / V2(단가 −4%) — 버전 복사·추가 가능
+   · 시트: 요약 · 월판매계획 · 가동일수·생산량 · 보수계획 · 제강 · 포스코 · 시중 · 26년 예상실적 · 버전 비교
+   · 노란 칸 = 입력, 나머지는 자동 계산(중량 = 수량 × 단중, 금액 = 중량 또는 수량 × 단가)
+   · 자료: 팀 저장소 dgrns_bpx(마스터 PC에서만 저장) — 엑셀 원본은 이 PC에서만 읽음 */
+const BPX_KEY='dgrns_bpx';
+try{if(MASTER_KEYS.indexOf(BPX_KEY)<0){MASTER_KEYS.push(BPX_KEY);MS_K.add(BPX_KEY);}}catch(e){}
+let BPX=null,__bpxRaw='',BPXT='sum',__bpxSave=0,BPXV='q',BPXF='';
+function bpxLoad(){try{__bpxRaw=localStorage.getItem(BPX_KEY)||'';const o=JSON.parse(__bpxRaw||'null');if(o&&o.vers)return o;}catch(e){}return {vers:{},order:[],cur:'',cmp:{a:'',b:''}};}
+function bpxCanEdit(){try{if(typeof msActive==='function'&&msActive()&&!msIsMaster())return false;}catch(e){}return ['office','admin'].indexOf(appRole())>=0;}
+function bpxPersist(){clearTimeout(__bpxSave);__bpxSave=setTimeout(()=>{if(!bpxCanEdit())return;try{const t=JSON.stringify(BPX);localStorage.setItem(BPX_KEY,t);__bpxRaw=t;}catch(e){toast('저장 오류: '+e.message);}},500);}
+function bpxV(){return BPX&&BPX.vers[BPX.cur];}
+const bpxM=[1,2,3,4,5,6,7,8,9,10,11,12],bpxS=a=>(a||[]).reduce((s,v)=>s+(+v||0),0);
+const bpxN0=v=>Math.round(+v||0).toLocaleString(),bpxN1=v=>(Math.round((+v||0)*10)/10).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1}),bpxN2=v=>{const x=Math.round((+v||0)*100)/100;return x.toLocaleString(undefined,{maximumFractionDigits:2});};
+function bpxRid(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+/* ---- 계산 ---- */
+function bpxDays(v,m){const d=(v.days&&v.days[m])||new Date(2027,m,0).getDate(),h=(v.gd.h&&v.gd.h[m])||{};return d-((+h.reg||0)+(+h.maj||0)+(+h.idle||0)+(+h.off||0)+(+h.peak||0))/24;}
+function bpxProd(v,m){return bpxDays(v,m)*((v.gd.pp&&+v.gd.pp[m])||0);}
+function bpxCH(v,m){return bpxProd(v,m)/(+v.ton||140);}
+function bpxUw(r,k){return (r.uwm&&+r.uwm[k]>0)?+r.uwm[k]:(+r.uw||0);}
+function bpxRow(r,k){const q=+r.q[k]||0,w=q*bpxUw(r,k),a=(r.basis==='qty'?q:w)*(+r.price||0);return {q,w,a};}
+function bpxRowT(r){let q=0,w=0,a=0;for(let k=0;k<12;k++){const c=bpxRow(r,k);q+=c.q;w+=c.w;a+=c.a;}return {q,w,a};}
+function bpxTot(v){const z=()=>({w:Array(12).fill(0),a:Array(12).fill(0)});const o={dk:z(),po:z(),mk:z(),eq:{}};
+  (v.dk||[]).forEach(r=>{const e=o.eq[r.eq]=o.eq[r.eq]||z();for(let k=0;k<12;k++){const c=bpxRow(r,k);o.dk.w[k]+=c.w;o.dk.a[k]+=c.a;e.w[k]+=c.w;e.a[k]+=c.a;}});
+  (v.posco||[]).forEach(r=>{for(let k=0;k<12;k++){const c=bpxRow(r,k);o.po.w[k]+=c.w;o.po.a[k]+=c.a;}});
+  (v.mk||[]).forEach(r=>{for(let k=0;k<12;k++){const c=bpxRow(r,k);o.mk.w[k]+=c.w;o.mk.a[k]+=c.a;}});
+  o.dkW=bpxS(o.dk.w);o.dkA=bpxS(o.dk.a);o.exW=bpxS(o.po.w)+bpxS(o.mk.w);o.exA=bpxS(o.po.a)+bpxS(o.mk.a);return o;}
+/* ---- 화면 틀 ---- */
+function bpxCss(){if(document.getElementById('bpxCss'))return;const s=document.createElement('style');s.id='bpxCss';s.textContent=`
+#bpxWrap{font-size:13px}
+#bpxWrap .bx-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#f6f8fa;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+#bpxWrap .bx-chip{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:5px 10px;cursor:pointer;line-height:1.25;text-align:left}
+#bpxWrap .bx-chip b{font-size:13.5px}#bpxWrap .bx-chip small{display:block;color:#64748b;font-size:11px}
+#bpxWrap .bx-chip.on{background:#17375E;border-color:#17375E;color:#fff}#bpxWrap .bx-chip.on small{color:#cbd5e1}
+#bpxWrap .bx-tabs{display:flex;gap:2px;border-bottom:2px solid #17375E;margin:6px 0 10px;flex-wrap:wrap}
+#bpxWrap .bx-tab{border:1px solid #cbd5e1;border-bottom:none;background:#f1f5f9;padding:6px 12px;border-radius:8px 8px 0 0;cursor:pointer;font-weight:700;color:#334155}
+#bpxWrap .bx-tab.on{background:#17375E;color:#fff;border-color:#17375E}
+#bpxWrap .bx-tw{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:8px;background:#fff}
+#bpxWrap table.bx{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+#bpxWrap table.bx th,#bpxWrap table.bx td{border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:3px 6px;white-space:nowrap}
+#bpxWrap table.bx thead th{position:sticky;top:0;background:#17375E;color:#fff;z-index:3;font-weight:700;text-align:center}
+#bpxWrap table.bx thead tr:nth-child(2) th{top:26px}
+#bpxWrap table.bx .st{position:sticky;background:#fff;z-index:2}#bpxWrap table.bx thead .st{z-index:4;background:#17375E}
+#bpxWrap table.bx td.n{text-align:right;font-variant-numeric:tabular-nums}
+#bpxWrap table.bx tr.sub td{background:#eef2f7;font-weight:700}#bpxWrap table.bx tr.sub td.st{background:#eef2f7}
+#bpxWrap table.bx tr.tot td{background:#dbe4f0;font-weight:800}#bpxWrap table.bx tr.tot td.st{background:#dbe4f0}
+#bpxWrap input.bi{width:62px;border:1px solid #f1d58a;background:#fffbe6;border-radius:4px;padding:2px 4px;text-align:right;font:inherit}
+#bpxWrap input.bi.w{width:86px}#bpxWrap input.bi.t{width:100%;text-align:left}#bpxWrap input.bi:focus{outline:2px solid #3b82f6;background:#fff}
+#bpxWrap input.bi.ch{background:#fde68a;border-color:#f59e0b}#bpxWrap td.ch{background:#fef3c7}
+#bpxWrap input.bi[readonly]{background:#f8fafc;border-color:#e2e8f0}
+#bpxWrap .bx-cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}#bpxWrap .bx-card{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff;min-width:150px}
+#bpxWrap .bx-card .l{font-size:11.5px;color:#64748b}#bpxWrap .bx-card .v{font-size:18px;font-weight:800;color:#17375E}#bpxWrap .bx-card .d{font-size:11.5px}
+#bpxWrap .up{color:#c00000}#bpxWrap .dn{color:#1d4ed8}#bpxWrap .hint{font-size:11.5px;color:#64748b}
+#bpxWrap textarea.bt{width:100%;min-height:44px;border:1px solid #f1d58a;background:#fffbe6;border-radius:6px;padding:4px 6px;font:inherit}
+#bpxWrap .bx-h{font-weight:800;color:#17375E;margin:12px 0 6px;font-size:14px}`;document.head.appendChild(s);}
+function bpxEnsureWrap(){const sec=document.getElementById('v-bizplan');if(!sec)return null;let w=document.getElementById('bpxWrap');
+  if(!w){w=document.createElement('div');w.id='bpxWrap';sec.insertBefore(w,sec.firstChild);
+    const sw=document.createElement('div');sw.id='bpxModeSw';sw.style.cssText='display:flex;gap:6px;margin-bottom:8px';sec.insertBefore(sw,sec.firstChild);}
+  return w;}
+function bpxMode(){try{return localStorage.getItem('rnsBpxMode')||'x';}catch(e){return 'x';}}
+function bpxSetMode(m){try{localStorage.setItem('rnsBpxMode',m);}catch(e){}bpxApplyMode();if(m!=='x'){try{bizplanTab(bizplanCurTab||'drive');}catch(e){}}}
+function bpxApplyMode(){const sec=document.getElementById('v-bizplan');if(!sec)return;bpxCss();const w=bpxEnsureWrap(),sw=document.getElementById('bpxModeSw'),x=bpxMode()==='x';
+  sw.innerHTML=`<button class="btn sm${x?' primary':''}" onclick="bpxSetMode('x')">📒 사업계획 (엑셀 양식 · 기존/V1/V2)</button><button class="btn sm${x?'':' primary'}" onclick="bpxSetMode('o')">⚙ 예전 사업계획 화면</button>`;
+  [...sec.children].forEach(el=>{if(el.id==='bpxModeSw'||el.id==='bpxWrap')return;if(el.dataset.bpxHide==null)el.dataset.bpxHide=el.style.display||'';el.style.display=x?'none':el.dataset.bpxHide;});
+  w.style.display=x?'':'none';
+  if(x){if(!BPX)BPX=bpxLoad();bpxRender();}}
+try{const _nvx=nav;nav=function(v){const r=_nvx.apply(this,arguments);if(v==='bizplan')setTimeout(bpxApplyMode,30);return r;};}catch(e){}
+try{const _btx=bizplanTab;bizplanTab=function(){const r=_btx.apply(this,arguments);if(bpxMode()==='x'&&curView==='bizplan')setTimeout(bpxApplyMode,0);return r;};}catch(e){}
+setInterval(()=>{try{if(curView!=='bizplan'||bpxMode()!=='x')return;const raw=localStorage.getItem(BPX_KEY)||'';if(raw===__bpxRaw)return;
+  const a=document.activeElement;if(a&&a.closest&&a.closest('#bpxWrap'))return;BPX=bpxLoad();bpxRender();}catch(e){}},4000);
+/* ---- 메인 렌더 ---- */
+const BPX_TABS=[['sum','요약'],['mon','월판매계획'],['gd','가동일수·생산량'],['rep','보수계획'],['dk','제강 사업계획'],['po','포스코'],['mk','시중'],['fc','26년 예상실적'],['cmp','📊 버전 비교']];
+function bpxRender(){const w=document.getElementById('bpxWrap');if(!w)return;if(!BPX)BPX=bpxLoad();
+  const ed=bpxCanEdit(),vs=BPX.order.filter(n=>BPX.vers[n]);
+  if(!vs.length){w.innerHTML=`<div class="bx-bar"><b style="color:#17375E">📒 2027 사업계획 (엑셀 양식)</b></div>
+    <div style="padding:30px;text-align:center;border:1px dashed #cbd5e1;border-radius:10px;background:#fff">
+    <div style="font-size:15px;font-weight:800;color:#17375E;margin-bottom:6px">엑셀 사업계획을 불러와 기존 · V1 · V2 세 버전을 만듭니다</div>
+    <div class="hint" style="line-height:1.8">V1 = 엑셀 원본(단가 −4.96%) · 기존 = 품목마스터 26년 4분기 현재 단가 · V2 = 기존 단가 −4%<br>엑셀 파일은 이 PC에서만 읽고, 결과는 팀 저장소에 저장됩니다(마스터 PC 전용).</div>
+    <button class="btn primary" style="margin-top:12px" onclick="bpxPick()" ${ed?'':'disabled'}>📥 엑셀 불러오기 (2027년 사업계획 V1 파일)</button>${ed?'':'<div class="hint" style="margin-top:6px">마스터 PC(서승수 로그인)에서 불러와 주세요.</div>'}</div>`;return;}
+  if(!BPX.vers[BPX.cur])BPX.cur=vs[0];
+  const chips=vs.map(n=>{const v=BPX.vers[n],t=bpxTot(v);return `<button class="bx-chip${n===BPX.cur?' on':''}" onclick="bpxSel('${esc(n)}')"><b>${esc(n)}</b> <span style="font-size:11px">${v.cut?'단가 −'+v.cut+'%':'현재 단가'}</span><small>제강 ${bpxN1(t.dkA/1e6)}백만 · 계 ${bpxN1((t.dkA+t.exA)/1e6)}백만</small></button>`;}).join('');
+  const tabs=BPX_TABS.map(([k,l])=>`<div class="bx-tab${BPXT===k?' on':''}" onclick="bpxTab('${k}')">${l}</div>`).join('');
+  w.innerHTML=`<div class="bx-bar"><b style="color:#17375E;margin-right:4px">📒 2027 사업계획</b>${chips}<span style="flex:1"></span>
+    ${ed?`<button class="btn sm" onclick="bpxCopy()">＋ 버전 복사</button><button class="btn sm" onclick="bpxRename()">✏ 이름·인하율</button><button class="btn sm" onclick="bpxCutApply()">💲 단가 인하율 적용</button><button class="btn sm" onclick="bpxDel()">🗑 버전 삭제</button><button class="btn sm" onclick="bpxPick(true)" title="V4처럼 따로 작성한 엑셀 파일 하나를 새 버전으로 추가">📥 엑셀을 새 버전으로</button><button class="btn sm" onclick="bpxPick()" title="V1 엑셀로 기존·V1·V2를 다시 만듦">📥 기존·V1·V2 다시 만들기</button>`:'<span class="hint">🔒 보기 전용 — 수정은 마스터 PC(서승수 로그인)에서</span>'}
+    <button class="btn sm" onclick="bpxXls()">📤 이 시트 엑셀</button></div>
+    <div class="bx-tabs">${tabs}</div><div id="bpxBody"></div>`;
+  bpxBody();}
+function bpxSel(n){BPX.cur=n;bpxRender();}
+function bpxTab(t){BPXT=t;bpxRender();}
+function bpxBody(){const b=document.getElementById('bpxBody');if(!b)return;const v=bpxV();if(!v)return;
+  const f={sum:bpxSum,mon:bpxMon,gd:bpxGd,rep:bpxRep,dk:bpxDk,po:()=>bpxExt('posco'),mk:()=>bpxExt('mk'),fc:bpxFc,cmp:bpxCmp}[BPXT]||bpxSum;
+  try{b.innerHTML=f(v);}catch(e){b.innerHTML='<div class="hint">표시 오류: '+esc(e.message)+'</div>';console.error(e);}}
+function bpxRO(){return bpxCanEdit()?'':' readonly';}
+/* 입력 저장 공통: path는 v 기준 경로 */
+function bpxSet(path,val,num){if(!bpxCanEdit())return;const v=bpxV();const ks=path.split('.');let o=v;for(let i=0;i<ks.length-1;i++){const k=ks[i];if(o[k]==null)o[k]=/^\d+$/.test(ks[i+1])?[]:{};o=o[k];}
+  const t=String(val).trim();o[ks[ks.length-1]]=num===false?t:(t===''?0:(+t.replace(/[,\s]/g,'')||0));bpxPersist();
+  setTimeout(()=>{const a=document.activeElement,p=a&&a.dataset&&a.closest&&a.closest('#bpxWrap')?a.dataset.p:null;bpxBodySoft();
+    if(p){const el=document.querySelector('#bpxWrap [data-p="'+p+'"]');if(el){el.focus();try{el.select();}catch(e){}}}},0);}
+/* Enter = 아래 칸으로 이동(엑셀처럼), Shift+Enter = 위 칸 */
+function bpxKey(e,el){if(e.key!=='Enter')return;e.preventDefault();const td=el.closest('td'),tb=el.closest('tbody');if(!td||!tb){el.blur();return;}
+  const ci=td.cellIndex,ins=[...tb.querySelectorAll('input.bi')].filter(x=>{const c=x.closest('td');return c&&c.cellIndex===ci&&x.closest('tr').cells.length===el.closest('tr').cells.length;});
+  const i=ins.indexOf(el),nx=ins[i+(e.shiftKey?-1:1)];if(nx){nx.focus();try{nx.select();}catch(_){}}else el.blur();}
+function bpxBodySoft(keep){const sc=document.querySelector('#bpxWrap .bx-tw'),st=sc?sc.scrollTop:0,sl=sc?sc.scrollLeft:0;bpxBody();
+  const sc2=document.querySelector('#bpxWrap .bx-tw');if(sc2){sc2.scrollTop=st;sc2.scrollLeft=sl;}
+  const chips=document.querySelectorAll('#bpxWrap .bx-chip');BPX.order.filter(n=>BPX.vers[n]).forEach((n,i)=>{const c=chips[i];if(!c)return;const t=bpxTot(BPX.vers[n]);const sm=c.querySelector('small');if(sm)sm.textContent='제강 '+bpxN1(t.dkA/1e6)+'백만 · 계 '+bpxN1((t.dkA+t.exA)/1e6)+'백만';});}
+function bpxIn(path,val,cls,title){return `<input class="bi${cls?' '+cls:''}" data-p="${path}" value="${val===0||val?esc(String(Math.round((+val||0)*100)/100)):''}"${bpxRO()} onchange="bpxSet('${path}',this.value)" onkeydown="bpxKey(event,this)"${title?' title="'+esc(title)+'"':''}>`;}
+function bpxInT(path,val){return `<input class="bi t" data-p="${path}" value="${esc(val||'')}"${bpxRO()} onchange="bpxSet('${path}',this.value,false)">`;}
+const bpxMH=()=>bpxM.map(m=>`<th>${m}월</th>`).join('');
+/* ---- 요약 ---- */
+function bpxSum(v){const t=bpxTot(v),fc=v.fc||{};let fw=0,fa=0,xw=0,xa=0;bpxM.forEach(m=>{const f=fc[m]||{};fw+=+f.dw||0;fa+=+f.da||0;xw+=(+f.pw||0)+(+f.xw||0);xa+=(+f.pa||0)+(+f.xa||0);});
+  const T=v.txt||{};const sec=(k,lb)=>`<div class="bx-h">${lb}</div><table class="bx" style="width:100%"><tbody>${(T[k]||[]).map((r,i)=>`<tr><td style="width:90px;font-weight:700">${bpxInT('txt.'+k+'.'+i+'.b',r.b)}</td><td>${bpxInT('txt.'+k+'.'+i+'.c',r.c)}</td><td style="width:240px">${bpxInT('txt.'+k+'.'+i+'.i',r.i)}</td></tr>`).join('')}</tbody></table>${bpxCanEdit()?`<button class="btn sm" style="margin-top:4px" onclick="bpxTxtAdd('${k}')">＋ 줄 추가</button>`:''}`;
+  const dd=(a,b)=>{const d=a-b,p=b?d/b*100:0;return `<td class="n ${d>0?'up':d<0?'dn':''}">${d>0?'+':''}${bpxN1(d)}</td><td class="n ${d>0?'up':d<0?'dn':''}">${b?(p>0?'+':'')+p.toFixed(1)+'%':''}</td>`;};
+  const prod=bpxM.reduce((s,m)=>s+bpxProd(v,m),0),p26=bpxS(v.p26&&v.p26.act);
+  return `<div class="bx-cards"><div class="bx-card"><div class="l">제강 생산량</div><div class="v">${bpxN1(prod/1e4)}만톤</div><div class="d ${prod>=p26?'up':'dn'}">26년 실적 ${bpxN1(p26/1e4)}만톤 대비 ${p26?((prod/p26-1)*100).toFixed(1):'-'}%</div></div>
+    <div class="bx-card"><div class="l">제강(동국제강) 금액</div><div class="v">${bpxN1(t.dkA/1e6)}백만</div><div class="d">${bpxN1(t.dkW/1000)}톤</div></div>
+    <div class="bx-card"><div class="l">포스코·외부 금액</div><div class="v">${bpxN1(t.exA/1e6)}백만</div><div class="d">${bpxN1(t.exW/1000)}톤</div></div>
+    <div class="bx-card"><div class="l">합계</div><div class="v">${bpxN1((t.dkA+t.exA)/1e6)}백만</div><div class="d">단가 ${v.cut?'−'+v.cut+'%':'현재 단가'}</div></div></div>
+    ${sec('s1','1) 산출 기준')}
+    <div class="bx-h">2) 판매 계획 (정량적) <span class="hint">중량 톤 · 금액 백만원 · 자동 계산</span></div>
+    <div class="bx-tw" style="max-height:none"><table class="bx" style="width:100%"><thead><tr><th rowspan="2">구분</th><th colspan="2">26년 예상실적</th><th colspan="2">27년 판매 계획</th><th colspan="4">26년 실적 대비</th><th rowspan="2">비고</th></tr>
+    <tr><th>중량</th><th>금액</th><th>중량</th><th>금액</th><th>중량</th><th>%</th><th>금액</th><th>%</th></tr></thead><tbody>
+    <tr><td><b>제강</b></td><td class="n">${bpxN1(fw)}</td><td class="n">${bpxN1(fa)}</td><td class="n"><b>${bpxN1(t.dkW/1000)}</b></td><td class="n"><b>${bpxN1(t.dkA/1e6)}</b></td>${dd(t.dkW/1000,fw)}${dd(t.dkA/1e6,fa)}<td>${bpxInT('txt.n2.dk',(T.n2||{}).dk)}</td></tr>
+    <tr><td><b>외부</b></td><td class="n">${bpxN1(xw)}</td><td class="n">${bpxN1(xa)}</td><td class="n"><b>${bpxN1(t.exW/1000)}</b></td><td class="n"><b>${bpxN1(t.exA/1e6)}</b></td>${dd(t.exW/1000,xw)}${dd(t.exA/1e6,xa)}<td>${bpxInT('txt.n2.ex',(T.n2||{}).ex)}</td></tr>
+    <tr class="tot"><td>계</td><td class="n">${bpxN1(fw+xw)}</td><td class="n">${bpxN1(fa+xa)}</td><td class="n">${bpxN1((t.dkW+t.exW)/1000)}</td><td class="n">${bpxN1((t.dkA+t.exA)/1e6)}</td>${dd((t.dkW+t.exW)/1000,fw+xw)}${dd((t.dkA+t.exA)/1e6,fa+xa)}<td></td></tr></tbody></table></div>
+    <div class="hint" style="margin-top:4px">※ 외부 중량에 포스코 중량 포함(엑셀 원본은 포스코 중량을 빼고 표기) · 금액은 엑셀과 같은 방식</div>
+    ${sec('s3','3) 사업계획 증감 세부내역')}${sec('s4','4) 변경내역')}
+    <div class="bx-h">버전 메모</div><textarea class="bt"${bpxRO()} onchange="bpxSet('note',this.value,false)">${esc(v.note||'')}</textarea>`;}
+function bpxTxtAdd(k){const v=bpxV();v.txt=v.txt||{};(v.txt[k]=v.txt[k]||[]).push({b:'',c:'',i:''});bpxPersist();bpxBody();}
+/* ---- 월판매계획 ---- */
+function bpxMon(v){const t=bpxTot(v),fc=v.fc||{};let rows='',S=[0,0,0,0,0,0];
+  bpxM.forEach((m,k)=>{const dw=t.dk.w[k]/1000,da=t.dk.a[k]/1e6,xw=(t.po.w[k]+t.mk.w[k])/1000,xa=(t.po.a[k]+t.mk.a[k])/1e6;[dw,da,xw,xa,dw+xw,da+xa].forEach((x,i)=>S[i]+=x);
+    const f=fc[m]||{},fa=(+f.da||0)+(+f.pa||0)+(+f.xa||0);
+    rows+=`<tr><td class="st" style="left:0"><b>${m}월</b></td><td class="n">${bpxN1(dw)}</td><td class="n">${bpxN1(da)}</td><td class="n">${bpxN1(xw)}</td><td class="n">${bpxN1(xa)}</td><td class="n"><b>${bpxN1(dw+xw)}</b></td><td class="n"><b>${bpxN1(da+xa)}</b></td><td class="n">${bpxN1(fa)}</td><td class="n ${da+xa-fa>0?'up':'dn'}">${bpxN1(da+xa-fa)}</td></tr>`;});
+  let F=[0,0,0,0];bpxM.forEach(m=>{const f=fc[m]||{};F[0]+=+f.dw||0;F[1]+=+f.da||0;F[2]+=(+f.pw||0)+(+f.xw||0);F[3]+=(+f.pa||0)+(+f.xa||0);});
+  return `<div class="hint">중량 톤 · 금액 백만원 · 전부 자동 계산 (제강·포스코·시중 시트 값의 월 합계)</div><div class="bx-tw"><table class="bx"><thead><tr><th class="st" style="left:0" rowspan="2">월</th><th colspan="2">동국제강</th><th colspan="2">포스코 / 외부</th><th colspan="2">합계</th><th colspan="2">26년 예상실적 대비</th></tr>
+   <tr><th>중량</th><th>금액</th><th>중량</th><th>금액</th><th>중량</th><th>금액</th><th>26년 금액</th><th>증감</th></tr></thead><tbody>${rows}
+   <tr class="tot"><td class="st" style="left:0">TOTAL</td>${S.map(x=>`<td class="n">${bpxN1(x)}</td>`).join('')}<td class="n">${bpxN1(F[1]+F[3])}</td><td class="n">${bpxN1(S[5]-F[1]-F[3])}</td></tr>
+   <tr class="sub"><td class="st" style="left:0">26년 예상</td><td class="n">${bpxN1(F[0])}</td><td class="n">${bpxN1(F[1])}</td><td class="n">${bpxN1(F[2])}</td><td class="n">${bpxN1(F[3])}</td><td class="n">${bpxN1(F[0]+F[2])}</td><td class="n">${bpxN1(F[1]+F[3])}</td><td></td><td></td></tr>
+   <tr><td class="st" style="left:0">비율</td>${[[S[0],F[0]],[S[1],F[1]],[S[2],F[2]],[S[3],F[3]],[S[4],F[0]+F[2]],[S[5],F[1]+F[3]]].map(([a,b])=>`<td class="n">${b?(a/b*100).toFixed(0)+'%':''}</td>`).join('')}<td></td><td></td></tr></tbody></table></div>`;}
+/* ---- 가동일수·생산량 ---- */
+function bpxGd(v){const L=[['reg','정기보수 (시간)'],['maj','대보수 (시간)'],['idle','휴동 (시간)'],['off','휴무 (시간)'],['peak','Peak Time (시간)']];
+  const row=(lb,cells,tot,cls)=>`<tr class="${cls||''}"><td class="st" style="left:0;min-width:150px"><b>${lb}</b></td>${cells}<td class="n"><b>${tot}</b></td></tr>`;
+  let h='';L.forEach(([k,lb])=>{h+=row(lb,bpxM.map(m=>`<td>${bpxIn('gd.h.'+m+'.'+k,((v.gd.h||{})[m]||{})[k])}</td>`).join(''),bpxN1(bpxM.reduce((s,m)=>s+(+((v.gd.h||{})[m]||{})[k]||0),0)));});
+  h+=row('달력 일수',bpxM.map(m=>`<td>${bpxIn('days.'+m,(v.days&&v.days[m])||new Date(2027,m,0).getDate())}</td>`).join(''),bpxM.reduce((s,m)=>s+((v.days&&+v.days[m])||new Date(2027,m,0).getDate()),0));
+  h+=row('가동일 (자동)',bpxM.map(m=>`<td class="n">${bpxN2(bpxDays(v,m))}</td>`).join(''),bpxN2(bpxM.reduce((s,m)=>s+bpxDays(v,m),0)),'sub');
+  h+=row('일생산성 (톤/일)',bpxM.map(m=>`<td>${bpxIn('gd.pp.'+m,(v.gd.pp||{})[m])}</td>`).join(''),'');
+  h+=row('생산량 (톤, 자동)',bpxM.map(m=>`<td class="n">${bpxN0(bpxProd(v,m))}</td>`).join(''),bpxN0(bpxM.reduce((s,m)=>s+bpxProd(v,m),0)),'tot');
+  h+=row(`CH (생산량 ÷ ${bpxIn('ton',v.ton||140,'','1CH 톤수')})`,bpxM.map(m=>`<td class="n">${bpxN1(bpxCH(v,m))}</td>`).join(''),bpxN1(bpxM.reduce((s,m)=>s+bpxCH(v,m),0)),'sub');
+  const p=v.p26||{};
+  h+=row('2026년 계획 생산량',bpxM.map((m,k)=>`<td>${bpxIn('p26.plan.'+k,(p.plan||[])[k],'w')}</td>`).join(''),bpxN0(bpxS(p.plan)));
+  h+=row('2026년 실적 생산량',bpxM.map((m,k)=>`<td>${bpxIn('p26.act.'+k,(p.act||[])[k],'w')}</td>`).join(''),bpxN0(bpxS(p.act)));
+  h+=row('27년 계획 − 26년 실적',bpxM.map((m,k)=>{const d=bpxProd(v,m)-(+(p.act||[])[k]||0);return `<td class="n ${d>0?'up':'dn'}">${bpxN0(d)}</td>`;}).join(''),(()=>{const d=bpxM.reduce((s,m)=>s+bpxProd(v,m),0)-bpxS(p.act);return (d>0?'+':'')+bpxN0(d)+(bpxS(p.act)?' ('+(d/bpxS(p.act)*100).toFixed(1)+'%)':'');})());
+  return `<div class="hint">노란 칸 입력 → 가동일 = 달력 일수 − (정기보수+대보수+휴동+휴무+Peak) ÷ 24 · 생산량 = 가동일 × 일생산성 · CH = 생산량 ÷ 1CH 톤수</div>
+   <div class="bx-tw"><table class="bx"><thead><tr><th class="st" style="left:0">구분</th>${bpxMH()}<th>연계</th></tr></thead><tbody>${h}</tbody></table></div>`;}
+/* ---- 보수계획 ---- */
+function bpxRep(v){const R=v.rep||[];const ch=m=>bpxCH(v,m);
+  let h='';bpxM.forEach((m,k)=>{const r=R[k]||{};h+=`<tr><td class="st" style="left:0"><b>${m}월</b></td><td class="n">${bpxN1(ch(m))}</td><td class="n">${bpxN1(ch(m)/2)}</td><td>${bpxIn('rep.'+k+'.ar',r.ar)}</td><td>${bpxIn('rep.'+k+'.ab',r.ab)}</td><td class="n">${bpxN1(ch(m)/2)}</td><td>${bpxIn('rep.'+k+'.br',r.br)}</td><td>${bpxIn('rep.'+k+'.bb',r.bb)}</td>
+    <td class="n">${bpxN2(ch(m)/(+v.ladDiv||162.5))}</td><td class="n">${bpxN2(ch(m)/(+v.tdDiv||50))}</td></tr>`;});
+  const sm=f=>bpxS(bpxM.map((m,k)=>+(R[k]||{})[f]||0));const CHt=bpxM.reduce((s,m)=>s+ch(m),0);
+  h+=`<tr class="tot"><td class="st" style="left:0">합계</td><td class="n">${bpxN1(CHt)}</td><td class="n">${bpxN1(CHt/2)}</td><td class="n">${sm('ar')}</td><td class="n">${sm('ab')}</td><td class="n">${bpxN1(CHt/2)}</td><td class="n">${sm('br')}</td><td class="n">${sm('bb')}</td><td class="n">${bpxN1(CHt/(+v.ladDiv||162.5))}</td><td class="n">${bpxN1(CHt/(+v.tdDiv||50))}</td></tr>`;
+  const L=v.lad||{cnt:[],items:[]};let lh='';
+  lh+=`<tr class="sub"><td class="st" style="left:0">월 횟수 (신축 · 콘보수)</td><td></td><td></td><td></td>${bpxM.map((m,k)=>`<td>${bpxIn('lad.cnt.'+k+'.n',((L.cnt||[])[k]||{}).n)}</td><td>${bpxIn('lad.cnt.'+k+'.c',((L.cnt||[])[k]||{}).c)}</td>`).join('')}<td class="n">${bpxS((L.cnt||[]).map(x=>+(x||{}).n||0))} / ${bpxS((L.cnt||[]).map(x=>+(x||{}).c||0))}</td></tr>`;
+  (L.items||[]).forEach((it,i)=>{let tot=0;const dv=+it.dv||1;lh+=`<tr><td class="st" style="left:0;min-width:130px">${bpxInT('lad.items.'+i+'.lb',it.lb)}</td><td>${bpxIn('lad.items.'+i+'.un',it.un)}</td><td>${bpxIn('lad.items.'+i+'.uc',it.uc)}</td><td>${bpxIn('lad.items.'+i+'.dv',dv,'','나누는 값(엑셀: CA-180M은 1000, CA-160은 250)')}</td>${bpxM.map((m,k)=>{const c=(L.cnt||[])[k]||{},a=(+it.un||0)*(+c.n||0)/dv,b=(+it.uc||0)*(+c.c||0)/dv;tot+=a+b;return `<td class="n">${bpxN1(a)}</td><td class="n">${bpxN1(b)}</td>`;}).join('')}<td class="n"><b>${bpxN1(tot)}</b></td></tr>`;});
+  return `<div class="bx-h">전기로 보수계획 (A로 · B로)</div><div class="hint">CH는 가동일수·생산량 시트에서 자동 · 로저전극·발코니보수 횟수는 입력 · 래들 보수대수 = CH ÷ ${bpxIn('ladDiv',v.ladDiv||162.5,'','래들 보수 1대당 CH')} · 턴디쉬 축조대수 = CH ÷ ${bpxIn('tdDiv',v.tdDiv||50,'','턴디쉬 1대당 CH')}</div>
+   <div class="bx-tw" style="max-height:none"><table class="bx"><thead><tr><th class="st" style="left:0" rowspan="2">월</th><th rowspan="2">CH</th><th colspan="3">A로</th><th colspan="3">B로</th><th rowspan="2">래들 보수대수</th><th rowspan="2">턴디쉬 축조대수</th></tr>
+   <tr><th>CH</th><th>로저전극</th><th>발코니보수</th><th>CH</th><th>로저전극</th><th>발코니보수</th></tr></thead><tbody>${h}</tbody></table></div>
+   <div class="bx-h">래들 축조 수량 (신축 · 콘보수) <span class="hint">수량 = 1회당 수량 × 월 횟수 ÷ 나누는 값 · 참고용(제강 시트 품목 수량과는 아직 연동하지 않음 — 다음 단계 보수계획 연동에서 연결)</span></div>
+   <div class="bx-tw"><table class="bx"><thead><tr><th class="st" style="left:0" rowspan="2">품목</th><th rowspan="2">신축 1회</th><th rowspan="2">콘보수 1회</th><th rowspan="2">÷</th>${bpxM.map(m=>`<th colspan="2">${m}월</th>`).join('')}<th rowspan="2">연계</th></tr><tr>${bpxM.map(()=>'<th>신축</th><th>콘보수</th>').join('')}</tr></thead><tbody>${lh}</tbody></table></div>`;}
+/* ---- 제강 사업계획 ---- */
+const BPX_EQ=[['EAF','전기로'],['LD','래들'],['TD','턴디쉬']];
+function bpxCmpBase(){const n=BPX.cur,o=BPX.order.filter(x=>BPX.vers[x]);const i=o.indexOf(n);return BPX.chgBase&&BPX.vers[BPX.chgBase]&&BPX.chgBase!==n?BPX.chgBase:(i>0?o[i-1]:'');}
+function bpxDk(v){const base=bpxCmpBase(),bv=base?BPX.vers[base]:null,bmap={};if(bv)(bv.dk||[]).forEach(r=>bmap[r.rid]=r);
+  const mode=BPXV,flt=BPXF.trim().toUpperCase();let body='';const T={q:0,w:0,a:0};const head=bpxM.map(m=>`<th>${m}월</th>`).join('');
+  BPX_EQ.forEach(([eq,lb])=>{const rows=(v.dk||[]).map((r,i)=>({r,i})).filter(x=>x.r.eq===eq&&(!flt||(x.r.name+' '+x.r.spec).toUpperCase().indexOf(flt)>=0));if(!rows.length)return;
+    const ST={q:0,w:0,a:0,m:Array(12).fill(0)};
+    rows.forEach(({r,i})=>{const b=bmap[r.rid],t=bpxRowT(r);ST.q+=t.q;ST.w+=t.w;ST.a+=t.a;
+      const rule=r.cut===false?+r.base:Math.round(+r.base*(1-(+v.cut||0)/100)),pc=+r.base>0&&Math.abs(rule-(+r.price||0))>=Math.max(2,(+r.price||0)*0.003);
+      const cells=bpxM.map((m,k)=>{const c=bpxRow(r,k);ST.m[k]+=mode==='q'?c.q:mode==='w'?c.w:c.a;
+        if(mode==='q'){const chg=b&&Math.abs((+b.q[k]||0)-c.q)>1e-9;return `<td>${bpxIn('dk.'+i+'.q.'+k,r.q[k],chg?'ch':'',chg?base+': '+bpxN2(b.q[k]):'')}</td>`;}
+        return `<td class="n">${mode==='w'?bpxN0(c.w):bpxN0(c.a/1000)}</td>`;}).join('');
+      const pr=r.base?((+r.price/(+r.base)-1)*100):0;
+      body+=`<tr><td class="st" style="left:0;min-width:46px">${eq}</td><td class="st" style="left:46px;min-width:150px;max-width:190px;overflow:hidden;text-overflow:ellipsis" title="${esc(r.name)}">${esc(r.name)}</td><td class="st" style="left:196px;min-width:110px;max-width:140px;overflow:hidden;text-overflow:ellipsis" title="${esc(r.spec)}">${esc(r.spec)}</td>
+        <td class="n">${bpxN2(r.uw)}${r.uwm?'<span title="월별 단중(엑셀 중량 기준)" style="color:#b45309">*</span>':''}</td><td class="n" title="기존(현재) 단가">${bpxN0(r.base)}</td><td>${bpxIn('dk.'+i+'.price',r.price,'w'+(pc?' ch':''),pc?'인하율 계산값 '+bpxN0(rule)+'원과 다름(직접 조정 · 엑셀 값)':'')}<div style="font-size:10px;color:${pr<0?'#1d4ed8':'#64748b'};text-align:right">${r.base&&Math.abs(pr)>0.005?pr.toFixed(2)+'%':''}${r.cut===false?' 인하제외':''}</div></td><td style="font-size:11px;color:#64748b">${r.basis==='qty'?'개당':'kg당'}</td>
+        ${cells}<td class="n">${bpxN2(t.q)}</td><td class="n">${bpxN1(t.w/1000)}</td><td class="n"><b>${bpxN1(t.a/1e6)}</b></td>
+        <td>${bpxCanEdit()?`<button class="btn sm" onclick="bpxRowEdit('dk',${i})" title="품명·규격·단중·기준 수정">✎</button><button class="btn sm" onclick="bpxRowDel('dk',${i})" title="행 삭제">✕</button>`:''}</td></tr>`;});
+    T.q+=ST.q;T.w+=ST.w;T.a+=ST.a;
+    body+=`<tr class="sub"><td class="st" style="left:0"></td><td class="st" style="left:46px">${lb} 소계</td><td class="st" style="left:196px"></td><td></td><td></td><td></td><td></td>${ST.m.map(x=>`<td class="n">${mode==='q'?'':mode==='w'?bpxN0(x):bpxN0(x/1000)}</td>`).join('')}<td></td><td class="n">${bpxN1(ST.w/1000)}</td><td class="n">${bpxN1(ST.a/1e6)}</td><td>${bpxCanEdit()?`<button class="btn sm" onclick="bpxRowAdd('dk','${eq}')">＋ 행</button>`:''}</td></tr>`;});
+  const mtot=bpxTot(v);
+  body+=`<tr class="tot"><td class="st" style="left:0"></td><td class="st" style="left:46px">합계</td><td class="st" style="left:196px"></td><td></td><td></td><td></td><td></td>${bpxM.map((m,k)=>`<td class="n">${mode==='q'?'':mode==='w'?bpxN0(mtot.dk.w[k]):bpxN0(mtot.dk.a[k]/1000)}</td>`).join('')}<td></td><td class="n">${bpxN1(T.w/1000)}</td><td class="n">${bpxN1(T.a/1e6)}</td><td></td></tr>`;
+  const prodRow=(lb,f,d)=>`<tr class="sub"><td class="st" style="left:0"></td><td class="st" style="left:46px">${lb}</td><td class="st" style="left:196px"></td><td colspan="4"></td>${bpxM.map(m=>`<td class="n">${f(m)}</td>`).join('')}<td colspan="4" class="n">${d||''}</td></tr>`;
+  const info=prodRow('27년 생산계획 (톤)',m=>bpxN0(bpxProd(v,m)),bpxN0(bpxM.reduce((s,m)=>s+bpxProd(v,m),0)))+prodRow('가동일수',m=>bpxN2(bpxDays(v,m)))+prodRow('총생산 CH',m=>bpxN1(bpxCH(v,m)))
+    +prodRow('래들 보수대수',m=>bpxN2(bpxCH(v,m)/(+v.ladDiv||162.5)))+prodRow('턴디쉬 축조대수',m=>bpxN2(bpxCH(v,m)/(+v.tdDiv||50)));
+  const opts=BPX.order.filter(x=>BPX.vers[x]&&x!==BPX.cur).map(x=>`<option value="${esc(x)}"${x===base?' selected':''}>${esc(x)}</option>`).join('');
+  return `<div class="toolrow" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+     <span>보기</span><button class="btn sm${mode==='q'?' primary':''}" onclick="BPXV='q';bpxBody()">수량 (입력)</button><button class="btn sm${mode==='w'?' primary':''}" onclick="BPXV='w';bpxBody()">중량 (kg)</button><button class="btn sm${mode==='a'?' primary':''}" onclick="BPXV='a';bpxBody()">금액 (천원)</button>
+     <input class="bi t" style="width:180px" placeholder="품명·규격 검색" value="${esc(BPXF)}" oninput="BPXF=this.value;clearTimeout(window.__bpxF);window.__bpxF=setTimeout(bpxBody,250)">
+     <span class="hint">변경 표시 기준</span><select class="selbox" onchange="BPX.chgBase=this.value;bpxBody()"><option value="">(없음)</option>${opts}</select><span class="hint">주황 수량 = 기준 버전과 다른 값 · 주황 단가 = 인하율 계산값과 다른 단가(마우스를 올리면 설명)</span></div>
+   <div class="bx-tw"><table class="bx"><thead><tr><th class="st" style="left:0">설비</th><th class="st" style="left:46px">품명</th><th class="st" style="left:196px">규격</th><th>단중</th><th>기존단가</th><th>단가</th><th>기준</th>${head}<th>연 수량</th><th>연 중량(톤)</th><th>연 금액(백만)</th><th></th></tr></thead>
+   <tbody>${info}${body}</tbody></table></div>
+   <div class="hint" style="margin-top:4px">금액 = (kg당: 중량, 개당: 수량) × 단가 · 단중 * 표시는 엑셀 월별 중량 기준(SPRAY재 등) · 기존단가 = 품목마스터 26년 4분기 단가</div>`;}
+function bpxRowEdit(kind,i){const v=bpxV(),arr=kind==='dk'?v.dk:kind==='posco'?v.posco:v.mk,r=arr[i];if(!r)return;
+  const nm=prompt('품명',r.name);if(nm===null)return;const sp=prompt('규격',r.spec||'');if(sp===null)return;
+  const uw=prompt('단중(kg)',r.uw);if(uw===null)return;const bs=prompt('금액 기준: kg당이면 wt, 개당이면 qty',r.basis||'wt');if(bs===null)return;
+  let base=r.base;if(kind==='dk'){const b=prompt('기존(현재) 단가',r.base);if(b===null)return;base=+b||0;}
+  Object.assign(r,{name:nm.trim(),spec:sp.trim(),uw:+uw||0,basis:bs.trim()==='qty'?'qty':'wt',base});if(+uw>0)delete r.uwm;bpxPersist();bpxBody();}
+function bpxRowDel(kind,i){const v=bpxV(),arr=kind==='dk'?v.dk:kind==='posco'?v.posco:v.mk,r=arr[i];if(!r)return;if(!confirm('「'+r.name+' '+(r.spec||'')+'」 행을 이 버전에서 삭제할까요?'))return;arr.splice(i,1);bpxPersist();bpxBody();}
+function bpxRowAdd(kind,eq){const v=bpxV();const nm=prompt('품명');if(!nm)return;const sp=prompt('규격','')||'';const uw=+(prompt('단중(kg)','0')||0);const pr=+(prompt('단가(원)','0')||0);const bs=(prompt('금액 기준: kg당이면 wt, 개당이면 qty','wt')||'wt').trim()==='qty'?'qty':'wt';
+  const r={rid:bpxRid(),name:nm.trim(),spec:sp.trim(),uw,base:pr,price:pr,basis:bs,q:Array(12).fill(0),cut:true};
+  if(kind==='dk'){r.eq=eq;v.dk.push(r);}else if(kind==='posco'){r.grp=eq||'';v.posco.push(r);}else{r.vendor=eq||'';v.mk.push(r);}bpxPersist();bpxBody();}
+/* ---- 포스코 · 시중 ---- */
+function bpxExt(kind){const v=bpxV(),arr=kind==='posco'?(v.posco||[]):(v.mk||[]);const gk=kind==='posco'?'grp':'vendor';const base=bpxCmpBase(),bv=base?BPX.vers[base]:null,bmap={};if(bv)((kind==='posco'?bv.posco:bv.mk)||[]).forEach(r=>bmap[r.rid]=r);
+  const groups=[];arr.forEach((r,i)=>{let g=groups.find(x=>x.k===r[gk]);if(!g)groups.push(g={k:r[gk],rows:[]});g.rows.push({r,i});});
+  let body='';const TT={w:0,a:0};
+  groups.forEach(g=>{const ST={w:0,a:0};g.rows.forEach(({r,i})=>{const t=bpxRowT(r),b=bmap[r.rid];ST.w+=t.w;ST.a+=t.a;
+      body+=`<tr><td class="st" style="left:0;min-width:110px">${esc(r[gk]||'')}</td>${kind==='posco'?`<td class="st" style="left:110px;min-width:84px">${esc(r.code||'')}</td>`:''}<td class="st" style="left:${kind==='posco'?194:110}px;min-width:130px">${esc(kind==='posco'?r.spec:(r.name+(r.spec?' '+r.spec:'')))}</td>
+        <td class="n">${bpxN2(r.uw)}</td><td>${bpxIn((kind==='posco'?'posco.':'mk.')+i+'.price',r.price,'w'+(b&&Math.abs((+b.price||0)-(+r.price||0))>=0.5?' ch':''))}</td><td style="font-size:11px;color:#64748b">${r.basis==='qty'?'개당':'kg당'}</td>
+        ${bpxM.map((m,k)=>{const chg=b&&Math.abs((+b.q[k]||0)-(+r.q[k]||0))>1e-9;return `<td>${bpxIn((kind==='posco'?'posco.':'mk.')+i+'.q.'+k,r.q[k],chg?'ch':'',chg?base+': '+bpxN2(b.q[k]):'')}</td>`;}).join('')}
+        <td class="n">${bpxN2(t.q)}</td><td class="n">${bpxN1(t.w/1000)}</td><td class="n"><b>${bpxN1(t.a/1e6)}</b></td><td>${bpxCanEdit()?`<button class="btn sm" onclick="bpxRowEdit('${kind}',${i})">✎</button><button class="btn sm" onclick="bpxRowDel('${kind}',${i})">✕</button>`:''}</td></tr>`;});
+    TT.w+=ST.w;TT.a+=ST.a;
+    body+=`<tr class="sub"><td class="st" style="left:0">${esc(g.k||'')} 소계</td>${kind==='posco'?'<td class="st" style="left:110px"></td>':''}<td class="st" style="left:${kind==='posco'?194:110}px"></td><td colspan="${3+12+1}"></td><td class="n">${bpxN1(ST.w/1000)}</td><td class="n">${bpxN1(ST.a/1e6)}</td><td>${bpxCanEdit()?`<button class="btn sm" onclick="bpxRowAdd('${kind}','${esc(g.k||'')}')">＋ 행</button>`:''}</td></tr>`;});
+  body+=`<tr class="tot"><td class="st" style="left:0">합계</td>${kind==='posco'?'<td class="st" style="left:110px"></td>':''}<td class="st" style="left:${kind==='posco'?194:110}px"></td><td colspan="${3+12+1}"></td><td class="n">${bpxN1(TT.w/1000)}</td><td class="n">${bpxN1(TT.a/1e6)}</td><td></td></tr>`;
+  return `<div class="hint">수량·단가 노란 칸 입력 · 포스코·시중 단가는 단가 인하율 적용 대상이 아님(계약 단가)</div><div class="bx-tw"><table class="bx"><thead><tr><th class="st" style="left:0">${kind==='posco'?'품목':'업체'}</th>${kind==='posco'?'<th class="st" style="left:110px">자재코드</th>':''}<th class="st" style="left:${kind==='posco'?194:110}px">${kind==='posco'?'규격':'품명·규격'}</th><th>단중</th><th>단가</th><th>기준</th>${bpxMH()}<th>연 수량</th><th>연 중량(톤)</th><th>연 금액(백만)</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`;}
+/* ---- 26년 예상실적 ---- */
+function bpxFc(v){const fc=v.fc||{};let h='',S=Array(8).fill(0);
+  bpxM.forEach(m=>{const f=fc[m]||{},tw=(+f.dw||0)+(+f.pw||0)+(+f.xw||0),ta=(+f.da||0)+(+f.pa||0)+(+f.xa||0);[f.dw,f.da,f.pw,f.pa,f.xw,f.xa,tw,ta].forEach((x,i)=>S[i]+=+x||0);
+    h+=`<tr><td class="st" style="left:0"><b>${m}월</b></td>${['dw','da','pw','pa','xw','xa'].map(k=>`<td>${bpxIn('fc.'+m+'.'+k,f[k],'w')}</td>`).join('')}<td class="n"><b>${bpxN1(tw)}</b></td><td class="n"><b>${bpxN1(ta)}</b></td></tr>`;});
+  h+=`<tr class="tot"><td class="st" style="left:0">TOTAL</td>${S.map(x=>`<td class="n">${bpxN1(x)}</td>`).join('')}</tr>`;
+  return `<div class="hint">중량 톤 · 금액 백만원 · 요약·월판매계획의 비교 기준</div><div class="bx-tw" style="max-height:none"><table class="bx"><thead><tr><th class="st" style="left:0" rowspan="2">월</th><th colspan="2">동국제강</th><th colspan="2">포스코</th><th colspan="2">외부</th><th colspan="2">합계</th></tr><tr><th>중량</th><th>금액</th><th>중량</th><th>금액</th><th>중량</th><th>금액</th><th>중량</th><th>금액</th></tr></thead><tbody>${h}</tbody></table></div>`;}
+/* ---- 버전 비교 ---- */
+function bpxCmp(){const o=BPX.order.filter(x=>BPX.vers[x]);BPX.cmp=BPX.cmp||{};let A=BPX.cmp.a,B=BPX.cmp.b;if(!BPX.vers[A])A=o.includes('V1')?'V1':o[0];if(!BPX.vers[B]||B===A)B=o.find(x=>x!==A&&x==='V2')||o.find(x=>x!==A)||A;BPX.cmp.a=A;BPX.cmp.b=B;
+  const va=BPX.vers[A],vb=BPX.vers[B],ta=bpxTot(va),tb=bpxTot(vb);const sel=(k,cur)=>`<select class="selbox" onchange="BPX.cmp.${k}=this.value;bpxBody()">${o.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('')}</select>`;
+  const bm={};(va.dk||[]).forEach(r=>bm[r.rid]=r);let pe=0,qe=0,ne=0,de=0;const items=[];const eqS={};
+  (vb.dk||[]).forEach(r=>{const a=bm[r.rid],tbR=bpxRowT(r);if(!a){ne+=tbR.a;items.push({r,a:null,da:tbR.a,ta:{q:0,w:0,a:0},tb:tbR});const e=eqS[r.eq]=eqS[r.eq]||{a:0,b:0};e.b+=tbR.a;return;}
+    const taR=bpxRowT(a);let p=0,q=0;for(let k=0;k<12;k++){const ca=bpxRow(a,k),cb=bpxRow(r,k),unitA=(a.basis==='qty'?1:bpxUw(a,k)),unitB=(r.basis==='qty'?1:bpxUw(r,k));
+      q+=(cb.q*unitB-ca.q*unitA)*(+a.price||0);p+=cb.q*unitB*((+r.price||0)-(+a.price||0));}
+    pe+=p;qe+=q;const e=eqS[r.eq]=eqS[r.eq]||{a:0,b:0};e.a+=taR.a;e.b+=tbR.a;items.push({r,a,da:tbR.a-taR.a,ta:taR,tb:tbR,p,q});});
+  const bmb={};(vb.dk||[]).forEach(r=>bmb[r.rid]=1);(va.dk||[]).forEach(a=>{if(!bmb[a.rid]){const t=bpxRowT(a);de-=t.a;items.push({r:a,a,gone:true,da:-t.a,ta:t,tb:{q:0,w:0,a:0}});const e=eqS[a.eq]=eqS[a.eq]||{a:0,b:0};e.a+=t.a;}});
+  const d=(x,y)=>{const v=x-y;return `<span class="${v>0?'up':v<0?'dn':''}">${v>0?'+':''}${bpxN1(v)}</span>`;};const pct=(x,y)=>y?((x/y-1)*100).toFixed(1)+'%':'-';
+  const card=(l,a,b,u)=>`<div class="bx-card"><div class="l">${l}</div><div class="v">${bpxN1(b)}<span style="font-size:12px">${u}</span></div><div class="d">${esc(A)} ${bpxN1(a)} → ${esc(B)} · ${d(b,a)} (${pct(b,a)})</div></div>`;
+  const eqRows=[['EAF','전기로'],['LD','래들'],['TD','턴디쉬']].map(([k,l])=>{const e=eqS[k]||{a:0,b:0};return `<tr><td>${l}</td><td class="n">${bpxN1(e.a/1e6)}</td><td class="n">${bpxN1(e.b/1e6)}</td><td class="n">${d(e.b/1e6,e.a/1e6)}</td><td class="n">${pct(e.b,e.a)}</td></tr>`;}).join('')
+    +[['포스코',bpxS(ta.po.a),bpxS(tb.po.a)],['시중',bpxS(ta.mk.a),bpxS(tb.mk.a)]].map(([l,a,b])=>`<tr><td>${l}</td><td class="n">${bpxN1(a/1e6)}</td><td class="n">${bpxN1(b/1e6)}</td><td class="n">${d(b/1e6,a/1e6)}</td><td class="n">${pct(b,a)}</td></tr>`).join('');
+  const tot=(ta.dkA+ta.exA),totb=(tb.dkA+tb.exA);
+  const top=items.filter(x=>Math.abs(x.da)>=0.5).sort((x,y)=>Math.abs(y.da)-Math.abs(x.da)).slice(0,40).map(x=>{const r=x.r,a=x.a;return `<tr><td>${esc(r.eq)}</td><td>${esc(r.name)} ${esc(r.spec||'')}${x.gone?' <span class="dn">(삭제)</span>':!a?' <span class="up">(추가)</span>':''}</td><td class="n">${bpxN2(x.ta.q)}</td><td class="n">${bpxN2(x.tb.q)}</td><td class="n">${a?bpxN0(a.price):'-'}</td><td class="n">${x.gone?'-':bpxN0(r.price)}</td><td class="n">${bpxN1(x.ta.a/1e6)}</td><td class="n">${bpxN1(x.tb.a/1e6)}</td><td class="n"><b>${d(x.tb.a/1e6,x.ta.a/1e6)}</b></td><td class="n">${x.p!=null?bpxN1(x.p/1e6):''}</td><td class="n">${x.q!=null?bpxN1(x.q/1e6):''}</td></tr>`;}).join('');
+  const mon=bpxM.map((m,k)=>{const a=(ta.dk.a[k]+ta.po.a[k]+ta.mk.a[k])/1e6,b=(tb.dk.a[k]+tb.po.a[k]+tb.mk.a[k])/1e6;return `<tr><td>${m}월</td><td class="n">${bpxN1(a)}</td><td class="n">${bpxN1(b)}</td><td class="n">${d(b,a)}</td></tr>`;}).join('');
+  return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><b>비교</b> ${sel('a',A)} → ${sel('b',B)} <span class="hint">B − A · 금액 백만원</span></div>
+   <div class="bx-cards">${card('합계 금액',tot/1e6,totb/1e6,'백만')}${card('제강 금액',ta.dkA/1e6,tb.dkA/1e6,'백만')}${card('포스코·외부 금액',ta.exA/1e6,tb.exA/1e6,'백만')}${card('제강 중량',ta.dkW/1000,tb.dkW/1000,'톤')}</div>
+   <div class="bx-h">제강 금액 변동 요인</div><table class="bx"><thead><tr><th>요인</th><th>금액(백만)</th><th>설명</th></tr></thead><tbody>
+    <tr><td>단가 효과</td><td class="n">${d(pe/1e6,0)}</td><td>${esc(B)} 수량 × (${esc(B)} 단가 − ${esc(A)} 단가)</td></tr>
+    <tr><td>물량 효과</td><td class="n">${d(qe/1e6,0)}</td><td>(${esc(B)} 물량 − ${esc(A)} 물량) × ${esc(A)} 단가</td></tr>
+    <tr><td>품목 추가 · 삭제</td><td class="n">${d((ne+de)/1e6,0)}</td><td>추가 ${bpxN1(ne/1e6)} · 삭제 ${bpxN1(-de/1e6)}</td></tr>
+    <tr class="tot"><td>제강 계</td><td class="n">${d(tb.dkA/1e6,ta.dkA/1e6)}</td><td></td></tr></tbody></table>
+   <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+    <div><div class="bx-h">구분별</div><table class="bx"><thead><tr><th>구분</th><th>${esc(A)}</th><th>${esc(B)}</th><th>증감</th><th>%</th></tr></thead><tbody>${eqRows}</tbody></table></div>
+    <div><div class="bx-h">월별 합계 금액</div><table class="bx"><thead><tr><th>월</th><th>${esc(A)}</th><th>${esc(B)}</th><th>증감</th></tr></thead><tbody>${mon}</tbody></table></div></div>
+   <div class="bx-h">품목별 변동 (금액 차이 큰 순 · 최대 40)</div><div class="bx-tw"><table class="bx"><thead><tr><th>설비</th><th>품목</th><th>수량 ${esc(A)}</th><th>수량 ${esc(B)}</th><th>단가 ${esc(A)}</th><th>단가 ${esc(B)}</th><th>금액 ${esc(A)}</th><th>금액 ${esc(B)}</th><th>증감</th><th>단가 효과</th><th>물량 효과</th></tr></thead><tbody>${top||'<tr><td colspan="11" class="hint">차이가 없습니다.</td></tr>'}</tbody></table></div>`;}
+/* ---- 버전 관리 ---- */
+function bpxCopy(){const v=bpxV();if(!v)return;const n=(prompt('새 버전 이름 (현재 「'+BPX.cur+'」 복사)','V'+(BPX.order.length+1))||'').trim();if(!n)return;if(BPX.vers[n]){alert('이미 있는 이름입니다.');return;}
+  const c=JSON.parse(JSON.stringify(v));c.name=n;c.at=new Date().toISOString();c.from=BPX.cur;BPX.vers[n]=c;BPX.order.push(n);BPX.cur=n;bpxPersist();bpxRender();}
+function bpxRename(){const v=bpxV();if(!v)return;const n=(prompt('버전 이름',BPX.cur)||'').trim();if(!n)return;const c=prompt('단가 인하율(%) — 기존 단가 대비. 예: 4 = −4%, 0 = 현재 단가',v.cut||0);if(c===null)return;
+  if(n!==BPX.cur){if(BPX.vers[n]){alert('이미 있는 이름입니다.');return;}BPX.vers[n]=v;delete BPX.vers[BPX.cur];BPX.order=BPX.order.map(x=>x===BPX.cur?n:x);BPX.cur=n;}
+  v.name=n;v.cut=+c||0;bpxPersist();bpxRender();toast('인하율만 바꿨습니다 — 단가에 반영하려면 [💲 단가 인하율 적용]을 누르세요');}
+function bpxCutApply(){const v=bpxV();if(!v)return;const c=+v.cut||0;const n=(v.dk||[]).filter(r=>r.cut!==false&&+r.base>0).length;
+  if(!confirm('「'+BPX.cur+'」 제강 품목 '+n+'개 단가를 기존 단가 × (1 − '+c+'%)로 다시 계산합니다.\n(인하 제외 품목·포스코·시중은 그대로) 계속할까요?'))return;
+  (v.dk||[]).forEach(r=>{if(!(+r.base>0))return;r.price=r.cut===false?+r.base:Math.round(+r.base*(1-c/100));});bpxPersist();bpxRender();}
+function bpxDel(){if(BPX.order.filter(x=>BPX.vers[x]).length<=1){alert('마지막 버전은 삭제할 수 없습니다.');return;}if(!confirm('「'+BPX.cur+'」 버전을 삭제할까요? (되돌릴 수 없음)'))return;
+  delete BPX.vers[BPX.cur];BPX.order=BPX.order.filter(x=>x!==BPX.cur);BPX.cur=BPX.order[0];bpxPersist();bpxRender();}
+function bpxXls(){const tw=document.querySelector('#bpxBody');if(!tw)return;const tbls=[...tw.querySelectorAll('table')].map(t=>{const c=t.cloneNode(true);c.querySelectorAll('input').forEach(i=>{const s=document.createElement('span');s.textContent=i.value;i.replaceWith(s);});c.querySelectorAll('button,select').forEach(b=>b.remove());return c.outerHTML;}).join('<br>');
+  const tl=(BPX_TABS.find(x=>x[0]===BPXT)||['',''])[1];try{downloadXls('2027사업계획_'+BPX.cur+'_'+tl,tbls);}catch(e){alert('엑셀 저장 오류: '+e.message);}}
+/* ---- 엑셀 불러오기 → 기존 · V1 · V2 ---- */
+let __bpxAs=false;
+function bpxPick(as){if(!bpxCanEdit()){alert('마스터 PC(서승수 로그인)에서 불러와 주세요.');return;}__bpxAs=!!as;
+  let inp=document.getElementById('bpxFile');if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='.xlsx';inp.id='bpxFile';inp.style.display='none';inp.onchange=async()=>{const f=inp.files&&inp.files[0];inp.value='';if(f)await bpxImport(f,__bpxAs);};document.body.appendChild(inp);}inp.click();}
+async function bpxImport(f,asVer){
+  let V;try{V=await bxParse(f);}catch(e){alert('엑셀을 읽지 못했습니다: '+e.message);return;}
+  const G=V.G||{};let cutV1=(()=>{const m=/단가\s*-?\s*(\d+(?:\.\d+)?)/.exec(f.name);const x=m?+m[1]:4.96;return x>0&&x<20?x:4.96;})();
+  // 품목마스터 현재(26년 4분기) 단가 — 사업계획 품목 매칭 → 연결 마스터
+  let bs={};try{bs=bizplanVerSnapshotLive(String(V.year));}catch(e){}
+  let M=[];try{M=bxMatch(V,bs);}catch(e){M=V.dk.map(x=>({x,i:-1}));}
+  const qMaster=i=>{try{const pid=(NFA._pl||{})[i];let p=pid?prodById(pid):null;if(!p){const c=planQcInfo(i).c;const ms=c?planMastersByQc(c):[];p=ms[0]||null;}return p;}catch(e){return null;}};
+  {const rs=M.map(m=>{const p=m.i>=0?qMaster(m.i):null;const b=p?+priceAt(p.id,'2026Q4')||0:0;return b?m.x.price/b:0;}).filter(r=>r>0.85&&r<0.995).sort((a,b)=>a-b);
+    if(rs.length>=10){const md=rs[Math.floor(rs.length/2)];cutV1=Math.round((1-md)*10000)/100;}}
+  let nb=0;const dk=M.map(m=>{const x=m.x;const p=m.i>=0?qMaster(m.i):null;let base=p?+priceAt(p.id,'2026Q4')||0:0;const r=base?x.price/base:0;
+    let cut=true,est=false;if(base&&r>0.995){cut=false;}if(!base||r<0.85||r>1.01){base=Math.round(x.price/(1-cutV1/100)*100)/100;cut=true;est=true;nb++;}
+    const um=x.q.map((q,k)=>q>0&&x.w[k]>0?x.w[k]/q:(x.uw||0));const uwm=um.some((u,k)=>x.q[k]>0&&Math.abs(u-(x.uw||0))>1e-6)?um.map(u=>Math.round(u*1e6)/1e6):null;
+    return {rid:bpxRid(),eq:x.eq,name:x.name,spec:x.spec==null?'':String(x.spec),uw:x.uw||0,uwm,base,price:x.price,basis:bxBasis(x,'wt'),q:x.q.slice(),cut,est};});
+  const basisOf=(x)=>{const Q=bpxS(x.qty),W=bpxS(x.w),A=bpxS(x.a);if(!(A>0&&x.price>0))return 'qty';return Math.abs(A-Q*x.price)<=Math.abs(A-W*x.price)?'qty':'wt';};
+  const uwOf=x=>{const u=+x.uw;if(u>0)return u;const Q=bpxS(x.qty),W=bpxS(x.w);return Q>0&&W>0?W/Q:0;};
+  const posco=V.posco.map(x=>({rid:bpxRid(),grp:x.cat,code:x.q,spec:x.spec,name:x.spec,uw:uwOf(x),base:x.price,price:x.price,basis:basisOf(x),q:x.qty.slice()}));
+  const mk=V.market.map(x=>({rid:bpxRid(),vendor:x.vendor,name:x.cat,spec:x.spec,uw:uwOf(x),base:x.price,price:x.price,basis:basisOf(x),q:x.qty.slice()}));
+  const fc={};if(V.fc26)bpxM.forEach(m=>{const F=V.fc26;fc[m]={dw:+(F.dk[m]||{}).w||0,da:+(F.dk[m]||{}).a||0,pw:+(F.posco[m]||{}).w||0,pa:+(F.posco[m]||{}).a||0,xw:+(F.ext[m]||{}).w||0,xa:+(F.ext[m]||{}).a||0};});
+  // 제강생산량(26 계획·실적)
+  const p26={plan:Array(12).fill(0),act:Array(12).fill(0)};try{const g=G.prod||{};Object.keys(g).forEach(r=>{const row=g[r]||{};const mm=/^(\d{1,2})월/.exec(bxS(row[1]));if(mm){p26.plan[+mm[1]-1]=bxNum(row[2]);p26.act[+mm[1]-1]=bxNum(row[3]);}});}catch(e){}
+  // 설비별 보수계획 · 래들 축조 · 요약 문구 — 시트 직접 읽기
+  const rep=Array.from({length:12},()=>({ar:0,ab:0,br:0,bb:0}));const lad={cnt:Array.from({length:12},()=>({n:0,c:0})),items:[]};const txt={s1:[],s3:[],s4:[],n2:{dk:'',ex:''}};
+  try{const wb=await xlsxOpenWorkbook(f);const sh=k=>wb.sheets.find(s=>s.name.replace(/\s/g,'').indexOf(k)>=0);
+    const rs=sh('보수계획');if(rs){const g=await xlsxParseSheetGrid(wb,rs.path);Object.keys(g).forEach(r=>{const row=g[r]||{};const mm=/^(\d{1,2})월/.exec(bxS(row[1]));if(mm){const k=+mm[1]-1;rep[k]={ar:bxNum(row[4]),ab:bxNum(row[5]),br:bxNum(row[7]),bb:bxNum(row[8])};}});}
+    const ss=sh('요약');if(ss){const g=await xlsxParseSheetGrid(wb,ss.path);let sec='';Object.keys(g).map(Number).sort((a,b)=>a-b).forEach(r=>{const row=g[r]||{};const A=bxS(row[1]);
+      if(/1\)/.test(A))sec='s1';else if(/2\)/.test(A))sec='s2';else if(/3\)/.test(A))sec='s3';else if(/4\)/.test(A))sec='s4';
+      const B=bxS(row[2]),C=row[3],I=bxS(row[9])||bxS(row[8]);
+      if(sec==='s2'){if(B==='제강'&&I)txt.n2.dk=I;if(B==='외부'&&I)txt.n2.ex=I;return;}
+      if(!sec||/^구\s*분$/.test(B))return;const c=typeof C==='string'?C.trim():'';if(!c&&!B)return;if(typeof C==='number')return;txt[sec].push({b:B,c,i:I});});}
+  }catch(e){console.warn('보조 시트',e);}
+  try{const g=G.dk||{};const rows=Object.keys(g).map(Number).sort((a,b)=>a-b);const mr=rows.find(r=>!!bxMonthCols(g[r]));const MCs=mr?bxMonthCols(g[mr]):null;
+    const hr=rows.find(r=>/신축/.test(bxS((g[r]||{})[4])));
+    if(MCs&&hr&&hr<mr){const row=g[hr];for(let k=0;k<12;k++)lad.cnt[k]={n:bxNum(row[MCs[k+1]]),c:bxNum(row[MCs[k+1]+1])};
+      rows.filter(r=>r>hr&&r<mr).forEach(r=>{const rw=g[r]||{};const lb=bxS(rw[3]);if(!lb)return;const un=bxNum(rw[4]),uc=bxNum(rw[5]);let dv=1;
+        for(let k=0;k<12;k++){const c=lad.cnt[k],F=bxNum(rw[MCs[k+1]]),Gv=bxNum(rw[MCs[k+1]+1]);if(F>0&&un*c.n>0){dv=un*c.n/F;break;}if(Gv>0&&uc*c.c>0){dv=uc*c.c/Gv;break;}}
+        dv=Math.round(dv*1000)/1000;lad.items.push({lb,un,uc,dv:dv>0?dv:1});});}}catch(e){console.warn('래들 축조',e);}
+  const h={};bpxM.forEach(m=>{h[m]=V.gd.h[m]||{reg:0,maj:0,idle:0,off:0,peak:0};});
+  const mkV=(name,cut,dkRows)=>({name,cut,note:'',at:new Date().toISOString(),src:f.name,ton:140,ladDiv:162.5,tdDiv:50,gd:{h:JSON.parse(JSON.stringify(h)),pp:Object.assign({},V.gd.pp)},days:{},
+    p26:JSON.parse(JSON.stringify(p26)),rep:JSON.parse(JSON.stringify(rep)),lad:JSON.parse(JSON.stringify(lad)),dk:dkRows,posco:JSON.parse(JSON.stringify(posco)),mk:JSON.parse(JSON.stringify(mk)),fc:JSON.parse(JSON.stringify(fc)),txt:JSON.parse(JSON.stringify(txt))});
+  if(asVer)return bpxImportAs(f,V,dk,posco,mk,mkV);
+  const v1=mkV('V1',cutV1,JSON.parse(JSON.stringify(dk)));v1.note='엑셀 원본('+f.name+') — 단가 −'+cutV1+'%';
+  const v0=mkV('기존',0,dk.map(r=>Object.assign(JSON.parse(JSON.stringify(r)),{price:r.base})));v0.note='현재 단가(품목마스터 26년 4분기) · 수량은 V1과 같음';
+  const v2=mkV('V2',4,dk.map(r=>Object.assign(JSON.parse(JSON.stringify(r)),{price:r.cut===false?r.base:Math.round(r.base*0.96)})));v2.note='기존 단가 −4% · 수량은 V1과 같음(작성 시작점)';
+  const t1=bpxTot(v1),x=V.xl||{},fm=v=>(Math.round(v*10)/10).toLocaleString();
+  const ex=BPX&&BPX.order&&BPX.order.filter(n=>BPX.vers[n]).length;
+  if(!confirm('엑셀을 읽었습니다: 제강 '+dk.length+'행 · 포스코 '+posco.length+' · 시중 '+mk.length+'\n\nV1(엑셀 원본) 제강 '+fm(t1.dkA/1e6)+'백만원 / 엑셀 '+fm(x.dkA||0)+'백만원\n기존 단가 = 품목마스터 26년 4분기 단가'+(nb?' (마스터에 없는 '+nb+'개는 엑셀 단가 ÷ (1 − '+cutV1+'%))':'')+'\nV2 = 기존 단가 −4%\n\n'+(ex?'⚠ 이미 있는 기존·V1·V2는 엑셀 값으로 다시 만듭니다(다른 버전은 유지). ':'')+'계속할까요?'))return;
+  try{await undoSnap('사업계획(엑셀 양식) 불러오기 '+f.name,'bulk');}catch(e){}
+  BPX=bpxLoad();BPX.vers['기존']=v0;BPX.vers['V1']=v1;BPX.vers['V2']=v2;['기존','V1','V2'].forEach(n=>{if(BPX.order.indexOf(n)<0)BPX.order.push(n);});
+  BPX.order=['기존','V1','V2'].concat(BPX.order.filter(n=>['기존','V1','V2'].indexOf(n)<0));BPX.cur='V1';BPX.cmp={a:'V1',b:'V2'};BPXT='sum';
+  try{const t=JSON.stringify(BPX);localStorage.setItem(BPX_KEY,t);__bpxRaw=t;}catch(e){alert('저장 오류: '+e.message);}
+  bpxRender();
+  const t0=bpxTot(v0),t2=bpxTot(v2);
+  alert('기존 · V1 · V2를 만들었습니다.\n\n제강 금액(백만원): 기존 '+fm(t0.dkA/1e6)+' · V1 '+fm(t1.dkA/1e6)+' (엑셀 '+fm(x.dkA||0)+') · V2 '+fm(t2.dkA/1e6)+'\n포스코·외부(백만원): '+fm(t1.exA/1e6)+' (엑셀 '+fm(x.exA||0)+')');
+}
+/* ---- 엑셀 한 파일을 새 버전(V4 등)으로 불러오기 — 기존 행과 짝을 맞춰(같은 설비·품명·규격) 버전 비교가 품목 단위로 되게 ---- */
+async function bpxImportAs(f,V,dk,posco,mk,mkV){
+  const vs=BPX.order.filter(n=>BPX.vers[n]);if(!vs.length){alert('먼저 [📥 엑셀 불러오기]로 기존 · V1 · V2를 만들어 주세요.');return;}
+  const ref=BPX.vers.V1||BPX.vers[vs[0]],refN=BPX.vers.V1?'V1':vs[0];
+  const nmG=(/-\s*(V\d+)/i.exec(f.name)||[])[1];const cutG=(/단가\s*-?\s*(\d+(?:\.\d+)?)/.exec(f.name)||[])[1];
+  let name=(prompt('새 버전 이름 (파일: '+f.name+')',(nmG||'V'+(vs.length+1)).toUpperCase())||'').trim();if(!name)return;
+  if(BPX.vers[name]&&['기존','V1'].indexOf(name)>=0){alert('「'+name+'」은 기준 버전이라 이 방법으로 바꿀 수 없습니다. 다른 이름을 써 주세요.');return;}
+  const cs=prompt('이 버전의 단가 인하율(%) — 기존 단가 대비',cutG!=null?String(+cutG):'4');if(cs===null)return;const cut=+cs||0;
+  const K=(...a)=>a.map(x=>bxN(x)).join('|');
+  const pool=(arr,kf)=>{const m={};(arr||[]).forEach(r=>{const k=kf(r);(m[k]=m[k]||[]).push(r);});return m;};
+  const pd=pool(ref.dk,r=>K(r.eq,r.name,r.spec)),pp=pool(ref.posco,r=>K(r.code,r.spec)),pm=pool(ref.mk,r=>K(r.vendor,r.name,r.spec));
+  const cutV1=+ref.cut||0;let nNew=0,nFix=0,nKeep=0;const fixRid={};
+  dk.forEach(r=>{const a=(pd[K(r.eq,r.name,r.spec)]||[]).shift();if(!a){nNew++;r.est=false;r.base=r.price;r.cut=false;return;}
+    r.rid=a.rid;const est=a.est||(cutV1>0&&Math.abs(+a.base-Math.round(+a.price/(1-cutV1/100)*100)/100)<0.011);r.base=+a.base;r.cut=a.cut!==false;r.est=est;
+    const rule=Math.round(r.base*(1-cut/100)),same=Math.abs(r.price-(+a.price||0))<0.5,off=Math.abs(rule-r.price)>=Math.max(2,r.price*0.003);
+    if(same&&off){if(est){fixRid[a.rid]=r.price;r.base=r.price;r.est=false;nFix++;}else nKeep++;r.cut=false;}});
+  posco.forEach(r=>{const a=(pp[K(r.code,r.spec)]||[]).shift();if(a){r.rid=a.rid;r.base=+a.base||r.price;}});
+  mk.forEach(r=>{const a=(pm[K(r.vendor,r.name,r.spec)]||[]).shift();if(a){r.rid=a.rid;r.base=+a.base||r.price;}});
+  const gone=Object.values(pd).reduce((s,a)=>s+a.length,0);
+  const nv=mkV(name,cut,dk);nv.note='엑셀 원본('+f.name+') — 단가 −'+cut+'%';nv.from=refN;
+  const t=bpxTot(nv),tr=bpxTot(ref),x=V.xl||{},fm=v=>(Math.round(v*10)/10).toLocaleString();
+  if(!confirm('「'+name+'」 버전으로 불러옵니다: 제강 '+dk.length+'행 · 포스코 '+posco.length+' · 시중 '+mk.length+'\n\n제강 '+fm(t.dkA/1e6)+'백만원 (엑셀 '+fm(x.dkA||0)+') · '+refN+' '+fm(tr.dkA/1e6)+'\n포스코·외부 '+fm(t.exA/1e6)+'백만원 (엑셀 '+fm(x.exA||0)+')\n\n'+refN+'과 짝 맞춘 품목 '+(dk.length-nNew)+'개 · 새 품목 '+nNew+'개 · '+name+'에 없는 품목 '+gone+'개'
+    +(nFix+nKeep?'\n단가 인하 제외 품목 '+(nFix+nKeep)+'개 ('+refN+'과 단가 같음)'+(nFix?' — 이 중 '+nFix+'개는 기존 단가를 '+refN+' 단가로 바로잡음(기존·인하율 계산 버전에도 반영)':''):'')
+    +(BPX.vers[name]?'\n\n⚠ 이미 있는 「'+name+'」을 이 엑셀 값으로 바꿉니다.':'')+'\n\n계속할까요?'))return;
+  try{await undoSnap('사업계획(엑셀 양식) 버전 불러오기 '+name,'bulk');}catch(e){}
+  if(nFix)Object.keys(BPX.vers).forEach(n=>{const v=BPX.vers[n];(v.dk||[]).forEach(r=>{if(fixRid[r.rid]==null)return;const p=fixRid[r.rid];
+    const wasRule=(+v.cut||0)>0&&n!==refN&&Math.abs((+r.price||0)-Math.round(+r.base*(1-(+v.cut||0)/100)))<1;r.base=p;r.est=false;r.cut=false;if(n==='기존'||wasRule)r.price=p;});});
+  BPX.vers[name]=nv;if(BPX.order.indexOf(name)<0)BPX.order.push(name);BPX.cur=name;BPX.cmp={a:refN,b:name};BPX.chgBase=refN;
+  try{const s2=JSON.stringify(BPX);localStorage.setItem(BPX_KEY,s2);__bpxRaw=s2;}catch(e){alert('저장 오류: '+e.message);}
+  BPXT='cmp';bpxRender();
+  alert('「'+name+'」 버전을 만들었습니다. 버전 비교('+refN+' → '+name+')를 열었습니다.\n제강 '+fm(t.dkA/1e6)+'백만원 (엑셀 '+fm(x.dkA||0)+')');}
+/* ============ 2026-11-25 근태 달력 — 날짜별 휴가·반차·조퇴·출장 현황 (포항·인천, PC·모바일) ============
+   팀 일정 달력과 같은 모양으로, 휴가원(결재 완료 + 결재 중)을 날짜 칸에 이름·종류로 표시한다.
+   · 위치: 근태 관리 → 결재함 바로 아래 「📅 근태 달력」 / 인천사업소 근태·결재 → 결재함 아래 / 모바일 홈 → 결재함 아래
+   · 보는 사람: 결재함을 볼 수 있는 사람(관리직·사업소장·결재자)
+   · 반려된 문서는 빼고, 결재 중 문서는 점선·연한 색으로 구분 (끄기 가능) */
+const ATC_COLOR={'연차':'#dc2626','오전반차':'#ea580c','오후반차':'#ea580c','약정연차':'#db2777','조퇴':'#7c3aed','경조사':'#475569','연중휴가':'#0891b2','주휴':'#64748b','훈련':'#16a34a','교육':'#16a34a','출장':'#2563eb'};
+const ATC_GRP=[['all','전체'],['ann','연차·반차'],['early','조퇴'],['yr','연중·약정'],['evt','경조사'],['biz','출장·교육·훈련'],['etc','주휴']];
+function atcGrpOf(t){if(['연차','오전반차','오후반차'].indexOf(t)>=0)return 'ann';if(t==='조퇴')return 'early';if(t==='연중휴가'||t==='약정연차')return 'yr';if(t==='경조사')return 'evt';if(['출장','교육','훈련'].indexOf(t)>=0)return 'biz';return 'etc';}
+function atcColor(t){return ATC_COLOR[t]||'#64748b';}
+let atcY=new Date().getFullYear(),atcM=new Date().getMonth(),atcSel='',atcF={grp:'all',dept:'',pend:true},atcSig='';
+function atcYmd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function atcDays(r){const a=r.start,b=(r.end&&r.end>r.start)?r.end:r.start,out=[];if(!a)return out;let d=new Date(a+'T00:00:00');for(let i=0;i<200;i++){const ds=atcYmd(d);if(ds>b)break;out.push(ds);d.setDate(d.getDate()+1);}return out;}
+function atcPend(r){return OPEN_ST.indexOf(r.status)>=0;}
+function atcEmp(r){return empData.find(e=>e.id===r.empId)||null;}
+function atcDept(r){const e=atcEmp(r);return normDept((e&&e.dept)||r.dept||'');}
+function atcRecs(){return (leaveData||[]).filter(r=>r&&r.start&&r.status!=='rej'&&!r.del&&(atcF.pend||!atcPend(r))&&(atcF.grp==='all'||atcGrpOf(r.type)===atcF.grp)&&(!atcF.dept||atcDept(r)===atcF.dept));}
+function atcByDate(){const m={};atcRecs().forEach(r=>atcDays(r).forEach(d=>(m[d]=m[d]||[]).push(r)));
+  Object.keys(m).forEach(k=>m[k].sort((a,b)=>{try{const ea=atcEmp(a),eb=atcEmp(b);if(ea&&eb)return empOrder(ea,eb);}catch(e){}return String(a.name||'').localeCompare(String(b.name||''),'ko');}));return m;}
+function atcLabel(r){return (r.name||'')+' '+(r.type||'');}
+function atcEvStyle(r){const c=atcColor(r.type),p=atcPend(r);return p?`background:#fff;color:${c};border:1px dashed ${c};border-left:3px dashed ${c}`:`background:${c}1a;color:${c};border-left:3px solid ${c}`;}
+function atcPeriod(r){const b=(r.end&&r.end>r.start)?r.end:'';const f=x=>{try{return fmtMD(x);}catch(e){return x.slice(5);}};return f(r.start)+(b?' ~ '+f(b):'')+(r.days?' · '+(+r.days)+'일':'');}
+function atcDepts(){const s=new Set();(leaveData||[]).forEach(r=>{const d=atcDept(r);if(d)s.add(d);});const o=(typeof DEPT_SORT!=='undefined'?DEPT_SORT:[]);return [...s].sort((a,b)=>{const i=x=>{const k=o.indexOf(x);return k<0?99:k;};return i(a)-i(b)||a.localeCompare(b,'ko');});}
+/* ---- 화면 등록 ---- */
+(function(){try{
+  if(ALL_VIEWS.indexOf('attcal')<0)ALL_VIEWS.push('attcal');
+  VIEWS.attcal=['근태 달력','날짜별 휴가 · 반차 · 조퇴 · 출장 현황 (결재 완료 + 결재 중)'];
+  IC_VIEWS.icattcal='attcal';IC_REV.attcal='icattcal';if(ATT_BASE.indexOf('attcal')<0)ATT_BASE.push('attcal');
+  VIEWS.icattcal=['인천 근태 달력',VIEWS.attcal[1]];
+  TOPNAV.forEach(g=>{const i=g.it.indexOf('approve'),j=g.it.indexOf('icapprove');if(i>=0&&g.it.indexOf('attcal')<0)g.it.splice(i+1,0,'attcal');if(j>=0&&g.it.indexOf('icattcal')<0)g.it.splice(j+1,0,'icattcal');});
+  const addSide=(after,v)=>{document.querySelectorAll('.side-item[data-view="'+after+'"]').forEach(el=>{if(el.parentNode.querySelector('.side-item[data-view="'+v+'"]'))return;const d=document.createElement('div');d.className='side-item';d.dataset.view=v;d.setAttribute('onclick',"nav('"+v+"')");d.innerHTML='<span class="ic">📅</span>근태 달력';el.after(d);});};
+  addSide('approve','attcal');addSide('icapprove','icattcal');
+  const ct=document.querySelector('.content');if(ct&&!document.getElementById('v-attcal')){const sec=document.createElement('section');sec.id='v-attcal';sec.className='hidden';ct.appendChild(sec);}
+  const st=document.createElement('style');st.textContent=`
+  #v-attcal .atc-fil{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  #v-attcal .atc-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;cursor:pointer}
+  #v-attcal .atc-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  #v-attcal .cal-ev.pend{opacity:.9}
+  .atc-leg{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;color:var(--muted);margin:6px 0 10px}
+  .atc-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+  .atc-item{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:7px;background:#fff}
+  .atc-item .t{font-weight:700;font-size:13.5px}.atc-item .m{font-size:12px;color:var(--muted);margin-top:2px}
+  .mv-atc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .mv-atc-grid .h{background:var(--head);text-align:center;font-size:11.5px;font-weight:700;padding:6px 0}
+  .mv-atc-grid .h.sun,.mv-atc-grid .dn.sun{color:#c81e1e}.mv-atc-grid .h.sat,.mv-atc-grid .dn.sat{color:#1d4ed8}
+  .mv-atc-grid .c{background:#fff;min-height:64px;padding:3px 2px;cursor:pointer;overflow:hidden}
+  .mv-atc-grid .c.out{background:#fafbfc;opacity:.55}.mv-atc-grid .c.sel{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+  .mv-atc-grid .dn{font-size:12px;font-weight:700;padding-left:2px}.mv-atc-grid .c.today .dn{color:#fff;background:var(--accent);border-radius:50%;display:inline-block;width:19px;height:19px;text-align:center;line-height:19px;padding:0}
+  .mv-atc-grid .e{font-size:10px;line-height:1.25;margin-top:2px;padding:1px 2px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:clip}
+  .mv-atc-grid .more{font-size:10px;color:#64748b;padding-left:2px}`;
+  document.head.appendChild(st);
+  try{topnavBuild();}catch(e){}try{applyRoleNav();}catch(e){}
+}catch(e){console.warn('근태 달력 등록',e);}})();
+/* 보는 사람: 결재함을 볼 수 있는 사람 */
+try{const _vax=viewAllowed;viewAllowed=function(v){if(v==='attcal'||v==='icattcal'){if(_vax.call(this,v==='attcal'?'approve':'icapprove'))return true;
+    try{if(appRole()==='viewer')return false;const pr=personRule();if(pr&&pr.views&&pr.views.indexOf(v)>=0)return true;const a=roleViewsOf(appRole());if(Array.isArray(a)&&a.indexOf(v)>=0)return true;}catch(e){}return false;}return _vax.apply(this,arguments);};}catch(e){}
+try{const _nva=nav;nav=function(v){const r=_nva.apply(this,arguments);if(v==='attcal'||v==='icattcal'){setTimeout(()=>{if(curView==='attcal')atcRender();},30);setTimeout(()=>{if(curView==='attcal')atcRender();},500);}return r;};}catch(e){}
+try{const _rfa=refreshAttend;refreshAttend=function(){const r=_rfa.apply(this,arguments);try{if(curView==='attcal')atcRender();}catch(e){}return r;};}catch(e){}
+function atcSigNow(){try{return (window.__site||'')+'|'+(leaveData||[]).length+'|'+(leaveData||[]).map(r=>r.id+r.status+(r.start||'')+(r.end||'')).join(',').length+'|'+empData.length;}catch(e){return '';}}
+setInterval(()=>{try{const s=atcSigNow();if(s===atcSig)return;if(curView==='attcal'&&!document.body.classList.contains('mv'))atcRender();else if(document.body.classList.contains('mv')&&mvView==='atc')mvAtc(true);}catch(e){}},4000);
+/* ---- PC 화면 ---- */
+function atcMove(d){atcM+=d;if(atcM<0){atcM=11;atcY--;}if(atcM>11){atcM=0;atcY++;}atcRender();}
+function atcToday(){const t=new Date();atcY=t.getFullYear();atcM=t.getMonth();atcSel=todayStr();atcRender();}
+function atcPick(ds){atcSel=ds;atcRender();}
+function atcSetF(k,v){atcF[k]=v;atcRender();}
+function atcLegend(){return '<div class="atc-leg">'+['연차','오전반차','약정연차','조퇴','연중휴가','경조사','출장','교육','주휴'].map(t=>`<span><i style="background:${atcColor(t)}"></i>${t==='오전반차'?'반차':t==='교육'?'교육·훈련':t}</span>`).join('')+'<span><i style="background:#fff;border:1px dashed #64748b"></i>결재 중</span></div>';}
+function atcRender(){const sec=document.getElementById('v-attcal');if(!sec)return;atcSig=atcSigNow();if(!atcSel)atcSel=todayStr();
+  const by=atcByDate(),today=todayStr(),ym=atcY+'-'+String(atcM+1).padStart(2,'0');
+  const tdl=(by[today]||[]),mon=atcRecs().filter(r=>atcDays(r).some(d=>d.slice(0,7)===ym)),pend=mon.filter(atcPend).length;
+  const ppl=new Set(mon.map(r=>r.empId||r.name));
+  const cnt={};mon.forEach(r=>{cnt[r.type]=(cnt[r.type]||0)+1;});
+  const cards=`<div class="cards">
+    <div class="card"><div class="lbl">오늘 (${esc(today.slice(5).replace('-','/'))}) 휴가·조퇴</div><div class="val">${tdl.length}<small> 명</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">${tdl.length?esc(tdl.slice(0,6).map(r=>r.name+' '+r.type).join(' · '))+(tdl.length>6?' 외 '+(tdl.length-6):''):'없음'}</div></div>
+    <div class="card"><div class="lbl">${atcM+1}월 휴가원</div><div class="val">${mon.length}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">${ppl.size}명 · ${Object.keys(cnt).map(k=>k+' '+cnt[k]).join(' · ')||'-'}</div></div>
+    <div class="card"><div class="lbl">${atcM+1}월 결재 중</div><div class="val">${pend}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">점선 표시</div></div>
+    <div class="card"><div class="lbl">${atcM+1}월 조퇴</div><div class="val">${cnt['조퇴']||0}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">반차 ${(cnt['오전반차']||0)+(cnt['오후반차']||0)}건</div></div></div>`;
+  const depts=atcDepts();
+  const fil=`<div class="atc-fil">${ATC_GRP.map(([k,l])=>`<span class="atc-chip${atcF.grp===k?' on':''}" onclick="atcSetF('grp','${k}')">${l}</span>`).join('')}
+    <select class="selbox" onchange="atcSetF('dept',this.value)"><option value="">소속 전체</option>${depts.map(d=>`<option${atcF.dept===d?' selected':''}>${esc(d)}</option>`).join('')}</select>
+    <label style="font-size:12.5px;display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="atcSetF('pend',this.checked)">결재 중 포함</label></div>`;
+  const dows=['일','월','화','수','목','금','토'];let g=dows.map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  const start=new Date(atcY,atcM,1-new Date(atcY,atcM,1).getDay());
+  for(let i=0;i<42;i++){const dt=new Date(start);dt.setDate(start.getDate()+i);const ds=atcYmd(dt);
+    const out=dt.getMonth()!==atcM,dow=dt.getDay(),evs=by[ds]||[];let hol=null;try{hol=holInfo(ds).hol;}catch(e){}
+    const cap=hol?3:4;
+    const ev=evs.slice(0,cap).map(r=>`<div class="cal-ev${atcPend(r)?' pend':''}" title="${esc(atcLabel(r)+' · '+atcPeriod(r)+(atcPend(r)?' · 결재 중':''))}" style="${atcEvStyle(r)}">${esc(atcLabel(r))}</div>`).join('')+(evs.length>cap?`<div class="cal-ev" style="background:#eef2f6;color:#66707c">+${evs.length-cap}</div>`:'');
+    g+=`<div class="cal-cell ${out?'out':''} ${ds===atcSel?'sel':''} ${ds===today?'today0':''} ${hol?'hol':''}" onclick="atcPick('${ds}')"><span class="dn ${dow===0||hol?'sun':dow===6?'sat':''}">${dt.getDate()}</span>${hol?`<div class="cal-hol" title="${esc(hol)}">${esc(hol)}</div>`:''}${ev}</div>`;}
+  sec.innerHTML=cards+`<div class="cal-wrap"><div class="cal-main">
+    <div class="cal-head"><button class="btn sm" onclick="atcMove(-1)">◀</button><h3>${atcY}년 ${atcM+1}월</h3><button class="btn sm" onclick="atcMove(1)">▶</button><button class="btn sm" onclick="atcToday()">오늘</button><span class="today">오늘 ${today}</span></div>
+    ${fil}<div class="cal-grid">${g}</div></div>
+    <div class="cal-side"><div class="sd-day">${esc(atcSel)} (${dows[new Date(atcSel+'T00:00:00').getDay()]}) 근태</div>${atcLegend()}${atcDayList(atcSel,false)}
+    <div style="margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.6">휴가원을 신청·결재하면 바로 반영됩니다.<br>신청은 「휴가 · 잔업 신청」, 결재는 「결재함」에서 합니다.</div></div></div>`;}
+function atcDayList(ds,mob){const evs=(atcByDate()[ds]||[]);
+  if(!evs.length)return `<div class="empty" style="padding:16px">휴가·조퇴 인원이 없습니다.</div>`;
+  return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${evs.length}명</div>`+evs.map(r=>{const c=atcColor(r.type),e=atcEmp(r);
+    return `<div class="atc-item" style="border-left:4px ${atcPend(r)?'dashed':'solid'} ${c}"><div class="t"><span style="display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:${c};border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:middle">${esc(r.type||'')}</span>${esc(r.name||'')} <span style="font-weight:500;font-size:12px;color:var(--muted)">${esc(atcDept(r))}${e&&e.team?' '+esc(e.team):''}</span></div>
+      <div class="m">📅 ${esc(atcPeriod(r))} ${stStr(r)}</div>${r.reason?`<div class="m">사유: ${esc(r.reason)}</div>`:''}${r.subName?`<div class="m">대체 근무: ${esc(r.subName)}</div>`:''}</div>`;}).join('');}
+/* ---- 모바일 화면 ---- */
+function mvAtcOk(){try{const me=meEmp(),role=appRole();if(['foreman','office','admin'].indexOf(role)>=0)return true;return !!me&&isApproverMe();}catch(e){return false;}}
+let mvAtcY=new Date().getFullYear(),mvAtcM=new Date().getMonth(),mvAtcSel='';
+function mvAtcMove(d){mvAtcM+=d;if(mvAtcM<0){mvAtcM=11;mvAtcY--;}if(mvAtcM>11){mvAtcM=0;mvAtcY++;}mvAtc(true);}
+function mvAtcPick(ds){mvAtcSel=ds;mvAtc(true);setTimeout(()=>{const el=document.getElementById('mvAtcDay');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},30);}
+function mvAtcF(k,v){atcF[k]=v;mvAtc(true);}
+function mvAtc(soft){mvView='atc';if(!soft)mvHead('근태 달력','날짜별 휴가 · 반차 · 조퇴',true);mvGo('');atcSig=atcSigNow();
+  if(!mvAtcSel)mvAtcSel=todayStr();const by=atcByDate(),today=todayStr();
+  const dows=['일','월','화','수','목','금','토'];let g=dows.map((d,i)=>`<div class="h ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  const start=new Date(mvAtcY,mvAtcM,1-new Date(mvAtcY,mvAtcM,1).getDay());
+  const weeks=Math.ceil((new Date(mvAtcY,mvAtcM,1).getDay()+new Date(mvAtcY,mvAtcM+1,0).getDate())/7);
+  for(let i=0;i<weeks*7;i++){const dt=new Date(start);dt.setDate(start.getDate()+i);const ds=atcYmd(dt),dow=dt.getDay(),evs=by[ds]||[];let hol=null;try{hol=holInfo(ds).hol;}catch(e){}
+    g+=`<div class="c ${dt.getMonth()!==mvAtcM?'out':''} ${ds===mvAtcSel?'sel':''} ${ds===today?'today':''}" onclick="mvAtcPick('${ds}')"><span class="dn ${dow===0||hol?'sun':dow===6?'sat':''}">${dt.getDate()}</span>`
+      +evs.slice(0,2).map(r=>`<div class="e" style="${atcEvStyle(r)};border-left-width:2px">${esc(String(r.name||'').slice(0,3))}</div>`).join('')
+      +(evs.length>2?`<div class="more">+${evs.length-2}</div>`:'')+`</div>`;}
+  document.getElementById('mvBody').innerHTML=`<div class="mv-card" style="padding:12px 8px">
+     <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px"><button class="btn sm" onclick="mvAtcMove(-1)">◀</button><b style="font-size:16px">${mvAtcY}년 ${mvAtcM+1}월</b><button class="btn sm" onclick="mvAtcMove(1)">▶</button></div>
+     <div style="display:flex;gap:5px;flex-wrap:wrap;margin:0 4px 8px">${ATC_GRP.map(([k,l])=>`<button class="btn sm${atcF.grp===k?' primary':''}" style="padding:4px 9px;font-size:12px" onclick="mvAtcF('grp','${k}')">${l}</button>`).join('')}</div>
+     <div class="mv-atc-grid">${g}</div><div style="margin:8px 4px 0">${atcLegend()}</div>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 4px 0;font-size:11.5px;color:var(--muted)"><span>색으로 종류 구분 · 날짜를 누르면 상세</span><label style="display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="mvAtcF('pend',this.checked)">결재 중</label></div></div>
+    <div class="mv-card" id="mvAtcDay" style="margin-top:12px"><div class="mv-h">${esc(mvAtcSel)} (${dows[new Date(mvAtcSel+'T00:00:00').getDay()]})</div>${atcDayList(mvAtcSel,true)}
+     <div style="text-align:center;margin-top:8px"><button class="btn sm" onclick="mvAtcSel=todayStr();mvAtcY=new Date().getFullYear();mvAtcM=new Date().getMonth();mvAtc(true)">오늘로</button></div></div>`;}
+try{const _mo0=mvOpen0;mvOpen0=function(v){if(v==='atc'){if(!mvAtcOk()){toast('근태 달력은 결재 권한이 있는 분만 볼 수 있습니다');return mvHome();}mvView='atc';return mvAtc();}return _mo0.apply(this,arguments);};}catch(e){}
+/* 모바일 홈: 결재함 버튼 바로 아래에 「📅 근태 달력」 */
+try{const _mvh=mvHome;mvHome=function(){const r=_mvh.apply(this,arguments);try{if(mvView==='home'&&mvAtcOk()){const menu=document.querySelector('#mvBody .mv-menu');
+  if(menu&&!menu.querySelector('[data-atc]')){const w=document.createElement('div');w.innerHTML=mvB('mv-m6','📅 근태 달력','날짜별 휴가 · 반차 · 조퇴',"mvOpen('atc')");const b=w.firstElementChild;b.dataset.atc='1';
+    const ap=[...menu.querySelectorAll('button')].find(x=>/결재함/.test(x.textContent));if(ap)ap.after(b);else menu.appendChild(b);}}}catch(e){}return r;};}catch(e){}
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
