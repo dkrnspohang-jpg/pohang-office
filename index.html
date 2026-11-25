@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.25-2100">
+<meta name="app-build" content="2026.11.25-2200">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26607,6 +26607,28 @@ try{const _caj=canApprove;canApprove=function(d){const r=_caj.apply(this,argumen
   try{const st=pendingStep(d);if(st!=='jun')return false;const me=meEmp();if(!me)return false;const lv=rankLv(me);if(lv<2||lv>JUNIOR_MAX)return false;
     if(me.id===d.empId||otHas(d,me.id))return false;if(window.__site==='I'&&!empData.some(e=>e.id===me.id))return false;
     const named=(d.who||{})[st];if(named)return named===me.id;return normDept(me.dept)===normDept(d.dept);}catch(e){return false;}};}catch(e){}
+/* 2026-11-25 (2200): 결재는 결재선 지정 기준으로 — 직급(주임 갑·을 등)은 따지지 않는다.
+   · 이번 단계에 지정 결재자가 있으면 그 사람만 결재 (문서에 고정된 결재선 → 없으면 신청자의 현재 결재선)
+   · 지정이 없는 단계만 예전 규칙(같은 소속·직급)으로 판정
+   · 본인 문서 결재 불가, 인천 문서는 인천 직원만 — 기존 규칙 유지 */
+function apprNamed(d,st){try{const w=(d.who||{})[st];if(w)return w;const L=apprLineOf(d.empId);return (L&&L.who&&L.who[st])||'';}catch(e){return '';}}
+try{const _cal=canApprove;canApprove=function(d){
+  try{const st=pendingStep(d);if(!st)return false;const named=apprNamed(d,st);
+    if(named){const me=meEmp();if(!me)return false;if(me.id===d.empId||otHas(d,me.id))return false;
+      if(window.__site==='I'&&!empData.some(e=>e.id===me.id))return false;return me.id===named;}}catch(e){}
+  return _cal.apply(this,arguments);};}catch(e){}
+/* 2026-11-25 (2200): 결재함 진행 단계 옆에 「다음 결재: 이름」 — 지금 단계를 실제로 결재할 수 있는 사람을 결재 규칙 그대로 계산해 표시
+   (결재선 지정자 우선, 없으면 같은 소속·직급 규칙) · 아무도 없으면 빨간 글씨로 「결재선 확인」 */
+function apprWho(d){const st=pendingStep(d);if(!st)return null;const named=apprNamed(d,st);
+  if(named){const e=empData.find(x=>x.id===named);return {named:true,names:[e?e.name:'(직원 목록에 없음)']};}
+  const sv={me:meEmp,id:myEmpId,role:appRole,log:console.log,err:console.error,warn:console.warn},out=[];
+  try{console.log=console.error=console.warn=function(){};
+    for(const e of empData){if(e.active===0)continue;meEmp=()=>e;myEmpId=()=>e.id;const p=empPart(e);appRole=()=>p;try{if(canApprove(d))out.push(e.name);}catch(x){}}}
+  finally{meEmp=sv.me;myEmpId=sv.id;appRole=sv.role;console.log=sv.log;console.error=sv.err;console.warn=sv.warn;}
+  return {named:false,names:out};}
+try{const _sbw=stepBar;stepBar=function(d){let h=_sbw.apply(this,arguments);try{const w=apprWho(d);if(w){
+  h+=w.names.length?` <span style="font-size:10.5px;color:#0f766e;font-weight:700;white-space:nowrap">→ 다음 결재: ${esc(w.names.slice(0,4).join(', '))}${w.names.length>4?' 외 '+(w.names.length-4):''}${w.named?'':' <span style="font-weight:400;color:#64748b">(결재선 미지정·소속 기준)</span>'}</span>`
+   :` <span style="font-size:10.5px;color:#c81e1e;font-weight:700;white-space:nowrap">⚠ 다음 결재자 없음 — 결재선 확인</span>`;}}catch(e){}return h;};}catch(e){}
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
