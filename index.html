@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.25-2000">
+<meta name="app-build" content="2026.11.25-2100">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26601,6 +26601,12 @@ try{const _mvh=mvHome;mvHome=function(){const r=_mvh.apply(this,arguments);try{i
     let ap=[...menu.querySelectorAll('button')].find(x=>/결재함/.test(x.textContent));
     if(!ap){const w2=document.createElement('div');w2.innerHTML=mvB('mv-m5','✍️ 결재함','대기 문서 없음 · 지난 결재 확인',"mvOpen('appr')");ap=w2.firstElementChild;menu.appendChild(ap);}
     ap.after(b);}}}catch(e){}return r;};}catch(e){}
+/* 2026-11-25: 주임(갑)도 주임 단계 결재 — 직급 순서 차단(lv>필요)에서 주임(갑, lv3)이 주임 단계(필요 lv2)를 결재하지 못하던 오류 수정.
+   주임(을)·주임(갑) 모두 「주임」 단계 결재자: 지정 결재자가 있으면 그 사람만, 없으면 같은 소속 주임. 본인 문서는 제외(기존 규칙 유지). */
+try{const _caj=canApprove;canApprove=function(d){const r=_caj.apply(this,arguments);if(r)return r;
+  try{const st=pendingStep(d);if(st!=='jun')return false;const me=meEmp();if(!me)return false;const lv=rankLv(me);if(lv<2||lv>JUNIOR_MAX)return false;
+    if(me.id===d.empId||otHas(d,me.id))return false;if(window.__site==='I'&&!empData.some(e=>e.id===me.id))return false;
+    const named=(d.who||{})[st];if(named)return named===me.id;return normDept(me.dept)===normDept(d.dept);}catch(e){return false;}};}catch(e){}
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
