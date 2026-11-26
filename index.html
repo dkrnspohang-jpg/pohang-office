@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.25-2200">
+<meta name="app-build" content="2026.11.26-1300">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26491,7 +26491,7 @@ function atcPend(r){return !atcFinal(r);}
 function atcWaitCnt(ym){return (leaveData||[]).filter(r=>r&&r.start&&r.status!=='rej'&&!r.del&&!atcFinal(r)&&atcDays(r).some(d=>d.slice(0,7)===ym)).length;}
 function atcEmp(r){return empData.find(e=>e.id===r.empId)||null;}
 function atcDept(r){const e=atcEmp(r);return normDept((e&&e.dept)||r.dept||'');}
-function atcRecs(){return (leaveData||[]).filter(r=>r&&r.start&&r.status!=='rej'&&!r.del&&(atcF.pend||!atcPend(r))&&(atcF.grp==='all'||atcGrpOf(r.type)===atcF.grp)&&(!atcF.dept||atcDept(r)===atcF.dept));}
+function atcRecs(){return (leaveData||[]).filter(r=>r&&r.start&&r.status!=='rej'&&!r.del&&((atcF.pend&&atcMgr())||!atcPend(r))&&(atcF.grp==='all'||atcGrpOf(r.type)===atcF.grp)&&(!atcF.dept||atcDept(r)===atcF.dept));}
 function atcByDate(){const m={};atcRecs().forEach(r=>atcDays(r).forEach(d=>(m[d]=m[d]||[]).push(r)));
   Object.keys(m).forEach(k=>m[k].sort((a,b)=>{try{const ea=atcEmp(a),eb=atcEmp(b);if(ea&&eb)return empOrder(ea,eb);}catch(e){}return String(a.name||'').localeCompare(String(b.name||''),'ko');}));return m;}
 function atcLabel(r){return (r.name||'')+' '+(r.type||'');}
@@ -26529,7 +26529,7 @@ function atcDepts(){const s=new Set();(leaveData||[]).forEach(r=>{const d=atcDep
   try{topnavBuild();}catch(e){}try{applyRoleNav();}catch(e){}
 }catch(e){console.warn('근태 달력 등록',e);}})();
 /* 보는 사람: 결재함을 볼 수 있는 사람 */
-try{const _vax=viewAllowed;viewAllowed=function(v){if(v==='attcal'||v==='icattcal'){if(_vax.call(this,v==='attcal'?'approve':'icapprove'))return true;
+try{const _vax=viewAllowed;viewAllowed=function(v){if(v==='attcal'||v==='icattcal'){if(_vax.call(this,v==='attcal'?'approve':'icapprove'))return true;if(mvAtcOk())return true;
     try{if(appRole()==='viewer')return false;const pr=personRule();if(pr&&pr.views&&pr.views.indexOf(v)>=0)return true;const a=roleViewsOf(appRole());if(Array.isArray(a)&&a.indexOf(v)>=0)return true;}catch(e){}return false;}return _vax.apply(this,arguments);};}catch(e){}
 try{const _nva=nav;nav=function(v){const r=_nva.apply(this,arguments);if(v==='attcal'||v==='icattcal'){setTimeout(()=>{if(curView==='attcal')atcRender();},30);setTimeout(()=>{if(curView==='attcal')atcRender();},500);}return r;};}catch(e){}
 try{const _rfa=refreshAttend;refreshAttend=function(){const r=_rfa.apply(this,arguments);try{if(curView==='attcal')atcRender();}catch(e){}return r;};}catch(e){}
@@ -26554,7 +26554,7 @@ function atcRender(){const sec=document.getElementById('v-attcal');if(!sec)retur
   const depts=atcDepts();
   const fil=`<div class="atc-fil">${ATC_GRP.map(([k,l])=>`<span class="atc-chip${atcF.grp===k?' on':''}" onclick="atcSetF('grp','${k}')">${l}</span>`).join('')}
     <select class="selbox" onchange="atcSetF('dept',this.value)"><option value="">소속 전체</option>${depts.map(d=>`<option${atcF.dept===d?' selected':''}>${esc(d)}</option>`).join('')}</select>
-    <label style="font-size:12.5px;display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="atcSetF('pend',this.checked)">확인 전 문서도 보기(점선)</label></div>`;
+    ${atcMgr()?`<label style="font-size:12.5px;display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="atcSetF('pend',this.checked)">확인 전 문서도 보기(점선)</label>`:''}</div>`;
   const dows=['일','월','화','수','목','금','토'];let g=dows.map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
   const start=new Date(atcY,atcM,1-new Date(atcY,atcM,1).getDay());
   for(let i=0;i<42;i++){const dt=new Date(start);dt.setDate(start.getDate()+i);const ds=atcYmd(dt);
@@ -26571,9 +26571,11 @@ function atcDayList(ds,mob){const evs=(atcByDate()[ds]||[]);
   if(!evs.length)return `<div class="empty" style="padding:16px">휴가·조퇴 인원이 없습니다.</div>`;
   return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${evs.length}명</div>`+evs.map(r=>{const c=atcColor(r.type),e=atcEmp(r);
     return `<div class="atc-item" style="border-left:4px ${atcPend(r)?'dashed':'solid'} ${c}"><div class="t"><span style="display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:${c};border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:middle">${esc(r.type||'')}</span>${esc(r.name||'')} <span style="font-weight:500;font-size:12px;color:var(--muted)">${esc(atcDept(r))}${e&&e.team?' '+esc(e.team):''}</span></div>
-      <div class="m">📅 ${esc(atcPeriod(r))} ${stStr(r)}</div>${r.reason?`<div class="m">사유: ${esc(r.reason)}</div>`:''}${r.subName?`<div class="m">대체 근무: ${esc(r.subName)}</div>`:''}</div>`;}).join('');}
+      <div class="m">📅 ${esc(atcPeriod(r))} ${stStr(r)}</div>${r.reason&&(atcMgr()||r.empId===myEmpId())?`<div class="m">사유: ${esc(r.reason)}</div>`:''}${r.subName?`<div class="m">대체 근무: ${esc(r.subName)}</div>`:''}</div>`;}).join('');}
 /* ---- 모바일 화면 ---- */
-function mvAtcOk(){try{const me=meEmp(),role=appRole();if(['foreman','office','admin'].indexOf(role)>=0)return true;return !!me&&isApproverMe();}catch(e){return false;}}
+/* atcMgr = 관리직·결재자(사유·확인 전 문서까지 봄) / mvAtcOk = 근태 달력 열람(2026-11-26: 포항·인천 각 사업소 전 직원) */
+function atcMgr(){try{const me=meEmp(),role=appRole();if(['foreman','office','admin'].indexOf(role)>=0)return true;return !!me&&isApproverMe();}catch(e){return false;}}
+function mvAtcOk(){try{const role=appRole();if(role==='pohang'||role==='viewer')return false;return !!meEmp()||['office','admin'].indexOf(role)>=0;}catch(e){return false;}}
 let mvAtcY=new Date().getFullYear(),mvAtcM=new Date().getMonth(),mvAtcSel='';
 function mvAtcMove(d){mvAtcM+=d;if(mvAtcM<0){mvAtcM=11;mvAtcY--;}if(mvAtcM>11){mvAtcM=0;mvAtcY++;}mvAtc(true);}
 function mvAtcPick(ds){mvAtcSel=ds;mvAtc(true);setTimeout(()=>{const el=document.getElementById('mvAtcDay');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},30);}
@@ -26591,16 +26593,16 @@ function mvAtc(soft){mvView='atc';if(!soft)mvHead('근태 달력','날짜별 휴
      <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px"><button class="btn sm" onclick="mvAtcMove(-1)">◀</button><b style="font-size:16px">${mvAtcY}년 ${mvAtcM+1}월</b><button class="btn sm" onclick="mvAtcMove(1)">▶</button></div>
      <div style="display:flex;gap:5px;flex-wrap:wrap;margin:0 4px 8px">${ATC_GRP.map(([k,l])=>`<button class="btn sm${atcF.grp===k?' primary':''}" style="padding:4px 9px;font-size:12px" onclick="mvAtcF('grp','${k}')">${l}</button>`).join('')}</div>
      <div class="mv-atc-grid">${g}</div><div style="margin:8px 4px 0">${atcLegend()}</div>
-     <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 4px 0;font-size:11.5px;color:var(--muted)"><span>색으로 종류 구분 · 날짜를 누르면 상세</span><label style="display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="mvAtcF('pend',this.checked)">확인 전 보기</label></div></div>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 4px 0;font-size:11.5px;color:var(--muted)"><span>색으로 종류 구분 · 날짜를 누르면 상세</span>${atcMgr()?`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="mvAtcF('pend',this.checked)">확인 전 보기</label>`:''}</div></div>
     <div class="mv-card" id="mvAtcDay" style="margin-top:12px"><div class="mv-h">${esc(mvAtcSel)} (${dows[new Date(mvAtcSel+'T00:00:00').getDay()]})</div>${atcDayList(mvAtcSel,true)}
      <div style="text-align:center;margin-top:8px"><button class="btn sm" onclick="mvAtcSel=todayStr();mvAtcY=new Date().getFullYear();mvAtcM=new Date().getMonth();mvAtc(true)">오늘로</button></div></div>`;}
-try{const _mo0=mvOpen0;mvOpen0=function(v){if(v==='atc'){if(!mvAtcOk()){toast('근태 달력은 결재 권한이 있는 분만 볼 수 있습니다');return mvHome();}mvView='atc';return mvAtc();}return _mo0.apply(this,arguments);};}catch(e){}
+try{const _mo0=mvOpen0;mvOpen0=function(v){if(v==='atc'){if(!mvAtcOk()){toast('먼저 로그인하세요');return mvHome();}mvView='atc';return mvAtc();}return _mo0.apply(this,arguments);};}catch(e){}
 /* 모바일 홈: 결재함 버튼 바로 아래에 「📅 근태 달력」 */
 try{const _mvh=mvHome;mvHome=function(){const r=_mvh.apply(this,arguments);try{if(mvView==='home'&&mvAtcOk()){const menu=document.querySelector('#mvBody .mv-menu');
   if(menu&&!menu.querySelector('[data-atc]')){const w=document.createElement('div');w.innerHTML=mvB('mv-m6','📅 근태 달력','날짜별 휴가 · 반차 · 조퇴',"mvOpen('atc')");const b=w.firstElementChild;b.dataset.atc='1';
     let ap=[...menu.querySelectorAll('button')].find(x=>/결재함/.test(x.textContent));
-    if(!ap){const w2=document.createElement('div');w2.innerHTML=mvB('mv-m5','✍️ 결재함','대기 문서 없음 · 지난 결재 확인',"mvOpen('appr')");ap=w2.firstElementChild;menu.appendChild(ap);}
-    ap.after(b);}}}catch(e){}return r;};}catch(e){}
+    if(!ap&&atcMgr()){const w2=document.createElement('div');w2.innerHTML=mvB('mv-m5','✍️ 결재함','대기 문서 없음 · 지난 결재 확인',"mvOpen('appr')");ap=w2.firstElementChild;menu.appendChild(ap);}
+    if(ap)ap.after(b);else menu.appendChild(b);}}}catch(e){}return r;};}catch(e){}
 /* 2026-11-25: 주임(갑)도 주임 단계 결재 — 직급 순서 차단(lv>필요)에서 주임(갑, lv3)이 주임 단계(필요 lv2)를 결재하지 못하던 오류 수정.
    주임(을)·주임(갑) 모두 「주임」 단계 결재자: 지정 결재자가 있으면 그 사람만, 없으면 같은 소속 주임. 본인 문서는 제외(기존 규칙 유지). */
 try{const _caj=canApprove;canApprove=function(d){const r=_caj.apply(this,arguments);if(r)return r;
@@ -26629,6 +26631,101 @@ function apprWho(d){const st=pendingStep(d);if(!st)return null;const named=apprN
 try{const _sbw=stepBar;stepBar=function(d){let h=_sbw.apply(this,arguments);try{const w=apprWho(d);if(w){
   h+=w.names.length?` <span style="font-size:10.5px;color:#0f766e;font-weight:700;white-space:nowrap">→ 다음 결재: ${esc(w.names.slice(0,4).join(', '))}${w.names.length>4?' 외 '+(w.names.length-4):''}${w.named?'':' <span style="font-weight:400;color:#64748b">(결재선 미지정·소속 기준)</span>'}</span>`
    :` <span style="font-size:10.5px;color:#c81e1e;font-weight:700;white-space:nowrap">⚠ 다음 결재자 없음 — 결재선 확인</span>`;}}catch(e){}return h;};}catch(e){}
+/* 2026-11-26: 결재함 「진행중 전체」 — 인천사업소 관리직(관리직·사업소장)은 인천 진행 중 문서 전체 열람
+   (포항은 기존대로 서승수만 전체 · 다른 사람은 본인·결재할 차례·이미 결재한 문서) */
+try{const _dvi=docVisible;docVisible=function(d){try{if(window.__site==='I'&&pendingStep(d)){const me=meEmp(),r=appRole();
+  if(me&&empData.some(e=>e.id===me.id)&&(r==='office'||r==='admin'||normDept(me.dept)==='관리직'))return true;}}catch(e){}return _dvi.apply(this,arguments);};}catch(e){}
+/* ============ 2026-11-26 포스코/시중 입고 — 📅 기간별 조회 ============
+   기간(시작~종료)을 정해 입고 기록을 한 번에 본다 — 전산(ERP) 입고와 대조해 틀린 입력을 찾기 쉽게.
+   ① 일별 합계(날짜별 품목수·수량·금액·중량)  ② 품목 × 날짜 표(칸을 누르면 그날 입력 화면으로 이동해 바로 수정)
+   ③ 품목별 합계(수량·금액·중량·입고일수·첫/마지막 입고일)  · 같은 품목 평소보다 3배 이상 많은 칸은 주황 표시
+   · 입력 화면(일별 시트)과 같은 계산(금액 = 수량 × 그달 단가) — 입력·수정은 기존 시트에서 */
+let piPer={from:'',to:'',div:'',q:'',view:'auto',all:false};
+function pipYmd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function pipPreset(k){const t=new Date(todayStr()+'T00:00:00');let a,b=new Date(t);
+  if(k==='m'){a=new Date(t.getFullYear(),t.getMonth(),1);}
+  else if(k==='pm'){a=new Date(t.getFullYear(),t.getMonth()-1,1);b=new Date(t.getFullYear(),t.getMonth(),0);}
+  else if(k==='w'){a=new Date(t);a.setDate(t.getDate()-6);}
+  else if(k==='q'){const q=Math.floor(t.getMonth()/3)*3;a=new Date(t.getFullYear(),q,1);}
+  else if(k==='y'){a=new Date(t.getFullYear(),0,1);}
+  piPer.from=pipYmd(a);piPer.to=pipYmd(b);pipRender();}
+function pipRows(){const f=piPer.from,t=piPer.to,q=(piPer.q||'').toLowerCase().trim();
+  return piLoad().filter(r=>{const d=String(r.date||'');if(!d||d<f||d>t)return false;
+    if(piPer.div==='포스코'&&r.div!=='포스코')return false;if(piPer.div&&piPer.div!=='포스코'&&!(r.div==='시중'&&(r.vendor||'')===piPer.div))return false;
+    if(q&&!((r.name||'')+' '+(r.code||'')+' '+(r.item||'')+' '+(r.vendor||'')+' '+(r.note||'')).toLowerCase().includes(q))return false;return true;});}
+function pipKey(r){return r.k||((r.div||'')+'|'+(r.vendor||'')+'|'+(r.code||r.name||''));}
+function pipSrc(r){return r.div==='포스코'?'포스코':(r.vendor||'시중');}
+function pipGo(ds,src,code){piSt.tab=src;piSt.q=code||'';piSt.only=false;const el=document.getElementById('pi_date');if(el)el.value=ds;const sq=document.getElementById('pi_sq');if(sq)sq.value=piSt.q;
+  renderPoscoIn();toast(ds+' '+src+' 입력 화면으로 이동했습니다'+(code?' (검색: '+code+')':''));try{document.getElementById('pi_sheetPanel').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}}
+function pipEnsure(){const sec=document.getElementById('v-poscoin');if(!sec)return null;let p=document.getElementById('pi_perPanel');
+  if(!p){p=document.createElement('div');p.id='pi_perPanel';p.className='hidden';sec.appendChild(p);
+    const st=document.createElement('style');st.textContent=`#pi_perPanel .pp-m td.c{cursor:pointer;text-align:right}#pi_perPanel .pp-m td.c:hover{background:#dbeafe}#pi_perPanel .pp-m td.hi{background:#fed7aa;font-weight:800}
+      #pi_perPanel .pp-m th.d{font-size:10.5px;padding:4px 5px;white-space:nowrap}#pi_perPanel .pp-m td.st,#pi_perPanel .pp-m th.st{position:sticky;left:0;background:#fff;z-index:1}#pi_perPanel .pp-m thead th.st{background:var(--head);z-index:3}
+      #pi_perPanel .pp-tw{overflow:auto;max-height:66vh;border:1px solid var(--line);border-radius:8px}#pi_perPanel .pp-tw thead th{position:sticky;top:0;z-index:2}`;document.head.appendChild(st);}
+  return p;}
+function pipRender(){const p=pipEnsure();if(!p)return;if(!piPer.from)pipPreset('m');
+  const N=x=>Math.round(+x||0).toLocaleString(),rows=pipRows();
+  const srcs=['포스코'].concat(piVendorNames());
+  // 날짜 목록
+  const days=[];{let d=new Date(piPer.from+'T00:00:00');const e=new Date(piPer.to+'T00:00:00');for(let i=0;i<400&&d<=e;i++){days.push(pipYmd(d));d.setDate(d.getDate()+1);}}
+  const inDays=[...new Set(rows.map(r=>String(r.date)))].sort();
+  const mode=piPer.view==='auto'?((piPer.all?days.length:inDays.length)<=40?'d':'m'):piPer.view;
+  const cols=mode==='d'?(piPer.all?days:inDays):[...new Set(days.map(d=>d.slice(0,7)))];
+  const colOf=r=>mode==='d'?String(r.date):String(r.date).slice(0,7);
+  // 품목별
+  const IT={},DY={};let T={q:{},a:0,w:0,n:0};
+  rows.forEach(r=>{const k=pipKey(r),q=+r.qty||0,a=piAmount(r),w=piKg(r),u=(r.unit||'kg')==='ea'?'EA':'KG';
+    const it=IT[k]=IT[k]||{k,src:pipSrc(r),grp:r.div==='포스코'?(typeof piGrpOfItem==='function'?piGrpOfItem(r.item):''):'',item:r.item||'',name:r.name||'',code:r.code||'',unit:u,q:0,a:0,w:0,days:new Set(),c:{},cd:{},first:'',last:''};
+    it.q+=q;it.a+=a;it.w+=w;if(q>0)it.days.add(r.date);const c=colOf(r);it.c[c]=(it.c[c]||0)+q;it.cd[c]=r.date;
+    if(!it.first||r.date<it.first)it.first=r.date;if(!it.last||r.date>it.last)it.last=r.date;
+    const dy=DY[r.date]=DY[r.date]||{n:new Set(),q:{},a:0,w:0};dy.n.add(k);dy.q[u]=(dy.q[u]||0)+q;dy.a+=a;dy.w+=w;
+    T.q[u]=(T.q[u]||0)+q;T.a+=a;T.w+=w;T.n++;});
+  const ORD=['J-16','A-19','SE-MC','RHCT-AM'];
+  const items=Object.values(IT).sort((x,y)=>srcs.indexOf(x.src)-srcs.indexOf(y.src)||(x.grp==='기존'?0:1)-(y.grp==='기존'?0:1)||((ORD.indexOf(x.item)+10)%10)-((ORD.indexOf(y.item)+10)%10)||x.name.localeCompare(y.name));
+  const qs=o=>{const k=Object.keys(o).filter(u=>o[u]);return k.length?k.map(u=>N(o[u])+(k.length>1?' '+u:'')).join(' / '):'-';};
+  // 평소보다 많은 칸 (같은 품목 입고 칸 중앙값의 3배 이상, 입고 3회 이상일 때)
+  const hiOf=it=>{const v=Object.values(it.c).filter(x=>x>0).sort((a,b)=>a-b);if(v.length<3)return Infinity;return v[Math.floor(v.length/2)]*3;};
+  const dayList=Object.keys(DY).sort();
+  const lbl=c=>mode==='d'?(c.slice(5).replace('-','/')+'<br><span style="font-weight:400;opacity:.8">'+'일월화수목금토'[new Date(c+'T00:00:00').getDay()]+'</span>'):(+c.slice(5))+'월';
+  const tb=`<div class="toolrow" style="flex-wrap:wrap">
+     <label style="font-size:12px;color:var(--muted)">기간</label><input type="date" class="selbox" value="${piPer.from}" onchange="piPer.from=this.value;if(piPer.to<piPer.from)piPer.to=piPer.from;pipRender()"><span>~</span><input type="date" class="selbox" value="${piPer.to}" onchange="piPer.to=this.value;if(piPer.to<piPer.from)piPer.from=piPer.to;pipRender()">
+     ${[['w','최근 7일'],['m','이번 달'],['pm','지난 달'],['q','이번 분기'],['y','올해']].map(([k,l])=>`<button class="btn sm" onclick="pipPreset('${k}')">${l}</button>`).join('')}
+     <select class="selbox" onchange="piPer.div=this.value;pipRender()"><option value="">포스코+시중 전체</option>${srcs.map(s=>`<option value="${esc(s)}"${piPer.div===s?' selected':''}>${esc(s)}</option>`).join('')}</select>
+     <input class="search" style="max-width:190px" placeholder="품명·Q코드 검색" value="${esc(piPer.q)}" oninput="piPer.q=this.value;clearTimeout(window.__pipT);window.__pipT=setTimeout(pipRender,250)">
+     <select class="selbox" onchange="piPer.view=this.value;pipRender()" title="품목×날짜 표의 칸 단위"><option value="auto"${piPer.view==='auto'?' selected':''}>칸: 자동</option><option value="d"${piPer.view==='d'?' selected':''}>칸: 일별</option><option value="m"${piPer.view==='m'?' selected':''}>칸: 월별</option></select>
+     <label style="font-size:12px;color:var(--muted)"><input type="checkbox"${piPer.all?' checked':''} onchange="piPer.all=this.checked;pipRender()"> 입고 없는 날도 표시</label>
+     <button class="btn" onclick="pipXls()">📥 엑셀</button></div>`;
+  const cards=`<div class="cards"><div class="card"><div class="lbl">기간 입고금액</div><div class="val">${(T.a/1e6).toFixed(1)}<small> 백만원</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">${esc(piPer.from)} ~ ${esc(piPer.to)} (${days.length}일)</div></div>
+    <div class="card"><div class="lbl">입고 중량</div><div class="val">${(T.w/1000).toFixed(2)}<small> 톤</small></div></div>
+    <div class="card"><div class="lbl">입고 수량</div><div class="val" style="font-size:18px">${qs(T.q)}</div></div>
+    <div class="card"><div class="lbl">입고일 · 품목 · 기록</div><div class="val" style="font-size:18px">${dayList.length}<small>일</small> · ${items.length}<small>품목</small> · ${T.n}<small>건</small></div></div></div>`;
+  // ① 일별 합계
+  const d1=dayList.length?`<div class="subhead">① 일별 합계 <span class="hint">전산 입고 일자별 금액과 대조 · 날짜를 누르면 그날 입력 화면으로 이동</span></div>
+    <div class="tablewrap"><table class="bomtbl" style="min-width:0"><thead><tr><th>입고일</th><th class="n">품목수</th><th class="n">수량</th><th class="n">중량(kg)</th><th class="n">금액(원)</th><th></th></tr></thead><tbody>
+    ${dayList.map(d=>{const y=DY[d];const one=piPer.div||'포스코';return `<tr><td><a href="javascript:void 0" onclick="pipGo('${d}','${esc(piPer.div||'포스코')}','')">${d} (${'일월화수목금토'[new Date(d+'T00:00:00').getDay()]})</a></td><td class="n">${y.n.size}</td><td class="n">${qs(y.q)}</td><td class="n">${N(y.w)}</td><td class="n"><b>${N(y.a)}</b></td><td style="font-size:11px;color:var(--muted)"></td></tr>`;}).join('')}
+    <tr style="background:#f1f5f9;font-weight:800"><td>합계</td><td class="n">${items.length}</td><td class="n">${qs(T.q)}</td><td class="n">${N(T.w)}</td><td class="n">${N(T.a)}</td><td></td></tr></tbody></table></div>`:'';
+  // ② 품목 × 날짜
+  const colTot={};
+  const d2=items.length?`<div class="subhead">② 품목 × ${mode==='d'?'날짜':'월'} 수량 <span class="hint">칸을 누르면 그날 입력 화면(해당 품목 검색)으로 이동 · <span style="background:#fed7aa;padding:0 4px;border-radius:3px">주황</span> = 같은 품목 평소 입고량의 3배 이상(확인 권장)</span></div>
+    <div class="pp-tw"><table class="bomtbl pp-m" style="min-width:0"><thead><tr><th class="st" style="min-width:210px">품목</th><th>Q코드</th><th>단위</th>${cols.map(c=>`<th class="d">${lbl(c)}</th>`).join('')}<th class="n">합계</th><th class="n">금액(원)</th></tr></thead><tbody>
+    ${items.map(it=>{const hi=hiOf(it);return `<tr><td class="st"><span style="font-size:10.5px;color:${it.src==='포스코'?(it.grp==='기존'?'#1d4ed8':'#c2410c'):'#475569'};font-weight:700">${esc(it.src==='포스코'?'포스코 '+it.grp:it.src)}</span> <b>${esc(it.name)}</b></td><td style="font-family:Consolas,monospace;font-size:11px">${esc(it.code)}</td><td>${it.unit}</td>
+      ${cols.map(c=>{const v=it.c[c]||0;if(v)colTot[c]=(colTot[c]||0)+1;return v?`<td class="c${v>=hi?' hi':''}" title="${esc(it.name)} · ${c} · ${N(v)} ${it.unit}${v>=hi?' — 평소보다 많음':''}" onclick="pipGo('${it.cd[c]}','${esc(it.src)}','${esc(it.code||it.name)}')">${N(v)}</td>`:'<td style="color:#cbd5e1;text-align:center">·</td>';}).join('')}
+      <td class="n"><b>${N(it.q)}</b></td><td class="n">${N(it.a)}</td></tr>`;}).join('')}
+    <tr style="background:#f1f5f9;font-weight:700"><td class="st">입고 품목수</td><td></td><td></td>${cols.map(c=>`<td class="n" style="font-size:11px">${colTot[c]||''}</td>`).join('')}<td></td><td class="n">${N(T.a)}</td></tr></tbody></table></div>`
+    :`<div class="empty" style="padding:30px">이 기간에 입고 기록이 없습니다.</div>`;
+  // ③ 품목별 합계
+  const d3=items.length?`<div class="subhead">③ 품목별 합계</div><div class="tablewrap"><table class="bomtbl" style="min-width:0"><thead><tr><th>구분</th><th>Q코드</th><th>품목</th><th class="n">수량</th><th>단위</th><th class="n">중량(kg)</th><th class="n">금액(원)</th><th class="n">입고일수</th><th>첫 입고</th><th>마지막 입고</th></tr></thead><tbody>
+    ${items.map(it=>`<tr><td style="font-size:11px">${esc(it.src==='포스코'?'포스코 '+it.grp:it.src)}</td><td style="font-family:Consolas,monospace;font-size:11px">${esc(it.code)}</td><td><b>${esc(it.name)}</b></td><td class="n">${N(it.q)}</td><td>${it.unit}</td><td class="n">${N(it.w)}</td><td class="n"><b>${N(it.a)}</b></td><td class="n">${it.days.size}</td><td>${esc(it.first)}</td><td>${esc(it.last)}</td></tr>`).join('')}
+    <tr style="background:#f1f5f9;font-weight:800"><td colspan="3">합계</td><td class="n">${qs(T.q)}</td><td></td><td class="n">${N(T.w)}</td><td class="n">${N(T.a)}</td><td colspan="3"></td></tr></tbody></table></div>`:'';
+  p.innerHTML=tb+cards+d1+d2+d3;}
+function pipXls(){const p=document.getElementById('pi_perPanel');if(!p)return;const t=[...p.querySelectorAll('table')].map(x=>{const c=x.cloneNode(true);c.querySelectorAll('br').forEach(b=>b.replaceWith(' '));return c.outerHTML;}).join('<br>');
+  try{downloadXls('포스코시중입고_'+piPer.from+'_'+piPer.to,t);}catch(e){alert('엑셀 저장 오류: '+e.message);}}
+/* 탭 연결 */
+try{const _ptr=piTabsRender;piTabsRender=function(){const r=_ptr.apply(this,arguments);try{const box=document.getElementById('piVendTabs');if(box&&!box.querySelector('[data-per]')){const b=document.createElement('button');b.className='subtab'+(piSt.tab==='__per'?' active':'');b.dataset.per='1';b.textContent='📅 기간별 조회';b.onclick=()=>piTab('__per');box.appendChild(b);}}catch(e){}return r;};}catch(e){}
+try{const _rpi=renderPoscoIn;renderPoscoIn=function(){const per=piSt.tab==='__per';const pp=pipEnsure();
+  if(per){try{poscoImportBuiltinQ();}catch(e){}piTabsRender();['pi_sheetPanel','pi_sumPanel'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('hidden');});if(pp)pp.classList.remove('hidden');pipRender();return;}
+  if(pp)pp.classList.add('hidden');return _rpi.apply(this,arguments);};}catch(e){}
+try{const _psr=piSheetRender;piSheetRender=function(){if(piSt.tab==='__per')return;return _psr.apply(this,arguments);};}catch(e){}
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
