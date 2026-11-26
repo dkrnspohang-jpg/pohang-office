@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.26-1400">
+<meta name="app-build" content="2026.11.26-1700">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26727,6 +26727,39 @@ try{const _rpi=renderPoscoIn;renderPoscoIn=function(){const per=piSt.tab==='__pe
   if(per){try{poscoImportBuiltinQ();}catch(e){}piTabsRender();['pi_sheetPanel','pi_sumPanel'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('hidden');});if(pp)pp.classList.remove('hidden');pipRender();return;}
   if(pp)pp.classList.add('hidden');return _rpi.apply(this,arguments);};}catch(e){}
 try{const _psr=piSheetRender;piSheetRender=function(){if(piSt.tab==='__per')return;return _psr.apply(this,arguments);};}catch(e){}
+/* ============ 2026-11-26 결재선 「기장」 단계 신설 — 계장(lv4)과 기장(lv5)을 다른 단계로 ============
+   결재 단계: 주임 → 계장 → 기장 → 기성 → 사업소장 (+ 관리직 확인) — 사람별로 켜고 끄고 결재자 지정
+   · 인천: 계장이 없어 그동안 「계장」 칸에 기장을 넣어 쓰던 개인·기본 결재선을 「기장」 칸으로 옮김
+     (마스터 PC에서 팀 자료를 받은 뒤 1회 · 진행 중인 문서는 상신 때 고정된 결재선 그대로 끝까지 진행) */
+async function gijMigrate(force){
+  try{if(!force&&!(typeof msIsMaster==='function'&&msIsMaster()))return null;}catch(e){return null;}
+  try{if(!force&&localStorage.getItem('dgrns_mig_gij1'))return null;}catch(e){}
+  let all=[];try{all=await txAll('emp');}catch(e){all=[];}
+  const byId={};all.forEach(e=>byId[e.id]=e);
+  const m=apprLineAll();let n=0;const names=[];
+  Object.keys(m).forEach(id=>{const e=byId[id];if(!e||e.site!=='I')return;const o=m[id];if(!o||!Array.isArray(o.steps))return;
+    if(o.steps.indexOf('gye')<0||o.steps.indexOf('gij')>=0)return;o.who=o.who||{};const gw=o.who.gye,ge=gw?byId[gw]:null;
+    if(gw&&!(ge&&normRank(ge.rank)==='기장'))return;   // 계장 칸에 실제 계장이 지정된 경우는 그대로
+    o.steps=STEP_ALL.filter(k=>k==='gij'||(k!=='gye'&&o.steps.indexOf(k)>=0));if(gw){o.who.gij=gw;}delete o.who.gye;n++;names.push(e.name);});
+  if(n)apprLineSave(m);
+  let base=0;try{const k='dgrns_ic_apprline',c=JSON.parse(localStorage.getItem(k)||'null');
+    if(c&&Array.isArray(c.steps)&&c.steps.indexOf('gye')>=0&&c.steps.indexOf('gij')<0){c.steps=STEP_ALL.filter(x=>x==='gij'||(x!=='gye'&&c.steps.indexOf(x)>=0));localStorage.setItem(k,JSON.stringify(c));base=1;try{window.fbOnWrite&&fbOnWrite('__kv');}catch(e){}}
+    else if(!c){localStorage.setItem(k,JSON.stringify({steps:['jun','gij','gis','bos'],conf:true,skipOwn:true}));base=1;}}catch(e){}
+  try{applyApprCfg();}catch(e){}
+  try{localStorage.setItem('dgrns_mig_gij1',JSON.stringify({at:new Date().toISOString(),n,base}));}catch(e){}
+  try{if(n||base)toast('인천 결재선: 「계장」 칸의 기장 '+n+'명분을 「기장」 칸으로 옮겼습니다');}catch(e){}
+  try{if(typeof renderEmp==='function'&&(curView==='emp'))renderEmp();}catch(e){}
+  return {n,base,names};}
+try{const _fisg=fbInitialSync;fbInitialSync=async function(){const r=await _fisg.apply(this,arguments);setTimeout(()=>{gijMigrate().catch(()=>{});},7000);return r;};}catch(e){}
+/* 2026-11-26: 모바일 휴가·잔업 버튼이 눌리지 않던 오류 수정
+   원인: 휴대폰 화면 뒤에 숨어 있는 PC 화면(SN반 기본 화면 = 래들 해체 탭, SN반은 「열람만」)의 읽기 전용 상태가
+   휴대폰 화면에도 적용되어 「신청」 버튼 클릭과 저장이 막힘 → SN반 등 일부 직원만 안 되고 관리직은 됨.
+   수정: 휴대폰 간편 화면(본인 휴가·잔업·결재)에서는 PC 화면의 읽기 전용을 적용하지 않음 (열람 전용 기기는 그대로 차단) */
+(function(){try{const _vo=window.vwOn;if(typeof _vo!=='function')return;
+  window.vwOn=function(){try{if(document.body&&document.body.classList.contains('mv')&&localStorage.getItem('dgrns_role')!=='viewer'&&localStorage.getItem('dgrns_viewlock')!=='1')return false;}catch(e){}return _vo.apply(this,arguments);};
+  const sync=()=>{try{document.body.classList.toggle('viewer',window.vwOn());if(typeof vwSchedule==='function')vwSchedule();}catch(e){}};
+  try{new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});}catch(e){}
+  setTimeout(sync,0);}catch(e){}})();
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
@@ -40214,7 +40247,7 @@ const NODAY_TYPES=['조퇴'];                    // 일수 차감 없음(기록�
 /* ══ 결재선 : 신청 → 주임 → 계장 → 기성 → 사업소장 ══
    · 단계는 직급으로 결정 (신청자보다 상위 직급부터 시작)
    · 관리직은 결재선에 없고, 결재완료 후 [확인]란에 날인 = 회사 시스템 입력 완료 */
-const STEP_ALL=['jun','gye','gis','bos'];
+const STEP_ALL=['jun','gye','gij','gis','bos'];
 const APPR_DEF={steps:['jun','gye','gis','bos'],conf:true,skipOwn:true};
 function apprCfg(){try{const o=JSON.parse(localStorage.getItem(apprKey())||'null');
   const c=Object.assign({},APPR_DEF,o||{});
@@ -40239,15 +40272,15 @@ function docSteps(d){
 }
 function docUseConf(d){return (d&&d.lineConf!=null)?!!d.lineConf:apprCfg().conf;}
 function applyApprCfg(){STEP_ORDER=apprCfg().steps;}
-const STEP_LABEL={jun:'주임',gye:'계장',gis:'기성',bos:'사업소장',conf:'확인'};
-const STEP_RANKLV={jun:2,gye:4,gis:6,bos:7};   // 주임↑ · 계장↑ · 기성↑ · 사업소장
-const ST_LABEL={jun:'주임 결재대기',gye:'계장 결재대기',gis:'기성 결재대기',bos:'사업소장 결재대기',
+const STEP_LABEL={jun:'주임',gye:'계장',gij:'기장',gis:'기성',bos:'사업소장',conf:'확인'};
+const STEP_RANKLV={jun:2,gye:4,gij:5,gis:6,bos:7};   // 주임↑ · 계장↑ · 기성↑ · 사업소장
+const ST_LABEL={jun:'주임 결재대기',gye:'계장 결재대기',gij:'기장 결재대기',gis:'기성 결재대기',bos:'사업소장 결재대기',
                 done:'결재완료',rej:'반려',
                 req:'주임 결재대기',fm:'기성 결재대기',off:'사업소장 결재대기'};   // req/fm/off = 구버전 호환
-const ST_COLOR={jun:'#b45309',gye:'#0891b2',gis:'#1d4ed8',bos:'#7c3aed',done:'#15803d',rej:'#c81e1e',
+const ST_COLOR={jun:'#b45309',gye:'#0891b2',gij:'#0f766e',gis:'#1d4ed8',bos:'#7c3aed',done:'#15803d',rej:'#c81e1e',
                 req:'#b45309',fm:'#1d4ed8',off:'#7c3aed'};
 const ST_ALIAS={req:'jun',fm:'gis',off:'bos'};        // 구버전 상태 → 신버전 단계
-const OPEN_ST=['jun','gye','gis','bos','req','fm','off'];
+const OPEN_ST=['jun','gye','gij','gis','bos','req','fm','off'];
 /* 신청자 직급에 따른 최초 결재단계 (본인보다 상위 직급부터) */
 function docLineFor(emp){          // 이 직원에게 적용할 단계 배열
   const my=emp&&apprLineOf(emp.id);
@@ -40266,7 +40299,7 @@ function startStatus(emp){
   const lv=rankLv(emp);
   // ★ 결재 순서 고정: jun(2) → gye(4) → gis(6) → bos(7)
   // STEP_ORDER에 있는 단계 중 본인보다 상위 직급인 첫 번째를 찾기
-  const allSteps=['jun','gye','gis','bos'];  // 절대 순서!
+  const allSteps=STEP_ALL;  // 절대 순서! (2026-11-26 기장 단계 추가)
   for(const st of allSteps){
     if(line.includes(st) && STEP_RANKLV[st]>lv){
       return st;
@@ -40688,7 +40721,7 @@ function canApprove(d){
   // 대리 상신 정책과 맞추어 '주임' 단계도 같은 소속(부서)이면 반 구분 없이 결재 가능하도록 완화.
   const md=normDept(me.dept), td=normDept(d.dept);
   if(st==='jun')return td===md;                             // 주임 : 같은 소속(반 무관, 2026-09-30 완화)
-  if(st==='gye')return td===md;                             // 계장 : 같은 소속만
+  if(st==='gye'||st==='gij')return td===md;                // 계장·기장 : 같은 소속만
   return true;                                              // 기성 · 사업소장
 }
 /* 직원 목록의 결재선 셀 */
@@ -40742,7 +40775,7 @@ function drawEmpLine(){
   const e=empData.find(x=>x.id===id)||{};
   const my=apprLineOf(id), base=apprCfg();
   const steps=my?my.steps:base.steps, who=(my&&my.who)||{}, conf=my?my.conf:base.conf;
-  const DESC={jun:'같은 소속·같은 반 주임',gye:'같은 소속 계장·기장',gis:'현장 기성',bos:'사업소장(최종)'};
+  const DESC={jun:'같은 소속·같은 반 주임',gye:'같은 소속 계장',gij:'같은 소속 기장',gis:'현장 기성',bos:'사업소장(최종)'};
   document.getElementById('el_body').innerHTML=STEP_ALL.map(k=>{
     const on=steps.includes(k);
     return `<div class="pk-item" style="cursor:default;align-items:flex-start;flex-wrap:wrap">
@@ -40811,7 +40844,7 @@ function openEmpLineBulk(){
     +esc(names.slice(0,8).join(', '))+(names.length>8?' 외 '+(names.length-8)+'명':'')
     +'<br>선택한 직원의 기존 개인 결재선은 아래 내용으로 <b>덮어씁니다</b>.';
   const c=apprCfg();
-  const DESC={jun:'같은 소속·같은 반 주임',gye:'같은 소속 계장·기장',gis:'현장 기성',bos:'사업소장(최종)'};
+  const DESC={jun:'같은 소속·같은 반 주임',gye:'같은 소속 계장',gij:'같은 소속 기장',gis:'현장 기성',bos:'사업소장(최종)'};
   document.getElementById('elb_body').innerHTML=STEP_ALL.map(k=>`<div class="pk-item" style="cursor:default;align-items:flex-start;flex-wrap:wrap">
       <label style="display:flex;gap:7px;align-items:center;cursor:pointer;min-width:118px">
         <input type="checkbox" class="elb-st" value="${k}" ${c.steps.includes(k)?'checked':''} onchange="elbPrev()" style="width:16px;height:16px"><b>${STEP_LABEL[k]}</b></label>
@@ -40870,7 +40903,7 @@ async function purgeDocs(kind){
 function openApprCfg(){
   if(!['admin','office'].includes(appRole())){alert('결재선 설정은 사업소장·관리직만 가능합니다.');return;}
   const c=apprCfg();
-  const DESC={jun:'신청자와 같은 소속·같은 반 주임',gye:'같은 소속 계장(전 반)',
+  const DESC={jun:'신청자와 같은 소속·같은 반 주임',gye:'같은 소속 계장(전 반)',gij:'같은 소속 기장',
               gis:'현장 기성',bos:'사업소장(최종 결재)'};
   document.getElementById('ac_steps').innerHTML=STEP_ALL.map(k=>
     `<label class="pk-item" style="cursor:pointer">
@@ -40938,7 +40971,7 @@ function nextApprovers(d){
     if(e.active===0||e.id===d.empId)return false;
     if(rankLv(e)!==need)return false;
     if(st==='jun')return normDept(e.dept)===td&&(e.team||'')===(ap.team||'');
-    if(st==='gye')return normDept(e.dept)===td;
+    if(st==='gye'||st==='gij')return normDept(e.dept)===td;
     if(st==='gis')return normRank(e.rank)==='기성'||normDept(e.dept)==='기성'||empPart(e)==='foreman';
     return normRank(e.rank)==='사업소장'||normDept(e.dept)==='사업소장'||empPart(e)==='admin'; // 사업소장
   });
@@ -41306,7 +41339,7 @@ function attGuard(kind,rec,empIds){
   return true;
 }
 /* 이미 쌓인 중복 찾기 */
-function attRank(d){const stR={done:6,bos:5,off:5,gis:4,fm:4,gye:3,jun:2,req:2,rej:0};
+function attRank(d){const stR={done:6,bos:5,off:5,gis:4,fm:4,gye:3,gij:3,jun:2,req:2,rej:0};
   const real=d.steps?Object.keys(d.steps).filter(k=>!(d.steps[k]&&d.steps[k].auto)).length:0;return (stR[d.status]||1)*100+real*10+(d.imported?0:1);}
 function attDupScan(){
   const groups=[],warns=[];
@@ -41464,7 +41497,7 @@ function renderLeave(){
 function downloadLeave(){
   const rows=(((document.getElementById('lv_fType')||{}).value)||((document.getElementById('lv_fPer')||{}).value))?leaveFiltered():myDocs(leaveData);   // rpt152: 종류·기간을 고르면 보이는 내용만
   let t='<table><tr class="hd"><th>상신일</th><th>성명</th><th>소속</th><th>종류</th><th>시작</th><th>종료</th><th>일수</th><th>대근자</th><th>사유</th><th>상태</th><th>주임</th><th>계장</th><th>기성</th><th>사업소장</th><th>확인(관리직)</th></tr>';
-  rows.forEach(r=>{const s=r.steps||{};t+=`<tr><td>${esc(r.at||'')}</td><td>${esc(r.name)}</td><td>${esc(r.dept||'')}</td><td>${esc(r.type)}</td><td>${esc(r.start)}</td><td>${esc(r.end||'')}</td><td>${r.days}</td><td>${esc(r.subName||'')}</td><td>${esc(r.reason||'')}</td><td>${esc(ST_LABEL[r.status]||'')}</td><td>${esc((s.jun||{}).by||'')}</td><td>${esc((s.gye||{}).by||'')}</td><td>${esc((s.gis||s.fm||{}).by||'')}</td><td>${esc((s.bos||s.off||{}).by||'')}</td><td>${esc((r.conf||{}).by||'')}</td></tr>`;});
+  rows.forEach(r=>{const s=r.steps||{};t+=`<tr><td>${esc(r.at||'')}</td><td>${esc(r.name)}</td><td>${esc(r.dept||'')}</td><td>${esc(r.type)}</td><td>${esc(r.start)}</td><td>${esc(r.end||'')}</td><td>${r.days}</td><td>${esc(r.subName||'')}</td><td>${esc(r.reason||'')}</td><td>${esc(ST_LABEL[r.status]||'')}</td><td>${esc((s.jun||{}).by||'')}</td><td>${esc([(s.gye||{}).by,(s.gij||{}).by].filter(Boolean).join(' / '))}</td><td>${esc((s.gis||s.fm||{}).by||'')}</td><td>${esc((s.bos||s.off||{}).by||'')}</td><td>${esc((r.conf||{}).by||'')}</td></tr>`;});
   downloadXls('휴가원',t+'</table>');
 }
 /* ---- 잔업신청 ---- */
@@ -41479,8 +41512,7 @@ const OT_OWNSTEP={'주임(을)':'jun','주임(갑)':'jun','계장':'gye','기장
 function otStartFor(rep,filer){
   const def={status:startStatus(rep),st0:startStatus(rep),steps:{}};
   if(!filer||!FIELD_DEPTS.includes(normDept(filer.dept)))return def;
-  const own=OT_OWNSTEP[normRank(filer.rank)];if(!own)return def;
-  const line=docLineFor(rep),i=line.indexOf(own);if(i<0)return def;
+  const line=docLineFor(rep);let own=OT_OWNSTEP[normRank(filer.rank)];if(!own)return def;if(own==='gye'&&normRank(filer.rank)==='기장'&&line.indexOf('gij')>=0)own='gij';const i=line.indexOf(own);if(i<0)return def;
   const nm=((apprLineOf(rep.id)||{}).who||{})[own];if(nm&&nm!==filer.id)return def;   // 지정 결재자가 다른 사람이면 자동 날인하지 않음
   const steps={};steps[own]={by:filer.name,at:new Date().toISOString().slice(0,16).replace('T',' '),sign:filer.sign||'',role:'auto',rank:filer.rank||'',auto:true};
   return {status:line[i+1]||'done',st0:own,steps};
@@ -41607,7 +41639,7 @@ function renderOt(){
 function downloadOt(){
   const rows=otDocs();
   let t='<table><tr class="hd"><th>상신일</th><th>성명</th><th>소속</th><th>근무일</th><th>시작</th><th>종료</th><th>총시간</th><th>휴게</th><th>실잔업</th><th>작업내용</th><th>상태</th><th>주임</th><th>계장</th><th>기성</th><th>사업소장</th><th>확인(관리직)</th></tr>';
-  rows.forEach(r=>otMembers(r).forEach(m=>{const s=r.steps||{};t+=`<tr><td>${esc(r.at||'')}</td><td>${esc(m.name)}</td><td>${esc(m.dept||r.dept||'')}</td><td>${esc(r.date)}</td><td>${esc(r.st)}</td><td>${esc(r.et)}</td><td>${r.gross||r.hours}</td><td>${r.rest||0}</td><td>${r.hours}</td><td>${esc(r.reason||'')}</td><td>${esc(ST_LABEL[r.status]||'')}</td><td>${esc((s.jun||{}).by||'')}</td><td>${esc((s.gye||{}).by||'')}</td><td>${esc((s.gis||s.fm||{}).by||'')}</td><td>${esc((s.bos||s.off||{}).by||'')}</td><td>${esc((r.conf||{}).by||'')}</td></tr>`;}));
+  rows.forEach(r=>otMembers(r).forEach(m=>{const s=r.steps||{};t+=`<tr><td>${esc(r.at||'')}</td><td>${esc(m.name)}</td><td>${esc(m.dept||r.dept||'')}</td><td>${esc(r.date)}</td><td>${esc(r.st)}</td><td>${esc(r.et)}</td><td>${r.gross||r.hours}</td><td>${r.rest||0}</td><td>${r.hours}</td><td>${esc(r.reason||'')}</td><td>${esc(ST_LABEL[r.status]||'')}</td><td>${esc((s.jun||{}).by||'')}</td><td>${esc([(s.gye||{}).by,(s.gij||{}).by].filter(Boolean).join(' / '))}</td><td>${esc((s.gis||s.fm||{}).by||'')}</td><td>${esc((s.bos||s.off||{}).by||'')}</td><td>${esc((r.conf||{}).by||'')}</td></tr>`;}));
   downloadXls('잔업신청',t+'</table>');
 }
 /* ---- 휴가 관리 (개인별 잔여 자동계산) ---- */
@@ -41933,6 +41965,7 @@ function stepDesignee(d,k){
     if(k==='bos')return normRank(e.rank)==='사업소장'||normDept(e.dept)==='사업소장';
     if(k==='gis')return normDept(e.dept)==='기성'||normRank(e.rank)==='기성'&&normDept(e.dept)!=='관리직';
     if(k==='gye')return normDept(e.dept)===td&&rankLv(e)===4;
+    if(k==='gij')return normDept(e.dept)===td&&rankLv(e)===5;
     if(k==='jun')return normDept(e.dept)===td&&(e.team||'')===(ap.team||'')&&rankLv(e)>=2&&rankLv(e)<=3;
     return false;});
   return c.length===1?c[0]:null;
