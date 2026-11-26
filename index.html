@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.26-1700">
+<meta name="app-build" content="2026.11.26-2000">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26530,7 +26530,7 @@ function atcDepts(){const s=new Set();(leaveData||[]).forEach(r=>{const d=atcDep
   try{topnavBuild();}catch(e){}try{applyRoleNav();}catch(e){}
 }catch(e){console.warn('근태 달력 등록',e);}})();
 /* 보는 사람: 결재함을 볼 수 있는 사람 */
-try{const _vax=viewAllowed;viewAllowed=function(v){if(v==='attcal'||v==='icattcal'){if(_vax.call(this,v==='attcal'?'approve':'icapprove'))return true;if(mvAtcOk())return true;
+try{const _vax=viewAllowed;viewAllowed=function(v){if(v==='attcal'||v==='icattcal'){if(_vax.call(this,v==='attcal'?'approve':'icapprove'))return true;if(mvAtcOk()&&(v==='attcal'||(typeof isICUser==='function'&&isICUser())))return true;
     try{if(appRole()==='viewer')return false;const pr=personRule();if(pr&&pr.views&&pr.views.indexOf(v)>=0)return true;const a=roleViewsOf(appRole());if(Array.isArray(a)&&a.indexOf(v)>=0)return true;}catch(e){}return false;}return _vax.apply(this,arguments);};}catch(e){}
 try{const _nva=nav;nav=function(v){const r=_nva.apply(this,arguments);if(v==='attcal'||v==='icattcal'){setTimeout(()=>{if(curView==='attcal')atcRender();},30);setTimeout(()=>{if(curView==='attcal')atcRender();},500);}return r;};}catch(e){}
 try{const _rfa=refreshAttend;refreshAttend=function(){const r=_rfa.apply(this,arguments);try{if(curView==='attcal')atcRender();}catch(e){}return r;};}catch(e){}
@@ -26632,6 +26632,8 @@ function apprWho(d){const st=pendingStep(d);if(!st)return null;const named=apprN
 try{const _sbw=stepBar;stepBar=function(d){let h=_sbw.apply(this,arguments);try{const w=apprWho(d);if(w){
   h+=w.names.length?` <span style="font-size:10.5px;color:#0f766e;font-weight:700;white-space:nowrap">→ 다음 결재: ${esc(w.names.slice(0,4).join(', '))}${w.names.length>4?' 외 '+(w.names.length-4):''}${w.named?'':' <span style="font-weight:400;color:#64748b">(결재선 미지정·소속 기준)</span>'}</span>`
    :` <span style="font-size:10.5px;color:#c81e1e;font-weight:700;white-space:nowrap">⚠ 다음 결재자 없음 — 결재선 확인</span>`;}}catch(e){}return h;};}catch(e){}
+/* 2026-11-26 (2000): 근태 달력 — 각 사업소 전 직원 열람(달력에는 관리직·현장직 모두의 휴가 표시). 보는 범위는 권한별:
+   관리직·결재자(atcMgr) = 사유 전체 + 결재 중 문서(점선) / 일반 직원 = 결재 완료 휴가만, 사유는 본인 문서만 */
 /* 2026-11-26: 결재함 「진행중 전체」 — 인천사업소 관리직(관리직·사업소장)은 인천 진행 중 문서 전체 열람
    (포항은 기존대로 서승수만 전체 · 다른 사람은 본인·결재할 차례·이미 결재한 문서) */
 try{const _dvi=docVisible;docVisible=function(d){try{if(window.__site==='I'&&pendingStep(d)){const me=meEmp(),r=appRole();
@@ -26760,6 +26762,13 @@ try{const _fisg=fbInitialSync;fbInitialSync=async function(){const r=await _fisg
   const sync=()=>{try{document.body.classList.toggle('viewer',window.vwOn());if(typeof vwSchedule==='function')vwSchedule();}catch(e){}};
   try{new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});}catch(e){}
   setTimeout(sync,0);}catch(e){}})();
+/* 2026-11-26: 사이드바 — 접어 둔 대메뉴가 다시 열리던 오류 수정
+   원인: 화면을 다시 그릴 때마다(팀 자료 수신·권한 갱신 등) 지금 보고 있는 메뉴의 대메뉴를 자동으로 다시 펼침(topnavMark → snOpenAdd)
+   수정: 다른 화면으로 이동했을 때만 그 대메뉴를 한 번 펼치고, 같은 화면에서 다시 그릴 때는 사용자가 접은 상태를 그대로 둠 */
+try{const _soa=snOpenAdd;let __snAutoV=null;snOpenAdd=function(lb){let cv='';try{cv=curView;}catch(e){}if(__snAutoV===cv)return;__snAutoV=cv;return _soa.apply(this,arguments);};}catch(e){}
+/* 권한 관리 표: 근태 달력은 각 사업소 전 직원 공개(고정) — 현장 열도 체크된 채 잠금으로 표시 */
+try{const _prd=permRender;permRender=function(){const r=_prd.apply(this,arguments);try{document.querySelectorAll('#permBox input[data-k="attcal"],#permBox input[data-k="icattcal"]').forEach(i=>{if(i.dataset.r==='pohang'||i.dataset.lv==='w')return;i.checked=true;i.disabled=true;i.title='근태 달력은 각 사업소 전 직원 열람(고정) — 사유·결재 중 문서는 관리직·결재자만';});
+  const row=[...document.querySelectorAll('#permBox td.pm-l')].find(td=>/근태 달력/.test(td.textContent));if(row&&!row.querySelector('.pm-fix'))row.insertAdjacentHTML('beforeend',' <span class="pm-fix" style="font-size:10.5px;color:#64748b">(전 직원 고정)</span>');}catch(e){}return r;};}catch(e){}
 /* ============ 포스코 설비별 SET — 입찰 결과 · 단가·물량 정리 (2026-11-19) ============
    ② 입찰 ▸ SET 내화물에서 범용B(26년 결과 / 27년 입찰 준비)와 같은 모양으로 본다.
    · 📊 설비별 SET 입찰 결과: 8개 설비 한 줄씩 — 1SET 물량·기존단가 기준 금액·당사 입찰가 기준 금액·결과(우선협상/낙찰/탈락)·선정업체·낙찰금액
