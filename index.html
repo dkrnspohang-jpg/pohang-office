@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.26-1300">
+<meta name="app-build" content="2026.11.26-1400">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26486,7 +26486,8 @@ let atcY=new Date().getFullYear(),atcM=new Date().getMonth(),atcSel='',atcF={grp
 function atcYmd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function atcDays(r){const a=r.start,b=(r.end&&r.end>r.start)?r.end:r.start,out=[];if(!a)return out;let d=new Date(a+'T00:00:00');for(let i=0;i<200;i++){const ds=atcYmd(d);if(ds>b)break;out.push(ds);d.setDate(d.getDate()+1);}return out;}
 /* 2026-11-25: 달력에는 최종 확정(결재 완료 + 관리직 확인)된 휴가만 — 확인 전 문서는 「확인 전 문서도 보기」를 켜면 점선으로 */
-function atcFinal(r){if(r.status!=='done')return false;let uc=true;try{uc=docUseConf(r);}catch(e){}return !uc||!!(r.conf&&r.conf.by);}
+/* 2026-11-26: 관리직 확인 없이 최종 결재권자 결재(결재 완료)만 되면 반영 */
+function atcFinal(r){return r.status==='done';}
 function atcPend(r){return !atcFinal(r);}
 function atcWaitCnt(ym){return (leaveData||[]).filter(r=>r&&r.start&&r.status!=='rej'&&!r.del&&!atcFinal(r)&&atcDays(r).some(d=>d.slice(0,7)===ym)).length;}
 function atcEmp(r){return empData.find(e=>e.id===r.empId)||null;}
@@ -26501,7 +26502,7 @@ function atcDepts(){const s=new Set();(leaveData||[]).forEach(r=>{const d=atcDep
 /* ---- 화면 등록 ---- */
 (function(){try{
   if(ALL_VIEWS.indexOf('attcal')<0)ALL_VIEWS.push('attcal');
-  VIEWS.attcal=['근태 달력','날짜별 휴가 · 반차 · 조퇴 · 출장 현황 (결재 완료 + 관리직 확인된 문서)'];
+  VIEWS.attcal=['근태 달력','날짜별 휴가 · 반차 · 조퇴 · 출장 현황 (최종 결재 완료된 문서)'];
   IC_VIEWS.icattcal='attcal';IC_REV.attcal='icattcal';if(ATT_BASE.indexOf('attcal')<0)ATT_BASE.push('attcal');
   VIEWS.icattcal=['인천 근태 달력',VIEWS.attcal[1]];
   TOPNAV.forEach(g=>{const i=g.it.indexOf('approve'),j=g.it.indexOf('icapprove');if(i>=0&&g.it.indexOf('attcal')<0)g.it.splice(i+1,0,'attcal');if(j>=0&&g.it.indexOf('icattcal')<0)g.it.splice(j+1,0,'icattcal');});
@@ -26540,7 +26541,7 @@ function atcMove(d){atcM+=d;if(atcM<0){atcM=11;atcY--;}if(atcM>11){atcM=0;atcY++
 function atcToday(){const t=new Date();atcY=t.getFullYear();atcM=t.getMonth();atcSel=todayStr();atcRender();}
 function atcPick(ds){atcSel=ds;atcRender();}
 function atcSetF(k,v){atcF[k]=v;atcRender();}
-function atcLegend(){return '<div class="atc-leg">'+['연차','오전반차','약정연차','조퇴','연중휴가','경조사','출장','교육','주휴'].map(t=>`<span><i style="background:${atcColor(t)}"></i>${t==='오전반차'?'반차':t==='교육'?'교육·훈련':t}</span>`).join('')+'<span><i style="background:#fff;border:1px dashed #64748b"></i>확인 전</span></div>';}
+function atcLegend(){return '<div class="atc-leg">'+['연차','오전반차','약정연차','조퇴','연중휴가','경조사','출장','교육','주휴'].map(t=>`<span><i style="background:${atcColor(t)}"></i>${t==='오전반차'?'반차':t==='교육'?'교육·훈련':t}</span>`).join('')+'<span><i style="background:#fff;border:1px dashed #64748b"></i>결재 중</span></div>';}
 function atcRender(){const sec=document.getElementById('v-attcal');if(!sec)return;atcSig=atcSigNow();if(!atcSel)atcSel=todayStr();
   const by=atcByDate(),today=todayStr(),ym=atcY+'-'+String(atcM+1).padStart(2,'0');
   const tdl=(by[today]||[]),mon=atcRecs().filter(r=>atcDays(r).some(d=>d.slice(0,7)===ym)),pend=atcWaitCnt(ym);
@@ -26549,24 +26550,24 @@ function atcRender(){const sec=document.getElementById('v-attcal');if(!sec)retur
   const cards=`<div class="cards">
     <div class="card"><div class="lbl">오늘 (${esc(today.slice(5).replace('-','/'))}) 휴가·조퇴</div><div class="val">${tdl.length}<small> 명</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">${tdl.length?esc(tdl.slice(0,6).map(r=>r.name+' '+r.type).join(' · '))+(tdl.length>6?' 외 '+(tdl.length-6):''):'없음'}</div></div>
     <div class="card"><div class="lbl">${atcM+1}월 확정 휴가원</div><div class="val">${mon.length}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">${ppl.size}명 · ${Object.keys(cnt).map(k=>k+' '+cnt[k]).join(' · ')||'-'}</div></div>
-    <div class="card"><div class="lbl">${atcM+1}월 확인 대기</div><div class="val">${pend}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">결재 중 · 관리직 확인 전 (달력 미반영)</div></div>
+    <div class="card"><div class="lbl">${atcM+1}월 결재 중</div><div class="val">${pend}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">최종 결재 전 (달력 미반영)</div></div>
     <div class="card"><div class="lbl">${atcM+1}월 조퇴</div><div class="val">${cnt['조퇴']||0}<small> 건</small></div><div class="sub" style="font-size:11.5px;color:var(--muted)">반차 ${(cnt['오전반차']||0)+(cnt['오후반차']||0)}건</div></div></div>`;
   const depts=atcDepts();
   const fil=`<div class="atc-fil">${ATC_GRP.map(([k,l])=>`<span class="atc-chip${atcF.grp===k?' on':''}" onclick="atcSetF('grp','${k}')">${l}</span>`).join('')}
     <select class="selbox" onchange="atcSetF('dept',this.value)"><option value="">소속 전체</option>${depts.map(d=>`<option${atcF.dept===d?' selected':''}>${esc(d)}</option>`).join('')}</select>
-    ${atcMgr()?`<label style="font-size:12.5px;display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="atcSetF('pend',this.checked)">확인 전 문서도 보기(점선)</label>`:''}</div>`;
+    ${atcMgr()?`<label style="font-size:12.5px;display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="atcSetF('pend',this.checked)">결재 중 문서도 보기(점선)</label>`:''}</div>`;
   const dows=['일','월','화','수','목','금','토'];let g=dows.map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
   const start=new Date(atcY,atcM,1-new Date(atcY,atcM,1).getDay());
   for(let i=0;i<42;i++){const dt=new Date(start);dt.setDate(start.getDate()+i);const ds=atcYmd(dt);
     const out=dt.getMonth()!==atcM,dow=dt.getDay(),evs=by[ds]||[];let hol=null;try{hol=holInfo(ds).hol;}catch(e){}
     const cap=hol?3:4;
-    const ev=evs.slice(0,cap).map(r=>`<div class="cal-ev${atcPend(r)?' pend':''}" title="${esc(atcLabel(r)+' · '+atcPeriod(r)+(atcPend(r)?' · 확인 전':''))}" style="${atcEvStyle(r)}">${esc(atcLabel(r))}</div>`).join('')+(evs.length>cap?`<div class="cal-ev" style="background:#eef2f6;color:#66707c">+${evs.length-cap}</div>`:'');
+    const ev=evs.slice(0,cap).map(r=>`<div class="cal-ev${atcPend(r)?' pend':''}" title="${esc(atcLabel(r)+' · '+atcPeriod(r)+(atcPend(r)?' · 결재 중':''))}" style="${atcEvStyle(r)}">${esc(atcLabel(r))}</div>`).join('')+(evs.length>cap?`<div class="cal-ev" style="background:#eef2f6;color:#66707c">+${evs.length-cap}</div>`:'');
     g+=`<div class="cal-cell ${out?'out':''} ${ds===atcSel?'sel':''} ${ds===today?'today0':''} ${hol?'hol':''}" onclick="atcPick('${ds}')"><span class="dn ${dow===0||hol?'sun':dow===6?'sat':''}">${dt.getDate()}</span>${hol?`<div class="cal-hol" title="${esc(hol)}">${esc(hol)}</div>`:''}${ev}</div>`;}
   sec.innerHTML=cards+`<div class="cal-wrap"><div class="cal-main">
     <div class="cal-head"><button class="btn sm" onclick="atcMove(-1)">◀</button><h3>${atcY}년 ${atcM+1}월</h3><button class="btn sm" onclick="atcMove(1)">▶</button><button class="btn sm" onclick="atcToday()">오늘</button><span class="today">오늘 ${today}</span></div>
     ${fil}<div class="cal-grid">${g}</div></div>
     <div class="cal-side"><div class="sd-day">${esc(atcSel)} (${dows[new Date(atcSel+'T00:00:00').getDay()]}) 근태</div>${atcLegend()}${atcDayList(atcSel,false)}
-    <div style="margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.6">결재가 끝나고 관리직 확인까지 마치면 달력에 반영됩니다.<br>신청은 「휴가 · 잔업 신청」, 결재는 「결재함」에서 합니다.</div></div></div>`;}
+    <div style="margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.6">최종 결재권자 결재가 끝나면 바로 달력에 반영됩니다 (관리직 확인과 무관).<br>신청은 「휴가 · 잔업 신청」, 결재는 「결재함」에서 합니다.</div></div></div>`;}
 function atcDayList(ds,mob){const evs=(atcByDate()[ds]||[]);
   if(!evs.length)return `<div class="empty" style="padding:16px">휴가·조퇴 인원이 없습니다.</div>`;
   return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${evs.length}명</div>`+evs.map(r=>{const c=atcColor(r.type),e=atcEmp(r);
@@ -26593,7 +26594,7 @@ function mvAtc(soft){mvView='atc';if(!soft)mvHead('근태 달력','날짜별 휴
      <div style="display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px"><button class="btn sm" onclick="mvAtcMove(-1)">◀</button><b style="font-size:16px">${mvAtcY}년 ${mvAtcM+1}월</b><button class="btn sm" onclick="mvAtcMove(1)">▶</button></div>
      <div style="display:flex;gap:5px;flex-wrap:wrap;margin:0 4px 8px">${ATC_GRP.map(([k,l])=>`<button class="btn sm${atcF.grp===k?' primary':''}" style="padding:4px 9px;font-size:12px" onclick="mvAtcF('grp','${k}')">${l}</button>`).join('')}</div>
      <div class="mv-atc-grid">${g}</div><div style="margin:8px 4px 0">${atcLegend()}</div>
-     <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 4px 0;font-size:11.5px;color:var(--muted)"><span>색으로 종류 구분 · 날짜를 누르면 상세</span>${atcMgr()?`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="mvAtcF('pend',this.checked)">확인 전 보기</label>`:''}</div></div>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 4px 0;font-size:11.5px;color:var(--muted)"><span>색으로 종류 구분 · 날짜를 누르면 상세</span>${atcMgr()?`<label style="display:flex;gap:4px;align-items:center"><input type="checkbox"${atcF.pend?' checked':''} onchange="mvAtcF('pend',this.checked)">결재 중 보기</label>`:''}</div></div>
     <div class="mv-card" id="mvAtcDay" style="margin-top:12px"><div class="mv-h">${esc(mvAtcSel)} (${dows[new Date(mvAtcSel+'T00:00:00').getDay()]})</div>${atcDayList(mvAtcSel,true)}
      <div style="text-align:center;margin-top:8px"><button class="btn sm" onclick="mvAtcSel=todayStr();mvAtcY=new Date().getFullYear();mvAtcM=new Date().getMonth();mvAtc(true)">오늘로</button></div></div>`;}
 try{const _mo0=mvOpen0;mvOpen0=function(v){if(v==='atc'){if(!mvAtcOk()){toast('먼저 로그인하세요');return mvHome();}mvView='atc';return mvAtc();}return _mo0.apply(this,arguments);};}catch(e){}
