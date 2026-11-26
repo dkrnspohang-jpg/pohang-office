@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.27-1200">
+<meta name="app-build" content="2026.11.27-1400">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26991,6 +26991,25 @@ try{const _fwi=fbWriteItems;fbWriteItems=async function(store,items,extra){
     try{APS.seen&&APS.seen(store,got);}catch(e){}
     try{syncLog('🔒 '+store+' 동시 저장 보호 — 그 사이 다른 기기가 올린 문서 '+kept+'건 함께 유지');}catch(e){}}
 };}catch(e){}
+/* 2026-11-27: 이미 사라진 문서 복구 — 각 기기는 「팀에서 지워졌다」고 보고 지운 문서를 fbdrop_leave/ot(최근 40건)에 보관해 왔다.
+   팀 자료를 받은 뒤 1회: 11/24 이후 문서 중 삭제 표식이 없고, 지금 없고, 같은 사람·같은 날짜 문서도 없는 것을 되살려 팀에 다시 올린다. */
+async function atxRestoreDropped(){const res={leave:0,ot:0},done=JSON.parse(localStorage.getItem('fbrestored')||'{}');
+  for(const s of ['leave','ot']){let list=[];try{list=JSON.parse(localStorage.getItem('fbdrop_'+s)||'[]');}catch(e){}if(!list.length)continue;
+    let cur=[];try{cur=await txAll(s);}catch(e){continue;}const have=new Set(cur.map(x=>x&&x.id));const T=APS.tombs(s);
+    const seenIds=new Set();
+    for(const it of list.slice().reverse()){const x=it&&it.x;if(!x||x.id==null||seenIds.has(x.id))continue;seenIds.add(x.id);
+      if(have.has(x.id)||done[s+':'+x.id]||x.del)continue;if(T[x.id]&&!((+x._u||0)>T[x.id]))continue;
+      if(!((+x._u||0)>=1795446000000||String(x.at||'')>='2026-11-24'))continue;
+      let dup=false;try{if(s==='leave')dup=cur.some(o=>o&&o.id!==x.id&&attActive(o)&&o.empId===x.empId&&attLvOverlap(x,o));
+        else dup=cur.some(o=>o&&o.id!==x.id&&attActive(o)&&(o.empIds||[o.empId]).some(id=>otHas(x,id))&&attOtOverlap(x,o));}catch(e){}
+      done[s+':'+x.id]=Date.now();if(dup)continue;
+      try{await putRec(s,Object.assign({},x));res[s]++;cur.push(x);}catch(e){}}
+    if(res[s]){try{if(s==='leave')leaveData=siteF(await txAll('leave'));else otData=siteF(await txAll('ot'));}catch(e){}}}
+  try{localStorage.setItem('fbrestored',JSON.stringify(done));}catch(e){}
+  if(res.leave||res.ot){try{fbRerender();}catch(e){}try{toast('🛟 사라졌던 결재 문서를 되살렸습니다 — 휴가원 '+res.leave+'건 · 잔업 '+res.ot+'건 (팀에 다시 올림)');}catch(e){}
+    try{syncLog('🛟 사라진 문서 복구: 휴가원 '+res.leave+' · 잔업 '+res.ot);}catch(e){}}
+  return res;}
+try{const _fisr=fbInitialSync;fbInitialSync=async function(){const r=await _fisr.apply(this,arguments);setTimeout(()=>{if(!(window.vwOn&&window.vwOn()))atxRestoreDropped().catch(e=>console.warn(e));},9000);return r;};}catch(e){}
 /* ============ 2026-11-27 권한 관리 — 🏢 인천사업소 칸 ============
    인천 직원 로그인(인천 사업소장·관리직·현장총괄·SN반·축로반)별로 인천 메뉴를 켜고 끈다. 저장 키 dgrns_ic_perm(팀 공유).
    · 기본값 = 지금까지의 고정 규칙(관리직·사업소장: 전 메뉴 / 현장: 휴가·잔업 신청·근태 달력·내 급여)
@@ -27002,27 +27021,39 @@ const ICP_MAP={attend:'icattend',approve:'icapprove',emp:'icemp',mypay:'icmypay'
 function icpDefault(r){const m=r==='admin'||r==='office';return {icattend:1,icapprove:m?1:0,icattcal:1,icemp:m?1:0,icmypay:1};}
 function icpLoad(){try{const o=JSON.parse(localStorage.getItem(ICP_KEY)||'null');return o&&typeof o==='object'?o:{};}catch(e){return {};}}
 function icpOf(r,P){P=P||icpLoad();return Object.assign(icpDefault(r),P[r]||{});}
+function icpCanEdit(){try{if(permAccess())return true;return typeof isICUser==='function'&&isICUser()&&['office','admin'].indexOf(appRole())>=0;}catch(e){return false;}}
 try{const _vic=viewAllowed;viewAllowed=function(v){
+  if(v==='icperm')return icpCanEdit();
   try{if(typeof isICUser==='function'&&isICUser()){const k=ICP_MAP[v]||(ICP_VIEWS.some(x=>x[0]===v)?v:null);
     if(k){if(k==='icattcal')return true;if(k==='icapprove'){try{if(isApproverMe())return true;}catch(e){}}return !!icpOf(appRole())[k];}}}catch(e){}
   return _vic.apply(this,arguments);};}catch(e){}
 let __icpEd=null;
-function icpHtml(){const P=__icpEd||icpLoad(),ed=permAccess();
+function icpHtml(){const P=__icpEd||icpLoad(),ed=icpCanEdit();
   const head=ICP_ROLES.map(([r,l])=>`<th style="min-width:96px">${l}</th>`).join('');
   const rows=ICP_VIEWS.map(([k,l,ic])=>`<tr><td style="text-align:left;padding:5px 10px">${ic} ${l}${k==='icattcal'?' <span style="font-size:10.5px;color:#64748b">(전 직원 고정)</span>':''}${k==='icapprove'?' <span style="font-size:10.5px;color:#64748b">(결재자 지정 시 자동)</span>':''}</td>`
     +ICP_ROLES.map(([r])=>{const on=!!icpOf(r,P)[k],fix=k==='icattcal';return `<td style="text-align:center"><input type="checkbox" data-icr="${r}" data-ick="${k}"${on||fix?' checked':''}${fix||!ed?' disabled':''} onchange="icpSet('${r}','${k}',this.checked)"></td>`;}).join('')+'</tr>').join('');
   return `<div id="icpBox" class="formbar" style="margin-top:14px">
-    <h3>🏢 인천사업소 권한 <span style="font-size:12px;font-weight:400;color:#64748b">— 인천 직원으로 로그인했을 때 보이는 메뉴</span></h3>
-    <div class="hint" style="line-height:1.7;margin:4px 0 8px">인천 직원은 인천 메뉴만 봅니다(포항 자료 안 보임). 체크 = 메뉴 보임. 결재함은 결재자로 지정된 직원이면 체크와 관계없이 보이고, 근태 달력은 전 직원 고정입니다.<br>포항 관리직·서승수가 보는 인천 메뉴는 위 포항 표의 「인천사업소 근태·결재」에서 정합니다.</div>
+    <h3>🔐 인천 관리자 권한 <span style="font-size:12px;font-weight:400;color:#64748b">— 인천 직원으로 로그인했을 때 보이는 메뉴 · 인천 관리직·사업소장이 직접 설정</span></h3>
+    <div class="hint" style="line-height:1.7;margin:4px 0 8px">인천 직원은 인천 메뉴만 봅니다(포항 자료 안 보임). 체크 = 메뉴 보임. 결재함은 결재자로 지정된 직원이면 체크와 관계없이 보이고, 근태 달력은 전 직원 고정입니다.<br>포항 관리직·서승수가 보는 인천 메뉴는 「관리자 › 권한 관리」의 「인천사업소 근태·결재」에서 정합니다.</div>
     <style>#icpBox table{border-collapse:collapse;min-width:640px;font-size:13px;background:#fff}#icpBox th{background:#17375E;color:#fff;padding:7px 8px;font-weight:700}#icpBox td{border-bottom:1px solid #e2e8f0;padding:5px 8px}#icpBox tr:nth-child(even) td{background:#f8fafc}</style><div style="overflow:auto"><table><thead><tr><th style="text-align:left">인천 메뉴 / 로그인</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
     ${ed?`<div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary" onclick="icpSave()">💾 인천 권한 저장</button><button class="btn" onclick="__icpEd=null;icpPaint()">↺ 변경 취소</button><button class="btn danger" onclick="icpReset()">기본값으로 복원</button><span id="icpMsg" class="hint" style="align-self:center"></span></div>`:'<div class="hint" style="margin-top:6px">🔒 보기 전용</div>'}</div>`;}
-function icpPaint(){const box=document.getElementById('permBox');if(!box)return;let el=document.getElementById('icpBox');const h=icpHtml();if(el)el.outerHTML=h;else box.insertAdjacentHTML('beforeend',h);}
+function icpPaint(){const box=document.getElementById('v-icperm');if(!box)return;box.innerHTML=icpHtml();}
 function icpSet(r,k,on){__icpEd=__icpEd||JSON.parse(JSON.stringify(icpLoad()));__icpEd[r]=icpOf(r,__icpEd);__icpEd[r][k]=on?1:0;const m=document.getElementById('icpMsg');if(m)m.textContent='저장하지 않은 변경이 있습니다';}
-function icpSave(){if(!permNeedPin())return;const P=__icpEd||icpLoad();try{localStorage.setItem(ICP_KEY,JSON.stringify(P));}catch(e){alert('저장 오류: '+e.message);return;}
+function icpPin(){if(!icpCanEdit()){alert('인천 권한 변경은 인천 관리직·사업소장 또는 권한 관리자만 할 수 있습니다.');return false;}if(permAccess())return permNeedPin();return true;}
+function icpSave(){if(!icpPin())return;const P=__icpEd||icpLoad();try{localStorage.setItem(ICP_KEY,JSON.stringify(P));}catch(e){alert('저장 오류: '+e.message);return;}
   try{permLogAdd('인천 권한 변경');}catch(e){}__icpEd=null;icpPaint();toast('인천 권한을 저장했습니다 — 팀 공유로 인천 기기에 반영됩니다');}
-function icpReset(){if(!permNeedPin())return;if(!confirm('인천 권한을 기본값(관리직·사업소장: 전 메뉴 / 현장: 휴가·잔업 신청·근태 달력·내 급여)으로 되돌릴까요?'))return;
+function icpReset(){if(!icpPin())return;if(!confirm('인천 권한을 기본값(관리직·사업소장: 전 메뉴 / 현장: 휴가·잔업 신청·근태 달력·내 급여)으로 되돌릴까요?'))return;
   try{localStorage.removeItem(ICP_KEY);localStorage.setItem(ICP_KEY,'{}');}catch(e){}__icpEd=null;icpPaint();toast('인천 권한을 기본값으로 되돌렸습니다');}
-try{const _prc=permRender;permRender=function(){const r=_prc.apply(this,arguments);try{icpPaint();}catch(e){console.warn(e);}return r;};}catch(e){}
+/* 메뉴: 인천사업소 근태·결재 맨 아래 「🔐 인천 관리자 권한」 */
+(function(){try{
+  if(ALL_VIEWS.indexOf('icperm')<0)ALL_VIEWS.push('icperm');
+  VIEWS.icperm=['인천 관리자 권한','인천 직원 로그인별 메뉴 권한 (인천 관리직·사업소장 설정)'];
+  TOPNAV.forEach(g=>{if(g.it.indexOf('icmypay')>=0&&g.it.indexOf('icperm')<0)g.it.push('icperm');});
+  document.querySelectorAll('.side-item[data-view="icmypay"]').forEach(el=>{if(el.parentNode.querySelector('.side-item[data-view="icperm"]'))return;const d=document.createElement('div');d.className='side-item';d.dataset.view='icperm';d.setAttribute('onclick',"nav('icperm')");d.innerHTML='<span class="ic">🔐</span>인천 관리자 권한';el.parentNode.appendChild(d);});
+  const ct=document.querySelector('.content');if(ct&&!document.getElementById('v-icperm')){const sec=document.createElement('section');sec.id='v-icperm';sec.className='hidden';ct.appendChild(sec);}
+  try{topnavBuild();}catch(e){}try{applyRoleNav();}catch(e){}
+}catch(e){console.warn('인천 관리자 권한 등록',e);}})();
+try{const _nvp=nav;nav=function(v){const r=_nvp.apply(this,arguments);if(v==='icperm')setTimeout(()=>{if(curView==='icperm')icpPaint();},20);return r;};}catch(e){}
 /* ============ 2026-11-26 시중 입고 시트 — ✏ 품목 수정 ============
    품명·규격·Q코드·단위·단중·기본 단가를 고친다. 품목의 내부 키(k)는 그대로 두고(dgrns_pi_itemov 덮어쓰기),
    이미 입력한 입고 기록은 그대로 이어지며 표시용 품명·코드·단위·단중만 새 값으로 맞춘다. 포스코 품목은 품목마스터에서 수정. */
