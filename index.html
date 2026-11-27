@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.27-1400">
+<meta name="app-build" content="2026.11.27-1600">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27054,6 +27054,32 @@ function icpReset(){if(!icpPin())return;if(!confirm('인천 권한을 기본값(
   try{topnavBuild();}catch(e){}try{applyRoleNav();}catch(e){}
 }catch(e){console.warn('인천 관리자 권한 등록',e);}})();
 try{const _nvp=nav;nav=function(v){const r=_nvp.apply(this,arguments);if(v==='icperm')setTimeout(()=>{if(curView==='icperm')icpPaint();},20);return r;};}catch(e){}
+/* ============ 2026-11-27 결재함 건수 표시 — 포항·인천 따로 ============
+   이전: 결재함 숫자(결재할 문서 + 관리직 확인 대기)는 「지금 보고 있는 사업소」 자료로만 세어 포항 결재함 한 곳에만 표시
+         → 포항 화면에서는 인천 문서 수가 안 보이고, 인천 화면으로 가면 인천 수가 포항 결재함 자리에 표시됨.
+   변경: 두 사업소를 각각 세어 포항 결재함·근태·결재 묶음에는 포항 수, 인천 결재함·인천사업소 근태·결재 묶음에는 인천 수 */
+let __apbN={P:0,I:0},__apbTm=0;
+async function apbCount(S){const isI=S==='I';let L=[],O=[],E=[];
+  try{[L,O,E]=await Promise.all([txAll('leave'),txAll('ot'),txAll('emp')]);}catch(e){return 0;}
+  const docs=L.concat(O).filter(d=>d&&!d.del&&!!(d.site==='I')===isI),emps=E.filter(e=>e&&!!(e.site==='I')===isI);
+  const sv={site:window.__site,emp:empData};let n=0;
+  try{window.__site=S;empData=emps;n=docs.filter(d=>{try{return canApprove(d)||canConfirm(d);}catch(e){return false;}}).length;}finally{window.__site=sv.site;empData=sv.emp;}
+  return n;}
+async function apbRefresh(){let ic=false;try{ic=isICUser();}catch(e){}
+  const P=ic?0:await apbCount('P');let I=0;try{if(ic||viewAllowed('icapprove'))I=await apbCount('I');}catch(e){}
+  __apbN={P,I};apbPaint();}
+function apbSet(el,n){if(!el)return;el.hidden=!n;el.textContent=n;}
+function apbPaint(){const N=__apbN;
+  apbSet(document.getElementById('apprBadge'),N.P);apbSet(document.getElementById('snApprBadge'),N.P);apbSet(document.getElementById('tnApprBadge'),N.P);
+  document.querySelectorAll('.side-item[data-view="icapprove"],#sidenav .sn-it[data-k="icapprove"],#topnav .tn-it[data-k="icapprove"]').forEach(it=>{let b=it.querySelector('.apbadge.icbd');
+    if(!b){b=document.createElement('span');b.className='apbadge icbd'+(it.classList.contains('sn-it')?' sn-bd':it.classList.contains('tn-it')?' tn-bd':'');b.hidden=true;it.appendChild(b);}apbSet(b,N.I);});
+  const grp=(sel,bd)=>document.querySelectorAll(sel).forEach(g=>{const b=g.querySelector(bd);if(!b)return;const x=topnavGroups[+g.dataset.gi];if(!x)return;
+    const n=x.keys.indexOf('approve')>=0?N.P:(x.keys.indexOf('icapprove')>=0?N.I:-1);if(n<0)return;apbSet(b,n);});
+  try{grp('#sidenav .sn-g','.sn-gbd');grp('#topnav .tn-grp','.tn-gbd');}catch(e){}}
+try{const _uab=updateApprBadge;updateApprBadge=function(){const r=_uab.apply(this,arguments);clearTimeout(__apbTm);__apbTm=setTimeout(()=>{apbRefresh().catch(()=>{});},250);try{apbPaint();}catch(e){}return r;};}catch(e){}
+try{const _snm=sidenavMirror;sidenavMirror=function(){const r=_snm.apply(this,arguments);try{apbPaint();}catch(e){}return r;};}catch(e){}
+try{const _tnm=topnavMirror;topnavMirror=function(){const r=_tnm.apply(this,arguments);try{apbPaint();}catch(e){}return r;};}catch(e){}
+setTimeout(()=>{apbRefresh().catch(()=>{});},3000);
 /* ============ 2026-11-26 시중 입고 시트 — ✏ 품목 수정 ============
    품명·규격·Q코드·단위·단중·기본 단가를 고친다. 품목의 내부 키(k)는 그대로 두고(dgrns_pi_itemov 덮어쓰기),
    이미 입력한 입고 기록은 그대로 이어지며 표시용 품명·코드·단위·단중만 새 값으로 맞춘다. 포스코 품목은 품목마스터에서 수정. */
