@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.27-1600">
+<meta name="app-build" content="2026.11.27-1800">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27080,6 +27080,44 @@ try{const _uab=updateApprBadge;updateApprBadge=function(){const r=_uab.apply(thi
 try{const _snm=sidenavMirror;sidenavMirror=function(){const r=_snm.apply(this,arguments);try{apbPaint();}catch(e){}return r;};}catch(e){}
 try{const _tnm=topnavMirror;topnavMirror=function(){const r=_tnm.apply(this,arguments);try{apbPaint();}catch(e){}return r;};}catch(e){}
 setTimeout(()=>{apbRefresh().catch(()=>{});},3000);
+/* ============ 2026-11-27 마스터 PC가 아닌 기기에서 품목마스터·단가 수정 시 「조용히 되돌아감」 방지 ============
+   이전: 마스터 PC가 아닌 PC(다른 브라우저 포함)에서 단가·자재코드·원단위 신규등록을 하면 화면에는 바뀐 것처럼 보이지만 저장되지 않고,
+         다음 화면 갱신·팀 자료 수신 때 이전 단가로 되돌아갔다(안내 알림만 잠깐 표시).
+   변경: ① 품목마스터·연동 센터 맨 위에 빨간 안내 띠(마스터 PC/이 PC 표시 + 바로가기) ② 수정·등록을 누르면 바로 이유를 알리고 바꾸지 않음 */
+function msgBlocked(){try{return msActive()&&!msIsMaster();}catch(e){return false;}}
+let __msgAt=0;
+function msgWhy(){const me=(typeof meEmp==='function'&&meEmp())||{};const site=window.__site==='I';
+  if(me.name!==(typeof DL_OWNER!=='undefined'?DL_OWNER:'서승수'))return '로그인 이름이 서승수가 아닙니다';
+  if(site)return '지금 인천사업소 화면입니다';
+  return '이 PC(브라우저)는 마스터 PC로 지정되어 있지 않습니다 — 지정 기기 …'+String(msDev()).slice(-4)+' / 이 기기 …'+String(fbClientId).slice(-4)+' (같은 PC라도 크롬·엣지 등 브라우저가 다르면 다른 기기입니다)';}
+function msgAlert(){const t=Date.now();if(t-__msgAt<4000)return;__msgAt=t;
+  if(confirm('🔒 품목마스터·단가·원단위 품명은 마스터 PC에서만 저장됩니다.\n\n'+msgWhy()+'\n\n이 PC에서 고친 내용은 저장되지 않고 이전 값으로 되돌아갑니다.\n· 마스터 PC(지정한 브라우저)에서 수정하거나\n· 「팀 공유」 화면의 🔒 마스터 PC 칸에서 이 PC를 마스터로 지정한 뒤 수정하세요.\n\n팀 공유 화면으로 이동할까요?')){try{const d=document.getElementById('lxDlg');if(d)d.remove();}catch(e){}nav('sync');}}
+function msgBanner(){return `<div class="msg-band" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;border-radius:8px;padding:8px 12px;margin:0 0 8px;font-size:12.5px;line-height:1.6">🔒 <b>이 PC는 마스터 PC가 아니어서 품목마스터·단가·원단위 품명 수정이 저장되지 않습니다</b> (고쳐도 이전 값으로 되돌아감)<br><span style="font-size:11.5px">${esc(msgWhy())}</span> <button class="btn sm" style="margin-left:6px" onclick="try{document.getElementById('lxDlg').remove()}catch(e){}nav('sync')">팀 공유 › 마스터 PC 확인</button></div>`;}
+/* 수정 동작 막기 */
+['lxSetMasterPrice','mhNewInv','ncSave','mhSetCode','lxEditProd','editProdQcode','editProdCustName','lxPickDo','mhLinkPlan','lxFixInvPrice'].forEach(fn=>{try{const f=window[fn];if(typeof f!=='function')return;
+  window[fn]=function(){if(msgBlocked()){msgAlert();try{if(document.getElementById('lxDlg'))lxRender();}catch(e){}try{if(curView==='prodm')renderProdMaster();}catch(e){}return;}return f.apply(this,arguments);};}catch(e){}});
+try{const _epm=editProd;editProd=function(i,k){if(msgBlocked()&&['price','qcode','custName','name','spec','uw','mix','use','cat','gubun','kind'].indexOf(k)>=0){msgAlert();return;}return _epm.apply(this,arguments);};}catch(e){}
+/* 안내 띠 */
+try{const _rpm=renderProdMaster;renderProdMaster=function(){const r=_rpm.apply(this,arguments);try{const sec=document.getElementById('v-prodm');if(sec){let b=sec.querySelector(':scope > .msg-band');if(msgBlocked()){if(!b)sec.insertAdjacentHTML('afterbegin',msgBanner());}else if(b)b.remove();}}catch(e){}return r;};}catch(e){}
+try{const _lxr=lxRender;lxRender=function(){const r=_lxr.apply(this,arguments);try{const d=document.getElementById('lxDlg');if(d&&msgBlocked()&&!d.querySelector('.msg-band')){const w=document.createElement('div');w.style.cssText='padding:8px 14px 0';w.innerHTML=msgBanner();d.insertBefore(w,d.firstChild);}}catch(e){}return r;};}catch(e){}
+/* ============ 2026-11-27 마스터 PC에서 지운 품목·고친 단가가 「다시 돌아오는」 문제 ============
+   원인 후보 정리:
+   ① 마스터 PC인지 판단이 「지금 보고 있는 사업소」에 따라 바뀌었다(인천 메뉴를 보는 중이면 마스터 아님으로 판단)
+      → 그 사이 팀 저장소의 마스터 자료(이 PC가 예전에 올린 것)를 받아 이 PC 자료를 덮어씀 → 지운 품목·바꾼 단가가 되돌아감
+   ② 지운 품목을 「품명|규격」으로만 기억해, 백업 되살리기 등으로 같은 품목(옛 번호)이 다시 들어오면 막지 못함
+   변경: ① 마스터 PC = 지정 기기 + 서승수 로그인(보고 있는 사업소와 무관) ② 이 PC가 올린 마스터 자료는 다시 받지 않음
+         ③ 지운 품목 번호를 따로 기억(팀 공유)해 어떤 경로로도 다시 들어오지 않게 ④ 팀에 올리기 실패 시 바로 알림 */
+const MSX_DELID='dgrns_prod_delid';
+try{if(MASTER_KEYS.indexOf(MSX_DELID)<0){MASTER_KEYS.push(MSX_DELID);MS_K.add(MSX_DELID);}}catch(e){}
+try{msIsMaster=function(){try{if(!msDev()||msDev()!==fbClientId)return false;const id=myEmpId();let pool=Array.isArray(empData)?empData.slice():[];try{if(Array.isArray(__empP))pool=pool.concat(__empP);}catch(e){}
+  const m=pool.find(e=>e&&e.id===id);return !!m&&m.name===(typeof DL_OWNER!=='undefined'?DL_OWNER:'서승수')&&appRole()!=='viewer';}catch(e){return false;}};}catch(e){}
+try{const _mad=msApplyDoc;msApplyDoc=async function(d){try{if(d&&msDev()&&msDev()===fbClientId&&d.dev===fbClientId){__msMeta={dev:d.dev,by:d.by,at:d.at};return;}}catch(e){}return _mad.apply(this,arguments);};}catch(e){}
+function msxDelIds(){try{const a=JSON.parse(localStorage.getItem(MSX_DELID)||'[]');return new Set(Array.isArray(a)?a:[]);}catch(e){return new Set();}}
+function msxFilter(arr){const D=msxDelIds();if(!D.size||!Array.isArray(arr))return arr;return arr.filter(p=>!(p&&D.has(p.id)));}
+try{const _rmp=removeProds;removeProds=function(ids){try{const D=msxDelIds();(ids instanceof Set?[...ids]:ids||[]).forEach(id=>{if(id!=null)D.add(id);});localStorage.setItem(MSX_DELID,JSON.stringify([...D].slice(-2000)));}catch(e){}return _rmp.apply(this,arguments);};}catch(e){}
+try{const _lp=loadProd;loadProd=function(){const a=_lp.apply(this,arguments);const b=msxFilter(a);if(b.length!==a.length){try{if(!prodHoldWrite())localStorage.setItem('dgrns_prod',JSON.stringify(b));}catch(e){}}return b;};}catch(e){}
+try{const b=msxFilter(prodData);if(b.length!==prodData.length)prodData=b;}catch(e){}
+try{const _msp=msPush;msPush=async function(){const r=await _msp.apply(this,arguments);try{if(r===false&&msIsMaster()&&fbLive())toast('⚠ 마스터 자료(품목마스터·단가)를 팀 저장소에 올리지 못했습니다 — 팀 공유 화면에서 「다시 올리기」를 눌러 주세요');}catch(e){}return r;};}catch(e){}
 /* ============ 2026-11-26 시중 입고 시트 — ✏ 품목 수정 ============
    품명·규격·Q코드·단위·단중·기본 단가를 고친다. 품목의 내부 키(k)는 그대로 두고(dgrns_pi_itemov 덮어쓰기),
    이미 입력한 입고 기록은 그대로 이어지며 표시용 품명·코드·단위·단중만 새 값으로 맞춘다. 포스코 품목은 품목마스터에서 수정. */
