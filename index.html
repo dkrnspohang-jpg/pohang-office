@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.27-1800">
+<meta name="app-build" content="2026.11.27-1900">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27118,6 +27118,130 @@ try{const _rmp=removeProds;removeProds=function(ids){try{const D=msxDelIds();(id
 try{const _lp=loadProd;loadProd=function(){const a=_lp.apply(this,arguments);const b=msxFilter(a);if(b.length!==a.length){try{if(!prodHoldWrite())localStorage.setItem('dgrns_prod',JSON.stringify(b));}catch(e){}}return b;};}catch(e){}
 try{const b=msxFilter(prodData);if(b.length!==prodData.length)prodData=b;}catch(e){}
 try{const _msp=msPush;msPush=async function(){const r=await _msp.apply(this,arguments);try{if(r===false&&msIsMaster()&&fbLive())toast('⚠ 마스터 자료(품목마스터·단가)를 팀 저장소에 올리지 못했습니다 — 팀 공유 화면에서 「다시 올리기」를 눌러 주세요');}catch(e){}return r;};}catch(e){}
+/* ============ 2026-11-27 원단위 품목 중복 방지·정리 (CA-165S 여러 줄) ============
+   원인: ① 「원단위 신규등록」은 누를 때마다 새 임시코드(EX…) 원단위 품목을 만들었다(이미 연결된 품목·같은 이름 품목 확인 없음)
+         ② 품목마스터에서 마스터를 지워도 연결된 원단위 품목은 남았다 → 연결 대상이 없어져 「기본단가(엑셀)」(등록 당시 단가)로 표시
+   변경: ① 신규등록 시 이미 연결된 원단위가 있으면 그대로 사용, 같은 이름·같은 구분의 「연결 끊긴」 품목이 있으면 그것을 다시 연결(새로 만들지 않음)
+         ② 마스터 삭제 시 연결된 임시코드 원단위 중 입고·재고 기록이 없는 것은 함께 삭제, 기록이 있으면 삭제 여부를 물음
+         ③ 마스터 PC에서 1회 자동 정리 + 연동 센터 「🧹 원단위 중복 정리」 버튼 */
+function ivdLive(id){try{return !!(id&&prodById(id));}catch(e){return false;}}
+function ivdOrphan(m){const o=invMOv[m.c]||{};if(ivdLive(o.linkedProdId))return false;return !(o.linkedProdIds||[]).some(ivdLive);}
+function ivdNm(v){return ncNz(v);}
+function ivdTail(v){const t=String(v||'').split(',');return t[t.length-1];}
+function ivdSameName(m,p){if(!p)return false;const A=[ivdNm(m.n),ivdNm(ivdTail(m.n))].filter(Boolean),B=[ivdNm(p.custName),ivdNm(ivdTail(p.custName)),ivdNm(p.name)].filter(Boolean);return A.some(a=>B.indexOf(a)>=0);}
+function ivdOwnSame(p){const q=String(p.qcode||'').trim();return ivdLinkedTo(p.id).filter(m=>!((invMOv[m.c]||{}).linkedProdIds||[]).length&&((q&&m.c===q)||ivdSameName(m,p)));}
+function ivdSameGrp(m,p){const g=ncG(p.cat);return !m.g||g==='공통'||m.g===g;}
+function ivdLinkedTo(pid){return INV_MASTER.filter(m=>{const o=invMOv[m.c]||{};return o.linkedProdId===pid;});}
+function ivdOrphansFor(p){const q=String(p.qcode||'').trim();
+  return INV_MASTER.filter(m=>ivdOrphan(m)&&((q&&m.c===q)||(ivdSameName(m,p)&&ivdSameGrp(m,p))));}
+function ivdRecInfo(code){let v=0,n=0,yms=new Set(),ymds=new Set();
+  (invData||[]).forEach(r=>{if(r.code!==code)return;n++;if((+r.prev||0)||(+r.end||0)||(+r.in||0)||(+r.use||0)){v++;yms.add(r.ym);}});
+  (invInData||[]).forEach(r=>{if(r.code!==code)return;n++;if(+r.qty||0){v++;ymds.add(r.ymd);}});
+  return {v,n,yms,ymds};}
+function ivdKeeper(list,p){const q=p?String(p.qcode||'').trim():'';
+  const sc=m=>(q&&m.c===q?1e6:0)+(!/^EX/.test(m.c)?1e5:0)+ivdRecInfo(m.c).v*10;
+  return list.slice().sort((a,b)=>sc(b)-sc(a)||INV_MASTER.indexOf(a)-INV_MASTER.indexOf(b))[0];}
+function ivdLink(code,pid){const o=invMOv[code]=Object.assign({},invMOv[code]||{});o.linkedProdId=pid;delete o.linkedProdIds;delete o.noAuto;delete o.setOff;}
+function ivdConflict(a,b){const A=ivdRecInfo(a),B=ivdRecInfo(b);for(const x of A.yms)if(B.yms.has(x))return true;for(const x of A.ymds)if(B.ymds.has(x))return true;return false;}
+
+/* ① 신규등록 중복 방지 */
+try{const _ncmi=ncMakeInv;ncMakeInv=function(pid,silent){
+  const p=prodById(pid);if(!p)return _ncmi.apply(this,arguments);
+  try{
+    const own=ivdOwnSame(p);
+    if(own.length){const k=ivdKeeper(own,p);setTimeout(()=>{try{toast('이미 연결된 원단위 품목 '+k.c+' 가 있어 새로 만들지 않았습니다');}catch(e){}},700);return k.c;}
+    const orph=ivdOrphansFor(p);
+    if(orph.length){const k=ivdKeeper(orph,p);ivdLink(k.c,pid);
+      if(!(p.custName||'').trim())p.custName=k.n;if(!(p.qcode||'').trim()&&!/^EX/.test(k.c))p.qcode=k.c;
+      if(!silent){ncSaveAll();ncRefresh();}else{try{saveInvMOv();}catch(e){}}
+      setTimeout(()=>{try{toast('같은 이름의 원단위 품목 '+k.c+' 를 다시 연결했습니다 (새로 만들지 않음)'+(orph.length>1?' · 남은 중복 '+(orph.length-1)+'건은 연동 센터 「🧹 원단위 중복 정리」':''));}catch(e){}},700);
+      return k.c;}
+  }catch(e){console.warn('ivd',e);}
+  return _ncmi.apply(this,arguments);};}catch(e){}
+
+/* ② 마스터 삭제 시 연결된 원단위 정리 */
+let __ivdBusy=false;
+try{const _rmp=removeProds;removeProds=function(ids){
+  const set=new Set(ids instanceof Set?[...ids]:ids);let codes=[];
+  try{if(!(typeof msgBlocked==='function'&&msgBlocked())&&!__ivdBusy)
+    codes=INV_MASTER.filter(m=>{const o=invMOv[m.c]||{};return o.linkedProdId&&set.has(o.linkedProdId)&&!(o.linkedProdIds||[]).some(id=>id&&!set.has(id)&&ivdLive(id));}).map(m=>m.c);}catch(e){}
+  const r=_rmp.apply(this,arguments);
+  if(codes.length)setTimeout(()=>{ivdAfterRemove(codes).catch(e=>console.warn(e));},60);
+  return r;};}catch(e){}
+async function ivdAfterRemove(codes){
+  const user=codes.filter(c=>invIsUser(c)),free=user.filter(c=>!ivdRecInfo(c).v),rec=user.filter(c=>ivdRecInfo(c).v);
+  let del=free.slice();
+  if(rec.length){const L=rec.map(c=>{const m=invM.get(c)||{},i=ivdRecInfo(c);return '  · '+c+'  '+(m.n||'')+'  (입고·재고 기록 '+i.v+'건)';}).join('\n');
+    if(confirm('삭제한 마스터에 연결돼 있던 원단위 품목에 입고·재고 기록이 있습니다.\n\n'+L+'\n\n[확인] 원단위 품목과 기록도 함께 삭제\n[취소] 남겨 둠 — 같은 이름으로 마스터를 다시 등록하면 이 품목에 자동으로 다시 연결됩니다'))del=del.concat(rec);}
+  if(!del.length)return;
+  try{await undoSnap('마스터 삭제 — 연결 원단위 '+del.length+'건 정리','bulk');}catch(e){}
+  for(const c of del){try{await invDelItem(c,true);}catch(e){console.error(e);}}
+  try{invRenderAll();}catch(e){}try{flashSave();}catch(e){}
+  toast('연결돼 있던 원단위 품목 '+del.length+'건도 함께 삭제했습니다 ('+del.join(', ')+')');}
+
+/* ③ 정리 (마스터 PC) */
+function ivdPlan(){const P=[],seenPid=new Set(),used=new Set();
+  const live=prodData.filter(p=>p&&p.id);
+  live.forEach(p=>{if(seenPid.has(p.id))return;
+    const own=ivdOwnSame(p).filter(m=>!used.has(m.c)),orph=ivdOrphansFor(p).filter(m=>!used.has(m.c));
+    if(!orph.length&&own.length<=1)return;
+    const keep=own.length?ivdKeeper(own,p):ivdKeeper(orph,p);
+    const rest=own.concat(orph).filter(m=>m!==keep);used.add(keep.c);rest.forEach(m=>used.add(m.c));seenPid.add(p.id);
+    P.push({p,keep,relink:!own.length,rest:rest.map(m=>{const i=ivdRecInfo(m.c);return {m,v:i.v,user:invIsUser(m.c),act:!i.v?(invIsUser(m.c)?'del':'leave'):(ivdConflict(m.c,keep.c)?'review':'merge')};})});});
+  // 이름이 다른 마스터에 연결된 원단위(잘못 연결 의심) — 자재코드가 정확히 같은 다른 마스터가 있으면 그쪽으로
+  const wrong=[];INV_MASTER.forEach(m=>{const o=invMOv[m.c]||{};if(!ivdLive(o.linkedProdId)||(o.linkedProdIds||[]).length)return;const L=prodById(o.linkedProdId);
+    if(ivdSameName(m,L))return;const lq=String(L.qcode||'').trim();
+    const Q=live.filter(x=>x.id!==L.id&&x.use!==0&&String(x.qcode||'').trim()===m.c);
+    const N=live.filter(x=>x.id!==L.id&&x.use!==0&&ivdSameName(m,x)&&ivdSameGrp(m,x));
+    const to=(lq!==m.c&&Q.length===1)?Q[0]:null;if(!to&&!N.length)return;
+    wrong.push({m,L,to,cand:N.slice(0,3)});});
+  return {P,wrong};}
+async function ivdClean(auto){
+  if(typeof msgBlocked==='function'&&msgBlocked()){try{msgAlert();}catch(e){}return null;}
+  const R0=ivdPlan();const res={relink:0,del:0,merge:0,fix:0,review:[]};
+  const W=R0.wrong.filter(w=>w.to);
+  const work=R0.P.some(x=>x.relink||x.rest.some(r=>r.act==='del'||r.act==='merge'))||W.length;
+  let R=R0;
+  if(work){try{await undoSnap('원단위 중복 정리','bulk');}catch(e){}
+    __ivdBusy=true;try{
+      for(const w of W){ivdLink(w.m.c,w.to.id);res.fix++;}   // 잘못된 연결 먼저 바로잡고 다시 계산
+      if(W.length){saveInvMOv();R=ivdPlan();}
+      for(const x of R.P){if(x.relink){ivdLink(x.keep.c,x.p.id);res.relink++;}
+        for(const r of x.rest){
+          if(r.act==='del'){try{await invDelItem(r.m.c,true);res.del++;}catch(e){console.error(e);}}
+          else if(r.act==='merge'){try{await invRecode(r.m.c,x.keep.c,true);ivdLink(x.keep.c,x.p.id);res.merge++;}catch(e){console.error(e);}}
+          else res.review.push(r.m.c+' '+r.m.n+' — 같은 달 기록이 겹쳐 자동 합치기 안 함');}}
+      saveInvMOv();try{saveInvUserItems();}catch(e){}try{flashSave();}catch(e){}
+    }finally{__ivdBusy=false;}
+    window.__mhMap=null;try{invRenderAll();}catch(e){}try{renderProdMaster();}catch(e){}try{if(document.getElementById('lxDlg'))lxRender();}catch(e){}}
+  const R2=ivdPlan();
+  try{localStorage.setItem('ivd_last',JSON.stringify({at:Date.now(),res}));}catch(e){}
+  if(!auto||work||R2.wrong.length)ivdShow(res,R,R2,auto,W);
+  return res;}
+function ivdShow(res,R,R2,auto,W){const e0=document.getElementById('ivdDlg');if(e0)e0.remove();
+  const esc2=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const done=R.P.map(x=>`<tr><td>${esc2(x.p.name)} ${esc2(x.p.spec||'')}</td><td>${esc2(x.keep.c)}${x.relink?' <b style="color:#16a34a">다시 연결</b>':' (기존 연결)'}</td><td>${x.rest.map(r=>esc2(r.m.c)+' '+(r.act==='del'?'<span style="color:#dc2626">삭제(기록 없음)</span>':r.act==='merge'?'<span style="color:#2563eb">합침(기록 '+r.v+'건 이동)</span>':r.act==='leave'?'남김(동국제강 코드)':'<span style="color:#b45309">확인 필요(같은 달 기록 겹침)</span>')).join('<br>')||'-'}</td></tr>`).join('');
+  const fixed=W.map(w=>`<tr><td>${esc2(w.m.c)} ${esc2(w.m.n)}</td><td>${esc2(w.L.name)} → <b>${esc2(w.to.name)} ${esc2(w.to.spec||'')}</b> (자재코드 일치)</td></tr>`).join('');
+  const wrong=R2.wrong.map(w=>`<tr><td>${esc2(w.m.c)} ${esc2(w.m.n)}</td><td>${esc2(w.L.name)} ${esc2(w.L.spec||'')} · 자재코드 ${esc2(w.L.qcode||'없음')}</td><td>${w.cand.length?w.cand.map(c=>esc2(c.name+' '+(c.spec||''))).join(', '):'-'}</td></tr>`).join('');
+  const el=document.createElement('div');el.id='ivdDlg';el.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9995;display:flex;align-items:center;justify-content:center;padding:16px';
+  el.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:860px;width:100%;max-height:88vh;overflow:auto;padding:18px 20px;font-size:13px;line-height:1.6">
+   <style>#ivdDlg table{border-collapse:collapse;width:100%;margin:6px 0 12px}#ivdDlg th{background:#17375E;color:#fff;padding:5px 8px;text-align:left;font-weight:700}#ivdDlg td{border-bottom:1px solid #e2e8f0;padding:5px 8px;vertical-align:top}</style>
+   <h3 style="margin:0 0 6px;color:#17375E">🧹 원단위 품목 중복 정리${auto?' (마스터 PC 1회 자동)':''}</h3>
+   <div style="background:#f1f5f9;border-radius:8px;padding:8px 12px;margin-bottom:10px">다시 연결 <b>${res.relink}</b>건 · 삭제 <b>${res.del}</b>건 · 합침 <b>${res.merge}</b>건 · 잘못된 연결 바로잡음 <b>${res.fix}</b>건 — 되돌리기 저장점에 기록했습니다.</div>
+   ${done?`<b>① 같은 이름 원단위 품목</b><table><thead><tr><th>품목마스터</th><th>남긴 원단위</th><th>나머지</th></tr></thead><tbody>${done}</tbody></table>`:'<div class="hint">① 같은 이름으로 중복된 원단위 품목이 없습니다.</div>'}
+   ${fixed?`<b>② 바로잡은 연결</b><table><thead><tr><th>원단위</th><th>연결</th></tr></thead><tbody>${fixed}</tbody></table>`:''}
+   ${wrong?`<b>③ 이름이 다른 마스터에 연결된 원단위 — 확인해 주세요</b> <span class="hint">(맞으면 그대로 두셔도 됩니다. 틀리면 연동 센터에서 「연결」을 바꿔 주세요)</span><table><thead><tr><th>원단위</th><th>지금 연결된 마스터</th><th>이름이 같은 마스터</th></tr></thead><tbody>${wrong}</tbody></table>`:''}
+   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">${wrong?`<button class="btn" onclick="document.getElementById('ivdDlg').remove();lxOpen('A')">🔗 연동 센터 열기</button>`:''}<button class="btn primary" onclick="document.getElementById('ivdDlg').remove()">닫기</button></div></div>`;
+  document.body.appendChild(el);}
+/* 연동 센터 버튼 */
+try{const _lxr2=lxRender;lxRender=function(){const r=_lxr2.apply(this,arguments);try{const d=document.getElementById('lxDlg');if(d&&!d.querySelector('.ivd-bar')&&!(typeof msgBlocked==='function'&&msgBlocked())){
+  const n=INV_MASTER.filter(m=>{const o=invMOv[m.c]||{};return !!o.linkedProdId&&ivdOrphan(m);}).length;const w=document.createElement('div');w.className='ivd-bar';w.style.cssText='padding:6px 14px 0;display:flex;gap:8px;align-items:center;font-size:12.5px;color:#475569';
+  w.innerHTML=`<button class="btn sm" onclick="ivdClean(false)">🧹 원단위 중복 정리</button><span>같은 이름 원단위 품목 합치기 · 연결 끊긴 품목 다시 연결${n?` (연결 끊긴 원단위 <b>${n}</b>건)`:''}</span>`;
+  const f=d.firstChild;if(f&&f.nextSibling)d.insertBefore(w,f.nextSibling);else d.appendChild(w);}}catch(e){}return r;};}catch(e){}
+/* 마스터 PC 1회 자동 */
+try{const _fisi=fbInitialSync;fbInitialSync=async function(){const r=await _fisi.apply(this,arguments);
+  setTimeout(()=>{try{if(localStorage.getItem('ivd_auto1')||!(typeof msActive==='function'&&msActive()&&msIsMaster()))return;
+    localStorage.setItem('ivd_auto1',String(Date.now()));ivdClean(true).catch(e=>console.warn(e));}catch(e){}},14000);return r;};}catch(e){}
 /* ============ 2026-11-26 시중 입고 시트 — ✏ 품목 수정 ============
    품명·규격·Q코드·단위·단중·기본 단가를 고친다. 품목의 내부 키(k)는 그대로 두고(dgrns_pi_itemov 덮어쓰기),
    이미 입력한 입고 기록은 그대로 이어지며 표시용 품명·코드·단위·단중만 새 값으로 맞춘다. 포스코 품목은 품목마스터에서 수정. */
