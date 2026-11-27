@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="app-build" content="2026.11.27-1900">
+<meta name="app-build" content="2026.11.27-1930">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27195,7 +27195,33 @@ function ivdPlan(){const P=[],seenPid=new Set(),used=new Set();
     const N=live.filter(x=>x.id!==L.id&&x.use!==0&&ivdSameName(m,x)&&ivdSameGrp(m,x));
     const to=(lq!==m.c&&Q.length===1)?Q[0]:null;if(!to&&!N.length)return;
     wrong.push({m,L,to,cand:N.slice(0,3)});});
-  return {P,wrong};}
+  // 원단위 단가 ≠ 품목마스터 현재 단가 (이번 달) — 원인별
+  const ym=ivdYm(),diff=[];
+  INV_MASTER.forEach(m=>{const lps=invLinkProds(m.c);if(lps.length!==1)return;const L=lps[0];
+    let a=0,b=0;try{a=Math.round(invPriceAt(m.c,ym)||0);b=Math.round(+prodLivePrice(L)||0);}catch(e){return;}
+    if(!a||!b||Math.abs(a-b)<=0.5)return;const w=ivdPxWhy(m.c,ym,L);if(w)diff.push({m,L,a,b,w});});
+  return {P,wrong,diff,ym};}
+function ivdYm(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function ivdPxWhy(code,ym,L){const qk=ymToQuarterKey(ym),live=+prodLivePrice(L)||0;
+  if(invPriceForced(code,ym)!=null)return {k:'force',t:'입고량 화면에서 이 달 단가를 직접 고침(강제수정)'};
+  const h=(priceHold.inv||{})[L.id];
+  if(h&&((h[qk]!=null&&+h[qk]>0)||(h['*']!=null&&+h['*']>0&&Math.abs(_ppRaw(L.id,ym)-live)<0.5)))return {k:'hold',t:'마스터 단가를 바꿀 때 「원단위에는 적용 안 함」으로 이전 단가 '+Math.round(+(h[qk]||h['*'])).toLocaleString()+'원에 고정됨'};
+  const sv=((priceSnaps[qk]||{}).prices||{})[L.id];
+  if(sv!=null&&+sv&&Math.abs(+sv-live)>0.5)return {k:'snap',t:'이번 분기 확정단가(단가 시점)가 '+Math.round(+sv).toLocaleString()+'원으로 남아 있음'};
+  return null;}
+async function ivdFixPx(codes){if(typeof msgBlocked==='function'&&msgBlocked()){try{msgAlert();}catch(e){}return;}
+  const ym=ivdYm(),qk=ymToQuarterKey(ym),cq=currentQuarterKey();let n=0;
+  try{await undoSnap('원단위 단가를 품목마스터 현재 단가에 맞춤','bulk');}catch(e){}
+  const y=+qk.slice(0,4),q=+qk.slice(5),ms=[0,1,2].map(k=>y+'-'+String((q-1)*3+1+k).padStart(2,'0'));
+  for(const c of codes){const lps=invLinkProds(c);if(lps.length!==1)continue;const L=lps[0],live=+prodLivePrice(L)||0;
+    const h=(priceHold.inv||{})[L.id];if(h){delete h[qk];if(qk===cq)delete h['*'];if(!Object.keys(h).length)delete priceHold.inv[L.id];}
+    const f=invPriceForce[c];if(f){ms.forEach(m=>{delete f[m];});if(!Object.keys(f).length)delete invPriceForce[c];}
+    const S=priceSnaps[qk];if(qk===cq&&S&&S.prices&&S.prices[L.id]!=null&&Math.abs(+S.prices[L.id]-live)>0.5)S.prices[L.id]=live;
+    n++;}
+  try{savePriceHold();}catch(e){}try{saveInvPriceForce();}catch(e){}try{saveSnaps();}catch(e){}try{for(const k in _invPinCache)delete _invPinCache[k];}catch(e){}
+  window.__mhMap=null;try{invRenderAll();}catch(e){}try{renderProdMaster();}catch(e){}try{if(document.getElementById('lxDlg'))lxRender();}catch(e){}try{flashSave();}catch(e){}
+  toast('원단위 단가 '+n+'건을 품목마스터 현재 단가에 맞췄습니다');
+  if(document.getElementById('ivdDlg')){document.getElementById('ivdDlg').remove();ivdClean(false);}}
 async function ivdClean(auto){
   if(typeof msgBlocked==='function'&&msgBlocked()){try{msgAlert();}catch(e){}return null;}
   const R0=ivdPlan();const res={relink:0,del:0,merge:0,fix:0,review:[]};
@@ -27216,13 +27242,15 @@ async function ivdClean(auto){
     window.__mhMap=null;try{invRenderAll();}catch(e){}try{renderProdMaster();}catch(e){}try{if(document.getElementById('lxDlg'))lxRender();}catch(e){}}
   const R2=ivdPlan();
   try{localStorage.setItem('ivd_last',JSON.stringify({at:Date.now(),res}));}catch(e){}
-  if(!auto||work||R2.wrong.length)ivdShow(res,R,R2,auto,W);
+  if(!auto||work||R2.wrong.length||R2.diff.length)ivdShow(res,R,R2,auto,W);
   return res;}
 function ivdShow(res,R,R2,auto,W){const e0=document.getElementById('ivdDlg');if(e0)e0.remove();
   const esc2=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const done=R.P.map(x=>`<tr><td>${esc2(x.p.name)} ${esc2(x.p.spec||'')}</td><td>${esc2(x.keep.c)}${x.relink?' <b style="color:#16a34a">다시 연결</b>':' (기존 연결)'}</td><td>${x.rest.map(r=>esc2(r.m.c)+' '+(r.act==='del'?'<span style="color:#dc2626">삭제(기록 없음)</span>':r.act==='merge'?'<span style="color:#2563eb">합침(기록 '+r.v+'건 이동)</span>':r.act==='leave'?'남김(동국제강 코드)':'<span style="color:#b45309">확인 필요(같은 달 기록 겹침)</span>')).join('<br>')||'-'}</td></tr>`).join('');
   const fixed=W.map(w=>`<tr><td>${esc2(w.m.c)} ${esc2(w.m.n)}</td><td>${esc2(w.L.name)} → <b>${esc2(w.to.name)} ${esc2(w.to.spec||'')}</b> (자재코드 일치)</td></tr>`).join('');
   const wrong=R2.wrong.map(w=>`<tr><td>${esc2(w.m.c)} ${esc2(w.m.n)}</td><td>${esc2(w.L.name)} ${esc2(w.L.spec||'')} · 자재코드 ${esc2(w.L.qcode||'없음')}</td><td>${w.cand.length?w.cand.map(c=>esc2(c.name+' '+(c.spec||''))).join(', '):'-'}</td></tr>`).join('');
+  window.__ivdDiff=R2.diff.map(d=>d.m.c);
+  const diff=R2.diff.map(d=>`<tr><td>${esc2(d.m.c)} ${esc2(d.m.n)}</td><td>${esc2(d.L.name)} ${esc2(d.L.spec||'')}</td><td style="text-align:right">${d.a.toLocaleString()}</td><td style="text-align:right;font-weight:700">${d.b.toLocaleString()}</td><td>${esc2(d.w.t)}</td><td><button class="btn sm" onclick="ivdFixPx(['${esc2(d.m.c)}'])">맞춤</button></td></tr>`).join('');
   const el=document.createElement('div');el.id='ivdDlg';el.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9995;display:flex;align-items:center;justify-content:center;padding:16px';
   el.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:860px;width:100%;max-height:88vh;overflow:auto;padding:18px 20px;font-size:13px;line-height:1.6">
    <style>#ivdDlg table{border-collapse:collapse;width:100%;margin:6px 0 12px}#ivdDlg th{background:#17375E;color:#fff;padding:5px 8px;text-align:left;font-weight:700}#ivdDlg td{border-bottom:1px solid #e2e8f0;padding:5px 8px;vertical-align:top}</style>
@@ -27231,6 +27259,7 @@ function ivdShow(res,R,R2,auto,W){const e0=document.getElementById('ivdDlg');if(
    ${done?`<b>① 같은 이름 원단위 품목</b><table><thead><tr><th>품목마스터</th><th>남긴 원단위</th><th>나머지</th></tr></thead><tbody>${done}</tbody></table>`:'<div class="hint">① 같은 이름으로 중복된 원단위 품목이 없습니다.</div>'}
    ${fixed?`<b>② 바로잡은 연결</b><table><thead><tr><th>원단위</th><th>연결</th></tr></thead><tbody>${fixed}</tbody></table>`:''}
    ${wrong?`<b>③ 이름이 다른 마스터에 연결된 원단위 — 확인해 주세요</b> <span class="hint">(맞으면 그대로 두셔도 됩니다. 틀리면 연동 센터에서 「연결」을 바꿔 주세요)</span><table><thead><tr><th>원단위</th><th>지금 연결된 마스터</th><th>이름이 같은 마스터</th></tr></thead><tbody>${wrong}</tbody></table>`:''}
+   ${diff?`<b>④ 원단위 단가 ≠ 품목마스터 현재 단가 (${esc2(R2.ym)})</b> <span class="hint">(「맞춤」= 이번 분기 원단위 단가를 품목마스터 단가로 · 마스터 단가는 그대로)</span><table><thead><tr><th>원단위</th><th>연결 마스터</th><th style="text-align:right">원단위 단가</th><th style="text-align:right">마스터 단가</th><th>원인</th><th></th></tr></thead><tbody>${diff}</tbody></table>${R2.diff.length>1?`<div style="text-align:right;margin:-6px 0 10px"><button class="btn sm" onclick="ivdFixPx(window.__ivdDiff||[])">④ 모두 맞춤 (${R2.diff.length}건)</button></div>`:''}`:''}
    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">${wrong?`<button class="btn" onclick="document.getElementById('ivdDlg').remove();lxOpen('A')">🔗 연동 센터 열기</button>`:''}<button class="btn primary" onclick="document.getElementById('ivdDlg').remove()">닫기</button></div></div>`;
   document.body.appendChild(el);}
 /* 연동 센터 버튼 */
@@ -27240,8 +27269,8 @@ try{const _lxr2=lxRender;lxRender=function(){const r=_lxr2.apply(this,arguments)
   const f=d.firstChild;if(f&&f.nextSibling)d.insertBefore(w,f.nextSibling);else d.appendChild(w);}}catch(e){}return r;};}catch(e){}
 /* 마스터 PC 1회 자동 */
 try{const _fisi=fbInitialSync;fbInitialSync=async function(){const r=await _fisi.apply(this,arguments);
-  setTimeout(()=>{try{if(localStorage.getItem('ivd_auto1')||!(typeof msActive==='function'&&msActive()&&msIsMaster()))return;
-    localStorage.setItem('ivd_auto1',String(Date.now()));ivdClean(true).catch(e=>console.warn(e));}catch(e){}},14000);return r;};}catch(e){}
+  setTimeout(()=>{try{if(localStorage.getItem('ivd_auto2')||!(typeof msActive==='function'&&msActive()&&msIsMaster()))return;
+    localStorage.setItem('ivd_auto2',String(Date.now()));ivdClean(true).catch(e=>console.warn(e));}catch(e){}},14000);return r;};}catch(e){}
 /* ============ 2026-11-26 시중 입고 시트 — ✏ 품목 수정 ============
    품명·규격·Q코드·단위·단중·기본 단가를 고친다. 품목의 내부 키(k)는 그대로 두고(dgrns_pi_itemov 덮어쓰기),
    이미 입력한 입고 기록은 그대로 이어지며 표시용 품명·코드·단위·단중만 새 값으로 맞춘다. 포스코 품목은 품목마스터에서 수정. */
